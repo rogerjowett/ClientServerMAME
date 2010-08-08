@@ -184,10 +184,60 @@ SET(
 	"SDL Stage Directory"
 )
 
+IF(WIN32)
+	#Use the built-in zlib & expat
+INCLUDE_DIRECTORIES(
+src/lib/expat
+src/lib/zlib
+)
+ELSE(WIN32)
+	#Use the OS zlib & expat
+SET(
+ZLIB_INCLUDE
+"/usr/include"
+CACHE
+PATH 
+"ZLIB Include Directory"
+)
+
+SET(
+	ZLIB_LIB
+	"/usr/lib/"
+	CACHE
+	PATH 
+	"ZLIB Library Directory"
+)
+
+SET(
+EXPAT_INCLUDE
+"/usr/include"
+CACHE
+PATH 
+"Expat Include Directory"
+)
+
+SET(
+	EXPAT_LIB
+	"/usr/lib/"
+	CACHE
+	PATH 
+	"Expat Library Directory"
+)
+
+INCLUDE_DIRECTORIES(
+	${ZLIB_INCLUDE}
+	${EXPAT_INCLUDE}
+)
+
+LINK_DIRECTORIES(
+	${ZLIB_LIB}
+	${EXPAT_LIB}
+)
+ENDIF(WIN32)
 
 IF(MSVC)
 INCLUDE_DIRECTORIES(
-	"C:/Programming/C99_support/msvc"
+	./C99_support/msvc
 )
 ENDIF(MSVC)
 
@@ -296,10 +346,8 @@ src/emu/video
 src/ldplayer
 src/ldplayer/layout
 src/lib
-src/lib/expat
 src/lib/softfloat
 src/lib/util
-src/lib/zlib
 src/mame
 src/mame/audio
 src/mame/drivers
@@ -1432,27 +1480,9 @@ ADD_LIBRARY(
 SET_TARGET_PROPERTIES(emu_core PROPERTIES DEBUG_POSTFIX _d)
 
 ADD_LIBRARY(
-	libraries
+	utilities
 	STATIC
 
-./src/lib/expat/ascii.h
-./src/lib/expat/asciitab.h
-./src/lib/expat/expat.h
-./src/lib/expat/expat_external.h
-./src/lib/expat/iasciitab.h
-./src/lib/expat/intconfig.h
-./src/lib/expat/internal.h
-./src/lib/expat/latin1tab.h
-./src/lib/expat/nametab.h
-./src/lib/expat/utf8tab.h
-./src/lib/expat/xmlparse.cpp
-./src/lib/expat/xmlrole.cpp
-./src/lib/expat/xmlrole.h
-./src/lib/expat/xmltok.cpp
-./src/lib/expat/xmltok.h
-#./src/lib/expat/xmltok_impl.cpp
-./src/lib/expat/xmltok_impl.h
-#./src/lib/expat/xmltok_ns.cpp
 ./src/lib/util/astring.cpp
 ./src/lib/util/astring.h
 ./src/lib/util/avcomp.cpp
@@ -1483,8 +1513,8 @@ ADD_LIBRARY(
 ./src/lib/util/options.h
 ./src/lib/util/palette.cpp
 ./src/lib/util/palette.h
-./src/lib/util/png.cpp
-./src/lib/util/png.h
+./src/lib/util/mame_png.cpp
+./src/lib/util/mame_png.h
 ./src/lib/util/pool.cpp
 ./src/lib/util/pool.h
 ./src/lib/util/sha1.cpp
@@ -1499,6 +1529,33 @@ ADD_LIBRARY(
 ./src/lib/util/vbiparse.h
 ./src/lib/util/xmlfile.cpp
 ./src/lib/util/xmlfile.h
+)	
+
+SET_TARGET_PROPERTIES(utilities PROPERTIES DEBUG_POSTFIX _d)
+
+IF(WIN32)
+ADD_LIBRARY(
+	libraries
+	STATIC
+
+./src/lib/expat/ascii.h
+./src/lib/expat/asciitab.h
+./src/lib/expat/expat.h
+./src/lib/expat/expat_external.h
+./src/lib/expat/iasciitab.h
+./src/lib/expat/intconfig.h
+./src/lib/expat/internal.h
+./src/lib/expat/latin1tab.h
+./src/lib/expat/nametab.h
+./src/lib/expat/utf8tab.h
+./src/lib/expat/xmlparse.cpp
+./src/lib/expat/xmlrole.cpp
+./src/lib/expat/xmlrole.h
+./src/lib/expat/xmltok.cpp
+./src/lib/expat/xmltok.h
+#./src/lib/expat/xmltok_impl.cpp
+./src/lib/expat/xmltok_impl.h
+#./src/lib/expat/xmltok_ns.cpp
 ./src/lib/zlib/adler32.c
 ./src/lib/zlib/compress.c
 ./src/lib/zlib/crc32.c
@@ -1526,6 +1583,7 @@ ADD_LIBRARY(
 )
 
 SET_TARGET_PROPERTIES(libraries PROPERTIES DEBUG_POSTFIX _d)
+ENDIF(WIN32)
 
 ADD_LIBRARY(
 	video
@@ -4418,12 +4476,16 @@ TARGET_LINK_LIBRARIES(
 
 	optimized
 	emu_core
+)
+
+TARGET_LINK_LIBRARIES(
+	mamesdl
 
 	debug
-	libraries_d
+	utilities_d
 
 	optimized
-	libraries
+	utilities
 
 	debug
 	osd_sdl_d
@@ -4457,6 +4519,28 @@ IF(WIN32)
 TARGET_LINK_LIBRARIES(
 	mamesdl
 
+	debug
+	libraries_d
+
+	optimized
+	libraries
+)
+ELSE(WIN32)
+TARGET_LINK_LIBRARIES(
+	mamesdl
+
+	general
+	expat
+
+	general
+	z
+)
+ENDIF(WIN32)
+
+IF(WIN32)
+TARGET_LINK_LIBRARIES(
+	mamesdl
+
     general
     glu32
     
@@ -4477,6 +4561,168 @@ TARGET_LINK_LIBRARIES(
     pthread
 )
 ENDIF(WIN32)
+
+ADD_EXECUTABLE(
+	png2bdc
+
+	src/build/png2bdc.cpp
+)
+SET_TARGET_PROPERTIES(png2bdc PROPERTIES DEBUG_POSTFIX _d)
+
+TARGET_LINK_LIBRARIES(
+	png2bdc
+
+	debug
+	emu_d
+	
+	optimized
+	emu
+
+	debug
+	drivers_d
+	
+	optimized
+	drivers
+
+	debug
+	machine_d
+	
+	optimized
+	machine
+
+	debug
+	video_d
+	
+	optimized
+	video
+
+	debug
+	audio_d
+	
+	optimized
+	audio
+
+	debug
+	emu_cpu_d
+
+	optimized
+	emu_cpu
+
+	debug
+	emu_video_d
+
+	optimized
+	emu_video
+	
+	debug
+	emu_sound_d
+
+	optimized
+	emu_sound
+	
+	debug
+	emu_machine_d
+
+	optimized
+	emu_machine
+
+	debug
+	emu_core_d
+
+	optimized
+	emu_core
+)
+
+TARGET_LINK_LIBRARIES(
+	png2bdc
+
+	debug
+	utilities_d
+
+	optimized
+	utilities
+
+	debug
+	osd_sdl_d
+
+	optimized
+	osd_sdl
+
+	general
+	SDL
+	
+	debug
+	${BOOST_LIB_PREFIX_NAME}boost_thread-${BOOST_LIB_EXT_NAME_DEBUG}
+
+	optimized
+	${BOOST_LIB_PREFIX_NAME}boost_thread-${BOOST_LIB_EXT_NAME_RELEASE}
+
+	debug
+	${BOOST_LIB_PREFIX_NAME}boost_filesystem-${BOOST_LIB_EXT_NAME_DEBUG}
+
+	optimized
+	${BOOST_LIB_PREFIX_NAME}boost_filesystem-${BOOST_LIB_EXT_NAME_RELEASE}
+
+	debug
+	${BOOST_LIB_PREFIX_NAME}boost_system-${BOOST_LIB_EXT_NAME_DEBUG}
+
+	optimized
+	${BOOST_LIB_PREFIX_NAME}boost_system-${BOOST_LIB_EXT_NAME_RELEASE}
+)
+
+IF(WIN32)
+TARGET_LINK_LIBRARIES(
+	png2bdc
+
+	debug
+	libraries_d
+
+	optimized
+	libraries
+)
+ELSE(WIN32)
+TARGET_LINK_LIBRARIES(
+	png2bdc
+
+	general
+	expat
+
+	general
+	z
+)
+ENDIF(WIN32)
+
+IF(WIN32)
+TARGET_LINK_LIBRARIES(
+	png2bdc
+
+    general
+    glu32
+    
+    general
+    opengl32
+)
+ELSE(WIN32)
+TARGET_LINK_LIBRARIES(
+	png2bdc
+
+    general
+    GLU
+    
+    general
+    GL
+
+    general
+    pthread
+)
+ENDIF(WIN32)
+
+ADD_EXECUTABLE(
+	file2str
+
+	src/build/file2str.cpp
+)
+SET_TARGET_PROPERTIES(file2str PROPERTIES DEBUG_POSTFIX _d)
 
 #./src/build/file2str.cpp
 #./src/build/png2bdc.cpp

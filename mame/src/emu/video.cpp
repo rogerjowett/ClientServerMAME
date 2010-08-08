@@ -17,7 +17,7 @@
 #include "emu.h"
 #include "emuopts.h"
 #include "profiler.h"
-#include "png.h"
+#include "mame_png.h"
 #include "debugger.h"
 #include "debugint/debugint.h"
 #include "rendutil.h"

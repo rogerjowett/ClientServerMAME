@@ -50,7 +50,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include "png.h"
+#include "mame_png.h"
 
 
 /***************************************************************************

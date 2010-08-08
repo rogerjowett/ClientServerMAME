@@ -479,7 +479,7 @@ int mame_execute(core_options *options)
 				if(int(time(NULL)) != lastRecTime2)
 				{
 					lastRecTime2 = int(time(NULL));
-					printf("A SECOND PASSES\n");
+					//printf("A SECOND PASSES\n");
 				}
 				}
 

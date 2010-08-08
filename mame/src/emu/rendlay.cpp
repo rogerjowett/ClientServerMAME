@@ -64,7 +64,7 @@
 #include "rendutil.h"
 #include "output.h"
 #include "xmlfile.h"
-#include "png.h"
+#include "mame_png.h"
 
 
 

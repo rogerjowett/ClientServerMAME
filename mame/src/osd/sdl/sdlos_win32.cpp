@@ -152,14 +152,14 @@ void osd_sleep(osd_ticks_t duration)
 	// only sleep if at least 2 full milliseconds
 	if (msec >= 2)
 	{
-        std::cout << "SLEEPING FOR " << msec << "ms\n";
+        //std::cout << "SLEEPING FOR " << msec << "ms\n";
 		// take a couple of msecs off the top for good measure
 		msec -= 2;
 		Sleep(msec);
 	}
 	else if (msec == 0)
 	{
-        std::cout << "SLEEPING FOR " << msec << "ms\n";
+        //std::cout << "SLEEPING FOR " << msec << "ms\n";
 		Sleep(msec);
 	}
 }

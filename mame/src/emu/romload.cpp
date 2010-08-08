@@ -12,7 +12,7 @@
 #include "emu.h"
 #include "emuopts.h"
 #include "hash.h"
-#include "png.h"
+#include "mame_png.h"
 #include "harddisk.h"
 #include "config.h"
 #include "ui.h"
