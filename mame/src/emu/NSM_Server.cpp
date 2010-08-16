@@ -1,4 +1,20 @@
+#include "RakPeerInterface.h"
+#include "RakNetStatistics.h"
+#include "RakNetTypes.h"
+#include "BitStream.h"
+#include "PacketLogger.h"
+#include "RakNetTypes.h"
+
 #include "NSM_Server.h"
+
+#include <assert.h>
+#include <cstdio>
+#include <cstring>
+#include <stdlib.h>
+
+#include "osdcore.h"
+
+using namespace boost;
 
 Server *netServer=NULL;
 
@@ -8,6 +24,7 @@ volatile bool memoryBlocksLocked = false;
 
 Server *createGlobalServer(string _port)
 {
+cout << "Creating server on port " << _port << endl;
 netServer = new Server(_port);
 return netServer;
 }
@@ -18,69 +35,47 @@ if(netServer) delete netServer;
 netServer = NULL;
 }
 
-Session::Session(shared_ptr<tcp::socket> _activeSocket)
+// Copied from Multiplayer.cpp
+// If the first byte is ID_TIMESTAMP, then we want the 5th byte
+// Otherwise we want the 1st byte
+extern unsigned char GetPacketIdentifier(RakNet::Packet *p);
+extern unsigned char *GetPacketData(RakNet::Packet *p);
+extern int GetPacketSize(RakNet::Packet *p);
+
+Session::Session(const RakNet::RakNetGUID &_guid)
 :
-activeSocket(_activeSocket)
+guid(_guid)
 {
-    boost::asio::async_read(*activeSocket,    
-        boost::asio::buffer(&incomingMsgLength, sizeof(int)),
-        boost::bind(
-        &Session::handle_read_header, this,
-        boost::asio::placeholders::error));
 }
 
-void Session::handle_read_header(const boost::system::error_code& error)
+void Session::pushInputBuffer(const string &s)
 {
-    if (!error)
-    {
-        incomingMsg.clear();
-        incomingMsg.resize(incomingMsgLength,0);
-
-        //cout << "GOT MESSAGE FROM CLIENT OF LENGTH: " << incomingMsgLength << endl;
-
-        boost::asio::async_read(*activeSocket,
-            boost::asio::buffer(&(incomingMsg[0]), incomingMsgLength),
-            boost::bind(&Session::handle_read_body, this,
-            boost::asio::placeholders::error));
-    }
-    else
-    {
-        netServer->removeSession(this);
-    }
-}
-
-void Session::handle_read_body(const boost::system::error_code& error)
-{
-    if (!error)
-    {
-        string s((const char*)(&(incomingMsg[0])),incomingMsgLength);
+	while(memoryBlocksLocked)
+	{
+	;
+	}
+	memoryBlocksLocked=true;
         inputBufferQueue.push_back(s);
-        incomingMsg.clear();
-
-        //cout << "ADDED BUFFER OF SIZE: " << s.size() << " TO QUEUE\n";
-
-        boost::asio::async_read(*activeSocket,    
-            boost::asio::buffer(&incomingMsgLength, sizeof(int)),
-            boost::bind(
-            &Session::handle_read_header, this,
-            boost::asio::placeholders::error));
-    }
-    else
-    {
-        netServer->removeSession(this);
-    }
+    memoryBlocksLocked=false;
 }
 
 string Session::popInputBuffer()
 {
+	while(memoryBlocksLocked)
+	{
+	;
+	}
+	memoryBlocksLocked=true;
 	if(inputBufferQueue.empty())
 	{
 		//cout << "INPUT BUFFER QUEUE IS EMPTY\n";
+	    memoryBlocksLocked=false;
 	    return string("");
 	}
 	//cout << "POPPING A STRING\n";
 	string s = inputBufferQueue[0];
 	inputBufferQueue.erase(inputBufferQueue.begin());
+	memoryBlocksLocked=false;
 	return s;
 }
 
@@ -95,9 +90,9 @@ Server::Server(string _port)
 :
 port(_port)
 {
-	io_service = new boost::asio::io_service();
-	endpoint = new tcp::endpoint(tcp::v4(), atoi(port.c_str()) );
-	acceptor = new tcp::acceptor(*io_service,*endpoint);
+	rakInterface = RakNet::RakPeerInterface::GetInstance();
+	rakInterface->SetIncomingPassword("MAME",(int)strlen("MAME"));
+	rakInterface->SetTimeoutTime(30000,RakNet::UNASSIGNED_SYSTEM_ADDRESS);
 
 	/* allocate deflate state */
 	strm.zalloc = Z_NULL;
@@ -106,13 +101,37 @@ port(_port)
 
 }
 
-void Server::initializeConnection()
+Server::~Server()
 {
-	newSocket = boost::shared_ptr<tcp::socket>(new tcp::socket(*io_service));
-	acceptor->async_accept(*(newSocket.get()),
-		boost::bind(&Server::handle_accept, this, newSocket, boost::asio::placeholders::error));
+	// Be nice and let the server know we quit.
+	rakInterface->Shutdown(300);
 
-	boost::thread t(boost::bind(&boost::asio::io_service::run, io_service));
+	// We're done with the network
+	RakNet::RakPeerInterface::DestroyInstance(rakInterface);
+}
+
+bool Server::initializeConnection()
+{
+	RakNet::SocketDescriptor socketDescriptor(atoi(port.c_str()),0);
+	bool retval = rakInterface->Startup(16,&socketDescriptor,1)==RakNet::RAKNET_STARTED;
+	rakInterface->SetMaximumIncomingConnections(16);
+
+	if(!retval)
+	{
+		printf("Server failed to start. Terminating\n");
+		return false;
+	}
+	rakInterface->SetOccasionalPing(true);
+	rakInterface->SetUnreliableTimeout(1000);
+
+	DataStructures::List<RakNet::RakNetSmartPtr < RakNet::RakNetSocket> > sockets;
+	rakInterface->GetSockets(sockets);
+	printf("Ports used by RakNet:\n");
+	for (unsigned int i=0; i < sockets.Size(); i++)
+	{
+		printf("%i. %i\n", i+1, sockets[i]->boundAddress.port);
+	}
+    return true;
 }
 
 MemoryBlock Server::createMemoryBlock(int size)
@@ -133,14 +152,8 @@ MemoryBlock Server::createMemoryBlock(unsigned char *ptr,int size)
 	return blocks.back();
 }
 
-void Server::handle_accept(
-				   boost::shared_ptr<tcp::socket> acceptedSocket,
-				   const boost::system::error_code& error)
+void Server::initialSync(const RakNet::RakNetGUID &guid)
 {
-    acceptedSocket->set_option(tcp::no_delay(true));
-    boost::asio::socket_base::non_blocking_io command(false);
-    acceptedSocket->io_control(command); 
-
 	while(memoryBlocksLocked)
 	{
 	;
@@ -148,76 +161,139 @@ void Server::handle_accept(
 	memoryBlocksLocked=true;
 	boost::mutex::scoped_lock(memoryBlockMutex);
 	cout << "IN CRITICAL SECTION\n";
-    newSocket = boost::shared_ptr<tcp::socket>(new tcp::socket(*io_service));
-	acceptor->async_accept(*(newSocket.get()),
-		boost::bind(&Server::handle_accept, this, newSocket, boost::asio::placeholders::error));
+	cout << "SERVER: Sending initial snapshot\n";
+	RakNet::BitStream bitStream(65536);
+    unsigned char header = ID_INITIAL_SYNC;
+	bitStream.WriteBits((const unsigned char*)&header,8*sizeof(unsigned char));
+	int numBlocks = int(blocks.size());
+	cout << "NUMBLOCKS: " << numBlocks << endl;
+	bitStream.WriteBits((const unsigned char*)&numBlocks,8*sizeof(int));
 
-	if (!error)
+	// NOTE: The server must send stale data to the client for the first time
+	// So that future syncs will be accurate
+        unsigned char checksum = 0;
+	for(int blockIndex=0;blockIndex<int(staleBlocks.size());blockIndex++)
 	{
-        shared_ptr<Session> newSession;
-		try
-		{
-            newSession = shared_ptr<Session>(new Session(acceptedSocket));
-			sessions.push_back(newSession);
-			cout << "SERVER: Sending initial snapshot\n";
-			int numBlocks = int(blocks.size());
-			cout << "NUMBLOCKS: " << numBlocks << endl;
-			boost::asio::write(*acceptedSocket,boost::asio::buffer(&numBlocks, sizeof(int)));
+		//cout << "BLOCK SIZE FOR INDEX " << blockIndex << ": " << staleBlocks[blockIndex].size << endl;
+		bitStream.WriteBits((const unsigned char*)&(staleBlocks[blockIndex].size),8*sizeof(int));
+		bitStream.WriteBits((const unsigned char*)staleBlocks[blockIndex].data,8*staleBlocks[blockIndex].size);
 
-			// NOTE: The server must send stale data to the client for the first time
-			// So that future syncs will be accurate
-			for(int blockIndex=0;blockIndex<int(staleBlocks.size());blockIndex++)
-			{
-				//cout << "BLOCK SIZE FOR INDEX " << blockIndex << ": " << staleBlocks[blockIndex].size << endl;
-				boost::asio::write(*acceptedSocket,boost::asio::buffer(&(staleBlocks[blockIndex].size), sizeof(int)));
-				int bytesWritten = boost::asio::write(*acceptedSocket,boost::asio::buffer(staleBlocks[blockIndex].data, staleBlocks[blockIndex].size));
-				if(bytesWritten != staleBlocks[blockIndex].size) cout << "OH SHIT! BAD NETWORK SEND\n";
-			}
+        for(int a=0;a<staleBlocks[blockIndex].size;a++)
+        {
+            checksum = checksum ^ staleBlocks[blockIndex].data[a];
+        }
+    }
+        cout << "INITIAL CHECKSUM: " << int(checksum) << endl;
 
-            int numConstBlocks = int(constBlocks.size());
-			boost::asio::write(*acceptedSocket,boost::asio::buffer(&numConstBlocks, sizeof(int)));
+        int numConstBlocks = int(constBlocks.size());
+	bitStream.WriteBits((const unsigned char*)&numConstBlocks,8*sizeof(int));
+
 
 			// NOTE: The server must send stale data to the client for the first time
 			// So that future syncs will be accurate
 			for(int blockIndex=0;blockIndex<int(constBlocks.size());blockIndex++)
 			{
 				//cout << "BLOCK SIZE FOR INDEX " << blockIndex << ": " << constBlocks[blockIndex].size << endl;
-                int constBlockSize = int(constBlocks[blockIndex].size);
-				boost::asio::write(*acceptedSocket,boost::asio::buffer(&constBlockSize, sizeof(int)));
-				int bytesWritten = boost::asio::write(*acceptedSocket,boost::asio::buffer(constBlocks[blockIndex].data, constBlocks[blockIndex].size));
-				if(bytesWritten != constBlocks[blockIndex].size) cout << "OH SHIT! BAD NETWORK SEND\n";
+		                int constBlockSize = int(constBlocks[blockIndex].size);
+				bitStream.WriteBits((const unsigned char*)&constBlockSize,8*sizeof(int));
+				bitStream.WriteBits((const unsigned char*)constBlocks[blockIndex].data,8*constBlocks[blockIndex].size);
 			}
 
-            cout << "FINISHED SENDING BLOCKS TO CLIENT\n";
-		}
-        catch(const std::exception &ex)
-		{
-			cout << "SERVER: Client closed connection, removing client\n";
-            removeSession(newSession.get());
-	        memoryBlocksLocked=false;
-            return;
-		}
-	}
+	rakInterface->Send(
+			&bitStream,
+			HIGH_PRIORITY,
+			RELIABLE_ORDERED,//UNRELIABLE_SEQUENCED,
+			ORDERING_CHANNEL_SYNC,
+			guid,
+			false
+		       );
+        cout << "FINISHED SENDING BLOCKS TO CLIENT\n";
 	cout << "SERVER: Done with initial snapshot\n";
 	cout << "OUT OF CRITICAL AREA\n";
 	cout.flush();
 	memoryBlocksLocked=false;
 }
 
-void Server::syncAndUpdate() 
+void Server::update()
+{
+    osd_sleep(0);
+	RakNet::Packet *p;
+		for (p=rakInterface->Receive(); p; rakInterface->DeallocatePacket(p), p=rakInterface->Receive())
+		{
+			// We got a packet, get the identifier with our handy function
+			unsigned char packetIdentifier = GetPacketIdentifier(p);
+
+			// Check if this is a network message packet
+			switch (packetIdentifier)
+			{
+			case ID_CONNECTION_LOST:
+				// Couldn't deliver a reliable packet - i.e. the other system was abnormally
+				// terminated
+			case ID_DISCONNECTION_NOTIFICATION:
+				// Connection lost normally
+				printf("ID_DISCONNECTION_NOTIFICATION from %s\n", p->systemAddress.ToString(true));
+				for(int a=0;a<(int)sessions.size();a++)
+				{
+					if(sessions[a].getGUID()==p->guid)
+					{
+						sessions[a].setGUID(RakNet::UNASSIGNED_RAKNET_GUID);
+					}
+				}
+				break;
+
+
+			case ID_NEW_INCOMING_CONNECTION:
+				// Somebody connected.  We have their IP now
+				printf("ID_NEW_INCOMING_CONNECTION from %s with GUID %s\n", p->systemAddress.ToString(true), p->guid.ToString());
+				//Find a session index for the player
+				for(int a=0;a<=(int)sessions.size();a++)
+				{
+					if(a==(int)sessions.size())
+					{
+						sessions.push_back(Session(p->guid));
+                        break;
+					}
+					else if(sessions[a].getGUID()==RakNet::UNASSIGNED_RAKNET_GUID)
+					{
+						sessions[a].setGUID(p->guid);
+						break;
+					}
+				}
+				//Perform initial sync with player
+				initialSync(p->guid);
+				break;
+
+			case ID_INCOMPATIBLE_PROTOCOL_VERSION:
+				printf("ID_INCOMPATIBLE_PROTOCOL_VERSION\n");
+				break;
+
+
+			case ID_CLIENT_INPUTS:
+				sessions[getSessionIndexFromGUID(p->guid)].pushInputBuffer(string((char*)GetPacketData(p),(int)GetPacketSize(p)));
+				break;
+			default:
+				printf("UNEXPECTED PACKET ID: %d\n",int(packetIdentifier));
+				break;
+			}
+
+		}
+}
+
+void Server::sync() 
 {
 	while(memoryBlocksLocked)
 	{
 	;
 	}
 	memoryBlocksLocked=true;
-	static int runTimes=0;
-	runTimes++;
 	int bytesSynched=0;
 	boost::mutex::scoped_lock(memoryBlockMutex);
 	//cout << "IN CRITICAL SECTION\n";
 	//cout << "SERVER: Syncing with clients\n";
 	bool anyDirty=false;
+    unsigned char blockChecksum=0;
+    unsigned char xorChecksum=0;
+    unsigned char staleChecksum=0;
 	for(int blockIndex=0;blockIndex<int(blocks.size());blockIndex++)
 	{
 		MemoryBlock &block = blocks[blockIndex];
@@ -235,6 +311,15 @@ void Server::syncAndUpdate()
 			xorBlock.data[a] = block.data[a] ^ staleBlock.data[a];
 			if(xorBlock.data[a]) dirty=true;
 		}
+        if(dirty)
+        {
+		    for(int a=0;a<block.size;a++)
+		    {
+                blockChecksum = blockChecksum ^ block.data[a];
+                xorChecksum = xorChecksum ^ xorBlock.data[a];
+                staleChecksum = staleChecksum ^ staleBlock.data[a];
+            }
+        }
 		//dirty=true;
 		memcpy(staleBlock.data,block.data,block.size);
 		if(dirty && !anyDirty)
@@ -283,93 +368,37 @@ void Server::syncAndUpdate()
 	}
 	if(anyDirty)
 	{
+        printf("BLOCK CHECKSUM: %d\n",int(blockChecksum));
+        printf("XOR CHECKSUM: %d\n",int(xorChecksum));
+        printf("STALE CHECKSUM: %d\n",int(staleChecksum));
 	int finishIndex = -1;
 	strm.next_in = (Bytef*)&finishIndex;
 	strm.avail_in = sizeof(int);
 	int retval = deflate(&strm, Z_FINISH);
 	//cout << "DEFLATE RETVAL: " << retval << endl;
-	for(int a=0;a<(int)sessions.size();a++)
-	{
-        int header = 1;
-        boost::asio::write(*(sessions[a]->getSocket()),boost::asio::buffer(&header, sizeof(int)));
+	
+	int compressedSize = MAX_COMPRESSED_OUTBUF_SIZE - strm.avail_out;
+	int sendMessageSize = 1+sizeof(int)+compressedSize;
+	unsigned char *sendMessage = (unsigned char*)malloc(sendMessageSize);
+	sendMessage[0] = ID_RESYNC;
+	memcpy(sendMessage+1,&compressedSize,sizeof(int));
+	memcpy(sendMessage+1+sizeof(int),compressedOutBuf,compressedSize);
 
-		//boost::asio::write(*(sessions[a]->getSocket()),boost::asio::buffer(&(finishIndex), sizeof(int)));
-		int compressedSize = MAX_COMPRESSED_OUTBUF_SIZE - strm.avail_out;
-
-		char checksum = 0;
-		for(int b=0;b<compressedSize;b++)
-		{
-			checksum = checksum ^ compressedOutBuf[b];
-		}
-		//cout << "CHECKSUM: " << int(checksum) << endl;
-
-		//cout << "SENDING " << compressedSize << " BYTES\n";
-        try
-        {
-		    boost::asio::write(*(sessions[a]->getSocket()),boost::asio::buffer(&compressedSize, sizeof(int)));
-		    boost::asio::write(*(sessions[a]->getSocket()),boost::asio::buffer(compressedOutBuf, compressedSize));
-        }
-        catch(std::exception ex)
-        {
-            cout << "SERVER: GOT ERROR, CLOSING SESSION\n";
-            removeSession(sessions[a].get());
-            a--;
-        }
-
-#if 0
-		/* allocate deflate state */
-		strm2.zalloc = Z_NULL;
-		strm2.zfree = Z_NULL;
-		strm2.opaque = Z_NULL;
-		strm2.next_in = compressedOutBuf;
-		strm2.avail_in = compressedSize;
-		int ret = inflateInit(&strm2);
-		strm2.next_out = decompressionBuf;
-		strm2.avail_out = MAX_COMPRESSED_OUTBUF_SIZE;
-		retval = inflate(&strm2,Z_NO_FLUSH);
-		cout << "INFLATE RETVAL: " << retval << endl;
-		if(strm2.msg) cout << "ERROR MESSAGE: " << strm2.msg << endl;
-		if(retval==Z_DATA_ERROR) exit(1);
-#endif
-	}
+	rakInterface->Send(
+			(const char*)sendMessage,
+			sendMessageSize,
+            LOW_PRIORITY,
+			RELIABLE_ORDERED,
+			ORDERING_CHANNEL_SYNC,
+			RakNet::UNASSIGNED_SYSTEM_ADDRESS,
+			true
+		       );
 	deflateEnd(&strm);
 	}
 	//if(runTimes%1==0) cout << "BYTES SYNCED: " << bytesSynched << endl;
 	//cout << "OUT OF CRITICAL AREA\n";
 	//cout.flush();
 	memoryBlocksLocked=false;
-}
-
-void Server::sendString(const string &outputString)
-{
-	boost::mutex::scoped_lock(memoryBlockMutex);
-    //cout << "IN CRITICAL SECTION\n";
-    try
-    {
-        int intSize = int(outputString.length());
-        cout << "SENDING MESSAGE WITH LENGTH: " << intSize << endl;
-	    for(int a=0;a<(int)sessions.size();a++)
-	    {
-            try
-            {
-                int header = 2;
-	            boost::asio::write(*(sessions[a]->getSocket()),boost::asio::buffer(&header, sizeof(int)));
-	            boost::asio::write(*(sessions[a]->getSocket()),boost::asio::buffer(&intSize, sizeof(int)));
-	            boost::asio::write(*(sessions[a]->getSocket()),boost::asio::buffer(outputString.c_str(), intSize));
-            }
-            catch(std::exception ex)
-            {
-                cout << "SERVER: GOT ERROR, CLOSING SESSION\n";
-                removeSession(sessions[a].get());
-                a--;
-            }
-        }
-    }
-    catch(std::exception ex)
-    {
-        cout << "CONNECTION CLOSED\n";
-    }
-    //cout << "EXITING CRITICAL SECTION\n";
 }
 
 void Server::addConstBlock(unsigned char *tmpdata,int size)
@@ -382,26 +411,28 @@ void Server::addConstBlock(unsigned char *tmpdata,int size)
 	boost::mutex::scoped_lock(memoryBlockMutex);
     //cout << "Adding const block...\n";
     //cout << "IN CRITICAL SECTION\n";
+    if(constBlocks.size()>=100)
+    {
+        constBlocks.erase(constBlocks.begin());
+    }
     constBlocks.push_back(MemoryBlock(size));
     memcpy(constBlocks.back().data,tmpdata,size);
 
-    for(int a=0;a<(int)sessions.size();a++)
-    {
-        //cout << "ADDING CONST BLOCK WITH LENGTH: " << size << endl;
-        try
-        {
-            int header = 3;
-            boost::asio::write(*(sessions[a]->getSocket()),boost::asio::buffer(&header, sizeof(int)));
-            boost::asio::write(*(sessions[a]->getSocket()),boost::asio::buffer(&size, sizeof(int)));
-            boost::asio::write(*(sessions[a]->getSocket()),boost::asio::buffer(constBlocks.back().data, size));
-        }
-        catch(std::exception ex)
-        {
-            cout << "SERVER: GOT ERROR, CLOSING SESSION\n";
-            removeSession(sessions[a].get());
-            a--;
-        }
-    }
+	int sendMessageSize = 1+sizeof(int)+size;
+	unsigned char *sendMessage = (unsigned char*)malloc(sendMessageSize);
+	sendMessage[0] = ID_CONST_DATA;
+	memcpy(sendMessage+1,&size,sizeof(int));
+	memcpy(sendMessage+1+sizeof(int),tmpdata,size);
+
+	rakInterface->Send(
+			(const char*)sendMessage,
+			sendMessageSize,
+			LOW_PRIORITY,
+			UNRELIABLE,
+			ORDERING_CHANNEL_CONST_DATA,
+			RakNet::UNASSIGNED_SYSTEM_ADDRESS,
+			true
+		       );
 	memoryBlocksLocked=false;
     //cout << "done\n";
     //cout << "EXITING CRITICAL SECTION\n";

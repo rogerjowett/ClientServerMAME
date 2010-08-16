@@ -10,11 +10,14 @@ ADD_DEFINITIONS(
 	-DUSE_OPENGL
 	-DNO_DEBUGGER
 	-DXML_STATIC
+	-DUNICODE=1
+	-D_UNICODE=1
+	#-D_RAKNET_DLL_IMPORT
 )
 
 IF(WIN32)
 ADD_DEFINITIONS(
-	-D_WIN32_WINNT=0x0501
+	-D_WIN32_WINNT=0x0502
 	-DSDLMAME_WIN32
 	-D_CRT_SECURE_NO_WARNINGS
 )
@@ -50,8 +53,8 @@ ENDIF(CMAKE_BUILD_TYPE EQUAL "Debug")
 
 IF(MSVC)
 
-SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /EHsc /RTCsu /W3")
-SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /EHsc /RTCsu /W3")
+SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /EHsc /RTCsu /W3 /DDEBUG=1")
+SET(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /EHsc /RTCsu /W3 /DDEBUG=1")
 
 SET(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /EHsc /DRELEASE_MODE /fp:fast")
 SET(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /EHsc /DRELEASE_MODE /fp:fast")
@@ -177,11 +180,27 @@ PATH
 )
 
 SET(
-	SDL_LIB
-	"${CMAKE_CURRENT_SOURCE_DIR}/../../../../Libraries/SDL-1.2.14/VisualC/SDL/Release"
-	CACHE
-	PATH 
-	"SDL Stage Directory"
+SDL_LIB
+"${CMAKE_CURRENT_SOURCE_DIR}/../../../../Libraries/SDL-1.2.14/VisualC/SDL/Release"
+CACHE
+PATH 
+"SDL Stage Directory"
+)
+
+SET(
+RAKNET_INCLUDE
+"../../../../Libraries/RakNet/Source"
+CACHE
+PATH 
+"RakNet Base Directory"
+)
+
+SET(
+RAKNET_LIB
+"${CMAKE_CURRENT_SOURCE_DIR}/../../../../Libraries/RakNet/Lib"
+CACHE
+PATH 
+"RakNet Library Directory"
 )
 
 IF(WIN32)
@@ -363,12 +382,16 @@ src/osd/sdl/keymaps
 src/osd/sdl/shader
 src/osd/windows
 src/tools
+	${RAKNET_INCLUDE}
 )
 
 LINK_DIRECTORIES(
 	${LIBRARY_OUTPUT_PATH}
 	${BOOST_LIB}
 	${SDL_LIB}
+	${RAKNET_LIB}
+	${RAKNET_LIB}/DLL/
+	${RAKNET_LIB}/LibStatic/
 )
 
 SOURCE_GROUP("Base Files" REGULAR_EXPRESSION /)
@@ -910,6 +933,8 @@ ADD_LIBRARY(
 
 ./src/emu/video/generic.cpp
 ./src/emu/video/generic.h
+./src/emu/video/pc_video.cpp
+./src/emu/video/pc_video.h
 ./src/emu/video/hd63484.cpp
 ./src/emu/video/hd63484.h
 ./src/emu/video/mc6845.cpp
@@ -943,6 +968,8 @@ ADD_LIBRARY(
 ./src/emu/video/vooddefs.h
 ./src/emu/video/voodoo.cpp
 ./src/emu/video/voodoo.h
+./src/emu/video/pc_vga.cpp
+./src/emu/video/pc_vga.h
 )
 
 SET_TARGET_PROPERTIES(emu_video PROPERTIES DEBUG_POSTFIX _d)
@@ -1238,8 +1265,6 @@ ADD_LIBRARY(
 ./src/emu/machine/generic.h
 ./src/emu/machine/i2cmem.cpp
 ./src/emu/machine/i2cmem.h
-./src/emu/machine/i2cmemdev.cpp
-./src/emu/machine/i2cmemdev.h
 ./src/emu/machine/i8243.cpp
 ./src/emu/machine/i8243.h
 ./src/emu/machine/i8255a.cpp
@@ -1248,6 +1273,8 @@ ADD_LIBRARY(
 ./src/emu/machine/idectrl.h
 ./src/emu/machine/ins8154.cpp
 ./src/emu/machine/ins8154.h
+./src/emu/machine/ins8250.cpp
+./src/emu/machine/ins8250.h
 ./src/emu/machine/intelfsh.cpp
 ./src/emu/machine/intelfsh.h
 ./src/emu/machine/k033906.cpp
@@ -1307,6 +1334,8 @@ ADD_LIBRARY(
 ./src/emu/machine/timekpr.h
 ./src/emu/machine/tmp68301.cpp
 ./src/emu/machine/tmp68301.h
+./src/emu/machine/tms6100.cpp
+./src/emu/machine/tms6100.h
 ./src/emu/machine/upd4701.cpp
 ./src/emu/machine/upd4701.h
 ./src/emu/machine/wd33c93.cpp
@@ -1347,13 +1376,8 @@ ADD_LIBRARY(
 ./src/emu/audit.h
 ./src/emu/cheat.cpp
 ./src/emu/cheat.h
-./src/emu/clifront.cpp
-./src/emu/clifront.h
 ./src/emu/config.cpp
 ./src/emu/config.h
-./src/emu/cpuexec.cpp
-./src/emu/cpuexec.h
-./src/emu/cpuintrf.h
 ./src/emu/crsshair.cpp
 ./src/emu/crsshair.h
 ./src/emu/debug/debugcmd.cpp
@@ -1368,6 +1392,14 @@ ADD_LIBRARY(
 ./src/emu/debug/debughlp.h
 ./src/emu/debug/debugvw.cpp
 ./src/emu/debug/debugvw.h
+./src/emu/debug/dvmemory.cpp
+./src/emu/debug/dvmemory.h
+./src/emu/debug/dvtext.cpp
+./src/emu/debug/dvtext.h
+./src/emu/debug/dvdisasm.cpp
+./src/emu/debug/dvdisasm.h
+./src/emu/debug/dvstate.cpp
+./src/emu/debug/dvstate.h
 ./src/emu/debug/express.cpp
 ./src/emu/debug/express.h
 ./src/emu/debug/textbuf.cpp
@@ -1384,16 +1416,12 @@ ADD_LIBRARY(
 ./src/emu/drawgfx.cpp
 ./src/emu/drawgfx.h
 ./src/emu/drawgfxm.h
-./src/emu/driver.cpp
-./src/emu/driver.h
 ./src/emu/drivers/empty.cpp
 ./src/emu/drivers/xtal.h
 ./src/emu/eigccppc.h
 ./src/emu/eigccx86.h
 ./src/emu/eminline.h
 ./src/emu/emu.h
-./src/emu/emualloc.cpp
-./src/emu/emualloc.h
 ./src/emu/emucore.cpp
 ./src/emu/emucore.h
 ./src/emu/emuopts.cpp
@@ -1413,8 +1441,6 @@ ADD_LIBRARY(
 ./src/emu/input.h
 ./src/emu/inputseq.cpp
 ./src/emu/inputseq.h
-./src/emu/mame.cpp
-./src/emu/mame.h
 ./src/emu/mconfig.cpp
 ./src/emu/mconfig.h
 ./src/emu/memconv.h
@@ -1429,8 +1455,6 @@ ADD_LIBRARY(
 ./src/emu/output.h
 ./src/emu/profiler.cpp
 ./src/emu/profiler.h
-./src/emu/render.cpp
-./src/emu/render.h
 #./src/emu/rendersw.cpp
 ./src/emu/rendfont.cpp
 ./src/emu/rendfont.h
@@ -1442,21 +1466,17 @@ ADD_LIBRARY(
 ./src/emu/romload.h
 ./src/emu/sound.cpp
 ./src/emu/sound.h
-./src/emu/state.cpp
-./src/emu/state.h
 ./src/emu/streams.cpp
 ./src/emu/streams.h
 ./src/emu/tilemap.cpp
 ./src/emu/tilemap.h
-./src/emu/timer.cpp
-./src/emu/timer.h
 ./src/emu/tokenize.h
 ./src/emu/ui.cpp
 ./src/emu/ui.h
 ./src/emu/uigfx.cpp
 ./src/emu/uigfx.h
-./src/emu/uiinput.cpp
-./src/emu/uiinput.h
+./src/emu/uiimage.cpp
+./src/emu/uiimage.h
 ./src/emu/uimenu.cpp
 ./src/emu/uimenu.h
 ./src/emu/validity.cpp
@@ -1465,6 +1485,47 @@ ADD_LIBRARY(
 ./src/emu/video.h
 ./src/emu/watchdog.cpp
 ./src/emu/watchdog.h
+./src/emu/emualloc.cpp
+./src/emu/emualloc.h
+./src/emu/clifront.cpp
+./src/emu/clifront.h
+./src/emu/mame.cpp
+./src/emu/mame.h
+./src/emu/machine.cpp
+./src/emu/machine.h
+./src/emu/render.cpp
+./src/emu/render.h
+./src/version.cpp
+./src/emu/uiinput.cpp
+./src/emu/uiinput.h
+./src/emu/driver.cpp
+./src/emu/driver.h
+./src/emu/state.cpp
+./src/emu/state.h
+./src/emu/timer.cpp
+./src/emu/timer.h
+./src/emu/softlist.cpp
+./src/emu/softlist.h
+./src/emu/schedule.cpp
+./src/emu/schedule.h
+./src/emu/distate.cpp
+./src/emu/distate.h
+./src/emu/diexec.cpp
+./src/emu/diexec.h
+./src/emu/diimage.cpp
+./src/emu/diimage.h
+./src/emu/disound.cpp
+./src/emu/disound.h
+./src/emu/dimemory.cpp
+./src/emu/dimemory.h
+./src/emu/devcpu.cpp
+./src/emu/devcpu.h
+./src/emu/didisasm.cpp
+./src/emu/didisasm.h
+./src/emu/image.cpp
+./src/emu/image.h
+./src/emu/hashfile.cpp
+./src/emu/hashfile.h
 )
 
 SET_TARGET_PROPERTIES(emu PROPERTIES DEBUG_POSTFIX _d)
@@ -1475,6 +1536,13 @@ ADD_LIBRARY(
 
 ./src/emu/devcb.cpp
 ./src/emu/devcb.h
+./src/emu/devlegcy.cpp
+./src/emu/devlegcy.h
+./src/emu/devimage.cpp
+./src/emu/dinvram.cpp
+./src/emu/dinvram.h
+./src/emu/ioprocs.cpp
+./src/emu/ioprocs.h
 )
 
 SET_TARGET_PROPERTIES(emu_core PROPERTIES DEBUG_POSTFIX _d)
@@ -1505,12 +1573,16 @@ ADD_LIBRARY(
 ./src/lib/util/harddisk.h
 ./src/lib/util/huffman.cpp
 ./src/lib/util/huffman.h
+./src/lib/util/imageutl.cpp
+./src/lib/util/imageutl.h
 ./src/lib/util/jedparse.cpp
 ./src/lib/util/jedparse.h
 ./src/lib/util/md5.cpp
 ./src/lib/util/md5.h
 ./src/lib/util/options.cpp
 ./src/lib/util/options.h
+./src/lib/util/opresolv.cpp
+./src/lib/util/opresolv.h
 ./src/lib/util/palette.cpp
 ./src/lib/util/palette.h
 ./src/lib/util/mame_png.cpp
@@ -1529,6 +1601,8 @@ ADD_LIBRARY(
 ./src/lib/util/vbiparse.h
 ./src/lib/util/xmlfile.cpp
 ./src/lib/util/xmlfile.h
+./src/lib/util/zippath.cpp
+./src/lib/util/zippath.h
 )	
 
 SET_TARGET_PROPERTIES(utilities PROPERTIES DEBUG_POSTFIX _d)
@@ -1563,7 +1637,10 @@ ADD_LIBRARY(
 ./src/lib/zlib/deflate.c
 ./src/lib/zlib/deflate.h
 #./src/lib/zlib/example.c
-./src/lib/zlib/gzio.c
+./src/lib/zlib/gzlib.c
+./src/lib/zlib/gzclose.c
+./src/lib/zlib/gzread.c
+./src/lib/zlib/gzwrite.c
 ./src/lib/zlib/infback.c
 ./src/lib/zlib/inffast.c
 ./src/lib/zlib/inffast.h
@@ -2490,7 +2567,6 @@ ADD_LIBRARY(
 #./src/mame/machine/cx4fn.cpp
 #./src/mame/machine/cx4oam.cpp
 #./src/mame/machine/cx4ops.cpp
-./src/mame/machine/daikaiju.cpp
 ./src/mame/machine/dc.cpp
 ./src/mame/machine/dec0.cpp
 ./src/mame/machine/deco102.cpp
@@ -2603,6 +2679,7 @@ ADD_LIBRARY(
 ./src/mame/machine/segaic16.h
 ./src/mame/machine/segas24.cpp
 ./src/mame/machine/segas32.cpp
+./src/mame/machine/segacrp2.cpp
 ./src/mame/machine/seibuspi.cpp
 ./src/mame/machine/seicop.cpp
 ./src/mame/machine/seicop.h
@@ -2809,6 +2886,7 @@ ADD_LIBRARY(
 ./src/mame/drivers/cchance.cpp
 ./src/mame/drivers/cchasm.cpp
 ./src/mame/drivers/cclimber.cpp
+./src/mame/drivers/cdi.cpp
 ./src/mame/drivers/centiped.cpp
 ./src/mame/drivers/chaknpop.cpp
 ./src/mame/drivers/cham24.cpp
@@ -3087,7 +3165,6 @@ ADD_LIBRARY(
 ./src/mame/drivers/jailbrek.cpp
 ./src/mame/drivers/jalmah.cpp
 ./src/mame/drivers/jangou.cpp
-./src/mame/drivers/janshi.cpp
 ./src/mame/drivers/jantotsu.cpp
 ./src/mame/drivers/jchan.cpp
 ./src/mame/drivers/jedi.cpp
@@ -3221,7 +3298,6 @@ ADD_LIBRARY(
 ./src/mame/drivers/minivadr.cpp
 ./src/mame/drivers/mirage.cpp
 ./src/mame/drivers/mirax.cpp
-./src/mame/drivers/mirderby.cpp
 ./src/mame/drivers/missb2.cpp
 ./src/mame/drivers/missile.cpp
 ./src/mame/drivers/mitchell.cpp
@@ -3454,6 +3530,7 @@ ADD_LIBRARY(
 ./src/mame/drivers/seta2.cpp
 ./src/mame/drivers/sf.cpp
 ./src/mame/drivers/sfbonus.cpp
+./src/mame/drivers/sfcbox.cpp
 ./src/mame/drivers/sfkick.cpp
 ./src/mame/drivers/sg1000a.cpp
 ./src/mame/drivers/shadfrce.cpp
@@ -3468,6 +3545,7 @@ ADD_LIBRARY(
 ./src/mame/drivers/sidearms.cpp
 ./src/mame/drivers/sidepckt.cpp
 ./src/mame/drivers/sigmab52.cpp
+./src/mame/drivers/sigmab98.cpp
 ./src/mame/drivers/silkroad.cpp
 ./src/mame/drivers/simpl156.cpp
 ./src/mame/drivers/simpsons.cpp
@@ -4259,6 +4337,15 @@ SET_TARGET_PROPERTIES(drivers PROPERTIES DEBUG_POSTFIX _d)
 
 IF(WIN32)
 SET( OSD_OS_SPECIFIC_FILES 
+./src/osd/sdl/sdlmain.cpp
+)
+ELSE(WIN32)
+SET( OSD_OS_SPECIFIC_FILES 
+)
+ENDIF(WIN32)
+
+IF(WIN32)
+SET( OSD_FILE_OS_SPECIFIC_FILES 
 #./src/osd/sdl/sdlmisc_macosx.cpp
 #./src/osd/sdl/sdlmisc_os2.cpp
 #./src/osd/sdl/sdlmisc_unix.cpp
@@ -4272,11 +4359,9 @@ SET( OSD_OS_SPECIFIC_FILES
 #./src/osd/sdl/sdlsync_sdl.cpp
 #./src/osd/sdl/sdlsync_tc.cpp
 ./src/osd/sdl/sdlsync_win32.cpp
-
-./src/osd/sdl/sdlmain.cpp
 )
 ELSE(WIN32)
-SET( OSD_OS_SPECIFIC_FILES 
+SET( OSD_FILE_OS_SPECIFIC_FILES 
 ./src/osd/sdl/sdlmisc_unix.cpp
 ./src/osd/sdl/sdlos_unix.cpp
 ./src/osd/sdl/sdlsync_sdl.cpp
@@ -4324,8 +4409,6 @@ ADD_LIBRARY(
 ./src/osd/sdl/output.cpp
 ./src/osd/sdl/output.h
 ./src/osd/sdl/SDL1211_opengl.h
-./src/osd/sdl/sdldir.cpp
-./src/osd/sdl/sdlfile.cpp
 ./src/osd/sdl/SDLMain_tmpl.h
 ./src/osd/sdl/sdlos.h
 ./src/osd/sdl/sdlprefix.h
@@ -4339,7 +4422,6 @@ ADD_LIBRARY(
 #./src/osd/sdl/shader/glsl_plain_rgb32_dir.fsh.cpp
 #./src/osd/sdl/shader/glsl_plain_rgb32_lut.fsh.cpp
 ./src/osd/sdl/sound.cpp
-./src/osd/sdl/strconv.cpp
 ./src/osd/sdl/strconv.h
 #./src/osd/sdl/testkeys.cpp
 #./src/osd/sdl/texcopy.cpp
@@ -4396,6 +4478,18 @@ ${OSD_OS_SPECIFIC_FILES}
 )
 
 SET_TARGET_PROPERTIES(osd_sdl PROPERTIES DEBUG_POSTFIX _d)
+
+ADD_LIBRARY(
+	osd_sdl_file
+	STATIC
+
+./src/osd/sdl/sdldir.cpp
+./src/osd/sdl/sdlfile.cpp
+./src/osd/sdl/strconv.cpp
+
+${OSD_FILE_OS_SPECIFIC_FILES}
+)
+SET_TARGET_PROPERTIES(osd_sdl_file PROPERTIES DEBUG_POSTFIX _d)
 
 IF(WIN32)
 SET( MAMESDL_OS_SPECIFIC_FILES 
@@ -4493,6 +4587,12 @@ TARGET_LINK_LIBRARIES(
 	optimized
 	osd_sdl
 
+	debug
+	osd_sdl_file_d
+
+	optimized
+	osd_sdl_file
+
 	general
 	SDL
 	
@@ -4524,6 +4624,12 @@ TARGET_LINK_LIBRARIES(
 
 	optimized
 	libraries
+
+	debug
+	RakNetLibStaticDebug
+
+	optimized
+	RakNetLibStatic
 )
 ELSE(WIN32)
 TARGET_LINK_LIBRARIES(
@@ -4534,6 +4640,9 @@ TARGET_LINK_LIBRARIES(
 
 	general
 	z
+
+	general
+	RakNetStatic
 )
 ENDIF(WIN32)
 
@@ -4572,65 +4681,65 @@ SET_TARGET_PROPERTIES(png2bdc PROPERTIES DEBUG_POSTFIX _d)
 TARGET_LINK_LIBRARIES(
 	png2bdc
 
-	debug
-	emu_d
+	#debug
+	#emu_d
 	
-	optimized
-	emu
+	#optimized
+	#emu
 
-	debug
-	drivers_d
+	#debug
+	#drivers_d
 	
-	optimized
-	drivers
+	#optimized
+	#drivers
 
-	debug
-	machine_d
+	#debug
+	#machine_d
 	
-	optimized
-	machine
+	#optimized
+	#machine
 
-	debug
-	video_d
+	#debug
+	#video_d
 	
-	optimized
-	video
+	#optimized
+	#video
 
-	debug
-	audio_d
+	#debug
+	#audio_d
 	
-	optimized
-	audio
+	#optimized
+	#audio
 
-	debug
-	emu_cpu_d
+	#debug
+	#emu_cpu_d
 
-	optimized
-	emu_cpu
+	#optimized
+	#emu_cpu
 
-	debug
-	emu_video_d
+	#debug
+	#emu_video_d
 
-	optimized
-	emu_video
+	#optimized
+	#emu_video
 	
-	debug
-	emu_sound_d
+	#debug
+	#emu_sound_d
 
-	optimized
-	emu_sound
+	#optimized
+	#emu_sound
 	
-	debug
-	emu_machine_d
+	#debug
+	#emu_machine_d
 
-	optimized
-	emu_machine
+	#optimized
+	#emu_machine
 
-	debug
-	emu_core_d
+	#debug
+	#emu_core_d
 
-	optimized
-	emu_core
+	#optimized
+	#emu_core
 )
 
 TARGET_LINK_LIBRARIES(
@@ -4643,14 +4752,14 @@ TARGET_LINK_LIBRARIES(
 	utilities
 
 	debug
-	osd_sdl_d
+	osd_sdl_file_d
 
 	optimized
-	osd_sdl
+	osd_sdl_file
 
 	general
 	SDL
-	
+
 	debug
 	${BOOST_LIB_PREFIX_NAME}boost_thread-${BOOST_LIB_EXT_NAME_DEBUG}
 
@@ -4724,6 +4833,20 @@ ADD_EXECUTABLE(
 )
 SET_TARGET_PROPERTIES(file2str PROPERTIES DEBUG_POSTFIX _d)
 
+ADD_EXECUTABLE(
+	tmsmake
+
+	src/emu/cpu/tms57002/tmsmake.cpp
+)
+SET_TARGET_PROPERTIES(tmsmake PROPERTIES DEBUG_POSTFIX _d)
+
+ADD_EXECUTABLE(
+	m68kmake
+
+	src/emu/cpu/m68000/m68kmake.cpp
+)
+SET_TARGET_PROPERTIES(m68kmake PROPERTIES DEBUG_POSTFIX _d)
+
 #./src/build/file2str.cpp
 #./src/build/png2bdc.cpp
 #./src/build/verinfo.cpp
@@ -4741,5 +4864,3 @@ SET_TARGET_PROPERTIES(file2str PROPERTIES DEBUG_POSTFIX _d)
 #./src/tools/src2html.cpp
 #./src/tools/srcclean.cpp
 #./src/tools/unidasm.cpp
-
-

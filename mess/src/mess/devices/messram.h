@@ -1,0 +1,72 @@
+/*************************************************************************
+
+    MESS RAM device
+
+    Provides a configurable amount of RAM to drivers
+
+**************************************************************************/
+
+#ifndef __MESSRAM_H__
+#define __MESSRAM_H__
+
+
+/***************************************************************************
+    CONSTANTS
+***************************************************************************/
+
+#define RAM_DEFAULT_VALUE	0xcd
+
+
+/***************************************************************************
+    TYPE DEFINITIONS
+***************************************************************************/
+
+typedef struct _ram_config ram_config;
+struct _ram_config
+{
+	const char *default_size;
+	const char *extra_options;
+	UINT8 default_value;
+};
+
+
+/***************************************************************************
+    DEVICE CONFIGURATION MACROS
+***************************************************************************/
+
+DECLARE_LEGACY_DEVICE(MESSRAM, messram);
+
+#define MDRV_RAM_ADD(_tag) \
+	MDRV_DEVICE_ADD(_tag, MESSRAM, 0) \
+	MDRV_DEVICE_CONFIG_DATA32(ram_config, default_value, RAM_DEFAULT_VALUE)
+
+#define MDRV_RAM_REMOVE(_tag) \
+	MDRV_DEVICE_REMOVE(_tag)
+
+#define MDRV_RAM_MODIFY(_tag) \
+	MDRV_DEVICE_MODIFY(_tag)	\
+	MDRV_DEVICE_CONFIG_DATAPTR(ram_config, extra_options, NULL)
+
+#define MDRV_RAM_DEFAULT_SIZE(_default_size) \
+	MDRV_DEVICE_CONFIG_DATAPTR(ram_config, default_size, _default_size)
+
+#define MDRV_RAM_EXTRA_OPTIONS(_extra_options) \
+	MDRV_DEVICE_CONFIG_DATAPTR(ram_config, extra_options, _extra_options)
+
+#define MDRV_RAM_DEFAULT_VALUE(_default_value) \
+	MDRV_DEVICE_CONFIG_DATA32(ram_config, default_value, _default_value)
+
+
+/***************************************************************************
+    FUNCTION PROTOTYPES
+***************************************************************************/
+
+UINT32 messram_get_size(running_device *device);
+UINT8 *messram_get_ptr(running_device *device);
+#ifdef UNUSED_FUNCTION
+void messram_dump(running_device *device, const char *filename);
+const char *messram_string(char *buffer, UINT32 ram);
+#endif
+UINT32 messram_parse_string(const char *s);
+
+#endif /* __MESSRAM_H__ */

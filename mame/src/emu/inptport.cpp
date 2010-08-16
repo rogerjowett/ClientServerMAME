@@ -207,7 +207,7 @@ struct _device_field_info
 {
 	device_field_info *			next;				/* linked list of info for this port */
 	const input_field_config *	field;				/* pointer to the input field referenced */
-	running_device *		device;				/* device */
+	device_t *		device;				/* device */
 	UINT8						shift;				/* shift to apply to the final result */
 	input_port_value			oldval;				/* last value */
 };
@@ -223,6 +223,7 @@ struct _input_field_state
 	UINT8						impulse;			/* counter for impulse controls */
 	UINT8						last;				/* were we pressed last time? */
 	UINT8						joydir;				/* digital joystick direction index */
+    UINT8                       curstate;           /* Used by the server to figure out the port->digital status*/
 	char *						name;				/* overridden name */
 };
 
@@ -771,7 +772,7 @@ static const struct
 ***************************************************************************/
 
 /* core system management */
-static void input_port_exit(running_machine *machine);
+static void input_port_exit(running_machine &machine);
 
 /* port reading */
 static INT32 apply_analog_settings(INT32 current, analog_field_state *analog);
@@ -784,7 +785,7 @@ static device_field_info *init_field_device_info(const input_field_config *field
 static analog_field_state *init_field_analog_state(const input_field_config *field);
 
 /* once-per-frame updates */
-static void frame_update_callback(running_machine *machine);
+static void frame_update_callback(running_machine &machine);
 static void frame_update(running_machine *machine);
 static void frame_update_digital_joysticks(running_machine *machine);
 static void frame_update_analog_field(running_machine *machine, analog_field_state *analog);
@@ -893,7 +894,7 @@ INLINE const char *get_port_tag(const input_port_config *port, char *tempbuffer)
 
 	if (port->tag != NULL)
 		return port->tag;
-	for (curport = port->machine->portlist.first(); curport != NULL; curport = curport->next)
+	for (curport = port->machine->m_portlist.first(); curport != NULL; curport = curport->next())
 	{
 		if (curport == port)
 			break;
@@ -990,8 +991,8 @@ time_t input_port_init(running_machine *machine, const input_port_token *tokens)
 	//portdata = machine->input_port_data;
 
 	/* add an exit callback and a frame callback */
-	add_exit_callback(machine, input_port_exit);
-	add_frame_callback(machine, frame_update_callback);
+	machine->add_notifier(MACHINE_NOTIFY_EXIT, input_port_exit);
+	machine->add_notifier(MACHINE_NOTIFY_FRAME, frame_update_callback);
 
 	/* initialize the default port info from the OSD */
 	init_port_types(machine);
@@ -999,7 +1000,7 @@ time_t input_port_init(running_machine *machine, const input_port_token *tokens)
 	/* if we have a token list, proceed */
 	if (tokens != NULL)
 	{
-		input_port_list_init(machine->portlist, tokens, errorbuf, sizeof(errorbuf), TRUE);
+		input_port_list_init(machine->m_portlist, tokens, errorbuf, sizeof(errorbuf), TRUE);
 		if (errorbuf[0] != 0)
 			mame_printf_error("Input port errors:\n%s", errorbuf);
 		init_port_state(machine);
@@ -1021,11 +1022,11 @@ time_t input_port_init(running_machine *machine, const input_port_token *tokens)
     we clean up and close our files
 -------------------------------------------------*/
 
-static void input_port_exit(running_machine *machine)
+static void input_port_exit(running_machine &machine)
 {
 	/* close any playback or recording files */
-	playback_end(machine, NULL);
-	record_end(machine, NULL);
+	playback_end(&machine, NULL);
+	record_end(&machine, NULL);
 }
 
 
@@ -1113,11 +1114,24 @@ const input_seq *input_field_seq(const input_field_config *field, input_seq_type
 		return portseq;
 
 	/* select either the live or config state depending on whether we have live state */
-	portseq = (field->state == NULL) ? &field->seq[seqtype] : &field->state->seq[seqtype];
+	portseq = NULL;
+    if(field->state == NULL)
+    {
+        //cout << "STATE DOES NOT EXIST, USING FIELD BASE\n";
+        portseq = &field->seq[seqtype];
+    }
+    else
+    {
+        //cout << "USING STATE\n";
+        portseq = &field->state->seq[seqtype];
+    }
 
 	/* if the portseq is the special default code, return the expanded default value */
 	if (input_seq_get_1(portseq) == SEQCODE_DEFAULT)
+    {
+        //cout << "SPECIAL DEFAULT CODE\n";
 		return input_type_seq(field->port->machine, field->type, field->player, seqtype);
+    }
 
 	/* otherwise, return the sequence as-is */
 	return portseq;
@@ -1443,6 +1457,7 @@ const input_seq *input_type_seq(running_machine *machine, int type, int player, 
 	/* if no machine, fall back to brute force searching */
 	else
 	{
+        throw std::runtime_error("NOT IMPLEMENTED IN ClientServerMAME\n");
 		int typenum;
 		for (typenum = 0; typenum < ARRAY_LENGTH(core_types); typenum++)
 			if (core_types[typenum].type == type && core_types[typenum].player == player)
@@ -1476,13 +1491,6 @@ void input_type_set_seq(running_machine *machine, int type, int player, input_se
 
 int input_type_pressed(running_machine *machine, int type, int player)
 {
-	static int count=0;
-	count++;
-	if(count%1237==0)
-	{
-	printf("Checking if type %d for player %d is pressed.\n",type,player);
-	}
-
 	return input_seq_pressed(machine, input_type_seq(machine, type, player, SEQ_TYPE_STANDARD));
 }
 
@@ -1533,7 +1541,7 @@ input_port_value input_port_read_direct(const input_port_config *port)
 	/* update VBLANK bits */
 	if (port->state->vblank != 0)
 	{
-		if (video_screen_get_vblank(port->machine->primary_screen))
+		if (port->machine->primary_screen->vblank())
 			result |= port->state->vblank;
 		else
 			result &= ~port->state->vblank;
@@ -1570,13 +1578,6 @@ input_port_value input_port_read_direct(const input_port_config *port)
 			/* insert into the port */
 			result = (result & ~analog->field->mask) | ((value << analog->shift) & analog->field->mask);
 		}
-
-	static int count=0;
-	count++;
-	if(count%1237==0)
-	{
-	//printf("Reading port from player %d (%s): %d\n",port->fieldlist->player,port->fieldlist->name,result);
-	}
 
 	return result;
 }
@@ -1622,7 +1623,7 @@ int input_port_get_crosshair_position(running_machine *machine, int player, floa
 	int gotx = FALSE, goty = FALSE;
 
 	/* read all the lightgun values */
-	for (port = machine->portlist.first(); port != NULL; port = port->next)
+	for (port = machine->m_portlist.first(); port != NULL; port = port->next())
 		for (field = port->fieldlist; field != NULL; field = field->next)
 			if (field->player == player && field->crossaxis != CROSSHAIR_AXIS_NONE)
 				if (input_condition_true(machine, &field->condition))
@@ -1691,25 +1692,22 @@ void input_port_update_defaults(running_machine *machine)
 		const input_port_config *port;
 
 		/* loop over all input ports */
-		for (port = machine->portlist.first(); port != NULL; port = port->next)
+		for (port = machine->m_portlist.first(); port != NULL; port = port->next())
 		{
 			const input_field_config *field;
-			bool first=true;
+
+				/* only clear on the first pass */
+			if (loopnum == 0)
+					port->state->defvalue = 0;
 
 			/* first compute the default value for the entire port */
 			for (field = port->fieldlist; field != NULL; field = field->next)
-			{
-				/* only clear on the first pass */
-				if (first && loopnum == 0)
-				{
-					first=false;
-					port->state->defvalue = 0;
-				}
+            {
 				if (input_condition_true(machine, &field->condition))
-				{
+                {
 					port->state->defvalue = (port->state->defvalue & ~field->mask) | (field->state->value & field->mask);
-				}
-			}
+                }
+            }
 		}
 	}
 }
@@ -1722,8 +1720,6 @@ void input_port_update_defaults(running_machine *machine)
 
 static INT32 apply_analog_settings(INT32 value, analog_field_state *analog)
 {
-	printf("Reading analog setting\n");
-
 	/* apply the min/max and then the sensitivity */
 	value = apply_analog_min_max(analog, value);
 	value = APPLY_SENSITIVITY(value, analog->sensitivity);
@@ -2044,13 +2040,13 @@ static astring *get_keyboard_key_name(const input_field_config *field)
 
 static void init_port_state(running_machine *machine)
 {
-	const char *joystick_map_default = options_get_string(mame_options(), OPTION_JOYSTICK_MAP);
+	const char *joystick_map_default = options_get_string(machine->options(), OPTION_JOYSTICK_MAP);
 	input_port_private *portdata = machine->input_port_data;
 	const input_field_config *field;
 	const input_port_config *port;
 
 	/* allocate live structures to mirror the configuration */
-	for (port = machine->portlist.first(); port != NULL; port = port->next)
+	for (port = machine->m_portlist.first(); port != NULL; port = port->next())
 	{
 		analog_field_state **analogstatetail;
 		device_field_info **readdevicetail;
@@ -2061,47 +2057,6 @@ static void init_port_state(running_machine *machine)
 		portstate = auto_alloc_clear(machine, input_port_state);
 		((input_port_config *)port)->state = portstate;
 		((input_port_config *)port)->machine = machine;
-
-        /*
-		if(netServer && port->fieldlist->player != 1)
-		{
-			netServer->createMemoryBlock(
-			(unsigned char*)&(((input_port_config *)port)->state->defvalue),
-			sizeof(input_port_value)
-			);
-			netServer->createMemoryBlock(
-			(unsigned char*)&(((input_port_config *)port)->state->digital),
-			sizeof(input_port_value)
-			);
-			netServer->createMemoryBlock(
-			(unsigned char*)&(((input_port_config *)port)->state->vblank),
-			sizeof(input_port_value)
-			);
-			netServer->createMemoryBlock(
-			(unsigned char*)&(((input_port_config *)port)->state->outputvalue),
-			sizeof(input_port_value)
-			);
-		}
-		if(netClient && port->fieldlist->player != 1)
-		{
-			netClient->createMemoryBlock(
-			(unsigned char*)&(((input_port_config *)port)->state->defvalue),
-			sizeof(input_port_value)
-			);
-			netClient->createMemoryBlock(
-			(unsigned char*)&(((input_port_config *)port)->state->digital),
-			sizeof(input_port_value)
-			);
-			netClient->createMemoryBlock(
-			(unsigned char*)&(((input_port_config *)port)->state->vblank),
-			sizeof(input_port_value)
-			);
-			netClient->createMemoryBlock(
-			(unsigned char*)&(((input_port_config *)port)->state->outputvalue),
-			sizeof(input_port_value)
-			);
-		}
-        */
 
 		/* start with tail pointers to all the data */
 		analogstatetail = &portstate->analoglist;
@@ -2128,48 +2083,12 @@ static void init_port_state(running_machine *machine)
 			{
 				*analogstatetail = fieldstate->analog = init_field_analog_state(field);
 				analogstatetail = &(*analogstatetail)->next;
-
-                /*
-				if(netServer && port->fieldlist->player != 1) 
-				{
-					netServer->createMemoryBlock(
-					((unsigned char*)fieldstate->analog)+sizeof(analog_field_state *)+sizeof(const input_field_config *),
-					sizeof(analog_field_state)-(sizeof(analog_field_state *)+sizeof(const input_field_config *))
-					);
-				}
-				if(netClient && port->fieldlist->player != 1) 
-				{
-					netClient->createMemoryBlock(
-					((unsigned char*)fieldstate->analog)+sizeof(analog_field_state *)+sizeof(const input_field_config *),
-					sizeof(analog_field_state)-(sizeof(analog_field_state *)+sizeof(const input_field_config *))
-					);
-				}
-                */
-
 			}
 
 			/* if this is a digital joystick field, make a note of it */
 			if (field->type >= __ipt_digital_joystick_start && field->type <= __ipt_digital_joystick_end)
 			{
 				fieldstate->joystick = &portdata->joystick_info[field->player][(field->type - __ipt_digital_joystick_start) / 4];
-
-                /*
-				if(netServer && port->fieldlist->player != 1) 
-				{
-					netServer->createMemoryBlock(
-					((unsigned char*)fieldstate->joystick)+sizeof(const input_field_config *)*4,
-					sizeof(digital_joystick_state)-(sizeof(const input_field_config *)*4)
-					);
-				}
-				if(netClient && port->fieldlist->player != 1) 
-				{
-					netClient->createMemoryBlock(
-					((unsigned char*)fieldstate->joystick)+sizeof(const input_field_config *)*4,
-					sizeof(digital_joystick_state)-(sizeof(const input_field_config *)*4)
-					);
-				}
-                */
-
 				fieldstate->joydir = (field->type - __ipt_digital_joystick_start) % 4;
 				fieldstate->joystick->field[fieldstate->joydir] = field;
 				fieldstate->joystick->inuse = TRUE;
@@ -2203,18 +2122,18 @@ static void init_port_state(running_machine *machine)
 	}
 
 	/* handle autoselection of devices */
-	init_autoselect_devices(machine->portlist, IPT_PADDLE,      IPT_PADDLE_V,     0,              OPTION_PADDLE_DEVICE,     "paddle");
-	init_autoselect_devices(machine->portlist, IPT_AD_STICK_X,  IPT_AD_STICK_Y,   IPT_AD_STICK_Z, OPTION_ADSTICK_DEVICE,    "analog joystick");
-	init_autoselect_devices(machine->portlist, IPT_LIGHTGUN_X,  IPT_LIGHTGUN_Y,   0,              OPTION_LIGHTGUN_DEVICE,   "lightgun");
-	init_autoselect_devices(machine->portlist, IPT_PEDAL,       IPT_PEDAL2,       IPT_PEDAL3,     OPTION_PEDAL_DEVICE,      "pedal");
-	init_autoselect_devices(machine->portlist, IPT_DIAL,        IPT_DIAL_V,       0,              OPTION_DIAL_DEVICE,       "dial");
-	init_autoselect_devices(machine->portlist, IPT_TRACKBALL_X, IPT_TRACKBALL_Y,  0,              OPTION_TRACKBALL_DEVICE,  "trackball");
-	init_autoselect_devices(machine->portlist, IPT_POSITIONAL,  IPT_POSITIONAL_V, 0,              OPTION_POSITIONAL_DEVICE, "positional");
-	init_autoselect_devices(machine->portlist, IPT_MOUSE_X,     IPT_MOUSE_Y,      0,              OPTION_MOUSE_DEVICE,      "mouse");
+	init_autoselect_devices(machine->m_portlist, IPT_PADDLE,      IPT_PADDLE_V,     0,              OPTION_PADDLE_DEVICE,     "paddle");
+	init_autoselect_devices(machine->m_portlist, IPT_AD_STICK_X,  IPT_AD_STICK_Y,   IPT_AD_STICK_Z, OPTION_ADSTICK_DEVICE,    "analog joystick");
+	init_autoselect_devices(machine->m_portlist, IPT_LIGHTGUN_X,  IPT_LIGHTGUN_Y,   0,              OPTION_LIGHTGUN_DEVICE,   "lightgun");
+	init_autoselect_devices(machine->m_portlist, IPT_PEDAL,       IPT_PEDAL2,       IPT_PEDAL3,     OPTION_PEDAL_DEVICE,      "pedal");
+	init_autoselect_devices(machine->m_portlist, IPT_DIAL,        IPT_DIAL_V,       0,              OPTION_DIAL_DEVICE,       "dial");
+	init_autoselect_devices(machine->m_portlist, IPT_TRACKBALL_X, IPT_TRACKBALL_Y,  0,              OPTION_TRACKBALL_DEVICE,  "trackball");
+	init_autoselect_devices(machine->m_portlist, IPT_POSITIONAL,  IPT_POSITIONAL_V, 0,              OPTION_POSITIONAL_DEVICE, "positional");
+	init_autoselect_devices(machine->m_portlist, IPT_MOUSE_X,     IPT_MOUSE_Y,      0,              OPTION_MOUSE_DEVICE,      "mouse");
 
 	/* look for 4-way joysticks and change the default map if we find any */
 	if (joystick_map_default[0] == 0 || strcmp(joystick_map_default, "auto") == 0)
-		for (port = machine->portlist.first(); port != NULL; port = port->next)
+		for (port = machine->m_portlist.first(); port != NULL; port = port->next())
 			for (field = port->fieldlist; field != NULL; field = field->next)
 				if (field->state->joystick != NULL && field->way == 4)
 				{
@@ -2268,7 +2187,7 @@ static void init_autoselect_devices(const ioport_list &portlist, int type1, int 
 
 	/* only scan the list if we haven't already enabled this class of control */
 	if (portlist.first() != NULL && !input_device_class_enabled(portlist.first()->machine, autoenable))
-		for (port = portlist.first(); port != NULL; port = port->next)
+		for (port = portlist.first(); port != NULL; port = port->next())
 			for (field = port->fieldlist; field != NULL; field = field->next)
 
 				/* if this port type is in use, apply the autoselect criteria */
@@ -2304,7 +2223,7 @@ static device_field_info *init_field_device_info(const input_field_config *field
 	if (device_name != NULL)
 		info->device = field->port->machine->device(device_name);
 	else
-		info->device = (running_device *) info;
+		info->device = (device_t *) info;
 
 	info->oldval = field->defvalue >> info->shift;
 	return info;
@@ -2490,14 +2409,14 @@ static analog_field_state *init_field_analog_state(const input_field_config *fie
     only if we are not paused
 -------------------------------------------------*/
 
-static void frame_update_callback(running_machine *machine)
+static void frame_update_callback(running_machine &machine)
 {
 	/* if we're paused, don't do anything */
-	if (mame_is_paused(machine))
+	if (machine.paused())
 		return;
 
 	/* otherwise, use the common code */
-	frame_update(machine);
+	frame_update(&machine);
 }
 
 static key_buffer *get_buffer(running_machine *machine)
@@ -2574,6 +2493,8 @@ std::map<attotime,MemoryBlock> clientInputDatabase;
 
 string serverInputDatabases[MAX_PLAYERS];
 
+std::map<const input_field_config *,const input_field_config *> playerInputFieldMap[MAX_PLAYERS];
+
 static void frame_update(running_machine *machine)
 {
 	input_port_private *portdata = machine->input_port_data;
@@ -2585,6 +2506,85 @@ static void frame_update(running_machine *machine)
 	INT32 mouse_target_x;
 	INT32 mouse_target_y;
 	int mouse_button;
+
+    if(playerInputFieldMap[0].size()==0)
+    {
+        //Initialize input map
+	    for (port = machine->m_portlist.first(); port != NULL; port = port->next())
+	    {
+		    const input_field_config *field;
+		    for (field = port->fieldlist; field != NULL; field = field->next)
+            {
+                if(field->player!=0)
+                {
+                    //This mapping maps player 0 inputs to the other players
+                    continue;
+                }
+                else
+                {
+                    //Search for a field that is the same as the current field
+                    //but for another player
+	                for(
+                        const input_port_config *newPort = machine->m_portlist.first(); 
+                        newPort != NULL; 
+                        newPort = newPort->next()
+                        )
+	                {
+		                for (
+                            const input_field_config* newField = newPort->fieldlist; 
+                            newField != NULL; 
+                            newField = newField->next
+                            )
+                        {
+                            
+                            int inputcount=1;
+                            //Special cases,
+                            //Assume that coin inputs and start inputs are contiguous
+                            if(field->type==IPT_START1)
+                            {
+                                inputcount=8;
+                            }
+                            if(field->type==IPT_COIN1)
+                            {
+                                inputcount=12;
+                            }
+                            if(field->type==IPT_SERVICE1)
+                            {
+                                inputcount=4;
+                            }
+                            if(field->type==IPT_TILT1)
+                            {
+                                inputcount=4;
+                            }
+
+                            //This for loop tries to map START_1 to START_2,
+                            //even though both are considered "player 1"
+                            for(int a=0;a<inputcount;a++)
+                            {
+                                UINT32 tmpinputtype = field->type + a;
+                                if(tmpinputtype==newField->type)
+                                {
+                                    //The current field for player 0 is the newField for
+                                    //player: newField->player
+                                    playerInputFieldMap[newField->player+a][field] = newField;
+                                    if(field->name && newField->name)
+                                    {
+                                        cout << field->name << " on player 0 maps to "
+                                            << newField->name << " on player " << int(newField->player)+a << "\n";
+                                    }
+                                    else
+                                    {
+                                        cout << field->type << " on player 0 maps to "
+                                            << newField->type << " on player " << int(newField->player)+a << "\n";
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
 profiler_mark_start(PROFILER_INPUT);
 
@@ -2599,44 +2599,28 @@ profiler_mark_start(PROFILER_INPUT);
 	/* update the digital joysticks */
 	frame_update_digital_joysticks(machine);
 
-	/* compute default values for all the ports */
-	input_port_update_defaults(machine);
-
-	/* perform the mouse hit test */
-	mouse_target = ui_input_find_mouse(machine, &mouse_target_x, &mouse_target_y, &mouse_button);
-	if (mouse_button && mouse_target)
-	{
-		const char *tag = NULL;
-		input_port_value mask;
-		if (render_target_map_point_input(mouse_target, mouse_target_x, mouse_target_y, &tag, &mask, NULL, NULL))
-			mouse_field = input_field_by_tag_and_mask(machine->portlist, tag, mask);
-	}
-
 	/* loop over all input ports */
-	for (port = machine->portlist.first(); port != NULL; port = port->next)
+    //cout << "DIGITAL PORTS: ";
+	for (port = machine->m_portlist.first(); port != NULL; port = port->next())
 	{
 		const input_field_config *field;
 		device_field_info *device_field;
 		input_port_value newvalue;
-		bool first=true;
 
-		/* now loop back and modify based on the inputs */
-		for (field = port->fieldlist; field != NULL; field = field->next)
-		{
-			if(first)
-			{
-			first=false;
 			/* start with 0 values for the digital and VBLANK bits */
 			port->state->digital = 0;
 			port->state->vblank = 0;
-			}
+
+		/* now loop back and modify based on the inputs */
+		for (field = port->fieldlist; field != NULL; field = field->next)
+        {
 			if (input_condition_true(port->machine, &field->condition))
 			{
 				/* accumulate VBLANK bits */
 				if (field->type == IPT_VBLANK)
 					port->state->vblank ^= field->mask;
 
-				/* handle analog inputs */
+				/* handle analog inputs (done up above now) */
 				else if (field->state->analog != NULL)
 					frame_update_analog_field(machine, field->state->analog);
 
@@ -2644,70 +2628,13 @@ profiler_mark_start(PROFILER_INPUT);
 				else if (!ui_visible && frame_get_digital_field_state(field, field == mouse_field))
 					port->state->digital |= field->mask;
 			}
-		}
+        }
+        //cout << " " << port->state->digital;
 
 		/* hook for MESS's natural keyboard support */
 		input_port_update_hook(machine, port, &port->state->digital);
-
-		/* handle playback/record */
-		playback_port(port);
-		record_port(port);
-
-		/* call device line changed handlers */
-		newvalue = input_port_read_direct(port);
-		for (device_field = port->state->writedevicelist; device_field; device_field = device_field->next)
-			if (device_field->field->type != IPT_OUTPUT && input_condition_true(port->machine, &device_field->field->condition))
-			{
-				input_port_value newval = (newvalue & device_field->field->mask) >> device_field->shift;
-
-				/* if the bits have  changed, call the handler */
-				if (device_field->oldval != newval)
-				{
-					(*device_field->field->write_line_device)(device_field->device, newval);
-
-					device_field->oldval = newval;
-				}
-			}
-	}
-
-    // comment to see performance
-	if(netClient && netClient->hasConnection())
-	{
-		//Send player 1 (0-based) data to the server
-		static char tmpbuffer[1024*1024*1];
-		int bytesUsed = serializePlayerInputToBuffer(machine,tmpbuffer);
-		//cout << "USED " << bytesUsed << " BYTES OF TMPBUFFER\n";
-		if(bytesUsed >= 1024*1024*1)
-		{
-			cout << "OOPS! Blew through tmpbuffer!\n";
-		}
-		netClient->sendString(string(tmpbuffer,bytesUsed));
-		//cout << "CALLING SYNC\n";
-
-        while(true)
-        {
-            //cout << "CHECKING FOR " << curtime.seconds << '.' << curtime.attoseconds << endl;
-            if(clientInputDatabase.find(curtime)!=clientInputDatabase.end())
-            {
-                //cout << "FOUND INPUT FROM SERVER\n";
-                deserializePlayerInputFromBuffer(machine,clientInputDatabase[curtime].data,clientInputDatabase[curtime].size,-1);
-                clientInputDatabase.erase(clientInputDatabase.find(curtime));
-                break;
-            }
-            //cout << "FAILED AT TIME:" << curtime.seconds << '.' << curtime.attoseconds << endl;
-            throw emu_fatalerror("FAILED TO FIND INPUT PACKET!");
-            //cout << "WAITING FOR INPUT FROM SERVER FOR TIME: " << curtime.seconds << " " << curtime.attoseconds << "\n";
-            /*
-            if(netClient->syncAndUpdate()) 
-            {
-                printf("EXECUTING POST LOAD\n");
-                fflush(stdout);
-                doPostLoad(machine);
-            }
-            */
-        }
     }
-    //
+    //cout << endl;
 
 	if(netServer)
 	{
@@ -2731,7 +2658,149 @@ profiler_mark_start(PROFILER_INPUT);
                 deserializePlayerInputFromBuffer(machine,(const unsigned char *)serverInputDatabases[a+1].c_str(),serverInputDatabases[a+1].length(),netServer->getClientID(a));
             }
 		}
+
+	    /* loop over all input ports */
+        //cout << "ADJUSTED DIGITAL PORTS: ";
+	    for (port = machine->m_portlist.first(); port != NULL; port = port->next())
+	    {
+		    const input_field_config *field;
+		    device_field_info *device_field;
+		    input_port_value newvalue;
+
+			/* start with 0 values for the digital and VBLANK bits */
+			port->state->digital = 0;
+
+		    /* now loop back and modify based on the inputs */
+		    for (field = port->fieldlist; field != NULL; field = field->next)
+            {
+			    if (input_condition_true(port->machine, &field->condition))
+			    {
+				    /* accumulate VBLANK bits */
+				    if (field->type == IPT_VBLANK)
+                    {
+                    }
+
+				    /* handle analog inputs (done up above now) */
+				    else if (field->state->analog != NULL)
+                    {
+                    }
+
+				    /* handle non-analog types, but only when the UI isn't visible */
+                    else if (!ui_visible && field->state->curstate)
+					    port->state->digital |= field->mask;
+			    }
+            }
+            //cout << " " << port->state->digital;
+        }
+        //cout << endl;
+    }
+
+    // comment to see performance
+	if(netClient)
+	{
+		//Send player 1 data to the server
+		static char tmpbuffer[1024*1024*1];
+		int bytesUsed = serializePlayerInputToBuffer(machine,tmpbuffer);
+		//cout << "USED " << bytesUsed << " BYTES OF TMPBUFFER\n";
+		if(bytesUsed >= 1024*1024*1)
+		{
+			cout << "OOPS! Blew through tmpbuffer!\n";
+		}
+		netClient->sendString(string(tmpbuffer,bytesUsed));
+		//cout << "CALLING SYNC\n";
+
+        //while(true)
+        {
+            //cout << "CHECKING FOR " << curtime.seconds << '.' << curtime.attoseconds << endl;
+            if(clientInputDatabase.find(curtime)!=clientInputDatabase.end())
+            {
+                //cout << "FOUND INPUT FROM SERVER\n";
+                deserializePlayerInputFromBuffer(machine,clientInputDatabase[curtime].data,clientInputDatabase[curtime].size,-1);
+                clientInputDatabase.erase(clientInputDatabase.find(curtime));
+                //break;
+            }
+            else
+            {
+            //cout << "FAILED AT TIME:" << curtime.seconds << '.' << curtime.attoseconds << endl;
+            //throw emu_fatalerror("FAILED TO FIND INPUT PACKET!");
+            cout << "FAILED TO FIND INPUT PACKET!\n";
+            //cout << "WAITING FOR INPUT FROM SERVER FOR TIME: " << curtime.seconds << " " << curtime.attoseconds << "\n";
+            /*
+            if(netClient->syncAndUpdate()) 
+            {
+                printf("EXECUTING POST LOAD\n");
+                fflush(stdout);
+                doPostLoad(machine);
+            }
+            */
+            }
+        }
+    }
+    //
+
+    if(netClient==NULL)
+    {
+        //JJG: Don't run this if you are the client, this comes from the server packet
+	    /* compute default values for all the ports */
+	    input_port_update_defaults(machine);
+    }
+
+    if(netServer)
+    {
+
+		//Send all player data to the server
+		static char tmpbuffer[1024*1024*1];
+		int bytesUsed = serializePlayerInputToBuffer(machine,tmpbuffer);
+		//cout << "USED " << bytesUsed << " BYTES OF TMPBUFFER\n";
+		if(bytesUsed >= 1024*1024*1)
+		{
+			cout << "OOPS! Blew through tmpbuffer!\n";
+		}
+        static int counter=0;
+        //cout << counter << ") ADDING BLOCK FOR: " << curtime.seconds << " " << curtime.attoseconds << endl;
+        counter++;
+		netServer->addConstBlock((unsigned char*)tmpbuffer,bytesUsed);
+		//cout << "CALLING SYNC\n";
+    }
+
+	/* perform the mouse hit test */
+	mouse_target = ui_input_find_mouse(machine, &mouse_target_x, &mouse_target_y, &mouse_button);
+	if (mouse_button && mouse_target)
+	{
+		const char *tag = NULL;
+		input_port_value mask;
+		if (render_target_map_point_input(mouse_target, mouse_target_x, mouse_target_y, &tag, &mask, NULL, NULL))
+			mouse_field = input_field_by_tag_and_mask(machine->m_portlist, tag, mask);
 	}
+
+	/* loop over all input ports */
+	for (port = machine->m_portlist.first(); port != NULL; port = port->next())
+	{
+		const input_field_config *field;
+		device_field_info *device_field;
+		input_port_value newvalue;
+
+		/* handle playback/record */
+		playback_port(port);
+		record_port(port);
+
+		/* call device line changed handlers */
+		newvalue = input_port_read_direct(port);
+		for (device_field = port->state->writedevicelist; device_field; device_field = device_field->next)
+			if (device_field->field->type != IPT_OUTPUT && input_condition_true(port->machine, &device_field->field->condition))
+			{
+				input_port_value newval = (newvalue & device_field->field->mask) >> device_field->shift;
+
+				/* if the bits have  changed, call the handler */
+				if (device_field->oldval != newval)
+				{
+					(*device_field->field->write_line_device)(device_field->device, newval);
+
+					device_field->oldval = newval;
+				}
+			}
+	}
+
 
 #if 0
 	for(int a=int(inputArray.size())-1;a>=0;a--)
@@ -2760,23 +2829,6 @@ profiler_mark_start(PROFILER_INPUT);
 		}
 	}
 #endif
-
-    if(netServer)
-    {
-		//Send all player data to the server
-		static char tmpbuffer[1024*1024*1];
-		int bytesUsed = serializePlayerInputToBuffer(machine,tmpbuffer);
-		//cout << "USED " << bytesUsed << " BYTES OF TMPBUFFER\n";
-		if(bytesUsed >= 1024*1024*1)
-		{
-			cout << "OOPS! Blew through tmpbuffer!\n";
-		}
-        static int counter=0;
-        //cout << counter << ") ADDING BLOCK FOR: " << curtime.seconds << " " << curtime.attoseconds << endl;
-        counter++;
-		netServer->addConstBlock((unsigned char*)tmpbuffer,bytesUsed);
-		//cout << "CALLING SYNC\n";
-    }
 
 #if 0
     static char tmpbuf[1024*1024*1];
@@ -2861,7 +2913,6 @@ static void frame_update_digital_joysticks(running_machine *machine)
 
 	/* loop over all the joysticks */
 	for (player = 0; player < MAX_PLAYERS; player++)
-	{
 		for (joyindex = 0; joyindex < DIGITAL_JOYSTICKS_PER_PLAYER; joyindex++)
 		{
 			digital_joystick_state *joystick = &portdata->joystick_info[player][joyindex];
@@ -2931,7 +2982,6 @@ static void frame_update_digital_joysticks(running_machine *machine)
 			}
 		}
 	}
-}
 
 
 /*-------------------------------------------------
@@ -3085,8 +3135,6 @@ static void frame_update_analog_field(running_machine *machine, analog_field_sta
 
 static int frame_get_digital_field_state(const input_field_config *field, int mouse_down)
 {
-	//printf("GETTING DIGITAL FIELD STATE FOR PLAYER %d AND TYPE %d (NAME %s)\n",field->player,field->type,field->name);
-
 	int curstate = mouse_down || input_seq_pressed(field->port->machine, input_field_seq(field, SEQ_TYPE_STANDARD));
 	int changed = FALSE;
 
@@ -3098,7 +3146,10 @@ static int frame_get_digital_field_state(const input_field_config *field, int mo
 	}
 
 	if (field->type == IPT_KEYBOARD && ui_get_use_natural_keyboard(field->port->machine))
+    {
+        field->state->curstate = FALSE;
 		return FALSE;
+    }
 
 	/* if this is a switch-down event, handle impulse and toggle */
 	if (changed && curstate)
@@ -3143,11 +3194,13 @@ static int frame_get_digital_field_state(const input_field_config *field, int mo
 	}
 
 	/* skip locked-out coin inputs */
-	if (curstate && field->type >= IPT_COIN1 && field->type <= IPT_COIN8 && coin_lockout_get_state(field->port->machine, field->type - IPT_COIN1) && options_get_bool(mame_options(), OPTION_COIN_LOCKOUT))
+	if (curstate && field->type >= IPT_COIN1 && field->type <= IPT_COIN12 && coin_lockout_get_state(field->port->machine, field->type - IPT_COIN1) && options_get_bool(mame_options(), OPTION_COIN_LOCKOUT))
 	{
 		ui_popup_time(3, "Coinlock disabled %s.", input_field_name(field));
+        field->state->curstate = FALSE;
 		return FALSE;
 	}
+    field->state->curstate = curstate;
 	return curstate;
 }
 
@@ -3817,7 +3870,7 @@ static void port_config_detokenize(ioport_list &portlist, const input_port_token
 -------------------------------------------------*/
 
 input_port_config::input_port_config(const char *_tag)
-	: next(NULL),
+	: m_next(NULL),
 	  tag(_tag),
 	  fieldlist(NULL),
 	  state(NULL),
@@ -4370,7 +4423,7 @@ static int load_game_config(running_machine *machine, xml_data_node *portnode, i
 	defvalue = xml_get_attribute_int(portnode, "defvalue", 0);
 
 	/* find the port we want; if no tag, search them all */
-	for (port = machine->portlist.first(); port != NULL; port = port->next)
+	for (port = machine->m_portlist.first(); port != NULL; port = port->next())
 		if (tag == NULL || strcmp(get_port_tag(port, tempbuffer), tag) == 0)
 			for (field = port->fieldlist; field != NULL; field = field->next)
 
@@ -4532,7 +4585,7 @@ static void save_game_inputs(running_machine *machine, xml_data_node *parentnode
 	const input_port_config *port;
 
 	/* iterate over ports */
-	for (port = machine->portlist.first(); port != NULL; port = port->next)
+	for (port = machine->m_portlist.first(); port != NULL; port = port->next())
 		for (field = port->fieldlist; field != NULL; field = field->next)
 			if (save_this_input_field_type(field->type))
 			{
@@ -4690,7 +4743,7 @@ static UINT64 playback_read_uint64(running_machine *machine)
 
 static time_t playback_init(running_machine *machine)
 {
-	const char *filename = options_get_string(mame_options(), OPTION_PLAYBACK);
+	const char *filename = options_get_string(machine->options(), OPTION_PLAYBACK);
 	input_port_private *portdata = machine->input_port_data;
 	UINT8 header[INP_HEADER_SIZE];
 	file_error filerr;
@@ -4888,10 +4941,10 @@ static void record_write_uint64(running_machine *machine, UINT64 data)
 
 static void record_init(running_machine *machine)
 {
-	const char *filename = options_get_string(mame_options(), OPTION_RECORD);
+	const char *filename = options_get_string(machine->options(), OPTION_RECORD);
 	input_port_private *portdata = machine->input_port_data;
 	UINT8 header[INP_HEADER_SIZE];
-	mame_system_time systime;
+	system_time systime;
 	file_error filerr;
 
 	/* if no file, nothing to do */
@@ -4903,7 +4956,7 @@ static void record_init(running_machine *machine)
 	assert_always(filerr == FILERR_NONE, "Failed to open file for recording");
 
 	/* get the base time */
-	mame_get_base_datetime(machine, &systime);
+	machine->base_datetime(systime);
 
 	/* fill in the header */
 	memset(header, 0, sizeof(header));
@@ -4972,6 +5025,8 @@ static void record_frame(running_machine *machine, attotime curtime)
 	}
 }
 
+#define DEBUG_INPUT_SERIALIZATION (0)
+
 int serializePlayerInputToBuffer(running_machine *machine, char *tmpbuffer)
 {
     char *curptr = tmpbuffer;
@@ -4999,20 +5054,20 @@ int serializePlayerInputToBuffer(running_machine *machine, char *tmpbuffer)
         sizeof(int)
         );
     curptr += sizeof(int);
-    //cout << "SER: PLAYER ID: " << playerID << endl;
+#if DEBUG_INPUT_SERIALIZATION
+    cout << "SER: PLAYER ID: " << playerID << endl;
+#endif
 
-    for (port = machine->portlist.first(); port != NULL; port = port->next)
+
+    for (port = machine->m_portlist.first(); port != NULL; port = port->next())
     {
-        //JJG: This sounds crazy, but because of some internal flaw in the MSVC compiler,
-        //I had to break these two cases up into two bools before checking them together
-        bool caseVal = (playerID == -1);
-        bool caseVal2 = (port->fieldlist->player == playerID);
-        //cout << "CASES " << caseVal << ' ' << caseVal2;
-        bool combinedCase = caseVal || caseVal2;
-        if( combinedCase || caseVal || caseVal2 )
+#if DEBUG_INPUT_SERIALIZATION
+        cout << "PORT ";
+#endif
+        if(playerID==-1)
         {
+            //When getting data from the server, also get the port state
 
-            //cout << "PORT ";
             memcpy(
                 curptr,
                 (unsigned char*)&(((input_port_config *)port)->state->defvalue),
@@ -5037,11 +5092,57 @@ int serializePlayerInputToBuffer(running_machine *machine, char *tmpbuffer)
                 sizeof(input_port_value)
                 );
             curptr += sizeof(input_port_value);
-            for (field = port->fieldlist; field != NULL; field = field->next)
+        }
+
+        for (field = port->fieldlist; field != NULL; field = field->next)
+        {
+            if(playerID==-1 || field->player==0)
             {
+#if DEBUG_INPUT_SERIALIZATION
+                cout << "FIELD ";
+#endif
+#if 0
+                memcpy(
+                    curptr,
+                    (unsigned char*)&(field->state->value),
+                    sizeof(input_port_value)
+                    );
+                curptr += sizeof(input_port_value);
+#endif
+                memcpy(
+                    curptr,
+                    (unsigned char*)&(field->state->impulse),
+                    sizeof(UINT8)
+                    );
+                curptr += sizeof(UINT8);
+                memcpy(
+                    curptr,
+                    (unsigned char*)&(field->state->last),
+                    sizeof(UINT8)
+                    );
+                curptr += sizeof(UINT8);
+                memcpy(
+                    curptr,
+                    (unsigned char*)&(field->state->joydir),
+                    sizeof(UINT8)
+                    );
+                curptr += sizeof(UINT8);
+                memcpy(
+                    curptr,
+                    (unsigned char*)&(field->state->curstate),
+                    sizeof(UINT8)
+                    );
+                curptr += sizeof(UINT8);
+                if(field->state->curstate)
+                {
+                    //cout << "SENDING A POSITIVE CURSTATE\n";
+                }
+
                 if(field->state->joystick)
                 {
-                    //cout << "JOY ";
+#if DEBUG_INPUT_SERIALIZATION
+                    cout << "JOY ";
+#endif
                     memcpy(
                         curptr,
                         (unsigned char*)&(field->state->joystick->inuse),
@@ -5069,7 +5170,9 @@ int serializePlayerInputToBuffer(running_machine *machine, char *tmpbuffer)
                 }
                 if(field->state->analog)
                 {
-                    //cout << "ANALOG ";
+#if DEBUG_INPUT_SERIALIZATION
+                    cout << "ANALOG ";
+#endif
                     memcpy(curptr,(unsigned char*)&(field->state->analog->shift),sizeof(UINT8)); curptr += sizeof(UINT8);
                     memcpy(curptr,(unsigned char*)&(field->state->analog->adjdefvalue),sizeof(INT32)); curptr += sizeof(INT32);
                     memcpy(curptr,(unsigned char*)&(field->state->analog->adjmin),sizeof(INT32)); curptr += sizeof(INT32);
@@ -5103,14 +5206,17 @@ int serializePlayerInputToBuffer(running_machine *machine, char *tmpbuffer)
                     memcpy(curptr,(unsigned char*)&(field->state->analog->lastdigital),sizeof(UINT8)); curptr += sizeof(UINT8);
                 }
             }
-            if(playerID != -1)
+            else
             {
-                //JJG: Assume that only player 0 has more than one port and the other ports are for debug only
-                break;
+#if DEBUG_INPUT_SERIALIZATION
+                cout << "FIELD_PASS ";
+#endif
             }
         }
     }
-    //cout << endl;
+#if DEBUG_INPUT_SERIALIZATION
+    cout << endl;
+#endif
     //cout << "SER: SIZE: " << int(curptr-tmpbuffer) << endl;
     return int(curptr-tmpbuffer);
 }
@@ -5119,8 +5225,8 @@ void deserializePlayerInputFromBuffer(running_machine *machine, const unsigned c
 {
     const unsigned char *curptr = tmpbuffer;
     const input_port_config *port;
-    const input_field_config *field;
-    int desPlayerID;
+    const input_field_config *field,*originalfield;
+    int playerID;
 
     attotime curtime = timer_get_time(machine);
     attotime clientTime;
@@ -5133,23 +5239,23 @@ void deserializePlayerInputFromBuffer(running_machine *machine, const unsigned c
     //cout << sizeof(attotime) << endl;
 
     memcpy(
-        (unsigned char*)&desPlayerID,
+        (unsigned char*)&playerID,
         (unsigned char*)curptr,
         sizeof(int)
         );
     curptr += sizeof(int);
-    //cout << "DES: PLAYER ID: " << desPlayerID << endl;
+#if DEBUG_INPUT_SERIALIZATION
+    cout << "DES: PLAYER ID: " << playerID << endl;
+    cout << "DES: PLAYER INDEX: " << playerIndex << endl;
+#endif
 
-    for (port = machine->portlist.first(); port != NULL; port = port->next)
+    for (port = machine->m_portlist.first(); port != NULL; port = port->next())
     {
-        //JJG: This sounds crazy, but because of some internal flaw in the MSVC compiler,
-        //I had to break these two cases up into two bools before checking them together
-        bool caseVal = desPlayerID == -1;
-        bool caseVal2 = (port->fieldlist->player == playerIndex);
-        bool combinedCase = caseVal || caseVal2;
-        if( combinedCase || caseVal || caseVal2 )
+#if DEBUG_INPUT_SERIALIZATION
+        cout << "PORT ";
+#endif
+        if(playerID==-1)
         {
-            //cout << "PORT ";
             memcpy(
                 (unsigned char*)&(((input_port_config *)port)->state->defvalue),
                 curptr,
@@ -5176,11 +5282,140 @@ void deserializePlayerInputFromBuffer(running_machine *machine, const unsigned c
                 sizeof(input_port_value)
                 );
             curptr += sizeof(input_port_value);
-            for (field = port->fieldlist; field != NULL; field = field->next)
+        }
+
+        for (originalfield = port->fieldlist; originalfield != NULL; originalfield = originalfield->next)
+        {
+            field = originalfield;
+#if DEBUG_INPUT_SERIALIZATION
+            cout << "(" << int(originalfield->player) << ") ";
+#endif
+            if(playerID==-1 || originalfield->player==0)
             {
+                if(playerID != -1)
+                {
+                    //Check if this port matches a port for the actual player
+                    std::map<const input_field_config *,const input_field_config *>::iterator it;
+                    it = playerInputFieldMap[playerIndex].find(originalfield);
+                    if(it==playerInputFieldMap[playerIndex].end())
+                    {
+#if DEBUG_INPUT_SERIALIZATION
+                        cout << "FIELD_SKIP ";
+#endif
+#if 0
+                        curptr += sizeof(input_port_value);
+#endif
+                        curptr += sizeof(UINT8);
+                        curptr += sizeof(UINT8);
+                        curptr += sizeof(UINT8);
+                        curptr += sizeof(UINT8);
+
+                        //There is no map between this input and other players, disregard
+                        if(field->state->joystick)
+                        {
+#if DEBUG_INPUT_SERIALIZATION
+                            cout << "JOY_SKIP ";
+#endif
+                            curptr += sizeof(UINT8);
+                            curptr += sizeof(UINT8);
+                            curptr += sizeof(UINT8);
+                            curptr += sizeof(UINT8);
+                        }
+                        if(field->state->analog)
+                        {
+#if DEBUG_INPUT_SERIALIZATION
+                            cout << "ANALOG_SKIP ";
+#endif
+                            curptr += sizeof(UINT8);
+                            curptr += sizeof(INT32);
+                            curptr += sizeof(INT32);
+                            curptr += sizeof(INT32);
+
+                            curptr += sizeof(INT32);
+                            curptr += sizeof(UINT8);
+                            curptr += sizeof(INT32);
+                            curptr += sizeof(INT32);
+
+                            curptr += sizeof(INT32);
+                            curptr += sizeof(INT32);
+                            curptr += sizeof(INT32);
+
+                            curptr += sizeof(INT32);
+                            curptr += sizeof(INT32);
+                            curptr += sizeof(INT32);
+                            curptr += sizeof(INT32);
+
+                            curptr += sizeof(INT64);
+                            curptr += sizeof(INT64);
+                            curptr += sizeof(INT64);
+                            curptr += sizeof(INT64);
+                            curptr += sizeof(INT64);
+
+                            curptr += sizeof(UINT8);
+                            curptr += sizeof(UINT8);
+                            curptr += sizeof(UINT8);
+                            curptr += sizeof(UINT8);
+                            curptr += sizeof(UINT8);
+                            curptr += sizeof(UINT8);
+                        }
+                        continue;
+                    }
+                    else
+                    {
+                        //Set the mapped field instead of the original field
+                        field = it->second;
+                    }
+                }
+
+                //This assumes that the order of port fields is constant among players
+                //That means if player 1's fields are LEFT,DOWN,RIGHT,UP, so 
+                //is the order for all players.
+
+#if DEBUG_INPUT_SERIALIZATION
+                cout << "FIELD ";
+#endif
+#if 0
+                memcpy(
+                    (unsigned char*)&(field->state->value),
+                    curptr,
+                    sizeof(input_port_value)
+                    );
+                curptr += sizeof(input_port_value);
+#endif
+                memcpy(
+                    (unsigned char*)&(field->state->impulse),
+                    curptr,
+                    sizeof(UINT8)
+                    );
+                curptr += sizeof(UINT8);
+                memcpy(
+                    (unsigned char*)&(field->state->last),
+                    curptr,
+                    sizeof(UINT8)
+                    );
+                curptr += sizeof(UINT8);
+                memcpy(
+                    (unsigned char*)&(field->state->joydir),
+                    curptr,
+                    sizeof(UINT8)
+                    );
+                curptr += sizeof(UINT8);
+                memcpy(
+                    (unsigned char*)&(field->state->curstate),
+                    curptr,
+                    sizeof(UINT8)
+                    );
+                curptr += sizeof(UINT8);
+                if(field->state->curstate)
+                {
+                    //cout << "GOT A POSITIVE CURSTATE\n";
+                }
+
                 if(field->state->joystick)
                 {
-                    //cout << "JOY ";
+#if DEBUG_INPUT_SERIALIZATION
+                    cout << "JOY ";
+#endif
                     memcpy(
                         (unsigned char*)&(field->state->joystick->inuse),
                         curptr,
@@ -5208,7 +5443,9 @@ void deserializePlayerInputFromBuffer(running_machine *machine, const unsigned c
                 }
                 if(field->state->analog)
                 {
-                    //cout << "ANALOG ";
+#if DEBUG_INPUT_SERIALIZATION
+                    cout << "ANALOG ";
+#endif
                     memcpy((unsigned char*)&(field->state->analog->shift),curptr,sizeof(UINT8)); curptr += sizeof(UINT8);
                     memcpy((unsigned char*)&(field->state->analog->adjdefvalue),curptr,sizeof(INT32)); curptr += sizeof(INT32);
                     memcpy((unsigned char*)&(field->state->analog->adjmin),curptr,sizeof(INT32)); curptr += sizeof(INT32);
@@ -5242,14 +5479,17 @@ void deserializePlayerInputFromBuffer(running_machine *machine, const unsigned c
                     memcpy((unsigned char*)&(field->state->analog->lastdigital),curptr,sizeof(UINT8)); curptr += sizeof(UINT8);
                 }
             }
-            if(playerIndex != -1)
+            else
             {
-                //JJG: Assume that only player 0 has more than one port and the other ports are for debug only
-                break;
+#if DEBUG_INPUT_SERIALIZATION
+                cout << "FIELD_PASS ";
+#endif
             }
         }
     }
-    //cout << endl;
+#if DEBUG_INPUT_SERIALIZATION
+    cout << endl;
+#endif
     int bytesUsed = int(curptr-tmpbuffer);
     //cout << "DES: SIZE: " << int(curptr-tmpbuffer) << endl;
     if(bytesUsed != size)
@@ -5295,7 +5535,7 @@ int input_machine_has_keyboard(running_machine *machine)
 #ifdef MESS
 	const input_field_config *field;
 	const input_port_config *port;
-	for (port = machine->portlist.first(); port != NULL; port = port->next)
+	for (port = machine->m_portlist.first(); port != NULL; port = port->next())
 	{
 		for (field = port->fieldlist; field != NULL; field = field->next)
 		{
@@ -5376,7 +5616,7 @@ static int scan_keys(running_machine *machine, const input_port_config *portconf
 
 	assert(keys < NUM_SIMUL_KEYS);
 
-	for (port = portconfig; port != NULL; port = port->next)
+	for (port = portconfig; port != NULL; port = port->next())
 	{
 		for (field = port->fieldlist; field != NULL; field = field->next)
 		{
@@ -5497,7 +5737,7 @@ int validate_natural_keyboard_statics(void)
     CORE IMPLEMENTATION
 ***************************************************************************/
 
-static void clear_keybuffer(running_machine *machine)
+static void clear_keybuffer(running_machine &machine)
 {
 	keybuffer = NULL;
 	queue_chars = NULL;
@@ -5510,7 +5750,7 @@ static void setup_keybuffer(running_machine *machine)
 {
 	inputx_timer = timer_alloc(machine, inputx_timerproc, NULL);
 	keybuffer = auto_alloc_clear(machine, key_buffer);
-	add_exit_callback(machine, clear_keybuffer);
+	machine->add_notifier(MACHINE_NOTIFY_EXIT, clear_keybuffer);
 }
 
 
@@ -5533,7 +5773,7 @@ void inputx_init(running_machine *machine)
 	/* posting keys directly only makes sense for a computer */
 	if (input_machine_has_keyboard(machine))
 	{
-		codes = build_codes(machine, machine->portlist.first());
+		codes = build_codes(machine, machine->m_portlist.first());
 		setup_keybuffer(machine);
 	}
 }
@@ -5996,7 +6236,7 @@ int input_has_input_class(running_machine *machine, int inputclass)
 	const input_port_config *port;
 	const input_field_config *field;
 
-	for (port = machine->portlist.first(); port != NULL; port = port->next)
+	for (port = machine->m_portlist.first(); port != NULL; port = port->next())
 	{
 		for (field = port->fieldlist; field != NULL; field = field->next)
 		{
@@ -6021,7 +6261,7 @@ int input_count_players(running_machine *machine)
 	int joystick_count;
 
 	joystick_count = 0;
-	for (port = machine->portlist.first(); port != NULL; port = port->next)
+	for (port = machine->m_portlist.first(); port != NULL; port = port->next())
 	{
 		for (field = port->fieldlist;  field != NULL; field = field->next)
 		{
@@ -6052,7 +6292,7 @@ int input_category_active(running_machine *machine, int category)
 	assert(category >= 1);
 
 	/* loop through the input ports */
-	for (port = machine->portlist.first(); port != NULL; port = port->next)
+	for (port = machine->m_portlist.first(); port != NULL; port = port->next())
 	{
 		for (field = port->fieldlist; field != NULL; field = field->next)
 		{

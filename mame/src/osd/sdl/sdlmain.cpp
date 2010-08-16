@@ -84,9 +84,14 @@ static const options_entry mame_sdl_options[] =
 
 	// video options
 	{ NULL,                                   NULL,       OPTION_HEADER,     "VIDEO OPTIONS" },
+// OS X can be trusted to have working hardware OpenGL, so default to it on for the best user experience
+#ifdef SDLMAME_MACOSX
+	{ SDLOPTION_VIDEO,                   SDLOPTVAL_OPENGL,  0,                 "video output method: soft or opengl" },
+#else
 	{ SDLOPTION_VIDEO,                   SDLOPTVAL_SOFT,  0,                 "video output method: soft or opengl" },
+#endif
 	{ SDLOPTION_NUMSCREENS,                   "1",        0,                 "number of screens to create; SDLMAME only supports 1 at this time" },
-	{ SDLOPTION_WINDOW ";w",                  "0",        OPTION_BOOLEAN,    "enable window mode; otherwise, full screen mode is assumed" },
+	{ SDLOPTION_WINDOW ";w",                  "1",        OPTION_BOOLEAN,    "enable window mode; otherwise, full screen mode is assumed" },
 	{ SDLOPTION_MAXIMIZE ";max",              "1",        OPTION_BOOLEAN,    "default to maximized windows; otherwise, windows will be minimized" },
 	{ SDLOPTION_KEEPASPECT ";ka",             "1",        OPTION_BOOLEAN,    "constrain to the proper aspect ratio" },
 	{ SDLOPTION_UNEVENSTRETCH ";ues",         "1",        OPTION_BOOLEAN,    "allow non-integer stretch factors" },
@@ -323,7 +328,7 @@ int utf8_main(int argc, char *argv[])
 //  output_oslog
 //============================================================
 
-static void output_oslog(running_machine *machine, const char *buffer)
+static void output_oslog(running_machine &machine, const char *buffer)
 {
 	fputs(buffer, stderr);
 }
@@ -334,7 +339,7 @@ static void output_oslog(running_machine *machine, const char *buffer)
 //  osd_exit
 //============================================================
 
-static void osd_exit(running_machine *machine)
+static void osd_exit(running_machine &machine)
 {
 
 	if (!SDLMAME_INIT_IN_WORKER_THREAD)
@@ -383,7 +388,7 @@ static void defines_verbose(void)
 	MACRO_VERBOSE(DISTRO);
 	MACRO_VERBOSE(SYNC_IMPLEMENTATION);
 	mame_printf_verbose("\n");
-	mame_printf_verbose("OpenGL defines: ");
+	mame_printf_verbose("SDL/OpenGL defines: ");
 	mame_printf_verbose("SDL_COMPILEDVERSION=%d ", SDL_COMPILEDVERSION);
 	MACRO_VERBOSE(USE_OPENGL);
 	MACRO_VERBOSE(USE_DISPATCH_GL);
@@ -467,14 +472,14 @@ void osd_init(running_machine *machine)
 	const char *stemp;
 
 	// Some driver options - must be before audio init!
-	stemp = options_get_string(mame_options(), SDLOPTION_AUDIODRIVER);
+	stemp = options_get_string(machine->options(), SDLOPTION_AUDIODRIVER);
 	if (stemp != NULL && strcmp(stemp, SDLOPTVAL_AUTO) != 0)
 	{
 		mame_printf_verbose("Setting SDL audiodriver '%s' ...\n", stemp);
 		osd_setenv(SDLENV_AUDIODRIVER, stemp, 1);
 	}
 
-	stemp = options_get_string(mame_options(), SDLOPTION_VIDEODRIVER);
+	stemp = options_get_string(machine->options(), SDLOPTION_VIDEODRIVER);
 	if (stemp != NULL && strcmp(stemp, SDLOPTVAL_AUTO) != 0)
 	{
 		mame_printf_verbose("Setting SDL videodriver '%s' ...\n", stemp);
@@ -483,7 +488,7 @@ void osd_init(running_machine *machine)
 
 	if (SDL_VERSION_ATLEAST(1,3,0))
 	{
-		stemp = options_get_string(mame_options(), SDLOPTION_RENDERDRIVER);
+		stemp = options_get_string(machine->options(), SDLOPTION_RENDERDRIVER);
 		if (stemp != NULL && strcmp(stemp, SDLOPTVAL_AUTO) != 0)
 		{
 			mame_printf_verbose("Setting SDL renderdriver '%s' ...\n", stemp);
@@ -496,7 +501,7 @@ void osd_init(running_machine *machine)
      */
 	/* FIXME: move lib loading code from drawogl.c here */
 
-	stemp = options_get_string(mame_options(), SDLOPTION_GL_LIB);
+	stemp = options_get_string(machine->options(), SDLOPTION_GL_LIB);
 	if (stemp != NULL && strcmp(stemp, SDLOPTVAL_AUTO) != 0)
 	{
 		osd_setenv("SDL_VIDEO_GL_DRIVER", stemp, 1);
@@ -504,7 +509,7 @@ void osd_init(running_machine *machine)
 	}
 
 	/* get number of processors */
-	stemp = options_get_string(mame_options(), SDLOPTION_NUMPROCESSORS);
+	stemp = options_get_string(machine->options(), SDLOPTION_NUMPROCESSORS);
 
 	sdl_num_processors = 0;
 
@@ -533,7 +538,7 @@ void osd_init(running_machine *machine)
 		osd_sdl_info();
 	}
 	// must be before sdlvideo_init!
-	add_exit_callback(machine, osd_exit);
+	machine->add_notifier(MACHINE_NOTIFY_EXIT, osd_exit);
 
 	defines_verbose();
 
@@ -541,13 +546,13 @@ void osd_init(running_machine *machine)
 		if (machine->debug_flags & DEBUG_FLAG_OSD_ENABLED)
 		{
 			mame_printf_error("sdlmame: -debug not supported on X11-less builds\n\n");
-			osd_exit(machine);
+			osd_exit(*machine);
 			exit(-1);
 		}
 
 	if (sdlvideo_init(machine))
 	{
-		osd_exit(machine);
+		osd_exit(*machine);
 		mame_printf_error("sdlvideo_init: Initialization failed!\n\n\n");
 		fflush(stderr);
 		fflush(stdout);
@@ -560,8 +565,8 @@ void osd_init(running_machine *machine)
 
 	sdloutput_init(machine);
 
-	if (options_get_bool(mame_options(), SDLOPTION_OSLOG))
-		add_logerror_callback(machine, output_oslog);
+	if (options_get_bool(machine->options(), SDLOPTION_OSLOG))
+		machine->add_logerror_callback(output_oslog);
 
 #if (SDL_VERSION_ATLEAST(1,3,0))
 	SDL_EventState(SDL_TEXTINPUT, SDL_TRUE);
