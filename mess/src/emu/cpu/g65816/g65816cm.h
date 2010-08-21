@@ -107,6 +107,7 @@ struct _g65816i_cpu_struct
 	uint destination;
 	int ICount;
 	int cpu_type;
+    uint executionMode;
 };
 
 extern void (*const *const g65816i_opcodes[])(g65816i_cpu_struct *cpustate);
@@ -163,6 +164,7 @@ extern int (*const g65816i_execute[])(g65816i_cpu_struct *cpustate, int cycles);
 
 INLINE void g65816i_set_execution_mode(g65816i_cpu_struct *cpustate, uint mode)
 {
+    cpustate->executionMode = mode;
 	FTABLE_OPCODES = g65816i_opcodes[mode];
 	FTABLE_GET_REG = g65816i_get_reg[mode];
 	FTABLE_SET_REG = g65816i_set_reg[mode];

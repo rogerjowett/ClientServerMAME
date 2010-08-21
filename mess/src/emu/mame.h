@@ -27,7 +27,7 @@
 //**************************************************************************
 
 // return values from run_game
-enum MameErrorType
+enum
 {
 	MAMERR_NONE				= 0,	/* no error */
 	MAMERR_FAILED_VALIDITY	= 1,	/* failed validity checks */

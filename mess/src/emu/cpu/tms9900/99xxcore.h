@@ -509,7 +509,7 @@ struct _tms99xx_state
 	int extra_byte;	/* buffer holding the unused byte in a word read */
 };
 
-inline tms99xx_state *get_safe_token(running_device *device)
+INLINE tms99xx_state *get_safe_token(running_device *device)
 {
 	assert(device != NULL);
 //  assert(device->type() == TMS99XX_GET_INFO);

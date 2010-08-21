@@ -175,7 +175,7 @@ typedef struct {
 
 } i860_state_t;
 
-inline i860_state_t *get_safe_token_i860(running_device *device)
+INLINE i860_state_t *get_safe_token(running_device *device)
 {
 	assert(device != NULL);
 	assert(device->type() == I860);

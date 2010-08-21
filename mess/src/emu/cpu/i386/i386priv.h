@@ -257,7 +257,7 @@ struct _i386_state
 	UINT8 *cycle_table_rm;
 };
 
-inline i386_state *get_safe_token_i386(running_device *device)
+INLINE i386_state *get_safe_token(running_device *device)
 {
 	assert(device != NULL);
 	assert(device->type() == I386 ||

@@ -1279,7 +1279,7 @@ static void MTTLB(am29000_state *am29000)
     CONSTANT
 ***************************************************************************/
 
-static void AM_CONST(am29000_state *am29000)
+static void CONST(am29000_state *am29000)
 {
 	am29000->r[RA] = I16_ZEX;
 }
@@ -1488,7 +1488,7 @@ const op_info op_table[256] =
 	{ ILLEGAL,  IFLAG_ILLEGAL                                                      },
 	{ CONSTN,   IFLAG_RA_PRESENT                                                   },
 	{ CONSTH,   IFLAG_RA_PRESENT                                                   },
-	{ AM_CONST,    IFLAG_RA_PRESENT                                                   },
+	{ CONST,    IFLAG_RA_PRESENT                                                   },
 	{ MTSRIM,   0                                                                  },
 	{ ILLEGAL,  IFLAG_ILLEGAL                                                      },
 	{ LOADL,    0                                                                  },

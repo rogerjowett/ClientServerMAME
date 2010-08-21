@@ -9,7 +9,6 @@ void deleteGlobalServer();
 class Session
 {
 protected:
-    boost::shared_ptr<tcp::socket> activeSocket;
     vector< string > inputBufferQueue;
     RakNet::RakNetGUID guid;
 
@@ -30,8 +29,6 @@ public:
 	    guid = _guid;
     }
 };
-
-#define MAX_COMPRESSED_OUTBUF_SIZE (1024*1024*64)
 
 class Server
 {

@@ -18,7 +18,7 @@
 typedef struct cdrom_config_t	cdrom_config;
 struct cdrom_config_t
 {
-	const char *					cdrom_interface;
+	const char *					interface;
 };
 
 /***************************************************************************
@@ -38,6 +38,6 @@ cdrom_file *mess_cd_get_cdrom_file(running_device *device);
 	MDRV_DEVICE_ADD(_tag, CDROM, 0) \
 
 #define MDRV_CDROM_INTERFACE(_interface)							\
-	MDRV_DEVICE_CONFIG_DATAPTR(cdrom_config, cdrom_interface, _interface )
+	MDRV_DEVICE_CONFIG_DATAPTR(cdrom_config, interface, _interface )
 
 #endif /* MESS_CD_H */

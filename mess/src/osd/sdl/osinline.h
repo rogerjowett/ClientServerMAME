@@ -9,14 +9,6 @@
 
 #include "eminline.h"
 
-#ifdef _MSC_VER
-#include "windows.h"
-INLINE void ATTR_FORCE_INLINE
-osd_yield_processor(void)
-{
-	Sleep(0);
-}
-#endif
 
 //============================================================
 //  INLINE FUNCTIONS

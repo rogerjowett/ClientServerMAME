@@ -344,7 +344,7 @@ DECLARE_ENUM_OPERATORS(input_item_id)
 /* expanded codes referencing specific devices for input definitions */
 /* note that these all implcitly refer to device 0; to reference additional */
 /* devices, wrap the code in INPUT_CODE_SET_DEVINDEX() */
-enum KeyboardCode
+enum
 {
 	/* keyboard codes */
 	KEYCODE_A = STANDARD_CODE(KEYBOARD, 0, SWITCH, NONE, A),

@@ -344,7 +344,7 @@ DECLARE_ENUM_OPERATORS(input_item_id)
 /* expanded codes referencing specific devices for input definitions */
 /* note that these all implcitly refer to device 0; to reference additional */
 /* devices, wrap the code in INPUT_CODE_SET_DEVINDEX() */
-enum KeyboardCode
+enum
 {
 	/* keyboard codes */
 	KEYCODE_A = STANDARD_CODE(KEYBOARD, 0, SWITCH, NONE, A),
@@ -646,6 +646,7 @@ input_code input_code_from_token(running_machine *machine, const char *_token);
 
 /* return TRUE if the given input code has been pressed */
 INT32 debug_global_input_code_pressed(input_code code);
+INT32 debug_global_input_code_pressed_once(input_code code);
 
 
 #endif	/* __INPUT_H__ */

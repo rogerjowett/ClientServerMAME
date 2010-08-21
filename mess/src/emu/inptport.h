@@ -50,18 +50,19 @@
 
 
 /* sequence types for input_port_seq() call */
-enum input_seq_type
+enum _input_seq_type
 {
 	SEQ_TYPE_STANDARD = 0,
 	SEQ_TYPE_INCREMENT,
 	SEQ_TYPE_DECREMENT,
 	SEQ_TYPE_TOTAL
 };
+typedef enum _input_seq_type input_seq_type;
 DECLARE_ENUM_OPERATORS(input_seq_type)
 
 
 /* conditions for DIP switches */
-enum PortCondType
+enum
 {
 	PORTCOND_ALWAYS = 0,
 	PORTCOND_EQUALS,
@@ -74,7 +75,7 @@ enum PortCondType
 
 
 /* crosshair types */
-enum CrosshairType
+enum
 {
 	CROSSHAIR_AXIS_NONE = 0,
 	CROSSHAIR_AXIS_X,
@@ -83,7 +84,7 @@ enum CrosshairType
 
 
 /* groups for input ports */
-enum IPGType
+enum
 {
 	IPG_UI = 0,
 	IPG_PLAYER1,
@@ -101,7 +102,7 @@ enum IPGType
 
 
 /* various input port types */
-enum IPTType
+enum
 {
 	/* pseudo-port types */
 	IPT_INVALID = 0,
@@ -373,7 +374,7 @@ enum IPTType
 
 
 /* token types */
-enum InputToken
+enum
 {
 	INPUT_TOKEN_INVALID,
 	INPUT_TOKEN_END,
@@ -435,7 +436,7 @@ enum InputToken
 
 
 /* default strings used in port definitions */
-enum InputString
+enum
 {
 	INPUT_STRING_Off = 1,
 	INPUT_STRING_On,
@@ -558,7 +559,7 @@ enum InputString
 
 
 /* input classes */
-enum InputClass
+enum
 {
 	INPUT_CLASS_INTERNAL,
 	INPUT_CLASS_KEYBOARD,

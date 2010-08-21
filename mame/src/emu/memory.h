@@ -25,7 +25,7 @@
 ***************************************************************************/
 
 /* address spaces */
-enum AddressSpace
+enum
 {
 	ADDRESS_SPACE_0,				/* first address space */
 	ADDRESS_SPACE_1,				/* second address space */
@@ -52,7 +52,7 @@ typedef enum _map_handler_type map_handler_type;
 
 
 /* address map tokens */
-enum AddressMapTokenType
+enum
 {
 	ADDRMAP_TOKEN_INVALID,
 

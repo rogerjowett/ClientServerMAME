@@ -22,7 +22,7 @@
 
 /* This is a simple file to encapsulate the OpenGL API headers */
 
-#include <SDL_config.h>
+#include <SDL/SDL_config.h>
 
 #ifdef __WIN32__
 #define WIN32_LEAN_AND_MEAN
@@ -55,6 +55,10 @@
 #ifndef NO_SDL_GLEXT
 #if !defined(__glext_h_) && !defined(GL_GLEXT_LEGACY)
 #define __glext_h_
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*
 ** License Applicability. Except to the extent portions of this file are
@@ -6538,6 +6542,10 @@ GLAPI void APIENTRY glStringMarkerGREMEDY (GLsizei, const GLvoid *);
 typedef void (APIENTRYP PFNGLSTRINGMARKERGREMEDYPROC) (GLsizei len, const GLvoid *string);
 #endif
 
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 #endif /* NO_SDL_GLEXT */

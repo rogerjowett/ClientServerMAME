@@ -59,6 +59,7 @@
 #define CD_FRAMES_PER_HUNK		(4)
 
 #define CD_METADATA_WORDS		(1+(CD_MAX_TRACKS * 6))
+
 enum
 {
 	CD_TRACK_MODE1 = 0, 		/* mode 1 2048 bytes/sector */

@@ -4,8 +4,8 @@
 #define BIGCASE
 
 
-typedef char NEC_BOOLEAN;
+typedef char BOOLEAN;
 
-typedef UINT8 NEC_BYTE;
-typedef UINT16 NEC_WORD;
-typedef UINT32 NEC_DWORD;
+typedef UINT8 BYTE;
+typedef UINT16 WORD;
+typedef UINT32 DWORD;

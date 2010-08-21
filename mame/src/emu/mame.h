@@ -27,7 +27,7 @@
 //**************************************************************************
 
 // return values from run_game
-enum MameErrorType
+enum
 {
 	MAMERR_NONE				= 0,	/* no error */
 	MAMERR_FAILED_VALIDITY	= 1,	/* failed validity checks */
@@ -38,8 +38,8 @@ enum MameErrorType
 	MAMERR_INVALID_CONFIG	= 6,	/* some sort of error in configuration */
 	MAMERR_IDENT_NONROMS	= 7,	/* identified all non-ROM files */
 	MAMERR_IDENT_PARTIAL	= 8,	/* identified some files but not all */
-	MAMERR_IDENT_NONE		= 9,	/* identified no files */
-	MAMERR_NETWORK    		= 10	/* something in the network failed */
+	MAMERR_IDENT_NONE		= 9,		/* identified no files */
+	MAMERR_NETWORK		= 10 /*Network error in ClientServerMAME*/
 };
 
 

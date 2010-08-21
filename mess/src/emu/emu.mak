@@ -76,6 +76,8 @@ EMUOBJS = \
 	$(EMUOBJ)/machine.o \
 	$(EMUOBJ)/mconfig.o \
 	$(EMUOBJ)/memory.o \
+	$(EMUOBJ)/NSM_Client.o \
+	$(EMUOBJ)/NSM_Server.o \
 	$(EMUOBJ)/output.o \
 	$(EMUOBJ)/render.o \
 	$(EMUOBJ)/rendfont.o \
@@ -260,7 +262,7 @@ $(LIBSOUND): $(SOUNDOBJS)
 
 $(EMUOBJ)/rendfont.o:	$(EMUOBJ)/uismall.fh
 
-$(EMUOBJ)/video.o:		$(EMUSRC)/rendersw.c
+$(EMUOBJ)/video.o:	$(EMUSRC)/rendersw.c
 $(EMUVIDEO)/v9938.o:	$(EMUSRC)/video/v9938mod.c
 
 

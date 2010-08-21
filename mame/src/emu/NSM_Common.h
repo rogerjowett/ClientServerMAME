@@ -14,16 +14,10 @@
 #include <iostream>
 #include <list>
 #include <set>
-#include <boost/bind.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/enable_shared_from_this.hpp>
-#include <boost/asio.hpp>
-#include <boost/thread.hpp>
-#include <boost/circular_buffer.hpp>
 #include <vector>
 #include <string>
+#include <map>
 
-using boost::asio::ip::tcp;
 using namespace std;
 
 enum OrderingChannelType
@@ -47,6 +41,8 @@ enum CustomPacketType
 
 class Client;
 class Server;
+
+#define MAX_ZLIB_BUF_SIZE (1024*1024*64)
 
 class MemoryBlock
 {

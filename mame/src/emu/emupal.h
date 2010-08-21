@@ -231,7 +231,7 @@ INLINE rgb_t palette_get_color(running_machine *machine, pen_t pen)
 
 INLINE void palette_set_pen_contrast(running_machine *machine, pen_t pen, double bright)
 {
-	palette_entry_set_contrast(machine->palette, pen, (float)bright);
+	palette_entry_set_contrast(machine->palette, pen, bright);
 }
 
 

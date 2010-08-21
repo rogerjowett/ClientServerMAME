@@ -51,11 +51,11 @@ public:
 
 	// indexes to inline data
 	enum
-{
+	{
 		INLINE_X,
 		INLINE_Y,
 		INLINE_Z
-};
+	};
 
 protected:
 	// device_config overrides

@@ -26,8 +26,6 @@
 #define FLAG_SET_E 0
 #define FLAG_SET_M 1
 #define FLAG_SET_X 1
-#else
-#error INVALID EXECUTION MODE
 #endif
 
 #undef VECTOR_IRQ
@@ -70,17 +68,14 @@ INLINE uint g65816i_read_8_immediate(g65816i_cpu_struct *cpustate, uint address)
 	return g65816_read_8_immediate(address);
 }
 
-INLINE uint g65816i_read_8_direct(g65816i_cpu_struct *cpustate, uint address, int executionMode)
+INLINE uint g65816i_read_8_direct(g65816i_cpu_struct *cpustate, uint address)
 {
-    if(executionMode==EXECUTION_MODE_E)
-    {
+#if FLAG_SET_E
 	/* force address into zero page */
 	address = REGISTER_D + MAKE_UINT_8(address - REGISTER_D);
-	}
-	else
-	{
+#else
 	address = ADDRESS_65816(address);
-    }
+#endif
 	return g65816_read_8(address);
 }
 
@@ -98,17 +93,14 @@ INLINE void g65816i_write_8_normal(g65816i_cpu_struct *cpustate, uint address, u
 	g65816_write_8(address, MAKE_UINT_8(value));
 }
 
-INLINE void g65816i_write_8_direct(g65816i_cpu_struct *cpustate, uint address, uint value, int executionMode)
+INLINE void g65816i_write_8_direct(g65816i_cpu_struct *cpustate, uint address, uint value)
 {
-    if(executionMode==EXECUTION_MODE_E)
-    {
+#if FLAG_SET_E
 	/* force address into zero page */
 	address = REGISTER_D + MAKE_UINT_8(address - REGISTER_D);
-    }
-    else
-    {
+#else
 	address = ADDRESS_65816(address);
-    }
+#endif
 	g65816_write_8(address, MAKE_UINT_8(value));
 }
 
@@ -124,10 +116,10 @@ INLINE uint g65816i_read_16_immediate(g65816i_cpu_struct *cpustate, uint address
 			(g65816i_read_8_immediate(cpustate, address+1)<<8);
 }
 
-INLINE uint g65816i_read_16_direct(g65816i_cpu_struct *cpustate, uint address, int executionMode)
+INLINE uint g65816i_read_16_direct(g65816i_cpu_struct *cpustate, uint address)
 {
-	return   g65816i_read_8_direct(cpustate, address,executionMode) |
-			(g65816i_read_8_direct(cpustate, address+1,executionMode)<<8);
+	return   g65816i_read_8_direct(cpustate, address) |
+			(g65816i_read_8_direct(cpustate, address+1)<<8);
 }
 
 INLINE uint g65816i_read_16_vector(g65816i_cpu_struct *cpustate, uint address)
@@ -142,10 +134,10 @@ INLINE void g65816i_write_16_normal(g65816i_cpu_struct *cpustate, uint address, 
 	g65816i_write_8_normal(cpustate, address+1, value>>8);
 }
 
-INLINE void g65816i_write_16_direct(g65816i_cpu_struct *cpustate, uint address, uint value,int executionMode)
+INLINE void g65816i_write_16_direct(g65816i_cpu_struct *cpustate, uint address, uint value)
 {
-	g65816i_write_8_direct(cpustate, address, value&0xff, executionMode);
-	g65816i_write_8_direct(cpustate, address+1, value>>8, executionMode);
+	g65816i_write_8_direct(cpustate, address, value&0xff);
+	g65816i_write_8_direct(cpustate, address+1, value>>8);
 }
 
 INLINE uint g65816i_read_24_normal(g65816i_cpu_struct *cpustate, uint address)
@@ -162,11 +154,11 @@ INLINE uint g65816i_read_24_immediate(g65816i_cpu_struct *cpustate, uint address
 			(g65816i_read_8_immediate(cpustate, address+2)<<16);
 }
 
-INLINE uint g65816i_read_24_direct(g65816i_cpu_struct *cpustate, uint address,int executionMode)
+INLINE uint g65816i_read_24_direct(g65816i_cpu_struct *cpustate, uint address)
 {
-	return	 g65816i_read_8_direct(cpustate, address,executionMode)         |
-			(g65816i_read_8_direct(cpustate, address+1,executionMode)<<8) |
-			(g65816i_read_8_direct(cpustate, address+2,executionMode)<<16);
+	return	 g65816i_read_8_direct(cpustate, address)         |
+			(g65816i_read_8_direct(cpustate, address+1)<<8) |
+			(g65816i_read_8_direct(cpustate, address+2)<<16);
 }
 
 
@@ -175,56 +167,50 @@ INLINE uint g65816i_read_24_direct(g65816i_cpu_struct *cpustate, uint address,in
 /* ================================= STACK ================================ */
 /* ======================================================================== */
 
-INLINE void g65816i_push_8(g65816i_cpu_struct *cpustate, uint value, int executionMode)
+INLINE void g65816i_push_8(g65816i_cpu_struct *cpustate, uint value)
 {
 	g65816i_write_8_normal(cpustate, REGISTER_S, value);
-    if(executionMode==EXECUTION_MODE_E)
-    {
+#if FLAG_SET_E
 	REGISTER_S = MAKE_UINT_8(REGISTER_S-1) | 0x100;
-    }
-    else
-    {
+#else
 	REGISTER_S = MAKE_UINT_16(REGISTER_S-1);
-    }
+#endif
 }
 
-INLINE uint g65816i_pull_8(g65816i_cpu_struct *cpustate, int executionMode)
+INLINE uint g65816i_pull_8(g65816i_cpu_struct *cpustate)
 {
-    if(executionMode==EXECUTION_MODE_E)
-    {
+#if FLAG_SET_E
 	REGISTER_S = MAKE_UINT_8(REGISTER_S+1) | 0x100;
-    }
-    else
-    {
+#else
 	REGISTER_S = MAKE_UINT_16(REGISTER_S+1);
-    }
+#endif
 	return g65816i_read_8_normal(cpustate, REGISTER_S);
 }
 
-INLINE void g65816i_push_16(g65816i_cpu_struct *cpustate, uint value, int executionMode)
+INLINE void g65816i_push_16(g65816i_cpu_struct *cpustate, uint value)
 {
-	g65816i_push_8(cpustate, value>>8,executionMode);
-	g65816i_push_8(cpustate, value&0xff,executionMode);
+	g65816i_push_8(cpustate, value>>8);
+	g65816i_push_8(cpustate, value&0xff);
 }
 
-INLINE uint g65816i_pull_16(g65816i_cpu_struct *cpustate,int executionMode)
+INLINE uint g65816i_pull_16(g65816i_cpu_struct *cpustate)
 {
-	uint res = g65816i_pull_8(cpustate,executionMode);
-	return res | (g65816i_pull_8(cpustate,executionMode) << 8);
+	uint res = g65816i_pull_8(cpustate);
+	return res | (g65816i_pull_8(cpustate) << 8);
 }
 
-INLINE void g65816i_push_24(g65816i_cpu_struct *cpustate, uint value,int executionMode)
+INLINE void g65816i_push_24(g65816i_cpu_struct *cpustate, uint value)
 {
-	g65816i_push_8(cpustate, value>>16,executionMode);
-	g65816i_push_8(cpustate, (value>>8)&0xff,executionMode);
-	g65816i_push_8(cpustate, value&0xff,executionMode);
+	g65816i_push_8(cpustate, value>>16);
+	g65816i_push_8(cpustate, (value>>8)&0xff);
+	g65816i_push_8(cpustate, value&0xff);
 }
 
-INLINE uint g65816i_pull_24(g65816i_cpu_struct *cpustate,int executionMode)
+INLINE uint g65816i_pull_24(g65816i_cpu_struct *cpustate)
 {
-	uint res = g65816i_pull_8(cpustate,executionMode);
-	res |= g65816i_pull_8(cpustate,executionMode) << 8;
-	return ((res + 1) & 0xffff) | (g65816i_pull_8(cpustate,executionMode) << 16);
+	uint res = g65816i_pull_8(cpustate);
+	res |= g65816i_pull_8(cpustate) << 8;
+	return ((res + 1) & 0xffff) | (g65816i_pull_8(cpustate) << 16);
 }
 
 
@@ -245,19 +231,16 @@ INLINE void g65816i_jump_24(g65816i_cpu_struct *cpustate, uint address)
 	g65816i_jumping(REGISTER_PC);
 }
 
-INLINE void g65816i_branch_8(g65816i_cpu_struct *cpustate, uint offset, int executionMode)
+INLINE void g65816i_branch_8(g65816i_cpu_struct *cpustate, uint offset)
 {
-    if(executionMode==EXECUTION_MODE_E)
-    {
+#if FLAG_SET_E
 	uint old_pc = REGISTER_PC;
 	REGISTER_PC = MAKE_UINT_16(REGISTER_PC + MAKE_INT_8(offset));
 	if((REGISTER_PC^old_pc)&0xff00)
 		CLK(1);
-    }
-    else
-    {
+#else
 	REGISTER_PC = MAKE_UINT_16(REGISTER_PC + MAKE_INT_8(offset));
-    }
+#endif
 	g65816i_branching(REGISTER_PC);
 }
 
@@ -272,76 +255,67 @@ INLINE void g65816i_branch_16(g65816i_cpu_struct *cpustate, uint offset)
 /* ============================ STATUS REGISTER =========================== */
 /* ======================================================================== */
 
-INLINE void g65816i_set_flag_mx(g65816i_cpu_struct *cpustate, uint value, int executionMode)
+#if !FLAG_SET_E
+INLINE void g65816i_set_flag_mx(g65816i_cpu_struct *cpustate, uint value)
 {
-    if(executionMode==EXECUTION_MODE_E || executionMode==EXECUTION_MODE_M1X0 || executionMode==EXECUTION_MODE_M1X1)
-    {
+#if FLAG_SET_M
 	if(!(value & FLAGPOS_M))
 	{
 		REGISTER_A |= REGISTER_B;
 		REGISTER_B = 0;
 		FLAG_M = MFLAG_CLEAR;
 	}
-    }
-    else
-    {
+#else
 	if(value & FLAGPOS_M)
 	{
 		REGISTER_B = REGISTER_A & 0xff00;
 		REGISTER_A = MAKE_UINT_8(REGISTER_A);
 		FLAG_M = MFLAG_SET;
 	}
-	}
-    if(executionMode==EXECUTION_MODE_E || executionMode==EXECUTION_MODE_M0X1 || executionMode==EXECUTION_MODE_M1X1)
-    {
+#endif
+#if FLAG_SET_X
 	if(!(value & FLAGPOS_X))
 	{
 		FLAG_X = XFLAG_CLEAR;
 	}
-	}
-	else
-	{
+#else
 	if(value & FLAGPOS_X)
 	{
 		REGISTER_X = MAKE_UINT_8(REGISTER_X);
 		REGISTER_Y = MAKE_UINT_8(REGISTER_Y);
 		FLAG_X = XFLAG_SET;
 	}
-    }
+#endif
 	g65816i_set_execution_mode(cpustate, (FLAG_M>>4) | (FLAG_X>>4));
 }
+#endif
 
-INLINE void g65816i_set_flag_e(g65816i_cpu_struct *cpustate, uint value, int executionMode)
+INLINE void g65816i_set_flag_e(g65816i_cpu_struct *cpustate, uint value)
 {
-    if(executionMode==EXECUTION_MODE_E)
-    {
+#if FLAG_SET_E
 	if(!value)
 	{
 		FLAG_E = EFLAG_CLEAR;
 		g65816i_set_execution_mode(cpustate, EXECUTION_MODE_M1X1);
 	}
-    }
-    else
-    {
+#else
 	if(value)
 	{
-        if(executionMode==EXECUTION_MODE_M0X0 || executionMode==EXECUTION_MODE_M0X1)
-        {
+#if !FLAG_SET_M
 		REGISTER_B = REGISTER_A & 0xff00;
 		REGISTER_A &= 0x00ff;
 		FLAG_M = MFLAG_SET;
-        }
-        if(executionMode==EXECUTION_MODE_M0X0 || executionMode==EXECUTION_MODE_M1X0)
-        {
+#endif
+#if !FLAG_SET_X
 		REGISTER_X = MAKE_UINT_8(REGISTER_X);
 		REGISTER_Y = MAKE_UINT_8(REGISTER_Y);
 		FLAG_X = XFLAG_SET;
-        }
+#endif
 		REGISTER_S = MAKE_UINT_8(REGISTER_S) | 0x100;
 		FLAG_E = EFLAG_SET;
 		g65816i_set_execution_mode(cpustate, EXECUTION_MODE_E);
 	}
-    }
+#endif
 }
 
 //INLINE void g65816i_check_maskable_interrupt(void);
@@ -374,27 +348,24 @@ INLINE uint g65816i_get_reg_p(g65816i_cpu_struct *cpustate)
 			((FLAG_C>>8)&1);
 }
 
-INLINE void g65816i_set_reg_p(g65816i_cpu_struct *cpustate, uint value,int executionMode)
+INLINE void g65816i_set_reg_p(g65816i_cpu_struct *cpustate, uint value)
 {
-    if(executionMode==EXECUTION_MODE_E)
-    {
+#if FLAG_SET_E
 	FLAG_N = value;
 	FLAG_V = value << 1;
 	FLAG_D = value & FLAGPOS_D;
 	FLAG_Z = !(value & FLAGPOS_Z);
 	FLAG_C = value << 8;
 	g65816i_set_flag_i(cpustate, value);
-    }
-    else
-    {
+#else
 	FLAG_N = value;
 	FLAG_V = value << 1;
 	FLAG_D = value & FLAGPOS_D;
 	FLAG_Z = !(value & FLAGPOS_Z);
 	FLAG_C = value << 8;
-	g65816i_set_flag_mx(cpustate, value,executionMode);
+	g65816i_set_flag_mx(cpustate, value);
 	g65816i_set_flag_i(cpustate, value);
-    }
+#endif
 }
 
 
@@ -402,87 +373,78 @@ INLINE void g65816i_set_reg_p(g65816i_cpu_struct *cpustate, uint value,int execu
 /* =============================== INTERRUPTS ============================= */
 /* ======================================================================== */
 
-INLINE void g65816i_interrupt_hardware(g65816i_cpu_struct *cpustate, uint vector, int executionMode)
+INLINE void g65816i_interrupt_hardware(g65816i_cpu_struct *cpustate, uint vector)
 {
-    if(executionMode==EXECUTION_MODE_E)
-    {
+#if FLAG_SET_E
 	CLK(7);
-	g65816i_push_16(cpustate, REGISTER_PC,executionMode);
-	g65816i_push_8(cpustate, g65816i_get_reg_p(cpustate) & ~FLAGPOS_B,executionMode);
+	g65816i_push_16(cpustate, REGISTER_PC);
+	g65816i_push_8(cpustate, g65816i_get_reg_p(cpustate) & ~FLAGPOS_B);
 	FLAG_D = DFLAG_CLEAR;
 	g65816i_set_flag_i(cpustate, IFLAG_SET);
 	REGISTER_PB = 0;
 	g65816i_jump_16(cpustate, g65816i_read_16_vector(cpustate, vector));
 	if(INT_ACK) INT_ACK(cpustate->device, 0);
-    }
-    else
-    {
+#else
 	CLK(8);
-	g65816i_push_8(cpustate, REGISTER_PB>>16,executionMode);
-	g65816i_push_16(cpustate, REGISTER_PC,executionMode);
-	g65816i_push_8(cpustate, g65816i_get_reg_p(cpustate),executionMode);
+	g65816i_push_8(cpustate, REGISTER_PB>>16);
+	g65816i_push_16(cpustate, REGISTER_PC);
+	g65816i_push_8(cpustate, g65816i_get_reg_p(cpustate));
 	FLAG_D = DFLAG_CLEAR;
 	g65816i_set_flag_i(cpustate, IFLAG_SET);
 	REGISTER_PB = 0;
 	g65816i_jump_16(cpustate, g65816i_read_16_vector(cpustate, vector));
 	if(INT_ACK) INT_ACK(cpustate->device, 0);
-    }
+#endif
 }
 
-INLINE void g65816i_interrupt_software(g65816i_cpu_struct *cpustate, uint vector, int executionMode)
+INLINE void g65816i_interrupt_software(g65816i_cpu_struct *cpustate, uint vector)
 {
-    if(executionMode == EXECUTION_MODE_E)
-    {
+#if FLAG_SET_E
 	CLK(7);
-	g65816i_push_16(cpustate, REGISTER_PC,executionMode);
-	g65816i_push_8(cpustate, g65816i_get_reg_p(cpustate),executionMode);
+	g65816i_push_16(cpustate, REGISTER_PC);
+	g65816i_push_8(cpustate, g65816i_get_reg_p(cpustate));
 	FLAG_D = DFLAG_CLEAR;
 	g65816i_set_flag_i(cpustate, IFLAG_SET);
 	REGISTER_PB = 0;
 	g65816i_jump_16(cpustate, g65816i_read_16_normal(cpustate, vector));
-    }
-    else
-    {
+#else
 	CLK(8);
-	g65816i_push_8(cpustate, REGISTER_PB>>16,executionMode);
-	g65816i_push_16(cpustate, REGISTER_PC,executionMode);
-	g65816i_push_8(cpustate, g65816i_get_reg_p(cpustate),executionMode);
+	g65816i_push_8(cpustate, REGISTER_PB>>16);
+	g65816i_push_16(cpustate, REGISTER_PC);
+	g65816i_push_8(cpustate, g65816i_get_reg_p(cpustate));
 	FLAG_D = DFLAG_CLEAR;
 	g65816i_set_flag_i(cpustate, IFLAG_SET);
 	REGISTER_PB = 0;
 	g65816i_jump_16(cpustate, g65816i_read_16_normal(cpustate, vector));
-    }
+#endif
 }
 
-INLINE void g65816i_interrupt_nmi(g65816i_cpu_struct *cpustate, int executionMode)
+INLINE void g65816i_interrupt_nmi(g65816i_cpu_struct *cpustate)
 {
-    if(executionMode == EXECUTION_MODE_E)
-    {
+#if FLAG_SET_E
 	CLK(7);
-	g65816i_push_16(cpustate, REGISTER_PC,executionMode);
-	g65816i_push_8(cpustate, g65816i_get_reg_p(cpustate) & ~FLAGPOS_B,executionMode);
+	g65816i_push_16(cpustate, REGISTER_PC);
+	g65816i_push_8(cpustate, g65816i_get_reg_p(cpustate) & ~FLAGPOS_B);
 	FLAG_D = DFLAG_CLEAR;
 	REGISTER_PB = 0;
 	g65816i_jump_16(cpustate, g65816i_read_16_normal(cpustate, VECTOR_NMI));
-	}
-	else
-	{
+#else
 	CLK(8);
-	g65816i_push_8(cpustate, REGISTER_PB>>16,executionMode);
-	g65816i_push_16(cpustate, REGISTER_PC,executionMode);
-	g65816i_push_8(cpustate, g65816i_get_reg_p(cpustate),executionMode);
+	g65816i_push_8(cpustate, REGISTER_PB>>16);
+	g65816i_push_16(cpustate, REGISTER_PC);
+	g65816i_push_8(cpustate, g65816i_get_reg_p(cpustate));
 	FLAG_D = DFLAG_CLEAR;
 	REGISTER_PB = 0;
 	g65816i_jump_16(cpustate, g65816i_read_16_normal(cpustate, VECTOR_NMI));
-    }
+#endif
 }
 
 
-INLINE void g65816i_check_maskable_interrupt(g65816i_cpu_struct *cpustate,int executionMode)
+INLINE void g65816i_check_maskable_interrupt(g65816i_cpu_struct *cpustate)
 {
 	if(!(CPU_STOPPED & STOP_LEVEL_STOP) && LINE_IRQ && !FLAG_I)
 	{
-		g65816i_interrupt_hardware(cpustate, VECTOR_IRQ,executionMode);
+		g65816i_interrupt_hardware(cpustate, VECTOR_IRQ);
 		CPU_STOPPED &= ~STOP_LEVEL_WAI;
 		LINE_IRQ=0;
 	}
@@ -496,11 +458,11 @@ INLINE void g65816i_check_maskable_interrupt(g65816i_cpu_struct *cpustate,int ex
 /* Effective-address based memory access macros */
 #define read_8_NORM(A)		g65816i_read_8_normal(cpustate, A)
 #define read_8_IMM(A)		g65816i_read_8_immediate(cpustate, A)
-#define read_8_D(A)	    	g65816i_read_8_direct(cpustate, A,EXECUTION_MODE)
+#define read_8_D(A)	    	g65816i_read_8_direct(cpustate, A)
 #define read_8_A(A)	    	g65816i_read_8_normal(cpustate, A)
 #define read_8_AL(A)		g65816i_read_8_normal(cpustate, A)
-#define read_8_DX(A)		g65816i_read_8_direct(cpustate, A,EXECUTION_MODE)
-#define read_8_DY(A)		g65816i_read_8_direct(cpustate, A,EXECUTION_MODE)
+#define read_8_DX(A)		g65816i_read_8_direct(cpustate, A)
+#define read_8_DY(A)		g65816i_read_8_direct(cpustate, A)
 #define read_8_AX(A)		g65816i_read_8_normal(cpustate, A)
 #define read_8_ALX(A)		g65816i_read_8_normal(cpustate, A)
 #define read_8_AY(A)		g65816i_read_8_normal(cpustate, A)
@@ -517,11 +479,11 @@ INLINE void g65816i_check_maskable_interrupt(g65816i_cpu_struct *cpustate,int ex
 
 #define read_16_NORM(A)		g65816i_read_16_normal(cpustate, A)
 #define read_16_IMM(A)		g65816i_read_16_immediate(cpustate, A)
-#define read_16_D(A)		g65816i_read_16_direct(cpustate, A, EXECUTION_MODE)
+#define read_16_D(A)		g65816i_read_16_direct(cpustate, A)
 #define read_16_A(A)		g65816i_read_16_normal(cpustate, A)
 #define read_16_AL(A)		g65816i_read_16_normal(cpustate, A)
-#define read_16_DX(A)		g65816i_read_16_direct(cpustate, A, EXECUTION_MODE)
-#define read_16_DY(A)		g65816i_read_16_direct(cpustate, A, EXECUTION_MODE)
+#define read_16_DX(A)		g65816i_read_16_direct(cpustate, A)
+#define read_16_DY(A)		g65816i_read_16_direct(cpustate, A)
 #define read_16_AX(A)		g65816i_read_16_normal(cpustate, A)
 #define read_16_ALX(A)		g65816i_read_16_normal(cpustate, A)
 #define read_16_AY(A)		g65816i_read_16_normal(cpustate, A)
@@ -538,11 +500,11 @@ INLINE void g65816i_check_maskable_interrupt(g65816i_cpu_struct *cpustate,int ex
 
 #define read_24_NORM(A)		g65816i_read_24_normal(cpustate, A)
 #define read_24_IMM(A)		g65816i_read_24_immediate(cpustate, A)
-#define read_24_D(A)		g65816i_read_24_direct(cpustate, A,EXECUTION_MODE)
+#define read_24_D(A)		g65816i_read_24_direct(cpustate, A)
 #define read_24_A(A)		g65816i_read_24_normal(cpustate, A)
 #define read_24_AL(A)		g65816i_read_24_normal(cpustate, A)
-#define read_24_DX(A)		g65816i_read_24_direct(cpustate, A,EXECUTION_MODE)
-#define read_24_DY(A)		g65816i_read_24_direct(cpustate, A,EXECUTION_MODE)
+#define read_24_DX(A)		g65816i_read_24_direct(cpustate, A)
+#define read_24_DY(A)		g65816i_read_24_direct(cpustate, A)
 #define read_24_AX(A)		g65816i_read_24_normal(cpustate, A)
 #define read_24_ALX(A)		g65816i_read_24_normal(cpustate, A)
 #define read_24_AY(A)		g65816i_read_24_normal(cpustate, A)
@@ -558,11 +520,11 @@ INLINE void g65816i_check_maskable_interrupt(g65816i_cpu_struct *cpustate,int ex
 #define read_24_SIY(A)		g65816i_read_24_normal(cpustate, A)
 
 #define write_8_NORM(A, V)	g65816i_write_8_normal(cpustate, A, V)
-#define write_8_D(A, V)		g65816i_write_8_direct(cpustate, A, V,EXECUTION_MODE)
+#define write_8_D(A, V)		g65816i_write_8_direct(cpustate, A, V)
 #define write_8_A(A, V)		g65816i_write_8_normal(cpustate, A, V)
 #define write_8_AL(A, V)	g65816i_write_8_normal(cpustate, A, V)
-#define write_8_DX(A, V)	g65816i_write_8_direct(cpustate, A, V,EXECUTION_MODE)
-#define write_8_DY(A, V)	g65816i_write_8_direct(cpustate, A, V,EXECUTION_MODE)
+#define write_8_DX(A, V)	g65816i_write_8_direct(cpustate, A, V)
+#define write_8_DY(A, V)	g65816i_write_8_direct(cpustate, A, V)
 #define write_8_AX(A, V)	g65816i_write_8_normal(cpustate, A, V)
 #define write_8_ALX(A, V)	g65816i_write_8_normal(cpustate, A, V)
 #define write_8_AY(A, V)	g65816i_write_8_normal(cpustate, A, V)
@@ -578,11 +540,11 @@ INLINE void g65816i_check_maskable_interrupt(g65816i_cpu_struct *cpustate,int ex
 #define write_8_SIY(A, V)	g65816i_write_8_normal(cpustate, A, V)
 
 #define write_16_NORM(A, V)	g65816i_write_16_normal(cpustate, A, V)
-#define write_16_D(A, V)	g65816i_write_16_direct(cpustate, A, V, EXECUTION_MODE)
+#define write_16_D(A, V)	g65816i_write_16_direct(cpustate, A, V)
 #define write_16_A(A, V)	g65816i_write_16_normal(cpustate, A, V)
 #define write_16_AL(A, V)	g65816i_write_16_normal(cpustate, A, V)
-#define write_16_DX(A, V)	g65816i_write_16_direct(cpustate, A, V, EXECUTION_MODE)
-#define write_16_DY(A, V)	g65816i_write_16_direct(cpustate, A, V, EXECUTION_MODE)
+#define write_16_DX(A, V)	g65816i_write_16_direct(cpustate, A, V)
+#define write_16_DY(A, V)	g65816i_write_16_direct(cpustate, A, V)
 #define write_16_AX(A, V)	g65816i_write_16_normal(cpustate, A, V)
 #define write_16_ALX(A, V)	g65816i_write_16_normal(cpustate, A, V)
 #define write_16_AY(A, V)	g65816i_write_16_normal(cpustate, A, V)
@@ -658,7 +620,7 @@ INLINE void g65816i_check_maskable_interrupt(g65816i_cpu_struct *cpustate,int ex
 #define OPER_24_S(cpustate)	    	read_24_S(EA_S(cpustate))
 #define OPER_24_SIY(cpustate)		read_24_SIY(EA_SIY(cpustate))
 
-INLINE uint EA_IMM8(g65816i_cpu_struct *cpustate)  {REGISTER_PC += 1; 	return REGISTER_PB | MAKE_UINT_16(REGISTER_PC-1);}
+INLINE uint EA_IMM8(g65816i_cpu_struct *cpustate)  {REGISTER_PC += 1; return REGISTER_PB | MAKE_UINT_16(REGISTER_PC-1);}
 INLINE uint EA_IMM16(g65816i_cpu_struct *cpustate) {REGISTER_PC += 2; return REGISTER_PB | MAKE_UINT_16(REGISTER_PC-2);}
 INLINE uint EA_IMM24(g65816i_cpu_struct *cpustate) {REGISTER_PC += 3; return REGISTER_PB | MAKE_UINT_16(REGISTER_PC-3);}
 INLINE uint EA_D(g65816i_cpu_struct *cpustate)     {if(MAKE_UINT_8(REGISTER_D)) CLK(1); return MAKE_UINT_16(REGISTER_D + OPER_8_IMM(cpustate));}
@@ -807,7 +769,7 @@ INLINE uint EA_SIY(g65816i_cpu_struct *cpustate)   {return MAKE_UINT_16(read_16_
 			if(COND)														\
 			{																\
 				CLK(CLK_OP + CLK_RELATIVE_8 + 1);							\
-				g65816i_branch_8(cpustate, DST, EXECUTION_MODE);										\
+				g65816i_branch_8(cpustate, DST);										\
 				BREAKOUT;													\
 			}																\
 			CLK(CLK_OP + CLK_RELATIVE_8);									\
@@ -845,13 +807,13 @@ INLINE uint EA_SIY(g65816i_cpu_struct *cpustate)   {return MAKE_UINT_16(read_16_
 #undef OP_BRK
 #define OP_BRK()															\
 			REGISTER_PC++;														\
-			g65816i_interrupt_software(cpustate, VECTOR_BRK,EXECUTION_MODE)
+			g65816i_interrupt_software(cpustate, VECTOR_BRK)
 
 /* G65816  Branch Always */
 #undef OP_BRA
 #define OP_BRA()															\
 			CLK(CLK_OP + CLK_IMPLIED + CLK_RELATIVE_8);						\
-			g65816i_branch_8(cpustate, OPER_8_IMM(cpustate), EXECUTION_MODE)
+			g65816i_branch_8(cpustate, OPER_8_IMM(cpustate))
 
 /* G65816  Branch Always Long */
 #undef OP_BRL
@@ -923,7 +885,7 @@ INLINE uint EA_SIY(g65816i_cpu_struct *cpustate)   {return MAKE_UINT_16(read_16_
 #undef OP_COP
 #define OP_COP()															\
 			REGISTER_PC++;														\
-			g65816i_interrupt_software(cpustate, VECTOR_COP,EXECUTION_MODE)
+			g65816i_interrupt_software(cpustate, VECTOR_COP)
 
 /* M6502   Decrement accumulator */
 #undef OP_DEC
@@ -1054,8 +1016,8 @@ INLINE uint EA_SIY(g65816i_cpu_struct *cpustate)   {return MAKE_UINT_16(read_16_
 #define OP_JSL(MODE)														\
 			CLK(CLK_OP + CLK_W24 + CLK_##MODE + 1);							\
 			DST = EA_##MODE(cpustate);												\
-			g65816i_push_8(cpustate, REGISTER_PB>>16,EXECUTION_MODE);										\
-			g65816i_push_16(cpustate, REGISTER_PC-1,EXECUTION_MODE);										\
+			g65816i_push_8(cpustate, REGISTER_PB>>16);										\
+			g65816i_push_16(cpustate, REGISTER_PC-1);										\
 			g65816i_jump_24(cpustate, DST)
 
 /* M6502   Jump to Subroutine */
@@ -1064,7 +1026,7 @@ INLINE uint EA_SIY(g65816i_cpu_struct *cpustate)   {return MAKE_UINT_16(read_16_
 #define OP_JSR(MODE)														\
 			CLK(CLK_OP + CLK_W16 + CLK_##MODE);								\
 			DST = EA_##MODE(cpustate);												\
-			g65816i_push_16(cpustate, REGISTER_PC-1,EXECUTION_MODE);										\
+			g65816i_push_16(cpustate, REGISTER_PC-1);										\
 			g65816i_jump_16(cpustate, DST)
 
 /* M6502   Jump to Subroutine */
@@ -1073,7 +1035,7 @@ INLINE uint EA_SIY(g65816i_cpu_struct *cpustate)   {return MAKE_UINT_16(read_16_
 #define OP_JSRAXI()															\
 			CLK(CLK_OP + CLK_W16 + CLK_AXI);								\
 			DST = read_16_AXI(REGISTER_PB | (MAKE_UINT_16(OPER_16_IMM(cpustate) + REGISTER_X))); \
-			g65816i_push_16(cpustate, REGISTER_PC-1, EXECUTION_MODE);						\
+			g65816i_push_16(cpustate, REGISTER_PC-1);										\
 			g65816i_jump_16(cpustate, DST)
 
 /* M6502   Load accumulator with operand */
@@ -1334,31 +1296,31 @@ INLINE uint EA_SIY(g65816i_cpu_struct *cpustate)   {return MAKE_UINT_16(read_16_
 #undef OP_PEA
 #define OP_PEA()															\
 			CLK(CLK_OP + CLK_R16 + CLK_W16);								\
-			g65816i_push_16(cpustate, OPER_16_IMM(cpustate), EXECUTION_MODE)
+			g65816i_push_16(cpustate, OPER_16_IMM(cpustate))
 
 /* G65816  Push Effective Indirect Address */
 #undef OP_PEI
 #define OP_PEI()															\
 			CLK(CLK_OP + CLK_R16 + CLK_W16 + CLK_D);						\
-			g65816i_push_16(cpustate, EA_DI(cpustate), EXECUTION_MODE)
+			g65816i_push_16(cpustate, EA_DI(cpustate))
 
 /* G65816  Push Effective PC-Relative Address */
 #undef OP_PER
 #define OP_PER()															\
 			CLK(CLK_OP + CLK_R16 + CLK_W16 + 1);							\
 			SRC = OPER_16_IMM(cpustate);											\
-			g65816i_push_16(cpustate, REGISTER_PC + SRC, EXECUTION_MODE)
+			g65816i_push_16(cpustate, REGISTER_PC + SRC)
 
 /* M6502   Push accumulator to the stack */
 #undef OP_PHA
 #if FLAG_SET_M
 #define OP_PHA()															\
 			CLK(CLK_OP + CLK_W8 + 1);										\
-			g65816i_push_8(cpustate, REGISTER_A,EXECUTION_MODE)
+			g65816i_push_8(cpustate, REGISTER_A)
 #else
 #define OP_PHA()															\
 			CLK(CLK_OP + CLK_W16 + 1);										\
-			g65816i_push_16(cpustate, REGISTER_A, EXECUTION_MODE)
+			g65816i_push_16(cpustate, REGISTER_A)
 #endif
 
 /* M6502   Push index register to the stack */
@@ -1366,47 +1328,47 @@ INLINE uint EA_SIY(g65816i_cpu_struct *cpustate)   {return MAKE_UINT_16(read_16_
 #if FLAG_SET_X
 #define OP_PHX(REG)															\
 			CLK(CLK_OP + CLK_W8 + 1);										\
-			g65816i_push_8(cpustate, REG,EXECUTION_MODE)
+			g65816i_push_8(cpustate, REG)
 #else
 #define OP_PHX(REG)															\
 			CLK(CLK_OP + CLK_W16 + 1);										\
-			g65816i_push_16(cpustate, REG, EXECUTION_MODE)
+			g65816i_push_16(cpustate, REG)
 #endif
 
 /* G65816  Push data bank register */
 #undef OP_PHB
 #define OP_PHB()															\
 			CLK(CLK_OP + CLK_W8 + 1);										\
-			g65816i_push_8(cpustate, REGISTER_DB>>16,EXECUTION_MODE)
+			g65816i_push_8(cpustate, REGISTER_DB>>16)
 
 /* G65816  Push direct register */
 #undef OP_PHD
 #define OP_PHD()															\
 			CLK(CLK_OP + CLK_W16 + 1);										\
-			g65816i_push_16(cpustate, REGISTER_D, EXECUTION_MODE)
+			g65816i_push_16(cpustate, REGISTER_D)
 
 /* G65816  Push program bank register */
 #undef OP_PHK
 #define OP_PHK()															\
 			CLK(CLK_OP + CLK_W8 + 1);										\
-			g65816i_push_8(cpustate, REGISTER_PB>>16,EXECUTION_MODE)
+			g65816i_push_8(cpustate, REGISTER_PB>>16)
 
 /* M6502   Push the Processor Status Register to the stack */
 #undef OP_PHP
 #define OP_PHP()															\
 			CLK(CLK_OP + CLK_W8 + 1);										\
-			g65816i_push_8(cpustate, g65816i_get_reg_p(cpustate),EXECUTION_MODE)
+			g65816i_push_8(cpustate, g65816i_get_reg_p(cpustate))
 
 /* M6502   Pull accumulator from the stack */
 #undef OP_PLA
 #if FLAG_SET_M
 #define OP_PLA()															\
 			CLK(CLK_OP + CLK_R8 + 2);										\
-			FLAG_N = FLAG_Z = REGISTER_A = g65816i_pull_8(cpustate,EXECUTION_MODE)
+			FLAG_N = FLAG_Z = REGISTER_A = g65816i_pull_8(cpustate)
 #else
 #define OP_PLA()															\
 			CLK(CLK_OP + CLK_R16 + 2);										\
-			FLAG_Z = REGISTER_A = g65816i_pull_16(cpustate, EXECUTION_MODE);								\
+			FLAG_Z = REGISTER_A = g65816i_pull_16(cpustate);								\
 			FLAG_N = NFLAG_16(FLAG_Z)
 #endif
 
@@ -1415,11 +1377,11 @@ INLINE uint EA_SIY(g65816i_cpu_struct *cpustate)   {return MAKE_UINT_16(read_16_
 #if FLAG_SET_X
 #define OP_PLX(REG)															\
 			CLK(CLK_OP + CLK_R8 + 2);										\
-			FLAG_N = FLAG_Z = REG = g65816i_pull_8(cpustate,EXECUTION_MODE)
+			FLAG_N = FLAG_Z = REG = g65816i_pull_8(cpustate)
 #else
 #define OP_PLX(REG)															\
 			CLK(CLK_OP + CLK_R16 + 2);										\
-			FLAG_Z = REG = g65816i_pull_16(cpustate, EXECUTION_MODE);								\
+			FLAG_Z = REG = g65816i_pull_16(cpustate);								\
 			FLAG_N = NFLAG_16(FLAG_Z)
 #endif
 
@@ -1427,27 +1389,27 @@ INLINE uint EA_SIY(g65816i_cpu_struct *cpustate)   {return MAKE_UINT_16(read_16_
 #undef OP_PLB
 #define OP_PLB()															\
 			CLK(CLK_OP + CLK_R8 + 2);										\
-			FLAG_N = FLAG_Z = g65816i_pull_8(cpustate,EXECUTION_MODE);								\
+			FLAG_N = FLAG_Z = g65816i_pull_8(cpustate);								\
 			REGISTER_DB = FLAG_Z << 16
 
 /* G65816  Pull direct register */
 #undef OP_PLD
 #define OP_PLD()															\
 			CLK(CLK_OP + CLK_R16 + 2);										\
-			FLAG_Z = REGISTER_D = g65816i_pull_16(cpustate, EXECUTION_MODE);								\
+			FLAG_Z = REGISTER_D = g65816i_pull_16(cpustate);								\
 			FLAG_N = NFLAG_16(FLAG_Z)
 
 /* M6502   Pull the Processor Status Register from the stack */
 #undef OP_PLP
 #define OP_PLP()															\
 			CLK(CLK_OP + CLK_R8 + 2);										\
-			g65816i_set_reg_p(cpustate, g65816i_pull_8(cpustate,EXECUTION_MODE), EXECUTION_MODE)
+			g65816i_set_reg_p(cpustate, g65816i_pull_8(cpustate))
 
 /* G65816  Reset Program status word */
 #undef OP_REP
 #define OP_REP()															\
 			CLK(CLK_OP + CLK_R8 + 1);										\
-			g65816i_set_reg_p(cpustate, g65816i_get_reg_p(cpustate) & ~OPER_8_IMM(cpustate), EXECUTION_MODE)
+			g65816i_set_reg_p(cpustate, g65816i_get_reg_p(cpustate) & ~OPER_8_IMM(cpustate))
 
 /* M6502   Rotate Left the accumulator */
 #undef OP_ROL
@@ -1528,14 +1490,14 @@ INLINE uint EA_SIY(g65816i_cpu_struct *cpustate)   {return MAKE_UINT_16(read_16_
 #if FLAG_SET_E
 #define OP_RTI()															\
 			CLK(7);															\
-			g65816i_set_reg_p(cpustate, g65816i_pull_8(cpustate,EXECUTION_MODE), EXECUTION_MODE);							\
-			g65816i_jump_16(cpustate, g65816i_pull_16(cpustate, EXECUTION_MODE))
+			g65816i_set_reg_p(cpustate, g65816i_pull_8(cpustate));							\
+			g65816i_jump_16(cpustate, g65816i_pull_16(cpustate))
 #else
 #define OP_RTI()															\
 			CLK(8);															\
-			g65816i_set_reg_p(cpustate, g65816i_pull_8(cpustate,EXECUTION_MODE), EXECUTION_MODE);							\
-			g65816i_jump_16(cpustate, g65816i_pull_16(cpustate, EXECUTION_MODE));								\
-			REGISTER_PB = g65816i_pull_8(cpustate,EXECUTION_MODE) << 16
+			g65816i_set_reg_p(cpustate, g65816i_pull_8(cpustate));							\
+			g65816i_jump_16(cpustate, g65816i_pull_16(cpustate));								\
+			REGISTER_PB = g65816i_pull_8(cpustate) << 16
 #endif
 
 /* G65816  Return from Subroutine Long */
@@ -1543,14 +1505,14 @@ INLINE uint EA_SIY(g65816i_cpu_struct *cpustate)   {return MAKE_UINT_16(read_16_
 #undef OP_RTL
 #define OP_RTL()															\
 			CLK(6);															\
-			g65816i_jump_24(cpustate, g65816i_pull_24(cpustate,EXECUTION_MODE))
+			g65816i_jump_24(cpustate, g65816i_pull_24(cpustate))
 
 /* M6502   Return from Subroutine */
 /* Unusual behavior: Gets PC and increments */
 #undef OP_RTS
 #define OP_RTS()															\
 			CLK(6);															\
-			g65816i_jump_16(cpustate, g65816i_pull_16(cpustate, EXECUTION_MODE)+1)
+			g65816i_jump_16(cpustate, g65816i_pull_16(cpustate)+1)
 
 /* M6502   Subtract with Carry */
 /* Unusual behavior: C flag is inverted */
@@ -1642,7 +1604,7 @@ INLINE uint EA_SIY(g65816i_cpu_struct *cpustate)   {return MAKE_UINT_16(read_16_
 #undef OP_SEP
 #define OP_SEP()															\
 			CLK(CLK_OP + CLK_R8 + 1);										\
-			g65816i_set_reg_p(cpustate, g65816i_get_reg_p(cpustate) | OPER_8_IMM(cpustate), EXECUTION_MODE)
+			g65816i_set_reg_p(cpustate, g65816i_get_reg_p(cpustate) | OPER_8_IMM(cpustate))
 
 /* M6502   Store accumulator to memory */
 #undef OP_STA
@@ -1887,7 +1849,7 @@ INLINE uint EA_SIY(g65816i_cpu_struct *cpustate)   {return MAKE_UINT_16(read_16_
 #undef OP_WDM
 #define OP_WDM()															\
 			CLK(CLK_OP + CLK_IMPLIED);										\
-			REGISTER_PC++ \
+			REGISTER_PC++
 
 /* G65816  Exchange accum high and low bytes */
 #undef OP_XBA
@@ -1912,7 +1874,7 @@ INLINE uint EA_SIY(g65816i_cpu_struct *cpustate)   {return MAKE_UINT_16(read_16_
 			CLK(CLK_OP + CLK_IMPLIED);										\
 			SRC = CFLAG_AS_1();												\
 			FLAG_C = FLAG_E<<8;												\
-			g65816i_set_flag_e(cpustate, SRC, EXECUTION_MODE)
+			g65816i_set_flag_e(cpustate, SRC)
 
 
 
@@ -2301,7 +2263,7 @@ TABLE_FUNCTION(void, set_line, (g65816i_cpu_struct *cpustate, int line, int stat
 				LINE_NMI = 1;
 				CPU_STOPPED &= ~STOP_LEVEL_WAI;
 				if(!CPU_STOPPED)
-					g65816i_interrupt_nmi(cpustate,EXECUTION_MODE);
+					g65816i_interrupt_nmi(cpustate);
 			}
 			return;
 		case G65816_LINE_SO:
@@ -2353,7 +2315,7 @@ TABLE_FUNCTION(void, set_reg, (g65816i_cpu_struct *cpustate, int regnum, uint va
 #else
 		case STATE_GENSP: case G65816_S: REGISTER_S = MAKE_UINT_16(val); break;
 #endif
-		case G65816_P: g65816i_set_reg_p(cpustate, val, EXECUTION_MODE); break;
+		case G65816_P: g65816i_set_reg_p(cpustate, val); break;
 #if FLAG_SET_M
 		case G65816_A: REGISTER_A = MAKE_UINT_8(val); REGISTER_B = val&0xff00; break;
 #else
@@ -2397,7 +2359,7 @@ INLINE int g65816i_correct_mode(g65816i_cpu_struct *cpustate)
 TABLE_FUNCTION(int, execute, (g65816i_cpu_struct *cpustate, int clocks))
 {
 	// do a check here also in case we're in STOP_WAI mode - this'll clear it when the IRQ happens
-	g65816i_check_maskable_interrupt(cpustate, EXECUTION_MODE);
+	g65816i_check_maskable_interrupt(cpustate);
 
 	if (!CPU_STOPPED)
 	{
@@ -2408,7 +2370,7 @@ TABLE_FUNCTION(int, execute, (g65816i_cpu_struct *cpustate, int clocks))
              * check until this core is working well enough
              * to start trying fancy stuff.
              */
-			g65816i_check_maskable_interrupt(cpustate, EXECUTION_MODE);
+			g65816i_check_maskable_interrupt(cpustate);
 
 			REGISTER_PPC = REGISTER_PC;
 			G65816_CALL_DEBUGGER(REGISTER_PB | REGISTER_PC);

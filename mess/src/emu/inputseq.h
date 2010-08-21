@@ -24,7 +24,7 @@
 ***************************************************************************/
 
 /* additional expanded input codes for sequences */
-enum SequenceCode
+enum
 {
 	/* special codes */
 	SEQCODE_END = INTERNAL_CODE(0),
@@ -129,7 +129,7 @@ INLINE void input_seq_set_5(input_seq *seq, input_code code0, input_code code1, 
 	seq->code[2] = code2;
 	seq->code[3] = code3;
 	seq->code[4] = code4;
-	for (codenum = 5; codenum < int(ARRAY_LENGTH(seq->code)) ; codenum++)
+	for (codenum = 5; codenum < ARRAY_LENGTH(seq->code); codenum++)
 		seq->code[codenum] = SEQCODE_END;
 }
 
@@ -166,11 +166,11 @@ INLINE void input_seq_set_0(input_seq *seq)
 INLINE int input_seq_cmp(const input_seq *seqa, const input_seq *seqb)
 {
 	int codenum;
-	for (codenum = 0; codenum < int(ARRAY_LENGTH(seqa->code)); codenum++)
+	for (codenum = 0; codenum < ARRAY_LENGTH(seqa->code); codenum++)
 	{
 		if (seqa->code[codenum] != seqb->code[codenum])
 			return -1;
-		if (seqa->code[codenum] == UINT32(SEQCODE_END) )
+		if (seqa->code[codenum] == SEQCODE_END)
 			break;
 	}
 	return 0;
@@ -186,19 +186,19 @@ INLINE int input_seq_cmp(const input_seq *seqa, const input_seq *seqb)
 INLINE void input_seq_append_or(input_seq *seq, input_code code)
 {
 	int codenum;
-	if (seq->code[0] == UINT32(SEQCODE_END) || seq->code[0] == UINT32(SEQCODE_DEFAULT) )
+	if (seq->code[0] == SEQCODE_END || seq->code[0] == SEQCODE_DEFAULT)
 	{
 		seq->code[0] = code;
-		seq->code[1] = UINT32(SEQCODE_END);
+		seq->code[1] = SEQCODE_END;
 	}
 	else
 	{
-		for (codenum = 0; codenum < int(ARRAY_LENGTH(seq->code)) - 2; codenum++)
-			if (seq->code[codenum] == UINT32(SEQCODE_END) )
+		for (codenum = 0; codenum < ARRAY_LENGTH(seq->code) - 2; codenum++)
+			if (seq->code[codenum] == SEQCODE_END)
 			{
-				seq->code[codenum++] = UINT32(SEQCODE_OR);
+				seq->code[codenum++] = SEQCODE_OR;
 				seq->code[codenum++] = code;
-				seq->code[codenum++] = UINT32(SEQCODE_END);
+				seq->code[codenum++] = SEQCODE_END;
 			}
 	}
 }

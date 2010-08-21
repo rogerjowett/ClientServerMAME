@@ -53,7 +53,7 @@ typedef struct _cartslot_config cartslot_config;
 struct _cartslot_config
 {
 	const char *					extensions;
-	const char *					cart_interface;
+	const char *					interface;
 	int								must_be_loaded;
 	device_start_func				device_start;
 	device_image_load_func			device_load;
@@ -113,7 +113,7 @@ int cartslot_get_resource_length(running_device *device, const char *socket_name
 	MDRV_DEVICE_CONFIG_DATAPTR_ARRAY_MEMBER(cartslot_config, pcb_types, _index, cartslot_pcb_type, devtype, _pcb_devtype)
 
 #define MDRV_CARTSLOT_INTERFACE(_interface)							\
-	MDRV_DEVICE_CONFIG_DATAPTR(cartslot_config, cart_interface, _interface )
+	MDRV_DEVICE_CONFIG_DATAPTR(cartslot_config, interface, _interface )
 
 #define DECLARE_LEGACY_CART_SLOT_DEVICE(name, basename) _DECLARE_LEGACY_DEVICE(name, basename, basename##_device_config, basename##_device, legacy_cart_slot_device_config_base, legacy_cart_slot_device_base)
 #define DEFINE_LEGACY_CART_SLOT_DEVICE(name, basename) _DEFINE_LEGACY_DEVICE(name, basename, basename##_device_config, basename##_device, legacy_cart_slot_device_config_base, legacy_cart_slot_device_base)

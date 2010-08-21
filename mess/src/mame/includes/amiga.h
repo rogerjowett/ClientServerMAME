@@ -393,7 +393,7 @@ WRITE16_HANDLER( amiga_autoconfig_w );
 void amiga_cia_0_irq(running_device *device, int state);
 void amiga_cia_1_irq(running_device *device, int state);
 
-const amiga_machine_interface *amiga_get_interface_amiga(void);
+const amiga_machine_interface *amiga_get_interface(void);
 
 
 /*----------- defined in audio/amiga.c -----------*/

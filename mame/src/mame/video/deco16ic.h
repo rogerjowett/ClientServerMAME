@@ -116,7 +116,7 @@ void deco16ic_pdrawgfx(
 
 /* used by robocop2 */
 void deco16ic_set_tilemap_colour_mask(running_device *device, int tmap, int mask);
-void deco16ic_pf34_set_gfxbank(running_device *device, int small_deco, int big_deco);
+void deco16ic_pf34_set_gfxbank(running_device *device, int small, int big);
 
 /* used by stoneage */
 void deco16ic_set_scrolldx(running_device *device, int tmap, int size, int dx, int dx_if_flipped);

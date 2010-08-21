@@ -116,8 +116,8 @@ PREFIX = v
 endif
 
 # replace the various compilers with vconv.exe prefixes
-CC = @$(VCONVPREFIX) gcc -I.
-LD = @$(VCONVPREFIX) ld /profile
+CC = @$(VCONVPREFIX) gcc -I. -I"C:\DirectXSDK\Include"
+LD = @$(VCONVPREFIX) ld /profile 
 AR = @$(VCONVPREFIX) ar
 RC = @$(VCONVPREFIX) windres
 
@@ -126,6 +126,20 @@ ifdef DEBUG
 CCOMFLAGS += /MTd
 else
 CCOMFLAGS += /MT
+endif
+
+ifdef DEBUG
+ifeq ($(PTR64),1)
+LDFLAGS += ${SRC}/../../../Libraries/RakNet/Lib/RakNetLibStaticDebug.lib ws2_32.lib
+else
+LDFLAGS += ${SRC}/../../../Libraries/RakNet32/Lib/RakNetLibStaticDebug.lib ws2_32.lib
+endif
+else
+ifeq ($(PTR64),1)
+LDFLAGS += ${SRC}/../../../Libraries/RakNet/Lib/RakNetLibStatic.lib ws2_32.lib
+else
+LDFLAGS += ${SRC}/../../../Libraries/RakNet32/Lib/RakNetLibStatic.lib ws2_32.lib
+endif
 endif
 
 # turn on link-time codegen if the MAXOPT flag is also set
@@ -229,7 +243,7 @@ LIBS += -lunicows
 endif
 
 # ensure we statically link the gcc runtime lib
-LDFLAGS += -static-libgcc
+LDFLAGS += -static-libgcc /LIBPATH:"C:\DirectXSDK\Lib\x86"
 
 # add the windows libraries
 LIBS += -luser32 -lgdi32 -lddraw -ldsound -ldxguid -lwinmm -ladvapi32 -lcomctl32 -lshlwapi -ldinput8

@@ -107,7 +107,7 @@ static UINT32 h8_divxs16(h83xx_state *h8, INT16 src, INT32 dst);
 
 static CPU_EXECUTE(h8)
 {
-	h83xx_state *h8 = get_safe_token_h8(device);
+	h83xx_state *h8 = get_safe_token(device);
 	UINT16 opcode=0;
 
 	h8_check_irqs(h8);

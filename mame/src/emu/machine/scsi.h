@@ -64,7 +64,7 @@ typedef struct scsiconfigtable
 } SCSIConfigTable;
 
 // SCSI IDs
-enum SCSIID
+enum
 {
 	SCSI_ID_0 = 0,
 	SCSI_ID_1,

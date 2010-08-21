@@ -15,14 +15,14 @@
 	/* equivalent to #include <GL/gl.h>
      * #include <GL/glext.h>
      */
-	#include <SDL_version.h>
+	#include <SDL/SDL_version.h>
 
 #if (SDL_VERSION_ATLEAST(1,2,10))
 	#if defined(SDLMAME_WIN32)
 		// Avoid that winnt.h (included via sdl_opengl.h, windows.h, windef.h includes intrin.h
 		#define __INTRIN_H_
 	#endif
-	#include <SDL_opengl.h>
+	#include <SDL/SDL_opengl.h>
 #else
 	/*
      * SDL 1.2.9 does not provide everything we need

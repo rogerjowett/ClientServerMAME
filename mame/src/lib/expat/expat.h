@@ -17,6 +17,10 @@
 #include <stdlib.h>
 #include "expat_external.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct XML_ParserStruct;
 typedef struct XML_ParserStruct *XML_Parser;
 
@@ -1002,5 +1006,9 @@ XML_GetFeatureList(void);
 #define XML_MAJOR_VERSION 2
 #define XML_MINOR_VERSION 0
 #define XML_MICRO_VERSION 1
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* not Expat_INCLUDED */

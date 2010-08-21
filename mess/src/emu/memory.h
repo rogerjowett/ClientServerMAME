@@ -25,7 +25,7 @@
 ***************************************************************************/
 
 /* address spaces */
-enum AddressSpace
+enum
 {
 	ADDRESS_SPACE_0,				/* first address space */
 	ADDRESS_SPACE_1,				/* second address space */

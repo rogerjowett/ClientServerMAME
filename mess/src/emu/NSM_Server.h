@@ -9,7 +9,6 @@ void deleteGlobalServer();
 class Session
 {
 protected:
-    boost::shared_ptr<tcp::socket> activeSocket;
     vector< string > inputBufferQueue;
     RakNet::RakNetGUID guid;
 

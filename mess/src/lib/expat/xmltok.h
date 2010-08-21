@@ -5,6 +5,10 @@
 #ifndef XmlTok_INCLUDED
 #define XmlTok_INCLUDED 1
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* The following token may be returned by XmlContentTok */
 #define XML_TOK_TRAILING_RSQB -5 /* ] or ]] at the end of the scan; might be
                                     start of illegal ]]> sequence */
@@ -305,4 +309,8 @@ XmlInitUnknownEncodingNS(void *mem,
                          int *table,
                          CONVERTER convert,
                          void *userData);
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* not XmlTok_INCLUDED */

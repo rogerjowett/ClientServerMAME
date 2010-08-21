@@ -31,7 +31,7 @@
 ***************************************************************************/
 
 /* profiling */
-enum ProfilerType
+enum
 {
 	PROFILER_DEVICE_FIRST = 0,
 	PROFILER_DEVICE_MAX = PROFILER_DEVICE_FIRST + 256,
@@ -74,21 +74,24 @@ enum ProfilerType
     TYPE DEFINITIONS
 ***************************************************************************/
 
-struct profiler_filo_entry
+typedef struct _profiler_filo_entry profiler_filo_entry;
+struct _profiler_filo_entry
 {
 	int				type;				/* type of entry */
 	osd_ticks_t		start;				/* start time */
 };
 
 
-struct profiler_data
+typedef struct _profiler_data profiler_data;
+struct _profiler_data
 {
 	UINT32			context_switches;	/* number of context switches seen */
 	osd_ticks_t		duration[PROFILER_TOTAL]; /* duration spent in each entry */
 };
 
 
-struct profiler_state
+typedef struct _profiler_state profiler_state;
+struct _profiler_state
 {
 	UINT8			enabled;			/* are we enabled? */
 	UINT8			filoindex;			/* current FILO index */

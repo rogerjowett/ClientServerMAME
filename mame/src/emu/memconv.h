@@ -301,9 +301,9 @@ INLINE UINT64 read64be_with_read8_handler(read8_space_func handler, const addres
 INLINE void write64be_with_write8_handler(write8_space_func handler, const address_space *space, offs_t offset, UINT64 data, UINT64 mem_mask)
 {
 	if (ACCESSING_BITS_32_63)
-		write32be_with_write8_handler(handler, space, offset * 2 + 0, (UINT32)(data >> 32), (UINT32)(mem_mask >> 32) );
+		write32be_with_write8_handler(handler, space, offset * 2 + 0, data >> 32, mem_mask >> 32);
 	if (ACCESSING_BITS_0_31)
-		write32be_with_write8_handler(handler, space, offset * 2 + 1, (UINT32)data, (UINT32)mem_mask);
+		write32be_with_write8_handler(handler, space, offset * 2 + 1, data, mem_mask);
 }
 
 
@@ -327,9 +327,9 @@ INLINE UINT64 read64le_with_read8_handler(read8_space_func handler, const addres
 INLINE void write64le_with_write8_handler(write8_space_func handler, const address_space *space, offs_t offset, UINT64 data, UINT64 mem_mask)
 {
 	if (ACCESSING_BITS_0_31)
-		write32le_with_write8_handler(handler, space, offset * 2 + 0, (UINT32)(data >> 0), (UINT32)(mem_mask >> 0) );
+		write32le_with_write8_handler(handler, space, offset * 2 + 0, data >> 0, mem_mask >> 0);
 	if (ACCESSING_BITS_32_63)
-		write32le_with_write8_handler(handler, space, offset * 2 + 1, (UINT32)(data >> 32), (UINT32)(mem_mask >> 32) );
+		write32le_with_write8_handler(handler, space, offset * 2 + 1, data >> 32, mem_mask >> 32);
 }
 
 
@@ -339,7 +339,7 @@ INLINE void write64le_with_write8_handler(write8_space_func handler, const addre
  *
  *************************************/
 
-INLINE UINT64 read64be_with_16be_handler(read16_space_func handler, const address_space *space, offs_t offset, UINT64 mem_mask)
+INLINE UINT32 read64be_with_16be_handler(read16_space_func handler, const address_space *space, offs_t offset, UINT64 mem_mask)
 {
 	UINT64 result = 0;
 	if (ACCESSING_BITS_32_63)
@@ -353,9 +353,9 @@ INLINE UINT64 read64be_with_16be_handler(read16_space_func handler, const addres
 INLINE void write64be_with_16be_handler(write16_space_func handler, const address_space *space, offs_t offset, UINT64 data, UINT64 mem_mask)
 {
 	if (ACCESSING_BITS_32_63)
-		write32be_with_16be_handler(handler, space, offset * 2 + 0, (UINT32)(data >> 32), (UINT32)(mem_mask >> 32) );
+		write32be_with_16be_handler(handler, space, offset * 2 + 0, data >> 32, mem_mask >> 32);
 	if (ACCESSING_BITS_0_31)
-		write32be_with_16be_handler(handler, space, offset * 2 + 1, (UINT32)(data >> 0) , (UINT32)(mem_mask >> 0) );
+		write32be_with_16be_handler(handler, space, offset * 2 + 1, data >> 0, mem_mask >> 0);
 }
 
 

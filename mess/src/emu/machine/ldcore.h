@@ -184,7 +184,7 @@ extern const ldplayer_interface vp932_interface;
 /* ----- player interface ----- */
 
 /* return a token with type checking from a device */
-laserdisc_state *ldcore_get_safe_token_ldcore(running_device *device);
+laserdisc_state *ldcore_get_safe_token(running_device *device);
 
 /* set the left/right audio squelch states */
 void ldcore_set_audio_squelch(laserdisc_state *ld, UINT8 squelchleft, UINT8 squelchright);

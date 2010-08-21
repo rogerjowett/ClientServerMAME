@@ -18,4 +18,3 @@ bool mame_validitychecks(const game_driver *driver);
 bool validate_tag(const game_driver *driver, const char *object, const char *tag);
 
 #endif
-

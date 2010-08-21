@@ -202,7 +202,7 @@ void dump_unfreed_mem();
 //**************************************************************************
 
 // standard new/delete operators (try to avoid using)
-inline void *operator new(std::size_t size)
+inline void *operator new(std::size_t size) throw (std::bad_alloc)
 {
 	void *result = malloc_file_line(size, NULL, 0);
 	if (result == NULL)
@@ -210,7 +210,7 @@ inline void *operator new(std::size_t size)
 	return result;
 }
 
-inline void *operator new[](std::size_t size)
+inline void *operator new[](std::size_t size) throw (std::bad_alloc)
 {
 	void *result = malloc_file_line(size, NULL, 0);
 	if (result == NULL)
@@ -232,7 +232,7 @@ inline void operator delete[](void *ptr)
 
 
 // file/line new/delete operators
-inline void *operator new(std::size_t size, const char *file, int line) 
+inline void *operator new(std::size_t size, const char *file, int line) throw (std::bad_alloc)
 {
 	void *result = malloc_file_line(size, file, line);
 	if (result == NULL)
@@ -240,7 +240,7 @@ inline void *operator new(std::size_t size, const char *file, int line)
 	return result;
 }
 
-inline void *operator new[](std::size_t size, const char *file, int line) 
+inline void *operator new[](std::size_t size, const char *file, int line) throw (std::bad_alloc)
 {
 	void *result = malloc_file_line(size, file, line);
 	if (result == NULL)
@@ -262,7 +262,7 @@ inline void operator delete[](void *ptr, const char *file, int line)
 
 
 // file/line new/delete operators with zeroing
-inline void *operator new(std::size_t size, const char *file, int line, const zeromem_t &) 
+inline void *operator new(std::size_t size, const char *file, int line, const zeromem_t &) throw (std::bad_alloc)
 {
 	void *result = malloc_file_line(size, file, line);
 	if (result == NULL)
@@ -271,7 +271,7 @@ inline void *operator new(std::size_t size, const char *file, int line, const ze
 	return result;
 }
 
-inline void *operator new[](std::size_t size, const char *file, int line, const zeromem_t &) 
+inline void *operator new[](std::size_t size, const char *file, int line, const zeromem_t &) throw (std::bad_alloc)
 {
 	void *result = malloc_file_line(size, file, line);
 	if (result == NULL)

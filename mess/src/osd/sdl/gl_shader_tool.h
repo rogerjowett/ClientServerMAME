@@ -31,6 +31,10 @@
 #ifndef _GL_SHADER_TOOL_
 #define _GL_SHADER_TOOL_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /***
  *
  * OpenGL GLSL extentions:
@@ -186,5 +190,9 @@ extern PFNGLUNIFORM2IVARBPROC pfn_glUniform2ivARB;
 extern PFNGLUNIFORM3IVARBPROC pfn_glUniform3ivARB;
 extern PFNGLUNIFORM4IVARBPROC pfn_glUniform4ivARB;
 
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

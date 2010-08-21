@@ -35,7 +35,7 @@ static struct {
 
 #define PutImmRMWord(ModRM) 				\
 {							\
-	NEC_WORD val;					\
+	WORD val;					\
 	if (ModRM >= 0xc0)				\
 		nec_state->regs.w[Mod_RM.RM.w[ModRM]] = FETCHWORD(); \
 	else {						\

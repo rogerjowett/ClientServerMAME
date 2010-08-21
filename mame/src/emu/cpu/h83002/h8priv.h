@@ -47,7 +47,7 @@ struct _h83xx_state
 };
 extern h83xx_state h8;
 
-inline h83xx_state *get_safe_token_h8(running_device *device)
+INLINE h83xx_state *get_safe_token(running_device *device)
 {
 	assert(device != NULL);
 	assert(device->type() == H83002 ||

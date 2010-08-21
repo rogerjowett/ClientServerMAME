@@ -34,7 +34,7 @@
    system headers may assume the cdecl convention.
 */
 #ifndef XMLCALL
-#if defined(XML_USE_MSC_EXTENSIONS) || defined(_MSC_VER)
+#if defined(_MSC_VER)
 #define XMLCALL __cdecl
 #elif defined(__GNUC__) && defined(__i386) && !defined(__INTEL_COMPILER)
 #define XMLCALL __attribute__((cdecl))
@@ -74,6 +74,10 @@
 
 #define XMLPARSEAPI(type) XMLIMPORT type XMLCALL
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifdef XML_UNICODE_WCHAR_T
 #define XML_UNICODE
 #endif
@@ -103,5 +107,9 @@ typedef unsigned long long XML_Size;
 typedef long XML_Index;
 typedef unsigned long XML_Size;
 #endif /* XML_LARGE_SIZE */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* not Expat_External_INCLUDED */

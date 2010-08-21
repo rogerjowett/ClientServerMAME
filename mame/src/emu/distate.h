@@ -165,10 +165,10 @@ public:
 
 	// state getters
 	UINT64 state(int index);
-	offs_t pc() { return (offs_t)state(STATE_GENPC); }
-	offs_t pcbase() { return (offs_t)state(STATE_GENPCBASE); }
-	offs_t sp() { return (offs_t)state(STATE_GENSP); }
-	UINT64 flags() { return (offs_t)state(STATE_GENFLAGS); }
+	offs_t pc() { return state(STATE_GENPC); }
+	offs_t pcbase() { return state(STATE_GENPCBASE); }
+	offs_t sp() { return state(STATE_GENSP); }
+	UINT64 flags() { return state(STATE_GENFLAGS); }
 	astring &state_string(int index, astring &dest);
 	int state_string_max_length(int index);
 
@@ -224,7 +224,7 @@ protected:
 inline device_state_interface *device_state(device_t *device)
 {
 	device_state_interface *intf;
-	if (!device->dev_interface(intf))
+	if (!device->interface(intf))
 		throw emu_fatalerror("Device '%s' does not have state interface", device->tag());
 	return intf;
 }

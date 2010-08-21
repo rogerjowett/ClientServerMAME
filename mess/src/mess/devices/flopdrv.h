@@ -57,7 +57,7 @@ struct floppy_config_t
 
 	floppy_type_t floppy_type;
 	const struct FloppyFormat *formats;
-	const char *floppy_interface;
+	const char *interface;
 };
 
 /* sector has a deleted data address mark */

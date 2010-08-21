@@ -128,7 +128,7 @@ INLINE UINT32 mulu_32x32_shift(UINT32 a, UINT32 b, UINT8 shift)
 #ifndef div_64x32
 INLINE INT32 div_64x32(INT64 a, INT32 b)
 {
-	return (INT32)(a / (INT64)b);
+	return a / (INT64)b;
 }
 #endif
 
@@ -141,7 +141,7 @@ INLINE INT32 div_64x32(INT64 a, INT32 b)
 #ifndef divu_64x32
 INLINE UINT32 divu_64x32(UINT64 a, UINT32 b)
 {
-	return (UINT32)(a / (UINT64)b);
+	return a / (UINT64)b;
 }
 #endif
 
@@ -155,8 +155,8 @@ INLINE UINT32 divu_64x32(UINT64 a, UINT32 b)
 #ifndef div_64x32_rem
 INLINE INT32 div_64x32_rem(INT64 a, INT32 b, INT32 *remainder)
 {
-	*remainder = (INT32)(a % (INT64)b);
-	return (INT32)(a / (INT64)b);
+	*remainder = a % (INT64)b;
+	return a / (INT64)b;
 }
 #endif
 
@@ -170,8 +170,8 @@ INLINE INT32 div_64x32_rem(INT64 a, INT32 b, INT32 *remainder)
 #ifndef divu_64x32_rem
 INLINE UINT32 divu_64x32_rem(UINT64 a, UINT32 b, UINT32 *remainder)
 {
-	*remainder = (UINT32)(a % (UINT64)b);
-	return (UINT32)(a / (UINT64)b);
+	*remainder = a % (UINT64)b;
+	return a / (UINT64)b;
 }
 #endif
 
@@ -185,7 +185,7 @@ INLINE UINT32 divu_64x32_rem(UINT64 a, UINT32 b, UINT32 *remainder)
 #ifndef div_32x32_shift
 INLINE INT32 div_32x32_shift(INT32 a, INT32 b, UINT8 shift)
 {
-	return (INT32)(((INT64)a << shift) / (INT64)b);
+	return ((INT64)a << shift) / (INT64)b;
 }
 #endif
 
@@ -199,7 +199,7 @@ INLINE INT32 div_32x32_shift(INT32 a, INT32 b, UINT8 shift)
 #ifndef divu_32x32_shift
 INLINE UINT32 divu_32x32_shift(UINT32 a, UINT32 b, UINT8 shift)
 {
-	return (UINT32)(((UINT64)a << shift) / (UINT64)b);
+	return ((UINT64)a << shift) / (UINT64)b;
 }
 #endif
 
@@ -212,7 +212,7 @@ INLINE UINT32 divu_32x32_shift(UINT32 a, UINT32 b, UINT8 shift)
 #ifndef mod_64x32
 INLINE INT32 mod_64x32(INT64 a, INT32 b)
 {
-	return (INT32)(a % (INT64)b);
+	return a % (INT64)b;
 }
 #endif
 
@@ -225,7 +225,7 @@ INLINE INT32 mod_64x32(INT64 a, INT32 b)
 #ifndef modu_64x32
 INLINE UINT32 modu_64x32(UINT64 a, UINT32 b)
 {
-	return (UINT32)(a % (UINT64)b);
+	return a % (UINT64)b;
 }
 #endif
 

@@ -22,7 +22,7 @@
     and rendering code. These macros generally take the target pixel
     type (UINT8, UINT16, UINT32), one of the PIXEL_OP* macros,
     and a priority bitmap pixel type (UINT8, UINT16, UINT32, or the
-    special type NO_DRAW_PRIORITY).
+    special type NO_PRIORITY).
 
     Although the code may look inefficient at first, the compiler is
     able to easily optimize out unused cases due to the way the
@@ -56,14 +56,11 @@
 
 
 /* special priority type meaning "none" */
-struct NO_DRAW_PRIORITY
-{ 
-    char dummy[3]; 
-};
+typedef struct { char dummy[3]; } NO_PRIORITY;
 
 
 /* macros for using the optional priority */
-#define PRIORITY_VALID(x)		(sizeof(x) != sizeof(NO_DRAW_PRIORITY))
+#define PRIORITY_VALID(x)		(sizeof(x) != sizeof(NO_PRIORITY))
 #define PRIORITY_ADDR(p,t,y,x)	(PRIORITY_VALID(t) ? BITMAP_ADDR(p, t, y, x) : NULL)
 #define PRIORITY_ADVANCE(t,p,i)	do { if (PRIORITY_VALID(t)) (p) += (i); } while (0)
 
@@ -367,7 +364,7 @@ while (0)																			\
         int flipy - non-zero means render bottom-to-top instead of top-to-bottom
         INT32 destx - the top-left X coordinate to render to
         INT32 desty - the top-left Y coordinate to render to
-        bitmap_t *priority - the priority bitmap (even if PRIORITY_TYPE is NO_DRAW_PRIORITY, at least needs a dummy)
+        bitmap_t *priority - the priority bitmap (even if PRIORITY_TYPE is NO_PRIORITY, at least needs a dummy)
 */
 
 
@@ -639,7 +636,7 @@ do {																					\
         INT32 desty - the top-left Y coordinate to render to
         UINT32 scalex - the 16.16 scale factor in the X dimension
         UINT32 scaley - the 16.16 scale factor in the Y dimension
-        bitmap_t *priority - the priority bitmap (even if PRIORITY_TYPE is NO_DRAW_PRIORITY, at least needs a dummy)
+        bitmap_t *priority - the priority bitmap (even if PRIORITY_TYPE is NO_PRIORITY, at least needs a dummy)
 */
 
 
@@ -819,7 +816,7 @@ do {																					\
         int flipy - non-zero means render bottom-to-top instead of top-to-bottom
         INT32 destx - the top-left X coordinate to copy to
         INT32 desty - the top-left Y coordinate to copy to
-        bitmap_t *priority - the priority bitmap (even if PRIORITY_TYPE is NO_DRAW_PRIORITY, at least needs a dummy)
+        bitmap_t *priority - the priority bitmap (even if PRIORITY_TYPE is NO_PRIORITY, at least needs a dummy)
 */
 
 #define COPYBITMAP_CORE(PIXEL_TYPE, PIXEL_OP, PRIORITY_TYPE)							\
@@ -1000,7 +997,7 @@ do {																					\
         INT32 incxy - the 16.16 amount to increment in source X for each destination Y pixel
         INT32 incyy - the 16.16 amount to increment in source Y for each destination Y pixel
         int wraparound - non-zero means wrap when hitting the edges of the source
-        bitmap_t *priority - the priority bitmap (even if PRIORITY_TYPE is NO_DRAW_PRIORITY, at least needs a dummy)
+        bitmap_t *priority - the priority bitmap (even if PRIORITY_TYPE is NO_PRIORITY, at least needs a dummy)
 */
 
 #define COPYROZBITMAP_CORE(PIXEL_TYPE, PIXEL_OP, PRIORITY_TYPE)						\
@@ -1300,7 +1297,7 @@ do {																				\
         INT32 desty - the Y coordinate to copy to
         INT32 length - the total number of pixels to copy
         const UINTx *srcptr - pointer to memory containing the source pixels
-        bitmap_t *priority - the priority bitmap (even if PRIORITY_TYPE is NO_DRAW_PRIORITY, at least needs a dummy)
+        bitmap_t *priority - the priority bitmap (even if PRIORITY_TYPE is NO_PRIORITY, at least needs a dummy)
 */
 
 #define DRAWSCANLINE_CORE(PIXEL_TYPE, PIXEL_OP, PRIORITY_TYPE)						\

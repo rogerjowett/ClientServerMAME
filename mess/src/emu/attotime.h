@@ -201,7 +201,7 @@ INLINE attotime double_to_attotime(double _time)
 	attotime result;
 
 	/* set seconds to the integral part */
-	result.seconds = (seconds_t)floor(_time);
+	result.seconds = floor(_time);
 
 	/* set attoseconds to the fractional part */
 	_time -= (double)result.seconds;

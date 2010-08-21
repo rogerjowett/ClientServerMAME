@@ -12,7 +12,7 @@
 #ifndef __SDLWINDOW__
 #define __SDLWINDOW__
 
-#include <SDL.h>
+#include <SDL/SDL.h>
 #include "video.h"
 #include "render.h"
 #include "sdlsync.h"

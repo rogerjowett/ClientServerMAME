@@ -51,10 +51,6 @@
 // Suppress warnings about redefining the macro 'ARM' on ARM.
 #undef ARM
 
-//Rename snprintf under visual studio
-#ifdef _MSC_VER
-#define snprintf _snprintf 
-#endif
 
 
 //**************************************************************************

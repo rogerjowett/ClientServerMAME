@@ -26,7 +26,7 @@
 
 /* ----- type constants ----- */
 #define ROMENTRY_TYPEMASK			0x0000000f			/* type of entry */
-enum RomEntryType
+enum
 {
 	ROMENTRYTYPE_ROM = 0,		/* this entry is an actual ROM definition */
 	ROMENTRYTYPE_REGION,		/* this entry marks the start of a region */

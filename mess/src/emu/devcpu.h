@@ -426,17 +426,17 @@ protected:
 	// device_config_execute_interface overrides
 	virtual UINT64 execute_clocks_to_cycles(UINT64 clocks) const;
 	virtual UINT64 execute_cycles_to_clocks(UINT64 cycles) const;
-	virtual UINT32 execute_min_cycles() const { return (UINT32)get_legacy_config_int(CPUINFO_INT_MIN_CYCLES); }
-	virtual UINT32 execute_max_cycles() const { return (UINT32)get_legacy_config_int(CPUINFO_INT_MAX_CYCLES); }
-	virtual UINT32 execute_input_lines() const { return (UINT32)get_legacy_config_int(CPUINFO_INT_INPUT_LINES); }
-	virtual UINT32 execute_default_irq_vector() const { return (UINT32)get_legacy_config_int(CPUINFO_INT_DEFAULT_IRQ_VECTOR); }
+	virtual UINT32 execute_min_cycles() const { return get_legacy_config_int(CPUINFO_INT_MIN_CYCLES); }
+	virtual UINT32 execute_max_cycles() const { return get_legacy_config_int(CPUINFO_INT_MAX_CYCLES); }
+	virtual UINT32 execute_input_lines() const { return get_legacy_config_int(CPUINFO_INT_INPUT_LINES); }
+	virtual UINT32 execute_default_irq_vector() const { return get_legacy_config_int(CPUINFO_INT_DEFAULT_IRQ_VECTOR); }
 
 	// device_config_memory_interface overrides
-	virtual const address_space_config *memory_space_config(int spacenum = 0) const { return (spacenum < int(ARRAY_LENGTH(m_space_config)) && m_space_config[spacenum].m_addrbus_width != 0) ? &m_space_config[spacenum] : NULL; }
+	virtual const address_space_config *memory_space_config(int spacenum = 0) const { return (spacenum < ARRAY_LENGTH(m_space_config) && m_space_config[spacenum].m_addrbus_width != 0) ? &m_space_config[spacenum] : NULL; }
 
 	// device_config_disasm_interface overrides
-	virtual UINT32 disasm_min_opcode_bytes() const { return (UINT32)get_legacy_config_int(CPUINFO_INT_MIN_INSTRUCTION_BYTES); }
-	virtual UINT32 disasm_max_opcode_bytes() const { return (UINT32)get_legacy_config_int(CPUINFO_INT_MAX_INSTRUCTION_BYTES); }
+	virtual UINT32 disasm_min_opcode_bytes() const { return get_legacy_config_int(CPUINFO_INT_MIN_INSTRUCTION_BYTES); }
+	virtual UINT32 disasm_max_opcode_bytes() const { return get_legacy_config_int(CPUINFO_INT_MAX_INSTRUCTION_BYTES); }
 
 	// legacy interface helpers
 	INT64 get_legacy_config_int(UINT32 state) const;

@@ -59,11 +59,11 @@ typedef enum {
 #define SetSZPF_Byte(x) 	(cpustate->ParityVal = cpustate->SignVal = cpustate->ZeroVal = (INT8)(x))
 #define SetSZPF_Word(x) 	(cpustate->ParityVal = cpustate->SignVal = cpustate->ZeroVal = (INT16)(x))
 
-#define ADDB(dst,src) { unsigned res=dst+src; SetCFB(res); SetOFB_Add(res,src,dst); SetAF(res,src,dst); SetSZPF_Byte(res); dst=(HOST_BYTE)res; }
-#define ADDW(dst,src) { unsigned res=dst+src; SetCFW(res); SetOFW_Add(res,src,dst); SetAF(res,src,dst); SetSZPF_Word(res); dst=(HOST_WORD)res; }
+#define ADDB(dst,src) { unsigned res=dst+src; SetCFB(res); SetOFB_Add(res,src,dst); SetAF(res,src,dst); SetSZPF_Byte(res); dst=(BYTE)res; }
+#define ADDW(dst,src) { unsigned res=dst+src; SetCFW(res); SetOFW_Add(res,src,dst); SetAF(res,src,dst); SetSZPF_Word(res); dst=(WORD)res; }
 
-#define SUBB(dst,src) { unsigned res=dst-src; SetCFB(res); SetOFB_Sub(res,src,dst); SetAF(res,src,dst); SetSZPF_Byte(res); dst=(HOST_BYTE)res; }
-#define SUBW(dst,src) { unsigned res=dst-src; SetCFW(res); SetOFW_Sub(res,src,dst); SetAF(res,src,dst); SetSZPF_Word(res); dst=(HOST_WORD)res; }
+#define SUBB(dst,src) { unsigned res=dst-src; SetCFB(res); SetOFB_Sub(res,src,dst); SetAF(res,src,dst); SetSZPF_Byte(res); dst=(BYTE)res; }
+#define SUBW(dst,src) { unsigned res=dst-src; SetCFW(res); SetOFW_Sub(res,src,dst); SetAF(res,src,dst); SetSZPF_Word(res); dst=(WORD)res; }
 
 #define ORB(dst,src)		dst |= src; cpustate->CarryVal = cpustate->OverVal = cpustate->AuxVal = 0; SetSZPF_Byte(dst)
 #define ORW(dst,src)		dst |= src; cpustate->CarryVal = cpustate->OverVal = cpustate->AuxVal = 0; SetSZPF_Word(dst)
@@ -122,7 +122,7 @@ typedef enum {
 
 /************************************************************************/
 
-#define CompressFlags() (HOST_WORD)(CF | (PF << 2) | (AF << 4) | (ZF << 6) \
+#define CompressFlags() (WORD)(CF | (PF << 2) | (AF << 4) | (ZF << 6) \
 				| (SF << 7) | (cpustate->TF << 8) | (cpustate->IF << 9) \
 				| (DF << 10) | (OF << 11))
 

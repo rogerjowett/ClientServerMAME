@@ -1,5 +1,3 @@
-$(error Please use the cmake script to build this version of MAME. If you would like to get the makefile working, uncomment the first line of the makefile and try to buidl with this.)
-
 ###########################################################################
 #
 #   makefile
@@ -177,13 +175,13 @@ endif
 #-------------------------------------------------
 
 # uncomment next line to build a debug version
-DEBUG = 1
+# DEBUG = 1
 
 # uncomment next line to include the internal profiler
 # PROFILER = 1
 
 # uncomment next line to include gprof profiler support
-GPROF = 1
+# GPROF = 1
 
 # uncomment the force the universal DRC to always use the C backend
 # you may need to do this if your target architecture does not have
@@ -214,7 +212,7 @@ BUILD_EXPAT = 1
 BUILD_ZLIB = 1
 
 # uncomment next line to include the symbols
-SYMBOLS = 1
+# SYMBOLS = 1
 
 # uncomment next line to include profiling information from the compiler
 # PROFILE = 1
@@ -420,7 +418,7 @@ CCOMFLAGS += -pipe
 
 # add -g if we need symbols, and ensure we have frame pointers
 ifdef SYMBOLS
-CCOMFLAGS += -g -fno-omit-frame-pointer -rdynamic
+CCOMFLAGS += -g -fno-omit-frame-pointer
 endif
 
 # add -v if we need verbose build information
@@ -484,6 +482,8 @@ CCOMFLAGS += \
 	-I$(SRC)/lib/util \
 	-I$(SRC)/osd \
 	-I$(SRC)/osd/$(OSD) \
+	-I$(SRC)/../../../Libraries/RakNet/Source \
+	-I$(SRC)/../../../Libraries/RakNet32/Source
 
 
 #-------------------------------------------------
@@ -572,7 +572,27 @@ VERSIONOBJ = $(OBJ)/version.o
 LIBS = 
 
 # add boost
-LIBS += -lboost_thread-mt -lboost_system-mt
+#LIBS += -Lc:\Libraries\boost-trunk -lboost_thread-mt -lboost_system-mt
+
+# add RakNet
+ifdef MSVC_BUILD
+# Do nothing, this has to be taken care of in the windows osd makefile
+else
+ifdef DEBUG
+ifeq ($(PTR64),1)
+LIBS += -L${SRC}/../../../Libraries/RakNet/Lib -lRakNetLibStaticDebug.lib
+else
+LIBS += -L${SRC}/../../../Libraries/RakNet32/Lib -lRakNetLibStaticDebug.lib
+endif
+else
+ifeq ($(PTR64),1)
+LIBS += -L${SRC}/../../../Libraries/RakNet/Lib -lRakNetLibStatic.lib
+else
+LIBS += -L${SRC}/../../../Libraries/RakNet32/Lib -lRakNetLibStatic.lib
+endif
+endif
+endif
+
 
 # add expat XML library
 ifeq ($(BUILD_EXPAT),1)

@@ -155,7 +155,7 @@ public:
 	virtual ~device_config_memory_interface();
 
 	// basic information getters
-	const addrmap_token *address_map(int spacenum = 0) const { return (spacenum < int(ARRAY_LENGTH(m_address_map))) ? m_address_map[spacenum] : NULL; }
+	const addrmap_token *address_map(int spacenum = 0) const { return (spacenum < ARRAY_LENGTH(m_address_map)) ? m_address_map[spacenum] : NULL; }
 	const address_space_config *space_config(int spacenum = 0) const { return memory_space_config(spacenum); }
 
 protected:
@@ -229,7 +229,7 @@ protected:
 inline device_memory_interface *device_memory(device_t *device)
 {
 	device_memory_interface *intf;
-	if (!device->dev_interface(intf))
+	if (!device->interface(intf))
 		throw emu_fatalerror("Device '%s' does not have memory interface", device->tag());
 	return intf;
 }
@@ -254,7 +254,7 @@ inline const address_space *device_get_space(device_t *device, int spacenum = 0)
 inline const address_space_config *devconfig_get_space_config(const device_config &devconfig, int spacenum = 0)
 {
 	const device_config_memory_interface *intf;
-	if (!devconfig.dev_interface(intf))
+	if (!devconfig.interface(intf))
 		throw emu_fatalerror("Device '%s' does not have memory interface", devconfig.tag());
 	return intf->space_config(spacenum);
 }

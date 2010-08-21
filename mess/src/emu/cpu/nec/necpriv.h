@@ -55,11 +55,11 @@ typedef enum {
 #define SetOFW_Sub(x,y,z)	(nec_state->OverVal = ((z) ^ (y)) & ((z) ^ (x)) & 0x8000)
 #define SetOFB_Sub(x,y,z)	(nec_state->OverVal = ((z) ^ (y)) & ((z) ^ (x)) & 0x80)
 
-#define ADDB { UINT32 res=dst+src; SetCFB(res); SetOFB_Add(res,src,dst); SetAF(res,src,dst); SetSZPF_Byte(res); dst=(NEC_BYTE)res; }
-#define ADDW { UINT32 res=dst+src; SetCFW(res); SetOFW_Add(res,src,dst); SetAF(res,src,dst); SetSZPF_Word(res); dst=(NEC_WORD)res; }
+#define ADDB { UINT32 res=dst+src; SetCFB(res); SetOFB_Add(res,src,dst); SetAF(res,src,dst); SetSZPF_Byte(res); dst=(BYTE)res; }
+#define ADDW { UINT32 res=dst+src; SetCFW(res); SetOFW_Add(res,src,dst); SetAF(res,src,dst); SetSZPF_Word(res); dst=(WORD)res; }
 
-#define SUBB { UINT32 res=dst-src; SetCFB(res); SetOFB_Sub(res,src,dst); SetAF(res,src,dst); SetSZPF_Byte(res); dst=(NEC_BYTE)res; }
-#define SUBW { UINT32 res=dst-src; SetCFW(res); SetOFW_Sub(res,src,dst); SetAF(res,src,dst); SetSZPF_Word(res); dst=(NEC_WORD)res; }
+#define SUBB { UINT32 res=dst-src; SetCFB(res); SetOFB_Sub(res,src,dst); SetAF(res,src,dst); SetSZPF_Byte(res); dst=(BYTE)res; }
+#define SUBW { UINT32 res=dst-src; SetCFW(res); SetOFW_Sub(res,src,dst); SetAF(res,src,dst); SetSZPF_Word(res); dst=(WORD)res; }
 
 #define ORB dst|=src; nec_state->CarryVal=nec_state->OverVal=nec_state->AuxVal=0; SetSZPF_Byte(dst)
 #define ORW dst|=src; nec_state->CarryVal=nec_state->OverVal=nec_state->AuxVal=0; SetSZPF_Word(dst)
@@ -73,7 +73,7 @@ typedef enum {
 #define CF		(nec_state->CarryVal!=0)
 #define SF		(nec_state->SignVal<0)
 #define ZF		(nec_state->ZeroVal==0)
-#define PF		parity_table[(NEC_BYTE)nec_state->ParityVal]
+#define PF		parity_table[(BYTE)nec_state->ParityVal]
 #define AF		(nec_state->AuxVal!=0)
 #define OF		(nec_state->OverVal!=0)
 #define MD		(nec_state->MF!=0)
@@ -136,7 +136,7 @@ typedef enum {
 #define CLKR(v20o,v30o,v33o,v20e,v30e,v33e,vall,addr) { const UINT32 ocount=(v20o<<16)|(v30o<<8)|v33o, ecount=(v20e<<16)|(v30e<<8)|v33e; if (ModRM >=0xc0) nec_state->icount-=vall; else nec_state->icount-=(addr&1)?((ocount>>nec_state->chip_type)&0x7f):((ecount>>nec_state->chip_type)&0x7f); }
 
 /************************************************************************/
-#define CompressFlags() (NEC_WORD)(CF | (PF << 2) | (AF << 4) | (ZF << 6) \
+#define CompressFlags() (WORD)(CF | (PF << 2) | (AF << 4) | (ZF << 6) \
 				| (SF << 7) | (nec_state->TF << 8) | (nec_state->IF << 9) \
 				| (nec_state->DF << 10) | (OF << 11)| (MD << 15))
 
@@ -177,7 +177,7 @@ typedef enum {
 	if (flag)								\
 	{										\
 		static const UINT8 table[3]={3,10,10};	\
-		nec_state->ip = (NEC_WORD)(nec_state->ip+tmp);			\
+		nec_state->ip = (WORD)(nec_state->ip+tmp);			\
 		nec_state->icount-=table[nec_state->chip_type/8];	\
 		CHANGE_PC;							\
 		return;								\
@@ -241,7 +241,7 @@ typedef enum {
 		tmp |= (1<<tmp2)
 
 #define XchgAWReg(Reg)						\
-    NEC_WORD tmp;								\
+    WORD tmp;								\
 	tmp = nec_state->regs.w[Reg];					\
 	nec_state->regs.w[Reg] = nec_state->regs.w[AW]; 			\
 	nec_state->regs.w[AW] = tmp
@@ -254,12 +254,12 @@ typedef enum {
 #define ROLC_WORD dst = (dst << 1) + CF; SetCFW(dst)
 #define RORC_BYTE dst = (CF<<8)+dst; nec_state->CarryVal = dst & 0x01; dst >>= 1
 #define RORC_WORD dst = (CF<<16)+dst; nec_state->CarryVal = dst & 0x01; dst >>= 1
-#define SHL_BYTE(c) nec_state->icount-=c; dst <<= c;	SetCFB(dst); SetSZPF_Byte(dst);	PutbackRMByte(ModRM,(NEC_BYTE)dst)
-#define SHL_WORD(c) nec_state->icount-=c; dst <<= c;	SetCFW(dst); SetSZPF_Word(dst);	PutbackRMWord(ModRM,(NEC_WORD)dst)
-#define SHR_BYTE(c) nec_state->icount-=c; dst >>= c-1; nec_state->CarryVal = dst & 0x1; dst >>= 1; SetSZPF_Byte(dst); PutbackRMByte(ModRM,(NEC_BYTE)dst)
-#define SHR_WORD(c) nec_state->icount-=c; dst >>= c-1; nec_state->CarryVal = dst & 0x1; dst >>= 1; SetSZPF_Word(dst); PutbackRMWord(ModRM,(NEC_WORD)dst)
-#define SHRA_BYTE(c) nec_state->icount-=c; dst = ((INT8)dst) >> (c-1);	nec_state->CarryVal = dst & 0x1;	dst = ((INT8)((NEC_BYTE)dst)) >> 1; SetSZPF_Byte(dst); PutbackRMByte(ModRM,(NEC_BYTE)dst)
-#define SHRA_WORD(c) nec_state->icount-=c; dst = ((INT16)dst) >> (c-1);	nec_state->CarryVal = dst & 0x1;	dst = ((INT16)((NEC_WORD)dst)) >> 1; SetSZPF_Word(dst); PutbackRMWord(ModRM,(NEC_WORD)dst)
+#define SHL_BYTE(c) nec_state->icount-=c; dst <<= c;	SetCFB(dst); SetSZPF_Byte(dst);	PutbackRMByte(ModRM,(BYTE)dst)
+#define SHL_WORD(c) nec_state->icount-=c; dst <<= c;	SetCFW(dst); SetSZPF_Word(dst);	PutbackRMWord(ModRM,(WORD)dst)
+#define SHR_BYTE(c) nec_state->icount-=c; dst >>= c-1; nec_state->CarryVal = dst & 0x1; dst >>= 1; SetSZPF_Byte(dst); PutbackRMByte(ModRM,(BYTE)dst)
+#define SHR_WORD(c) nec_state->icount-=c; dst >>= c-1; nec_state->CarryVal = dst & 0x1; dst >>= 1; SetSZPF_Word(dst); PutbackRMWord(ModRM,(WORD)dst)
+#define SHRA_BYTE(c) nec_state->icount-=c; dst = ((INT8)dst) >> (c-1);	nec_state->CarryVal = dst & 0x1;	dst = ((INT8)((BYTE)dst)) >> 1; SetSZPF_Byte(dst); PutbackRMByte(ModRM,(BYTE)dst)
+#define SHRA_WORD(c) nec_state->icount-=c; dst = ((INT16)dst) >> (c-1);	nec_state->CarryVal = dst & 0x1;	dst = ((INT16)((WORD)dst)) >> 1; SetSZPF_Word(dst); PutbackRMWord(ModRM,(WORD)dst)
 
 #define DIVUB												\
 	uresult = nec_state->regs.w[AW];									\
