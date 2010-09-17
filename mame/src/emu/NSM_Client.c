@@ -35,6 +35,9 @@ extern z_stream strm;
 extern unsigned char compressedBuffer[MAX_ZLIB_BUF_SIZE];
 extern unsigned char uncompressedBuffer[MAX_ZLIB_BUF_SIZE];
 
+#include "unicode.h"
+#include "ui.h"
+#include "osdcore.h"
 
 Client::Client() 
 {
@@ -141,6 +144,7 @@ bool Client::initializeConnection(const char *hostname,const char *port)
         RakNet::Packet *p = rakInterface->Receive();
 	if(!p) 
 	{
+	  ui_popup_time(1,"Waiting for server to send entire game state for the first time");
 		printf("WAITING FOR SERVER TO SEND GAME WORLD...\n");
 		osd_sleep(osd_ticks_per_second());
 		continue; //We need the first few packets, so stall until we get them
@@ -553,4 +557,20 @@ void Client::sendString(const string &outputString)
 		    false
 		   );
     free(dataToSend);
+}
+
+string Client::getLatencyString()
+{
+  char buf[4096];
+  sprintf(buf,"Server Ping: %d ms", rakInterface->GetAveragePing(rakInterface->GetSystemAddressFromIndex(0)));
+  return string(buf);
+}
+
+string Client::getStatisticsString()
+{
+  RakNet::RakNetStatistics *rss;
+  char message[4096];
+  rss=rakInterface->GetStatistics(rakInterface->GetSystemAddressFromIndex(0));
+  StatisticsToString(rss, message, 0);
+  return string(message);
 }

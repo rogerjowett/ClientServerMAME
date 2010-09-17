@@ -9,6 +9,9 @@
 
 *********************************************************************/
 
+#include "NSM_Client.h"
+#include "NSM_Server.h"
+
 #include "emu.h"
 #include "emuopts.h"
 #include "video/vector.h"
@@ -22,7 +25,6 @@
 #include "uimenu.h"
 #include "uigfx.h"
 #include <ctype.h>
-
 
 
 /***************************************************************************
@@ -371,6 +373,13 @@ void ui_set_startup_text(running_machine *machine, const char *text, int force)
     render it; called by video.c
 -------------------------------------------------*/
 
+extern Client *netClient;
+extern Server *netServer;
+
+list< ChatLog > chatLogs;
+vector<char> chatString;
+int chatEnabled=false;
+
 void ui_update_and_render(running_machine *machine, render_container *container)
 {
 	/* always start clean */
@@ -400,6 +409,113 @@ void ui_update_and_render(running_machine *machine, render_container *container)
 		ui_draw_text_box(container, messagebox_text, JUSTIFY_CENTER, 0.5f, 0.9f, messagebox_backcolor);
 	else
 		popup_text_end = 0;
+
+	if(netClient)
+        {
+	  ui_draw_text_box(container,netClient->getLatencyString().c_str(),JUSTIFY_CENTER,0.9f,0.1f,MAKE_ARGB(255,0,0,128));
+	  ui_draw_text_box(container,netClient->getStatisticsString().c_str(),JUSTIFY_CENTER,0.1f,0.1f,MAKE_ARGB(255,0,0,128));
+        }
+	else if(netServer)
+	{
+		string allLatencyString;
+		for(int a=0;a<netServer->getNumSessions();a++)
+		{
+			allLatencyString += netServer->getLatencyString(a) + string("\n");
+		}
+		ui_draw_text_box(container,allLatencyString.c_str(),JUSTIFY_CENTER,0.9f,0.1f,MAKE_ARGB(255,0,0,128));
+		ui_draw_text_box(container,netServer->getStatisticsString().c_str(),JUSTIFY_CENTER,0.1f,0.1f,MAKE_ARGB(255,0,0,128));
+	}
+
+	time_t curTime = time(NULL);
+	for(
+	    list<ChatLog>::iterator it = chatLogs.begin();
+	    it != chatLogs.end();
+	    )
+	  {
+	    if(it->timeReceived+5<curTime)
+	      {
+		list<ChatLog>::iterator it2 = it;
+		it++;
+		chatLogs.erase(it2);
+	      }
+		  else {
+			  it++;
+		  }
+
+	  }
+
+	while(chatLogs.size()>3)
+	  {
+	    chatLogs.erase(chatLogs.begin());
+	  }
+
+	int chatIndex=0;
+	static const rgb_t chatColors[] =
+	  {
+	    MAKE_ARGB(255,0,0,0),
+	    MAKE_ARGB(255,255,0,0),
+	    MAKE_ARGB(255,0,255,0),
+	    MAKE_ARGB(255,0,0,255),
+	    MAKE_ARGB(255,255,255,0),
+	    MAKE_ARGB(255,255,0,255),
+	    MAKE_ARGB(255,0,255,255),
+	    MAKE_ARGB(255,128,255,255),
+	    MAKE_ARGB(255,255,128,255),
+	    MAKE_ARGB(255,255,255,128),
+	    MAKE_ARGB(255,128,128,255),
+	    MAKE_ARGB(255,128,255,128),
+	    MAKE_ARGB(255,255,128,128),
+	    MAKE_ARGB(255,128,128,128),
+	  };
+	for(
+	    list<ChatLog>::iterator it = chatLogs.begin();
+	    it != chatLogs.end();
+	    it++
+	    )
+	  {
+		  /*
+	    float totalWidth,totalHeight;
+	    ui_draw_text_full(
+			     container,
+			     it->message.cstr(),
+			     0.1,
+			     0.6+0.1*chatIndex,
+			     0.8,
+			     JUSTIFY_LEFT,
+			     1,
+			     1,
+			     chatColors[it->playerID],
+			     MAKE_ARGB(255,0,0,0),
+			     &totalWidth,
+			     &totalHeight
+			     );
+		   */
+		  //
+		  ui_draw_text_box(
+							container,
+							it->message.cstr(),
+						    JUSTIFY_CENTER,
+							0.5,
+							0.6+0.075*chatIndex,
+							chatColors[it->playerID]
+							);
+		   //
+		  chatIndex++;
+	  }
+	if(chatEnabled)
+	{
+		string promptString = string("Chat: ")+string(&chatString[0],chatString.size())
+							+ string("_");
+		ui_draw_text_box(
+						 container,
+						 promptString.c_str(),
+						 JUSTIFY_CENTER,
+						 0.5,
+						 0.8,
+						 MAKE_ARGB(255,0,0,0)
+						 );
+	}
+
 
 	/* cancel takes us back to the ingame handler */
 	if (ui_handler_param == UI_HANDLER_CANCEL)
@@ -1315,6 +1431,9 @@ static UINT32 handler_ingame(running_machine *machine, render_container *contain
 
 	/* determine if we should disable the rest of the UI */
 	int ui_disabled = (input_machine_has_keyboard(machine) && !machine->ui_active);
+	
+	if(chatEnabled==false)
+	{
 
 	/* is ScrLk UI toggling applicable here? */
 	if (input_machine_has_keyboard(machine))
@@ -1352,7 +1471,7 @@ static UINT32 handler_ingame(running_machine *machine, render_container *contain
 	/* is the natural keyboard enabled? */
 	if (ui_get_use_natural_keyboard(machine) && (machine->phase() == MACHINE_PHASE_RUNNING))
 		process_natural_keyboard(machine);
-
+	
 	if (!ui_disabled)
 	{
 		/* paste command */
@@ -1488,7 +1607,65 @@ static UINT32 handler_ingame(running_machine *machine, render_container *contain
 	}
 	else
 		video_set_fastforward(FALSE);
+		
+	}
 
+	if(!ui_disabled)
+	{
+		//handle chat input
+		ui_event event;
+		
+		/* loop while we have interesting events */
+		while (ui_input_pop_event(machine, &event))
+		{
+			/* if this was a UI_EVENT_CHAR event, post it */
+			if (event.event_type == UI_EVENT_CHAR)
+			{
+				if(!chatEnabled && (event.ch=='T' || event.ch=='t'))
+				{
+					chatEnabled=true;
+					chatString.clear();
+				}
+				else if(chatEnabled)
+				{
+					if(event.ch==13)
+					{
+						if(chatString.size())
+						{
+							chatString.push_back(0);
+							//Send chat
+							printf("SENDING CHAT %s\n",&chatString[0]);
+							astring chatAString = astring(&chatString[0]);
+							if(netClient)
+							{
+								chatString.insert(chatString.begin(),1);
+								netClient->sendString(string(&chatString[0]));
+							}
+							if(netServer)
+							{
+								chatLogs.push_back(ChatLog(0,time(NULL),chatAString));
+								chatString.insert(chatString.begin(),1);
+								netServer->addConstBlock((unsigned char*)&chatString[0],chatString.size());
+							}
+							chatString.clear();
+						}
+						chatEnabled=false;
+					}
+					else if(event.ch==127)
+					{
+						chatString.pop_back();
+					}
+					else
+					{
+						chatString.push_back(event.ch);
+					}
+
+					printf("GOT CHAR %d\n",int(event.ch));
+				}
+			}
+		}
+	}
+	
 	return 0;
 }
 

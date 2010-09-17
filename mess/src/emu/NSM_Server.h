@@ -30,8 +30,6 @@ public:
     }
 };
 
-#define MAX_COMPRESSED_OUTBUF_SIZE (1024*1024*64)
-
 class Server
 {
 protected:
@@ -99,5 +97,9 @@ public:
     {
 	    return i+1;
     }
+	
+	string getLatencyString(int connectionIndex);
+
+	string getStatisticsString();
 };
 

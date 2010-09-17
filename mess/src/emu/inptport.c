@@ -2494,16 +2494,6 @@ static void frame_update(running_machine *machine)
 		    const input_field_config *field;
 		    for (field = port->fieldlist; field != NULL; field = field->next)
             {
-                if(
-                field->category==13 || field->category==23 ||
-                field->category==12 || field->category==22 ||
-                field->category==5 || field->category==6
-                )
-                {
-                    //Hack to ignore snes super scope
-                    continue;
-                }
-                
                 if(field->player!=0)
                 {
                     //This mapping maps player 0 inputs to the other players
@@ -2525,15 +2515,6 @@ static void frame_update(running_machine *machine)
                             newField = newField->next
                             )
                         {
-                            if(
-                            newField->category==13 || newField->category==23 ||
-                            newField->category==12 || newField->category==22 ||
-                            newField->category==5 || newField->category==6
-                            )
-                            {
-                                //Hack to ignore snes super scope
-                                continue;
-                            }
                             
                             int inputcount=1;
                             //Special cases,
@@ -2602,8 +2583,6 @@ profiler_mark_start(PROFILER_INPUT);
 	for (port = machine->m_portlist.first(); port != NULL; port = port->next())
 	{
 		const input_field_config *field;
-		device_field_info *device_field;
-		input_port_value newvalue;
 
 			/* start with 0 values for the digital and VBLANK bits */
 			port->state->digital = 0;
@@ -2638,19 +2617,6 @@ profiler_mark_start(PROFILER_INPUT);
 	{
 		for(int a=0;a<netServer->getNumSessions();a++)
 		{
-            while(true)
-            {
-			    string buffer = netServer->popInputBuffer(a);
-			    if(buffer.length()>0)
-			    {
-				    serverInputDatabases[a+1] = buffer;
-			    }
-                else
-                {
-                    break;
-                }
-            }
-
             if(serverInputDatabases[a+1].length())
             {
                 deserializePlayerInputFromBuffer(machine,(const unsigned char *)serverInputDatabases[a+1].c_str(),serverInputDatabases[a+1].length(),netServer->getClientID(a));
@@ -2662,8 +2628,6 @@ profiler_mark_start(PROFILER_INPUT);
 	    for (port = machine->m_portlist.first(); port != NULL; port = port->next())
 	    {
 		    const input_field_config *field;
-		    device_field_info *device_field;
-		    input_port_value newvalue;
 
 			/* start with 0 values for the digital and VBLANK bits */
 			port->state->digital = 0;
@@ -2698,13 +2662,14 @@ profiler_mark_start(PROFILER_INPUT);
 	{
 		//Send player 1 data to the server
 		static char tmpbuffer[1024*1024*1];
-		int bytesUsed = serializePlayerInputToBuffer(machine,tmpbuffer);
+		tmpbuffer[0]=0;
+		int bytesUsed = serializePlayerInputToBuffer(machine,tmpbuffer+1);
 		//cout << "USED " << bytesUsed << " BYTES OF TMPBUFFER\n";
 		if(bytesUsed >= 1024*1024*1)
 		{
 			cout << "OOPS! Blew through tmpbuffer!\n";
 		}
-		netClient->sendString(string(tmpbuffer,bytesUsed));
+		netClient->sendString(string(tmpbuffer,bytesUsed+1));
 		//cout << "CALLING SYNC\n";
 
         //while(true)
@@ -2719,9 +2684,9 @@ profiler_mark_start(PROFILER_INPUT);
             }
             else
             {
-            cout << "FAILED TO FIND INPUT FOR TIME:" << curtime.seconds << '.' << curtime.attoseconds << endl;
+            //cout << "FAILED AT TIME:" << curtime.seconds << '.' << curtime.attoseconds << endl;
             //throw emu_fatalerror("FAILED TO FIND INPUT PACKET!");
-            //cout << "FAILED TO FIND INPUT PACKET!\n";
+            cout << "FAILED TO FIND INPUT PACKET!\n";
             //cout << "WAITING FOR INPUT FROM SERVER FOR TIME: " << curtime.seconds << " " << curtime.attoseconds << "\n";
             /*
             if(netClient->syncAndUpdate()) 
@@ -2748,7 +2713,8 @@ profiler_mark_start(PROFILER_INPUT);
 
 		//Send all player data to the server
 		static char tmpbuffer[1024*1024*1];
-		int bytesUsed = serializePlayerInputToBuffer(machine,tmpbuffer);
+		tmpbuffer[0]=0;
+		int bytesUsed = serializePlayerInputToBuffer(machine,tmpbuffer+1);
 		//cout << "USED " << bytesUsed << " BYTES OF TMPBUFFER\n";
 		if(bytesUsed >= 1024*1024*1)
 		{
@@ -2757,7 +2723,7 @@ profiler_mark_start(PROFILER_INPUT);
         static int counter=0;
         //cout << counter << ") ADDING BLOCK FOR: " << curtime.seconds << " " << curtime.attoseconds << endl;
         counter++;
-		netServer->addConstBlock((unsigned char*)tmpbuffer,bytesUsed);
+		netServer->addConstBlock((unsigned char*)tmpbuffer,bytesUsed+1);
 		//cout << "CALLING SYNC\n";
     }
 
@@ -2774,10 +2740,9 @@ profiler_mark_start(PROFILER_INPUT);
 	/* loop over all input ports */
 	for (port = machine->m_portlist.first(); port != NULL; port = port->next())
 	{
-		const input_field_config *field;
-		device_field_info *device_field;
-		input_port_value newvalue;
-
+	    device_field_info *device_field;
+	    input_port_value newvalue;
+	    
 		/* handle playback/record */
 		playback_port(port);
 		record_port(port);
@@ -2979,7 +2944,7 @@ static void frame_update_digital_joysticks(running_machine *machine)
 				}
 			}
 		}
-	}
+}
 
 
 /*-------------------------------------------------
@@ -5036,16 +5001,10 @@ int serializePlayerInputToBuffer(running_machine *machine, char *tmpbuffer)
     //curtime.seconds++;
     memcpy(
         curptr,
-        (unsigned char*)&(curtime.seconds),
-        sizeof(seconds_t)
+        (unsigned char*)&curtime,
+        sizeof(attotime)
         );
-    curptr += sizeof(seconds_t);
-    memcpy(
-        curptr,
-        (unsigned char*)&(curtime.attoseconds),
-        sizeof(attoseconds_t)
-        );
-    curptr += sizeof(attoseconds_t);
+    curptr += sizeof(attotime);
 
     int playerID = -1;
 
@@ -5066,7 +5025,7 @@ int serializePlayerInputToBuffer(running_machine *machine, char *tmpbuffer)
     for (port = machine->m_portlist.first(); port != NULL; port = port->next())
     {
 #if DEBUG_INPUT_SERIALIZATION
-        cout << "PORT_" << int(curptr-tmpbuffer) << " ";
+        cout << "PORT ";
 #endif
         if(playerID==-1)
         {
@@ -5103,7 +5062,7 @@ int serializePlayerInputToBuffer(running_machine *machine, char *tmpbuffer)
             if(playerID==-1 || field->player==0)
             {
 #if DEBUG_INPUT_SERIALIZATION
-                cout << "FIELD_" << int(curptr-tmpbuffer) << " ";
+                cout << "FIELD ";
 #endif
 #if 0
                 memcpy(
@@ -5145,7 +5104,7 @@ int serializePlayerInputToBuffer(running_machine *machine, char *tmpbuffer)
                 if(field->state->joystick)
                 {
 #if DEBUG_INPUT_SERIALIZATION
-                    cout << "JOY_" << int(curptr-tmpbuffer) << " ";
+                    cout << "JOY ";
 #endif
                     memcpy(
                         curptr,
@@ -5175,7 +5134,7 @@ int serializePlayerInputToBuffer(running_machine *machine, char *tmpbuffer)
                 if(field->state->analog)
                 {
 #if DEBUG_INPUT_SERIALIZATION
-                    cout << "ANALOG_" << int(curptr-tmpbuffer) << " ";
+                    cout << "ANALOG ";
 #endif
                     memcpy(curptr,(unsigned char*)&(field->state->analog->shift),sizeof(UINT8)); curptr += sizeof(UINT8);
                     memcpy(curptr,(unsigned char*)&(field->state->analog->adjdefvalue),sizeof(INT32)); curptr += sizeof(INT32);
@@ -5213,7 +5172,7 @@ int serializePlayerInputToBuffer(running_machine *machine, char *tmpbuffer)
             else
             {
 #if DEBUG_INPUT_SERIALIZATION
-                cout << "FIELD_PASS_" << int(curptr-tmpbuffer) << " ";
+                cout << "FIELD_PASS ";
 #endif
             }
         }
@@ -5235,17 +5194,11 @@ void deserializePlayerInputFromBuffer(running_machine *machine, const unsigned c
     attotime curtime = timer_get_time(machine);
     attotime clientTime;
     memcpy(
-        (unsigned char*)&(clientTime.seconds),
+        (unsigned char*)&clientTime,
         curptr,
-        sizeof(seconds_t)
+        sizeof(attotime)
         );
-    curptr += sizeof(seconds_t);
-    memcpy(
-        (unsigned char*)&(clientTime.attoseconds),
-        curptr,
-        sizeof(attoseconds_t)
-        );
-    curptr += sizeof(attoseconds_t);
+    curptr += sizeof(attotime);
     //cout << sizeof(attotime) << endl;
 
     memcpy(
@@ -5262,7 +5215,7 @@ void deserializePlayerInputFromBuffer(running_machine *machine, const unsigned c
     for (port = machine->m_portlist.first(); port != NULL; port = port->next())
     {
 #if DEBUG_INPUT_SERIALIZATION
-        cout << "PORT_" << int(curptr-tmpbuffer) << " ";
+        cout << "PORT ";
 #endif
         if(playerID==-1)
         {
@@ -5310,7 +5263,7 @@ void deserializePlayerInputFromBuffer(running_machine *machine, const unsigned c
                     if(it==playerInputFieldMap[playerIndex].end())
                     {
 #if DEBUG_INPUT_SERIALIZATION
-                        cout << "FIELD_SKIP_" << int(curptr-tmpbuffer) << " ";
+                        cout << "FIELD_SKIP ";
 #endif
 #if 0
                         curptr += sizeof(input_port_value);
@@ -5324,7 +5277,7 @@ void deserializePlayerInputFromBuffer(running_machine *machine, const unsigned c
                         if(field->state->joystick)
                         {
 #if DEBUG_INPUT_SERIALIZATION
-                            cout << "JOY_SKIP_" << int(curptr-tmpbuffer) << " ";
+                            cout << "JOY_SKIP ";
 #endif
                             curptr += sizeof(UINT8);
                             curptr += sizeof(UINT8);
@@ -5334,7 +5287,7 @@ void deserializePlayerInputFromBuffer(running_machine *machine, const unsigned c
                         if(field->state->analog)
                         {
 #if DEBUG_INPUT_SERIALIZATION
-                            cout << "ANALOG_SKIP_" << int(curptr-tmpbuffer) << " ";
+                            cout << "ANALOG_SKIP ";
 #endif
                             curptr += sizeof(UINT8);
                             curptr += sizeof(INT32);
@@ -5382,7 +5335,7 @@ void deserializePlayerInputFromBuffer(running_machine *machine, const unsigned c
                 //is the order for all players.
 
 #if DEBUG_INPUT_SERIALIZATION
-                cout << "FIELD_" << int(curptr-tmpbuffer) << " ";
+                cout << "FIELD ";
 #endif
 #if 0
                 memcpy(
@@ -5424,7 +5377,7 @@ void deserializePlayerInputFromBuffer(running_machine *machine, const unsigned c
                 if(field->state->joystick)
                 {
 #if DEBUG_INPUT_SERIALIZATION
-                    cout << "JOY_" << int(curptr-tmpbuffer) << " ";
+                    cout << "JOY ";
 #endif
                     memcpy(
                         (unsigned char*)&(field->state->joystick->inuse),
@@ -5454,7 +5407,7 @@ void deserializePlayerInputFromBuffer(running_machine *machine, const unsigned c
                 if(field->state->analog)
                 {
 #if DEBUG_INPUT_SERIALIZATION
-                    cout << "ANALOG_" << int(curptr-tmpbuffer) << " ";
+                    cout << "ANALOG ";
 #endif
                     memcpy((unsigned char*)&(field->state->analog->shift),curptr,sizeof(UINT8)); curptr += sizeof(UINT8);
                     memcpy((unsigned char*)&(field->state->analog->adjdefvalue),curptr,sizeof(INT32)); curptr += sizeof(INT32);
@@ -5492,7 +5445,7 @@ void deserializePlayerInputFromBuffer(running_machine *machine, const unsigned c
             else
             {
 #if DEBUG_INPUT_SERIALIZATION
-                cout << "FIELD_PASS_" << int(curptr-tmpbuffer) << " ";
+                cout << "FIELD_PASS ";
 #endif
             }
         }
@@ -6103,7 +6056,6 @@ static void inputx_postc_rate(running_machine *machine, unicode_char ch, attotim
 {
 	inputx_postn_rate(machine, &ch, 1, rate);
 }
-
 
 void inputx_postc(running_machine *machine, unicode_char ch)
 {

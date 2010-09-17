@@ -128,6 +128,9 @@ else
 CCOMFLAGS += /MT
 endif
 
+#JJG: Add sse2 support
+CCOMFLAGS += /arch:SSE2
+
 ifdef DEBUG
 ifeq ($(PTR64),1)
 LDFLAGS += ${SRC}/../../../Libraries/RakNet/Lib/RakNetLibStaticDebug.lib ws2_32.lib

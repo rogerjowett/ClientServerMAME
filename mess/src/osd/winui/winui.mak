@@ -129,6 +129,9 @@ else
 CC += /MT
 endif
 
+#JJG: Add sse2 support
+CCOMFLAGS += /arch:SSE2
+
 # turn on link-time codegen if the MAXOPT flag is also set
 ifdef MAXOPT
 CC += /GL

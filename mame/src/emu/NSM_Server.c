@@ -366,6 +366,7 @@ void Server::sync()
 	memcpy(sendMessage+1,&uncompressedSize,sizeof(int));
 	memcpy(sendMessage+1+sizeof(int),&compressedSize,sizeof(int));
 	memcpy(sendMessage+1+sizeof(int)+sizeof(int),compressedBuffer,compressedSize);
+	printf("SYNC SIZE: %d\n",compressedSize);
 
 	rakInterface->Send(
 			(const char*)sendMessage,
@@ -428,4 +429,24 @@ void Server::addConstBlock(unsigned char *tmpdata,int size)
     //cout << "EXITING CRITICAL SECTION\n";
 }
 
+string Server::getLatencyString(int connectionIndex)
+{
+	char buf[4096];
+	sprintf(buf,"Client %d Ping: %d ms", connectionIndex, rakInterface->GetAveragePing(rakInterface->GetSystemAddressFromGuid(sessions[connectionIndex].getGUID())));
+	return string(buf);
+}
+
+string Server::getStatisticsString()
+{
+	RakNet::RakNetStatistics *rss;
+	string retval;
+	for(int a=0;a<getNumSessions();a++)
+	{
+		char message[4096];
+		rss=rakInterface->GetStatistics(rakInterface->GetSystemAddressFromIndex(0));
+		StatisticsToString(rss, message, 0);
+		retval += string(message) + string("\n");
+	}
+	return retval;
+}
 

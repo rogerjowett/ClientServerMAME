@@ -97,5 +97,9 @@ public:
     {
 	    return i+1;
     }
+	
+	string getLatencyString(int connectionIndex);
+
+	string getStatisticsString();
 };
 

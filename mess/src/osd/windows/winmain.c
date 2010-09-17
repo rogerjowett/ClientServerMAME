@@ -310,7 +310,7 @@ const options_entry mame_win_options[] =
 	{ "video",                    "d3d",      0,                 "video output method: none, gdi, ddraw, or d3d" },
 	{ "numscreens(1-4)",          "1",        0,                 "number of screens to create; usually, you want just one" },
 	{ "window;w",                 "0",        OPTION_BOOLEAN,    "enable window mode; otherwise, full screen mode is assumed" },
-	{ "maximize;max",             "1",        OPTION_BOOLEAN,    "default to maximized windows; otherwise, windows will be minimized" },
+	{ "maximize;max",             "0",        OPTION_BOOLEAN,    "default to maximized windows; otherwise, windows will be minimized" },
 	{ "keepaspect;ka",            "1",        OPTION_BOOLEAN,    "constrain to the proper aspect ratio" },
 	{ "prescale",                 "1",        0,                 "scale screen rendering by this amount in software" },
 	{ "effect",                   "none",     0,                 "name of a PNG file to use for visual effects, or 'none'" },

@@ -76,11 +76,8 @@ string Session::popInputBuffer()
 }
 
 z_stream strm;
-unsigned char compressedOutBuf[MAX_COMPRESSED_OUTBUF_SIZE];
-//unsigned char *compressedOutBufPtr;
-
-z_stream strm2;
-unsigned char decompressionBuf[MAX_COMPRESSED_OUTBUF_SIZE];
+unsigned char compressedBuffer[MAX_ZLIB_BUF_SIZE];
+unsigned char uncompressedBuffer[MAX_ZLIB_BUF_SIZE];
 
 Server::Server(string _port) 
 :
@@ -286,6 +283,7 @@ void Server::sync()
     unsigned char blockChecksum=0;
     unsigned char xorChecksum=0;
     unsigned char staleChecksum=0;
+    unsigned char *uncompressedPtr = uncompressedBuffer;
 	for(int blockIndex=0;blockIndex<int(blocks.size());blockIndex++)
 	{
 		MemoryBlock &block = blocks[blockIndex];
@@ -317,45 +315,24 @@ void Server::sync()
 		if(dirty && !anyDirty)
 		{
 			//First dirty block
-			int ret = deflateInit(&strm, 9/*Z_DEFAULT_COMPRESSION*/);
-			strm.next_out = compressedOutBuf;
-			strm.avail_out = MAX_COMPRESSED_OUTBUF_SIZE;
-			if (ret != Z_OK)
-				cout << "CREATING ZLIB STREAM FAILED\n";
 			anyDirty=true;
 		}
 
 		if(dirty)
 		{
 			bytesSynched += xorBlock.size;
-			//cout << "SERVER: SENDING DIRTY BLOCK AT INDEX: " << blockIndex << endl;
-			//Send xorBlock
-			//for(int a=0;a<(int)sessions.size();a++)
-			{
-				//cout << "SENDING DIRTY BLOCK TO CLIENT OF SIZE " << xorBlock.size << "\n";
-				try
-				{
-					//boost::asio::write(*(sessions[a]->getSocket()),boost::asio::buffer(&(blockIndex), sizeof(int)));
-					//boost::asio::write(*(sessions[a]->getSocket()),boost::asio::buffer(&(xorBlock.size), sizeof(int)));
-					//boost::asio::write(*(sessions[a]->getSocket()),boost::asio::buffer(xorBlock.data, xorBlock.size));
-					strm.next_in = (Bytef*)&blockIndex;
-		    			strm.avail_in = sizeof(int);
-					int retval = deflate(&strm, Z_SYNC_FLUSH);
-					strm.next_in = xorBlock.data;
-		    			strm.avail_in = xorBlock.size;
-					retval = deflate(&strm, Z_SYNC_FLUSH);
-					//cout << "DEFLATE RETVAL: " << retval << endl;
-					//if(MAX_COMPRESSED_OUTBUF_SIZE - (compressedOutBufPtr-compressedOutBuf) <= 0)
-					//{
-						//cout << "WE BLEW OUR COMPRESSED OUTPUT BUFFER!\n";
-					//}
-				}
-                		catch(const std::exception &ex)
-				{
-					//cout << "SERVER: Client closed connection, removing client\n";
-					//sessions.erase(sessions.begin()+a);
-				}
-			}
+            memcpy(
+                uncompressedPtr,
+                &blockIndex,
+                sizeof(int)
+                );
+            uncompressedPtr += sizeof(int);
+            memcpy(
+                uncompressedPtr,
+                xorBlock.data,
+                xorBlock.size
+                );
+            uncompressedPtr += xorBlock.size;
 		}
 	}
 	if(anyDirty)
@@ -364,17 +341,32 @@ void Server::sync()
         printf("XOR CHECKSUM: %d\n",int(xorChecksum));
         printf("STALE CHECKSUM: %d\n",int(staleChecksum));
 	int finishIndex = -1;
-	strm.next_in = (Bytef*)&finishIndex;
-	strm.avail_in = sizeof(int);
-	int retval = deflate(&strm, Z_FINISH);
-	//cout << "DEFLATE RETVAL: " << retval << endl;
+	memcpy(
+			uncompressedPtr,
+			&finishIndex,
+			sizeof(int)
+	      );
+	uncompressedPtr += sizeof(int);
 	
-	int compressedSize = MAX_COMPRESSED_OUTBUF_SIZE - strm.avail_out;
-	int sendMessageSize = 1+sizeof(int)+compressedSize;
+	int uncompressedSize = uncompressedPtr-uncompressedBuffer;
+	uLongf compressedSizeLong = MAX_ZLIB_BUF_SIZE;
+
+	compress2(
+		compressedBuffer,
+		&compressedSizeLong,
+		uncompressedBuffer,
+		uncompressedSize,
+		9
+		);
+	int compressedSize = (int)compressedSizeLong;
+		
+	int sendMessageSize = 1+sizeof(int)+sizeof(int)+compressedSize;
 	unsigned char *sendMessage = (unsigned char*)malloc(sendMessageSize);
 	sendMessage[0] = ID_RESYNC;
-	memcpy(sendMessage+1,&compressedSize,sizeof(int));
-	memcpy(sendMessage+1+sizeof(int),compressedOutBuf,compressedSize);
+	memcpy(sendMessage+1,&uncompressedSize,sizeof(int));
+	memcpy(sendMessage+1+sizeof(int),&compressedSize,sizeof(int));
+	memcpy(sendMessage+1+sizeof(int)+sizeof(int),compressedBuffer,compressedSize);
+	printf("SYNC SIZE: %d\n",compressedSize);
 
 	rakInterface->Send(
 			(const char*)sendMessage,
@@ -385,8 +377,6 @@ void Server::sync()
 			RakNet::UNASSIGNED_SYSTEM_ADDRESS,
 			true
 		       );
-    free(sendMessage);
-	deflateEnd(&strm);
 	}
 	//if(runTimes%1==0) cout << "BYTES SYNCED: " << bytesSynched << endl;
 	//cout << "OUT OF CRITICAL AREA\n";
@@ -410,11 +400,20 @@ void Server::addConstBlock(unsigned char *tmpdata,int size)
     constBlocks.push_back(MemoryBlock(size));
     memcpy(constBlocks.back().data,tmpdata,size);
 
-	int sendMessageSize = 1+sizeof(int)+size;
+	uLongf compressedSize = MAX_ZLIB_BUF_SIZE;
+
+    int ret = compress2(compressedBuffer,&compressedSize,(Bytef*)tmpdata,size,9);
+	if (ret != Z_OK)
+		cout << "CREATING ZLIB STREAM FAILED\n";
+
+    int compressedSizeInt = (int)compressedSize;
+
+    int sendMessageSize = 1+sizeof(int)+sizeof(int)+compressedSize;
 	unsigned char *sendMessage = (unsigned char*)malloc(sendMessageSize);
 	sendMessage[0] = ID_CONST_DATA;
 	memcpy(sendMessage+1,&size,sizeof(int));
-	memcpy(sendMessage+1+sizeof(int),tmpdata,size);
+	memcpy(sendMessage+1+sizeof(int),&compressedSizeInt,sizeof(int));
+	memcpy(sendMessage+1+sizeof(int)+sizeof(int),compressedBuffer,compressedSize);
 
 	rakInterface->Send(
 			(const char*)sendMessage,
@@ -425,10 +424,29 @@ void Server::addConstBlock(unsigned char *tmpdata,int size)
 			RakNet::UNASSIGNED_SYSTEM_ADDRESS,
 			true
 		       );
-    free(sendMessage);
 	memoryBlocksLocked=false;
     //cout << "done\n";
     //cout << "EXITING CRITICAL SECTION\n";
 }
 
+string Server::getLatencyString(int connectionIndex)
+{
+	char buf[4096];
+	sprintf(buf,"Client %d Ping: %d ms", connectionIndex, rakInterface->GetAveragePing(rakInterface->GetSystemAddressFromGuid(sessions[connectionIndex].getGUID())));
+	return string(buf);
+}
+
+string Server::getStatisticsString()
+{
+	RakNet::RakNetStatistics *rss;
+	string retval;
+	for(int a=0;a<getNumSessions();a++)
+	{
+		char message[4096];
+		rss=rakInterface->GetStatistics(rakInterface->GetSystemAddressFromIndex(0));
+		StatisticsToString(rss, message, 0);
+		retval += string(message) + string("\n");
+	}
+	return retval;
+}
 

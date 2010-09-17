@@ -387,7 +387,7 @@ else
 # Remove the "/SDL" component from the include path so that we can compile
 # files (header files are #include "SDL/something.h", so the extra "/SDL"
 # causes a significant problem)
-CCOMFLAGS += `sdl-config --cflags | sed 's:/SDL::'` -DNO_SDL_GLEXT
+CCOMFLAGS += `sdl-config --cflags | sed 's:/SDL::'`
 # Remove libSDLmain, as its symbols conflict with SDLMain_tmpl.m
 LIBS += `sdl-config --libs | sed 's/-lSDLmain//'` -lpthread
 endif

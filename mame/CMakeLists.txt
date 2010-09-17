@@ -1680,10 +1680,10 @@ SET(LIBRARY_FILES
 ./src/lib/zlib/deflate.c
 ./src/lib/zlib/deflate.h
 #./src/lib/zlib/example.c
-./src/lib/zlib/gzlib.c
-./src/lib/zlib/gzclose.c
-./src/lib/zlib/gzread.c
-./src/lib/zlib/gzwrite.c
+#./src/lib/zlib/gzlib.c
+#./src/lib/zlib/gzclose.c
+#./src/lib/zlib/gzread.c
+#./src/lib/zlib/gzwrite.c
 ./src/lib/zlib/infback.c
 ./src/lib/zlib/inffast.c
 ./src/lib/zlib/inffast.h

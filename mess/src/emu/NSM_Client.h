@@ -41,6 +41,10 @@ public:
 
     void sendString(const string &outputString);
 
+    string getLatencyString();
+
+    string getStatisticsString();
+
 	MemoryBlock getMemoryBlock(int i)
 	{
 		return blocks[i];
@@ -54,5 +58,10 @@ public:
     MemoryBlock* getConstBlock(int i)
     {
         return &constBlocks[i];
+    }
+
+    void destroyConstBlock(int i)
+    {
+      constBlocks.erase(constBlocks.begin()+i);
     }
 };

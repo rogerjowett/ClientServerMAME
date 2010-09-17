@@ -2583,8 +2583,6 @@ profiler_mark_start(PROFILER_INPUT);
 	for (port = machine->m_portlist.first(); port != NULL; port = port->next())
 	{
 		const input_field_config *field;
-		device_field_info *device_field;
-		input_port_value newvalue;
 
 			/* start with 0 values for the digital and VBLANK bits */
 			port->state->digital = 0;
@@ -2619,19 +2617,6 @@ profiler_mark_start(PROFILER_INPUT);
 	{
 		for(int a=0;a<netServer->getNumSessions();a++)
 		{
-            while(true)
-            {
-			    string buffer = netServer->popInputBuffer(a);
-			    if(buffer.length()>0)
-			    {
-				    serverInputDatabases[a+1] = buffer;
-			    }
-                else
-                {
-                    break;
-                }
-            }
-
             if(serverInputDatabases[a+1].length())
             {
                 deserializePlayerInputFromBuffer(machine,(const unsigned char *)serverInputDatabases[a+1].c_str(),serverInputDatabases[a+1].length(),netServer->getClientID(a));
@@ -2643,8 +2628,6 @@ profiler_mark_start(PROFILER_INPUT);
 	    for (port = machine->m_portlist.first(); port != NULL; port = port->next())
 	    {
 		    const input_field_config *field;
-		    device_field_info *device_field;
-		    input_port_value newvalue;
 
 			/* start with 0 values for the digital and VBLANK bits */
 			port->state->digital = 0;
@@ -2679,13 +2662,14 @@ profiler_mark_start(PROFILER_INPUT);
 	{
 		//Send player 1 data to the server
 		static char tmpbuffer[1024*1024*1];
-		int bytesUsed = serializePlayerInputToBuffer(machine,tmpbuffer);
+		tmpbuffer[0]=0;
+		int bytesUsed = serializePlayerInputToBuffer(machine,tmpbuffer+1);
 		//cout << "USED " << bytesUsed << " BYTES OF TMPBUFFER\n";
 		if(bytesUsed >= 1024*1024*1)
 		{
 			cout << "OOPS! Blew through tmpbuffer!\n";
 		}
-		netClient->sendString(string(tmpbuffer,bytesUsed));
+		netClient->sendString(string(tmpbuffer,bytesUsed+1));
 		//cout << "CALLING SYNC\n";
 
         //while(true)
@@ -2729,7 +2713,8 @@ profiler_mark_start(PROFILER_INPUT);
 
 		//Send all player data to the server
 		static char tmpbuffer[1024*1024*1];
-		int bytesUsed = serializePlayerInputToBuffer(machine,tmpbuffer);
+		tmpbuffer[0]=0;
+		int bytesUsed = serializePlayerInputToBuffer(machine,tmpbuffer+1);
 		//cout << "USED " << bytesUsed << " BYTES OF TMPBUFFER\n";
 		if(bytesUsed >= 1024*1024*1)
 		{
@@ -2738,7 +2723,7 @@ profiler_mark_start(PROFILER_INPUT);
         static int counter=0;
         //cout << counter << ") ADDING BLOCK FOR: " << curtime.seconds << " " << curtime.attoseconds << endl;
         counter++;
-		netServer->addConstBlock((unsigned char*)tmpbuffer,bytesUsed);
+		netServer->addConstBlock((unsigned char*)tmpbuffer,bytesUsed+1);
 		//cout << "CALLING SYNC\n";
     }
 
@@ -2755,10 +2740,9 @@ profiler_mark_start(PROFILER_INPUT);
 	/* loop over all input ports */
 	for (port = machine->m_portlist.first(); port != NULL; port = port->next())
 	{
-		const input_field_config *field;
-		device_field_info *device_field;
-		input_port_value newvalue;
-
+	    device_field_info *device_field;
+	    input_port_value newvalue;
+	    
 		/* handle playback/record */
 		playback_port(port);
 		record_port(port);

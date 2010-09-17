@@ -375,279 +375,303 @@ extern Client *netClient;
 extern void doPostLoad(running_machine *machine);
 extern void doPreSave(running_machine *machine);
 extern std::map<attotime,MemoryBlock> clientInputDatabase;
+extern list< ChatLog > chatLogs;
+extern string serverInputDatabases[MAX_PLAYERS];
 
 int running_machine::run(bool firstrun)
 {
-	int error = MAMERR_NONE;
+  int error = MAMERR_NONE;
 
-	// use try/catch for deep error recovery
-	//try
-	{
-		// move to the init phase
-		m_current_phase = MACHINE_PHASE_INIT;
+  // use try/catch for deep error recovery
+  //try
+  {
+    // move to the init phase
+    m_current_phase = MACHINE_PHASE_INIT;
 
-		// if we have a logfile, set up the callback
-		if (options_get_bool(&m_options, OPTION_LOG))
-		{
-			file_error filerr = mame_fopen(SEARCHPATH_DEBUGLOG, "error.log", OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS, &m_logfile);
-			assert_always(filerr == FILERR_NONE, "unable to open log file");
-			add_logerror_callback(logfile_callback);
-		}
+    // if we have a logfile, set up the callback
+    if (options_get_bool(&m_options, OPTION_LOG))
+      {
+	file_error filerr = mame_fopen(SEARCHPATH_DEBUGLOG, "error.log", OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS, &m_logfile);
+	assert_always(filerr == FILERR_NONE, "unable to open log file");
+	add_logerror_callback(logfile_callback);
+      }
 
-		//Set up client/server as appropriate
-		if(options_get_bool(mame_options(), "client"))
-		{
-			deleteGlobalClient();
-			createGlobalClient();
-		}
-		else if(options_get_bool(mame_options(), "server"))
-		{
-			deleteGlobalServer();
-            createGlobalServer(options_get_string(mame_options(), "port"));
-		}
+    //Set up client/server as appropriate
+    if(options_get_bool(mame_options(), "client"))
+      {
+	deleteGlobalClient();
+	createGlobalClient();
+      }
+    else if(options_get_bool(mame_options(), "server"))
+      {
+	deleteGlobalServer();
+	createGlobalServer(options_get_string(mame_options(), "port"));
+      }
 		
-		// then finish setting up our local machine
-		start();
+    // then finish setting up our local machine
+    start();
 		
-		if(netServer) 
-        {
-			if(!netServer->initializeConnection())
-            {
-                return MAMERR_NETWORK;
-            }
-        }
+    if(netServer) 
+      {
+	if(!netServer->initializeConnection())
+	  {
+	    return MAMERR_NETWORK;
+	  }
+      }
 
-		// load the configuration settings and NVRAM
-		bool settingsloaded = config_load_settings(this);
-		nvram_load(this);
-		sound_mute(this, FALSE);
+    // load the configuration settings and NVRAM
+    bool settingsloaded = config_load_settings(this);
+    nvram_load(this);
+    sound_mute(this, FALSE);
 
-		// display the startup screens
-		ui_display_startup_screens(this, firstrun, !settingsloaded);
+    // display the startup screens
+    ui_display_startup_screens(this, firstrun, !settingsloaded);
 
-		// perform a soft reset -- this takes us to the running phase
-		soft_reset();
+    // perform a soft reset -- this takes us to the running phase
+    soft_reset();
 
-		// run the CPUs until a reset or exit
-		m_hard_reset_pending = false;
-        bool shouldDoPostLoad=false;
-		while ((!m_hard_reset_pending && !m_exit_pending) || m_saveload_schedule != SLS_NONE)
-		{
-			profiler_mark_start(PROFILER_EXTRA);
+    // run the CPUs until a reset or exit
+    m_hard_reset_pending = false;
+    bool shouldDoPostLoad=false;
+    while ((!m_hard_reset_pending && !m_exit_pending) || m_saveload_schedule != SLS_NONE)
+      {
+	profiler_mark_start(PROFILER_EXTRA);
 
-			// execute CPUs if not paused
-			if (!m_paused)
-				m_scheduler.timeslice();
+	// execute CPUs if not paused
+	if (!m_paused)
+	  m_scheduler.timeslice();
 
-			// otherwise, just pump video updates through
-			else
-				video_frame_update(this, false);
+	// otherwise, just pump video updates through
+	else
+	  video_frame_update(this, false);
 
-				/* if there are anonymous timers, we can't load just yet because the timers might */
-				/* overwrite data we have loaded */
-				if (timer_count_anonymous(this) == 0)
-				{
+	    static int startTime=int(time(NULL));
+	    if(startTime+1 < int(time(NULL)))
+	      {
+		static int first=true;
+		if(first)
+		  {
+		    first=false;
+		    if(netClient) 
+		      {
+			/* specify the filename to save or load */
+			//set_saveload_filename(machine, "1");
+			//handle_load(machine);
+			bool retval = netClient->initializeConnection(
+								      options_get_string(mame_options(), "hostname"),
+								      options_get_string(mame_options(), "port")
+								      );
+			printf("LOADED CLIENT\n");
+			if(!retval)
+			  {
+			    error = MAMERR_NETWORK;
+			    m_exit_pending = true;
+			  }
+			shouldDoPostLoad=true;
+		      }
+		    if(netServer) 
+		      {
+			doPreSave(this);
+			netServer->sync();
+			netServer->update();
+		      }
+		  }
 
-				static int startTime=int(time(NULL));
-				if(startTime+1 < int(time(NULL)))
-				{
-				static int first=true;
-				if(first)
-				{
-					first=false;
-					if(netClient) 
-					{
-						/* specify the filename to save or load */
-						//set_saveload_filename(machine, "1");
-						//handle_load(machine);
-						bool retval = netClient->initializeConnection(
-                            options_get_string(mame_options(), "hostname"),
-                            options_get_string(mame_options(), "port")
-                            );
-                        if(!retval)
-                        {
-                            error = MAMERR_NETWORK;
-                            m_exit_pending = true;
-                        }
-						shouldDoPostLoad=true;
-					}
-					if(netServer) 
-					{
-						doPreSave(this);
-                        netServer->sync();
-						netServer->update();
-					}
-				}
+		static clock_t lastRecTime=clock();
+		if(lastRecTime+CLOCKS_PER_SEC*5 < clock())
+		  {
+		    printf("SERVER SYNC AT TIME TIME: %d\n",int(time(NULL)));
+		    lastRecTime = clock();
+		    if(netServer) 
+		      {
+			doPreSave(this);
+			netServer->sync();
+		      }
+		  }
 
-				static clock_t lastRecTime=clock();
-				if(lastRecTime+CLOCKS_PER_SEC*5 < clock())
-				{
-					//printf("TIME: %d\n",int(time(NULL)));
-					lastRecTime = clock();
-					if(netServer) 
-					{
-						doPreSave(this);
-                        netServer->sync();
-					}
-				}
+		static clock_t lastSyncTime=clock();
+		if(lastSyncTime+CLOCKS_PER_SEC/60 < clock() || (netClient && !shouldDoPostLoad && clientInputDatabase.size()<=1) )
+		  {
+		    lastSyncTime = clock();
+		    if(netServer)
+		      {
+			netServer->update();
+				  
+				  for(int a=0;a<netServer->getNumSessions();a++)
+				  {
+					  while(true)
+					  {
+						  string buffer = netServer->popInputBuffer(a);
+						  if(buffer.length()>0)
+						  {
+							  if(buffer[0]==0)
+							  {
+								  serverInputDatabases[a+1] = buffer.substr(1);
+							  }
+							  else if(buffer[0]==1)
+							  {
+								  astring chatAString = astring(&buffer[1]);
+								  chatLogs.push_back(ChatLog(a+1,time(NULL),chatAString));
+							  }
+						  }
+						  else
+						  {
+							  break;
+						  }
+					  }
+				  }
+				  
+		      }
+		    if(netClient)
+		      {
+			while(true && !shouldDoPostLoad)
+			  {
+			    //cout << "UPDATING NETCLIENT\n";
+			    pair<bool,bool> survivedAndGotSync;
+			    survivedAndGotSync=netClient->syncAndUpdate();
+			    if(survivedAndGotSync.first==false)
+			      {
+				error = MAMERR_NETWORK;
+				m_exit_pending = true;
+				break;
+			      }
+			    if(survivedAndGotSync.second)
+			      {
+				cout << "GOT SYNC FROM SERVER\n";
+				shouldDoPostLoad = true;
+			      }
+			    while(netClient->getNumConstBlocks())
+			      {
+				//Add new blocks to the inputDatabase
+				MemoryBlock *mb = netClient->getConstBlock(0);
 
-                static clock_t lastSyncTime=clock();
-				if(lastSyncTime+CLOCKS_PER_SEC/60 < clock() || (netClient && !shouldDoPostLoad && clientInputDatabase.size()<=1) )
-				{
-				    lastSyncTime = clock();
-                    if(netServer)
-                    {
-						netServer->update();
-                    }
-				    if(netClient)
-				    {
-                        while(true && !shouldDoPostLoad)
-				        {
-    				        //cout << "UPDATING NETCLIENT\n";
-                            pair<bool,bool> survivedAndGotSync;
-                            survivedAndGotSync=netClient->syncAndUpdate();
-                            if(survivedAndGotSync.first==false)
-                            {
-                                error = MAMERR_NETWORK;
-                                m_exit_pending = true;
-                                break;
-                            }
-    					    if(survivedAndGotSync.second)
-                            {
-    			                cout << "GOT SYNC FROM SERVER\n";
-    						    shouldDoPostLoad = true;
-                            }
-                            static int lastUpdateSize=0;
-                            //cout << "GETTING NEW BLOCKS: " << lastUpdateSize << ' ' << netClient->getNumConstBlocks() << endl;
-                            for(;lastUpdateSize<netClient->getNumConstBlocks();lastUpdateSize++)
-                            {
-                                int a = lastUpdateSize;
+				if(mb->data[0]==0)
+				  {
+				    attotime serverTime;
+				    memcpy(
+					   (unsigned char*)&serverTime,
+					   mb->data+1,
+					   sizeof(attotime)
+					   );
+				    //cout << "ADDING SERVER TIME " << serverTime.seconds << ' ' << serverTime.attoseconds << endl;
 
-                                //Add new blocks to the inputDatabase
-                                MemoryBlock *mb = netClient->getConstBlock(a);
+				    clientInputDatabase[serverTime] = MemoryBlock(mb->data+1,mb->size-1);
+				  }
+				else
+				  {
+				    //This is a chat message
+				    chatLogs.push_back(ChatLog(mb->data[0]-1,time(NULL),astring((char*)(mb->data+1))));
+				    //ui_popup_time(5,"%s",string((char*)(mb->data+1),size_t(mb->size-1)).c_str());
+			      
+				  }
 
-				attotime serverTime;
-		                        memcpy(
-			                            (unsigned char*)&serverTime,
-			                            mb->data,
-			                            sizeof(attotime)
-			                            );
-                                //cout << a << ") ADDING SERVER TIME " << serverTime.seconds << ' ' << serverTime.attoseconds << endl;
+				netClient->destroyConstBlock(0);
+			      }
 
-                                if(clientInputDatabase.find(serverTime)!=clientInputDatabase.end())
-                                {
-                                    throw "SHIT LIKE A MONKEY!";
-                                }
+			    attotime latestTime;
+			    latestTime.seconds = latestTime.attoseconds = 0;
+			    attotime curtime = timer_get_time(this);
+			    if(survivedAndGotSync.second)
+			      cout << "DESTROYING BLOCKS FROM TIME: " << curtime.seconds << '.' << curtime.attoseconds << endl;
+			    for(std::map<attotime,MemoryBlock>::iterator it = clientInputDatabase.begin();
+				it != clientInputDatabase.end();
+				)
+			      {
+				if(it->first<curtime)
+				  {
+				    std::map<attotime,MemoryBlock>::iterator itold = it;
+				    it++;
+				    clientInputDatabase.erase(itold);
+				  }
+				else
+				  {
+				    if(it->first.seconds>latestTime.seconds 
+				       || (it->first.seconds==latestTime.seconds &&
+					   it->first.attoseconds>latestTime.attoseconds)
+				       )
+				      {
+					latestTime = it->first;
+				      }
+				    it++;
+				  }
+			      }
+			    attotime futureTime = curtime;
+			    futureTime.attoseconds+=ATTOSECONDS_PER_SECOND/10;
+			    if(futureTime.attoseconds>ATTOSECONDS_PER_SECOND)
+			      {
+				futureTime.seconds++;
+				futureTime.attoseconds-=ATTOSECONDS_PER_SECOND;
+			      }
+			    if(clientInputDatabase.size()>0)
+			      {
+				//cout << "EXITING NET READ LOOP\n";
+				break;
+			      }
+			    else
+			      {
+				osd_sleep(0);
+			      }
+			  }
+		      }
+		  }
+	      }
 
-                                clientInputDatabase[serverTime] = MemoryBlock(mb->data,mb->size);
-                            }
-                            attotime latestTime;
-                            latestTime.seconds = latestTime.attoseconds = 0;
-	                        attotime curtime = timer_get_time(this);
-        					if(survivedAndGotSync.second)
-                                cout << "DESTROYING BLOCKS FROM TIME: " << curtime.seconds << '.' << curtime.attoseconds << endl;
-                            for(std::map<attotime,MemoryBlock>::iterator it = clientInputDatabase.begin();
-                                it != clientInputDatabase.end();
-                            )
-                            {
-                                if(it->first<curtime)
-                                {
-                                    std::map<attotime,MemoryBlock>::iterator itold = it;
-                                    it++;
-                                    clientInputDatabase.erase(itold);
-                                }
-                                else
-                                {
-                                    if(it->first.seconds>latestTime.seconds 
-                                        || (it->first.seconds==latestTime.seconds &&
-                                        it->first.attoseconds>latestTime.attoseconds)
-                                        )
-                                    {
-                                        latestTime = it->first;
-                                    }
-                                    it++;
-                                }
-                            }
-	                        attotime futureTime = curtime;
-                            futureTime.attoseconds+=ATTOSECONDS_PER_SECOND/10;
-                            if(futureTime.attoseconds>ATTOSECONDS_PER_SECOND)
-                            {
-                                futureTime.seconds++;
-                                futureTime.attoseconds-=ATTOSECONDS_PER_SECOND;
-                            }
-                            if(clientInputDatabase.size()>1)
-                            {
-                                //cout << "EXITING NET READ LOOP\n";
-                                break;
-                            }
-                            else
-                            {
-                                osd_sleep(0);
-                            }
-                        }
-                    }
-				}
-				}
+	if(shouldDoPostLoad)
+	  {
+	    cout << "RUNNING POST LOAD\n";
+	    doPostLoad(this);
+	    shouldDoPostLoad=false;
+	  }
+	/* if there are anonymous timers, we can't load just yet because the timers might */
+	/* overwrite data we have loaded */
+	if (timer_count_anonymous(this) == 0)
+	  {
+	// handle save/load
+	if (m_saveload_schedule != SLS_NONE)
+	  handle_saveload();
+	  }
 
-				static int lastRecTime2=int(time(NULL));
-				if(int(time(NULL)) != lastRecTime2)
-				{
-					lastRecTime2 = int(time(NULL));
-					//printf("A SECOND PASSES\n");
-				}
-				}
+	profiler_mark_end();
+      }
 
-            if(shouldDoPostLoad)
-            {
-                cout << "RUNNING POST LOAD\n";
-                doPostLoad(this);
-                shouldDoPostLoad=false;
-            }
-			// handle save/load
-			if (m_saveload_schedule != SLS_NONE)
-				handle_saveload();
+    deleteGlobalClient();
+    deleteGlobalServer();
 
-			profiler_mark_end();
-		}
+    // and out via the exit phase
+    m_current_phase = MACHINE_PHASE_EXIT;
 
-		deleteGlobalClient();
-		deleteGlobalServer();
+    // save the NVRAM and configuration
+    sound_mute(this, true);
+    nvram_save(this);
+    config_save_settings(this);
+  }
+  /*
+    catch (emu_fatalerror &fatal)
+    {
+    mame_printf_error("%s\n", fatal.string());
+    error = MAMERR_FATALERROR;
+    if (fatal.exitcode() != 0)
+    error = fatal.exitcode();
+    }
+    catch (emu_exception &)
+    {
+    mame_printf_error("Caught unhandled emulator exception\n");
+    error = MAMERR_FATALERROR;
+    }
+    catch (std::bad_alloc &)
+    {
+    mame_printf_error("Out of memory!\n");
+    error = MAMERR_FATALERROR;
+    }
+  */
 
-		// and out via the exit phase
-		m_current_phase = MACHINE_PHASE_EXIT;
+  // call all exit callbacks registered
+  call_notifiers(MACHINE_NOTIFY_EXIT);
 
-		// save the NVRAM and configuration
-		sound_mute(this, true);
-		nvram_save(this);
-		config_save_settings(this);
-	}
-    /*
-	catch (emu_fatalerror &fatal)
-	{
-		mame_printf_error("%s\n", fatal.string());
-		error = MAMERR_FATALERROR;
-		if (fatal.exitcode() != 0)
-			error = fatal.exitcode();
-	}
-	catch (emu_exception &)
-	{
-		mame_printf_error("Caught unhandled emulator exception\n");
-		error = MAMERR_FATALERROR;
-	}
-	catch (std::bad_alloc &)
-	{
-		mame_printf_error("Out of memory!\n");
-		error = MAMERR_FATALERROR;
-	}
-    */
-
-	// call all exit callbacks registered
-	call_notifiers(MACHINE_NOTIFY_EXIT);
-
-	// close the logfile
-	if (m_logfile != NULL)
-		mame_fclose(m_logfile);
-	return error;
+  // close the logfile
+  if (m_logfile != NULL)
+    mame_fclose(m_logfile);
+  return error;
 }
 
 

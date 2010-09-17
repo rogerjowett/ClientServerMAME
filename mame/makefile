@@ -591,15 +591,15 @@ ifdef MSVC_BUILD
 else
 ifdef DEBUG
 ifeq ($(PTR64),1)
-LIBS += -L${SRC}/../../../Libraries/RakNet/Lib -lRakNetLibStaticDebug.lib
+LIBS += -L${SRC}/../../../Libraries/RakNet/Lib/LibStatic -lRakNetStaticDebug
 else
-LIBS += -L${SRC}/../../../Libraries/RakNet32/Lib -lRakNetLibStaticDebug.lib
+LIBS += -L${SRC}/../../../Libraries/RakNet32/Lib/LibStatic -lRakNetStaticDebug
 endif
 else
 ifeq ($(PTR64),1)
-LIBS += -L${SRC}/../../../Libraries/RakNet/Lib -lRakNetLibStatic.lib
+LIBS += -L${SRC}/../../../Libraries/RakNet/Lib/LibStatic -lRakNetStatic
 else
-LIBS += -L${SRC}/../../../Libraries/RakNet32/Lib -lRakNetLibStatic.lib
+LIBS += -L${SRC}/../../../Libraries/RakNet32/Lib/LibStatic -lRakNetStatic
 endif
 endif
 endif

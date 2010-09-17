@@ -15,8 +15,6 @@
 #include <cstring>
 #include <stdlib.h>
 
-#include "osdcore.h"
-
 Client *netClient=NULL;
 
 Client *createGlobalClient()
@@ -31,8 +29,13 @@ void deleteGlobalClient()
     netClient = NULL;
 }
 
-z_stream clientStrm;
-unsigned char compressedInBuf[MAX_COMPRESSED_OUTBUF_SIZE];
+#include "unicode.h"
+#include "ui.h"
+#include "osdcore.h"
+
+extern z_stream strm;
+extern unsigned char compressedBuffer[MAX_ZLIB_BUF_SIZE];
+extern unsigned char uncompressedBuffer[MAX_ZLIB_BUF_SIZE];
 
 Client::Client() 
 {
@@ -40,9 +43,9 @@ Client::Client()
     rakInterface->AllowConnectionResponseIPMigration(false);
 
     /* allocate deflate state */
-    clientStrm.zalloc = Z_NULL;
-    clientStrm.zfree = Z_NULL;
-    clientStrm.opaque = Z_NULL;
+    strm.zalloc = Z_NULL;
+    strm.zfree = Z_NULL;
+    strm.opaque = Z_NULL;
 }
 
 Client::~Client()
@@ -139,6 +142,7 @@ bool Client::initializeConnection(const char *hostname,const char *port)
         RakNet::Packet *p = rakInterface->Receive();
 	if(!p) 
 	{
+	  ui_popup_time(1,"Waiting for server to send entire game state for the first time");
 		printf("WAITING FOR SERVER TO SEND GAME WORLD...\n");
 		osd_sleep(osd_ticks_per_second());
 		continue; //We need the first few packets, so stall until we get them
@@ -306,10 +310,6 @@ void Client::loadInitialData(unsigned char *data,int size)
 
 std::pair<bool,bool> Client::syncAndUpdate() 
 {
-    int clientSizeOfNextMessage;
-    int blockIndex;
-
-
     osd_sleep(0);
     while(true)
     {
@@ -404,38 +404,15 @@ void Client::resync(unsigned char *data,int size)
             {
                 memcpy(blocks[a].data,staleBlocks[a].data,blocks[a].size);
             }
-            int bufLen;
-	    memcpy(&bufLen,data,sizeof(int));
-	    data += sizeof(int);
 
-        if(bufLen>=MAX_COMPRESSED_OUTBUF_SIZE)
-        {
-            cout << "ERROR!! BUFLEN IS TOO BIG!\n";
-        }
-
-	    memcpy(compressedInBuf,data,bufLen);
-
-            unsigned char checksum = 0;
-            for(int a=0;a<bufLen;a++)
-            {
-                checksum = checksum ^ compressedInBuf[a];
-            }
-            //cout << "CHECKSUM: " << int(checksum) << endl;
-
-            clientStrm.next_in = compressedInBuf;
-            clientStrm.avail_in = bufLen;
-            int ret = inflateInit(&clientStrm);
-            if (ret != Z_OK)
-                cout << "CREATING ZLIB STREAM FAILED\n";
-
-#if 0
-            clientStrm.next_out = (Bytef*)uncompressedInBuf;
-            clientStrm.avail_out = MAX_COMPRESSED_OUTBUF_SIZE;
-            int retval = inflate(&clientStrm,Z_NO_FLUSH);
-            cout << "INFLATE RETVAL: " << retval << endl;
-            if(clientStrm.msg) cout << "ERROR MESSAGE: " << clientStrm.msg << endl;
-            if(retval==Z_DATA_ERROR) exit(1);
-#endif		
+	int uncompressedSize,compressedSize;
+	memcpy(&uncompressedSize,data,sizeof(int));
+	data += sizeof(int);
+	memcpy(&compressedSize,data,sizeof(int));
+	data += sizeof(int);
+	uLongf destLen = MAX_ZLIB_BUF_SIZE;
+	uncompress(uncompressedBuffer,&destLen,data,compressedSize);
+	unsigned char *uncompressedPtr = uncompressedBuffer;
 
 #if 1
             unsigned char blockChecksum=0;
@@ -444,13 +421,12 @@ void Client::resync(unsigned char *data,int size)
             while(true)
             {
                 int blockIndex;
-                //boost::asio::read(*clientSocket,boost::asio::buffer(&blockIndex, sizeof(int)));
-                clientStrm.next_out = (Bytef*)&blockIndex;
-                clientStrm.avail_out = sizeof(int);
-                int retval = inflate(&clientStrm,Z_SYNC_FLUSH);
-                //cout << "BYTES READ: " << (sizeof(int)-clientStrm.avail_out) << endl;
-                //cout << "INFLATE RETVAL: " << retval << endl;
-                if(retval==Z_DATA_ERROR) exit(1);
+		memcpy(
+			&blockIndex,
+			uncompressedPtr,
+			sizeof(int)
+		      );
+		uncompressedPtr += sizeof(int);
 
                 if(blockIndex==-1)
                 {
@@ -478,13 +454,13 @@ void Client::resync(unsigned char *data,int size)
                 //<< " != " << block.size << endl;
                 //}
 
-                //boost::asio::read(*clientSocket,boost::asio::buffer(xorBlock.data, clientSizeOfNextMessage));
-                clientStrm.next_out = xorBlock.data;
-                clientStrm.avail_out = xorBlock.size;
-                retval = inflate(&clientStrm,Z_SYNC_FLUSH);
-                //cout << "BYTES READ: " << (xorBlock.size-clientStrm.avail_out) << endl;
-                //cout << "INFLATE RETVAL: " << retval << endl;
-                if(retval==Z_DATA_ERROR) exit(1);
+		memcpy(
+			xorBlock.data,
+			uncompressedPtr,
+			xorBlock.size
+		      );
+        uncompressedPtr += xorBlock.size;
+                //cout << "BYTES READ: " << (xorBlock.size-strm.avail_out) << endl;
                 for(int a=0;a<block.size;a++)
                 {
                     block.data[a] = xorBlock.data[a] ^ staleBlock.data[a];
@@ -504,17 +480,27 @@ void Client::resync(unsigned char *data,int size)
 
 void Client::addConstData(unsigned char *data,int size)
 {
-            //cout << "READING CONST BLOCK\n";
-            constBlocks.push_back(MemoryBlock(0));
+        //cout << "READING CONST BLOCK\n";
+        constBlocks.push_back(MemoryBlock(0));
+
 	    int blockSize;
 	    memcpy(&blockSize,data,sizeof(int));
 	    data += sizeof(int);
-
+	    int compressedblockSize;
+	    memcpy(&compressedblockSize,data,sizeof(int));
+	    data += sizeof(int);
 
 	    constBlocks.back().size = blockSize;	    
-            constBlocks.back().data = (unsigned char*)malloc(blockSize);
+        constBlocks.back().data = (unsigned char*)malloc(blockSize);
 
-	    memcpy(constBlocks.back().data,data,blockSize);
+        uLongf destLen = blockSize;
+
+        uncompress(
+            constBlocks.back().data,
+            &destLen,
+            data,
+            size-(sizeof(int)*2)
+            );
 }
 
 void Client::checkMatch(Server *server)
@@ -569,4 +555,20 @@ void Client::sendString(const string &outputString)
 		    false
 		   );
     free(dataToSend);
+}
+
+string Client::getLatencyString()
+{
+  char buf[4096];
+  sprintf(buf,"Server Ping: %d ms", rakInterface->GetAveragePing(rakInterface->GetSystemAddressFromIndex(0)));
+  return string(buf);
+}
+
+string Client::getStatisticsString()
+{
+  RakNet::RakNetStatistics *rss;
+  char message[4096];
+  rss=rakInterface->GetStatistics(rakInterface->GetSystemAddressFromIndex(0));
+  StatisticsToString(rss, message, 0);
+  return string(message);
 }

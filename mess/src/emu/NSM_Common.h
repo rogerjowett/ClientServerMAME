@@ -17,6 +17,7 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <cstring>
 
 using namespace std;
 
@@ -41,6 +42,8 @@ enum CustomPacketType
 
 class Client;
 class Server;
+
+#define MAX_ZLIB_BUF_SIZE (1024*1024*64)
 
 class MemoryBlock
 {
