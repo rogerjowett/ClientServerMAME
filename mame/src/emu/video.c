@@ -423,6 +423,8 @@ static TIMER_CALLBACK( screenless_update_callback )
 
 
 extern std::map<attotime,MemoryBlock> clientInputDatabase;
+extern std::map<attotime,MemoryBlock> clientInputDatabaseHistory;
+extern attotime mostRecentReport;
 extern Client *netClient;
 extern Server *netServer;
 
@@ -432,10 +434,27 @@ extern Server *netServer;
     operations
 -------------------------------------------------*/
 
+extern bool needToSkipAhead;
+
 void video_frame_update(running_machine *machine, int debug)
 {
 	attotime current_time = timer_get_time(machine);
-	int skipped_it = global.skipping_this_frame;
+
+	if(needToSkipAhead)
+	{
+		//cout << "CURRENT TIME: " << current_time.seconds << ',' << current_time.attoseconds << endl;
+		//cout << "MOST RECENT REPORT TIME: " << mostRecentReport.seconds << ',' << mostRecentReport.attoseconds << endl;
+    if(mostRecentReport.seconds || mostRecentReport.attoseconds)
+    {
+        if(mostRecentReport<=current_time)
+        {
+            printf("DONE WITH VIDEO SKIP %d\n",needToSkipAhead);
+            needToSkipAhead=false;
+        }
+    }
+	}
+
+	int skipped_it = global.skipping_this_frame || needToSkipAhead;
 	int phase = machine->phase();
 
 	/* validate */
@@ -831,15 +850,17 @@ static void update_throttle(running_machine *machine, attotime emutime)
 
     if(netClient)
     {
-        if(clientInputDatabase.size())
+        if(mostRecentReport.seconds || mostRecentReport.attoseconds)
         {
             //If we are a client, use the timstamp from the last packet from the server to represent "real time"
-            global.throttle_realtime = clientInputDatabase.rbegin()->first;
-            //global.throttle_realtime.seconds -= 10;
-            //cout << "EMUTIME: " << global.throttle_emutime.seconds << global.throttle_emutime.attoseconds << endl;
-            //cout << "REALTIME: " << global.throttle_realtime.seconds << global.throttle_realtime.attoseconds << endl;
+            global.throttle_realtime = mostRecentReport;
+
+	    if(global.throttle_realtime.attoseconds>ATTOSECONDS_PER_SECOND/30)
+	    {
+	            global.throttle_realtime.attoseconds -= ATTOSECONDS_PER_SECOND/30;
+	    }
         }
-        else
+        else if(netClient->isInitComplete())
         {
             cout << "WE ARE MISSING AN INPUT REPORT!!!\n";
         }
@@ -2459,6 +2480,7 @@ void screen_device::update_burnin()
 	int dstheight = m_burnin->height;
 	int xstep = (srcwidth << 16) / dstwidth;
 	int ystep = (srcheight << 16) / dstheight;
+    printf("USING WRONG RAND!!!\n");
 	int xstart = ((UINT32)rand() % 32767) * xstep / 32767;
 	int ystart = ((UINT32)rand() % 32767) * ystep / 32767;
 	int srcx, srcy;

@@ -167,6 +167,8 @@ const options_entry mame_core_options[] =
 	{ "client",               "0",         OPTION_BOOLEAN,    "Is this a client in the network" },
 	{ "hostname",               "127.0.0.1",         0,    "hostname of server to connect to" },
 	{ "port",               "5805",         0,    "port of server to connect to" },
+	{ "secondsbetweensync",               "30",         0,    "Number of seconds to wait between syncs" },
+	{ "synctransferseconds",               "10",         0,    "Number of seconds to spend transfering the sync" },
 
 	/* image device options */
 	{ OPTION_ADDED_DEVICE_OPTIONS,	 "0",		  OPTION_BOOLEAN | OPTION_INTERNAL,	"image device-specific options have been added" },

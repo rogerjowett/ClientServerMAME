@@ -517,6 +517,7 @@ state_save_error state_save_check_file(running_machine *machine, mame_file *file
 
 void doPreSave(running_machine *machine)
 {
+	printf("DOING PRE SAVE\n");
 	state_private *global = machine->state_data;
 	state_callback *func;
 
@@ -572,6 +573,7 @@ state_save_error state_save_write_file(running_machine *machine, mame_file *file
 -------------------------------------------------*/
 void doPostLoad(running_machine *machine)
 {
+	printf("DOING POST LOAD\n");
 	state_private *global = machine->state_data;
 	state_callback *func;
 	/* call the post-load functions */

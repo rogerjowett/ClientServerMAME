@@ -375,6 +375,8 @@ extern Client *netClient;
 extern void doPostLoad(running_machine *machine);
 extern void doPreSave(running_machine *machine);
 extern std::map<attotime,MemoryBlock> clientInputDatabase;
+extern std::map<attotime,MemoryBlock> clientInputDatabaseHistory;
+attotime mostRecentReport;
 extern list< ChatLog > chatLogs;
 extern string serverInputDatabases[MAX_PLAYERS];
 
@@ -406,19 +408,12 @@ int running_machine::run(bool firstrun)
       {
 	deleteGlobalServer();
 	createGlobalServer(options_get_string(mame_options(), "port"));
+	netServer->setSyncTransferTime(options_get_int(mame_options(), "synctransferseconds"));
       }
 		
     // then finish setting up our local machine
     start();
 		
-    if(netServer) 
-      {
-	if(!netServer->initializeConnection())
-	  {
-	    return MAMERR_NETWORK;
-	  }
-      }
-
     // load the configuration settings and NVRAM
     bool settingsloaded = config_load_settings(this);
     nvram_load(this);
@@ -430,9 +425,43 @@ int running_machine::run(bool firstrun)
     // perform a soft reset -- this takes us to the running phase
     soft_reset();
 
+    if(netServer) 
+      {
+	if(!netServer->initializeConnection())
+	  {
+	    return MAMERR_NETWORK;
+	  }
+		doPreSave(this);
+		netServer->sync();
+      }
+
+
+    if(netClient) 
+      {
+	      mostRecentReport.seconds = 0;
+	      mostRecentReport.attoseconds = 0;
+	/* specify the filename to save or load */
+	//set_saveload_filename(machine, "1");
+	//handle_load(machine);
+	//doPreSave(this);
+	bool retval = netClient->initializeConnection(
+						      options_get_string(mame_options(), "hostname"),
+						      options_get_string(mame_options(), "port"),
+						      this
+						      );
+	printf("LOADED CLIENT\n");
+	if(!retval)
+	  {
+	    error = MAMERR_NETWORK;
+	    m_exit_pending = true;
+	  }
+	    cout << "RUNNING POST LOAD\n";
+	    doPostLoad(this);
+      }
+
     // run the CPUs until a reset or exit
-    m_hard_reset_pending = false;
     bool shouldDoPostLoad=false;
+    m_hard_reset_pending = false;
     while ((!m_hard_reset_pending && !m_exit_pending) || m_saveload_schedule != SLS_NONE)
       {
 	profiler_mark_start(PROFILER_EXTRA);
@@ -445,53 +474,42 @@ int running_machine::run(bool firstrun)
 	else
 	  video_frame_update(this, false);
 
-	    static int startTime=int(time(NULL));
-	    if(startTime+1 < int(time(NULL)))
-	      {
-		static int first=true;
-		if(first)
-		  {
-		    first=false;
-		    if(netClient) 
-		      {
-			/* specify the filename to save or load */
-			//set_saveload_filename(machine, "1");
-			//handle_load(machine);
-			bool retval = netClient->initializeConnection(
-								      options_get_string(mame_options(), "hostname"),
-								      options_get_string(mame_options(), "port")
-								      );
-			printf("LOADED CLIENT\n");
-			if(!retval)
-			  {
-			    error = MAMERR_NETWORK;
-			    m_exit_pending = true;
-			  }
-			shouldDoPostLoad=true;
-		      }
-		    if(netServer) 
-		      {
-			doPreSave(this);
-			netServer->sync();
-			netServer->update();
-		      }
-		  }
 
-		static clock_t lastRecTime=clock();
-		if(lastRecTime+CLOCKS_PER_SEC*5 < clock())
+	attotime timeNow = timer_get_time(this);
+
+	      {
+		if(
+		timeNow.attoseconds == 0 && 
+		options_get_int(mame_options(), "secondsbetweensync") &&
+		timeNow.seconds%options_get_int(mame_options(), "secondsbetweensync") == 0
+		)
 		  {
-		    printf("SERVER SYNC AT TIME TIME: %d\n",int(time(NULL)));
-		    lastRecTime = clock();
 		    if(netServer) 
 		      {
+		    	printf("SERVER SYNC AT TIME: %d\n",int(time(NULL)));
+	if (timer_count_anonymous(this) != 0)
+	  {
+		  printf("ANONYMOUS TIMER! THIS COULD BE BAD (BUT HOPEFULLY ISN'T)\n");
+	  }
+
 			doPreSave(this);
 			netServer->sync();
 		      }
+		    if(netClient)
+		    {
+	if (timer_count_anonymous(this) != 0)
+	  {
+		  printf("ANONYMOUS TIMER! THIS COULD BE BAD (BUT HOPEFULLY ISN'T)\n");
+	  }
+			doPreSave(this);
+			    netClient->updateSyncCheck();
+		    }
 		  }
 
 		static clock_t lastSyncTime=clock();
-		if(lastSyncTime+CLOCKS_PER_SEC/60 < clock() || (netClient && !shouldDoPostLoad && clientInputDatabase.size()<=1) )
+		if(netServer || (netClient && !shouldDoPostLoad) )
 		  {
+			  //printf("IN NET LOOP\n");
 		    lastSyncTime = clock();
 		    if(netServer)
 		      {
@@ -510,8 +528,19 @@ int running_machine::run(bool firstrun)
 							  }
 							  else if(buffer[0]==1)
 							  {
-								  astring chatAString = astring(&buffer[1]);
+								  char buf[4096];
+								  sprintf(buf,"P%d: %s",(a+2),&buffer[1]);
+								  astring chatAString = astring(buf);
+								  //Figure out the index of who spoke and send that
 								  chatLogs.push_back(ChatLog(a+1,time(NULL),chatAString));
+
+								  string chatString = string(&buffer[1]);
+								//Here the # indicates that player # spoke
+								chatString.insert(chatString.begin(),char(a+1));
+								//the '1' indicates that the string is a chat message
+								chatString.insert(chatString.begin(),1);
+								  
+							          netServer->addConstBlock((unsigned char*)&chatString[0],chatString.length()+1);
 							  }
 						  }
 						  else
@@ -537,6 +566,10 @@ int running_machine::run(bool firstrun)
 			      }
 			    if(survivedAndGotSync.second)
 			      {
+	if (timer_count_anonymous(this) != 0)
+	  {
+		  printf("ANONYMOUS TIMER! THIS COULD BE BAD (BUT HOPEFULLY ISN'T)\n");
+	  }
 				cout << "GOT SYNC FROM SERVER\n";
 				shouldDoPostLoad = true;
 			      }
@@ -553,14 +586,24 @@ int running_machine::run(bool firstrun)
 					   mb->data+1,
 					   sizeof(attotime)
 					   );
+				    if(mostRecentReport<serverTime)
+				    {
+					    mostRecentReport = serverTime;
+				    }
 				    //cout << "ADDING SERVER TIME " << serverTime.seconds << ' ' << serverTime.attoseconds << endl;
+				    attotime curtime = timer_get_time(this);
+				    //cout << "CLIENT TIME: " << curtime.seconds << '.' << curtime.attoseconds << endl;
 
 				    clientInputDatabase[serverTime] = MemoryBlock(mb->data+1,mb->size-1);
 				  }
 				else
 				  {
+				    printf("GOT CONST BLOCK WITH ID %d",int(mb->data[0]));
 				    //This is a chat message
-				    chatLogs.push_back(ChatLog(mb->data[0]-1,time(NULL),astring((char*)(mb->data+1))));
+				    char buf[4096];
+				    sprintf(buf,"P%d: %s",int(mb->data[1])+1,mb->data+2);
+				    astring chatAString(buf);
+				    chatLogs.push_back(ChatLog(mb->data[1],time(NULL),buf));
 				    //ui_popup_time(5,"%s",string((char*)(mb->data+1),size_t(mb->size-1)).c_str());
 			      
 				  }
@@ -573,28 +616,42 @@ int running_machine::run(bool firstrun)
 			    attotime curtime = timer_get_time(this);
 			    if(survivedAndGotSync.second)
 			      cout << "DESTROYING BLOCKS FROM TIME: " << curtime.seconds << '.' << curtime.attoseconds << endl;
-			    for(std::map<attotime,MemoryBlock>::iterator it = clientInputDatabase.begin();
-				it != clientInputDatabase.end();
-				)
+			    while(clientInputDatabase.size())
 			      {
+			      std::map<attotime,MemoryBlock>::iterator it = clientInputDatabase.end();
+			      it--;
+
 				if(it->first<curtime)
 				  {
-				    std::map<attotime,MemoryBlock>::iterator itold = it;
-				    it++;
-				    clientInputDatabase.erase(itold);
+				    clientInputDatabaseHistory.insert( make_pair(it->first,it->second));
+				    clientInputDatabase.erase(it);
 				  }
 				else
-				  {
-				    if(it->first.seconds>latestTime.seconds 
-				       || (it->first.seconds==latestTime.seconds &&
-					   it->first.attoseconds>latestTime.attoseconds)
-				       )
-				      {
-					latestTime = it->first;
-				      }
-				    it++;
-				  }
+				{
+					break;
+				}
 			      }
+			    if(survivedAndGotSync.second)
+			      cout << "FINISHED DESTROYING BLOCKS1" << endl;
+			    attotime curtimeMinusFive = timer_get_time(this);
+			    if(curtimeMinusFive.seconds>=30)
+			    {
+			    curtimeMinusFive.seconds-=30;
+			    while(clientInputDatabaseHistory.size())
+			      {
+				std::map<attotime,MemoryBlock>::iterator it = clientInputDatabaseHistory.begin();
+				if(it->first<curtimeMinusFive)
+				  {
+				    clientInputDatabaseHistory.erase(it);
+				  }
+				else
+				{
+					break;
+				}
+			      }
+			    }
+			    if(survivedAndGotSync.second)
+			      cout << "FINISHED DESTROYING BLOCKS2" << endl;
 			    attotime futureTime = curtime;
 			    futureTime.attoseconds+=ATTOSECONDS_PER_SECOND/10;
 			    if(futureTime.attoseconds>ATTOSECONDS_PER_SECOND)
@@ -604,11 +661,12 @@ int running_machine::run(bool firstrun)
 			      }
 			    if(clientInputDatabase.size()>0)
 			      {
-				//cout << "EXITING NET READ LOOP\n";
+				//cout << "Got packet\n";
 				break;
 			      }
 			    else
 			      {
+				      //cout << "Waiting for packet\n";
 				osd_sleep(0);
 			      }
 			  }
@@ -619,6 +677,10 @@ int running_machine::run(bool firstrun)
 	if(shouldDoPostLoad)
 	  {
 	    cout << "RUNNING POST LOAD\n";
+	if (timer_count_anonymous(this) != 0)
+	  {
+		  printf("ANONYMOUS TIMER! THIS COULD BE BAD (BUT HOPEFULLY ISN'T)\n");
+	  }
 	    doPostLoad(this);
 	    shouldDoPostLoad=false;
 	  }

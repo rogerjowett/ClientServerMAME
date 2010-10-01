@@ -75,8 +75,8 @@ string Session::popInputBuffer()
 	return s;
 }
 
-z_stream strm;
 unsigned char compressedBuffer[MAX_ZLIB_BUF_SIZE];
+unsigned char syncBuffer[MAX_ZLIB_BUF_SIZE];
 unsigned char uncompressedBuffer[MAX_ZLIB_BUF_SIZE];
 
 Server::Server(string _port) 
@@ -91,6 +91,8 @@ port(_port)
 	strm.zalloc = Z_NULL;
 	strm.zfree = Z_NULL;
 	strm.opaque = Z_NULL;
+
+	firstSync=true;
 
 }
 
@@ -132,6 +134,7 @@ MemoryBlock Server::createMemoryBlock(int size)
 	blocks.push_back(MemoryBlock(size));
 	xorBlocks.push_back(MemoryBlock(size));
 	staleBlocks.push_back(MemoryBlock(size));
+	initialBlocks.push_back(MemoryBlock(size));
 	return blocks.back();
 }
 
@@ -140,11 +143,14 @@ MemoryBlock Server::createMemoryBlock(unsigned char *ptr,int size)
 	blocks.push_back(MemoryBlock(ptr,size));
 	xorBlocks.push_back(MemoryBlock(size));
 	staleBlocks.push_back(MemoryBlock(size));
+	initialBlocks.push_back(MemoryBlock(size));
 	return blocks.back();
 }
 
 void Server::initialSync(const RakNet::RakNetGUID &guid)
 {
+	unsigned char *data = uncompressedBuffer;
+
 	while(memoryBlocksLocked)
 	{
 	;
@@ -152,12 +158,10 @@ void Server::initialSync(const RakNet::RakNetGUID &guid)
 	memoryBlocksLocked=true;
 	cout << "IN CRITICAL SECTION\n";
 	cout << "SERVER: Sending initial snapshot\n";
-	RakNet::BitStream bitStream(65536);
-    unsigned char header = ID_INITIAL_SYNC;
-	bitStream.WriteBits((const unsigned char*)&header,8*sizeof(unsigned char));
 	int numBlocks = int(blocks.size());
 	cout << "NUMBLOCKS: " << numBlocks << endl;
-	bitStream.WriteBits((const unsigned char*)&numBlocks,8*sizeof(int));
+	memcpy(data,&numBlocks,sizeof(int));
+	data += sizeof(int);
 
 	// NOTE: The server must send stale data to the client for the first time
 	// So that future syncs will be accurate
@@ -165,8 +169,10 @@ void Server::initialSync(const RakNet::RakNetGUID &guid)
 	for(int blockIndex=0;blockIndex<int(staleBlocks.size());blockIndex++)
 	{
 		//cout << "BLOCK SIZE FOR INDEX " << blockIndex << ": " << staleBlocks[blockIndex].size << endl;
-		bitStream.WriteBits((const unsigned char*)&(staleBlocks[blockIndex].size),8*sizeof(int));
-		bitStream.WriteBits((const unsigned char*)staleBlocks[blockIndex].data,8*staleBlocks[blockIndex].size);
+		memcpy(data,&(staleBlocks[blockIndex].size),sizeof(int));
+		data += sizeof(int);
+		memcpy(data,staleBlocks[blockIndex].data,staleBlocks[blockIndex].size);
+		data += staleBlocks[blockIndex].size;
 
         for(int a=0;a<staleBlocks[blockIndex].size;a++)
         {
@@ -176,7 +182,8 @@ void Server::initialSync(const RakNet::RakNetGUID &guid)
         cout << "INITIAL CHECKSUM: " << int(checksum) << endl;
 
         int numConstBlocks = int(constBlocks.size());
-	bitStream.WriteBits((const unsigned char*)&numConstBlocks,8*sizeof(int));
+	memcpy(data,&numConstBlocks,sizeof(int));
+	data += sizeof(int);
 
 
 			// NOTE: The server must send stale data to the client for the first time
@@ -185,18 +192,84 @@ void Server::initialSync(const RakNet::RakNetGUID &guid)
 			{
 				//cout << "BLOCK SIZE FOR INDEX " << blockIndex << ": " << constBlocks[blockIndex].size << endl;
 		                int constBlockSize = int(constBlocks[blockIndex].size);
-				bitStream.WriteBits((const unsigned char*)&constBlockSize,8*sizeof(int));
-				bitStream.WriteBits((const unsigned char*)constBlocks[blockIndex].data,8*constBlocks[blockIndex].size);
+				memcpy(data,&constBlockSize,sizeof(int));
+				data += sizeof(int);
+				memcpy(data,constBlocks[blockIndex].data,constBlocks[blockIndex].size);
+				data += constBlocks[blockIndex].size;
 			}
 
+	int uncompressedSize = (data-uncompressedBuffer);
+	if(uncompressedSize>MAX_ZLIB_BUF_SIZE/2)
+	{
+		printf("SYNC BUFFER IS DANGEROUSLY SMALL\n");
+	}
+
+	uLongf compressedSizeLong = MAX_ZLIB_BUF_SIZE;
+
+	compressedBuffer[0] = ID_INITIAL_SYNC_COMPLETE;
+	compress2(
+		compressedBuffer+1+sizeof(int),
+		&compressedSizeLong,
+		uncompressedBuffer,
+		uncompressedSize,
+		9
+		);
+
+	int compressedSize = (int)compressedSizeLong;
+	memcpy(compressedBuffer+1,&compressedSize,sizeof(int));
+
+	printf("COMPRESSED SIZE: %d\n",compressedSize/8/1024);
+
+	/*
 	rakInterface->Send(
-			&bitStream,
+		(char*)compressedBuffer,
+		compressedSize+1+sizeof(int),
+		HIGH_PRIORITY,
+		RELIABLE_ORDERED,//UNRELIABLE_SEQUENCED,
+		ORDERING_CHANNEL_SYNC,
+		guid,
+		false
+	       );
+	*/
+
+	//
+	unsigned char *sendPtr = compressedBuffer+1;
+	int sizeRemaining = compressedSize+sizeof(int);
+	printf("INITIAL STATE SIZE: %dKB\n",sizeRemaining/1024);
+	int packetSize = sizeRemaining/100;
+	while(sizeRemaining>packetSize && sizeRemaining>100)
+	{
+		RakNet::BitStream bitStreamPart(65536);
+		unsigned char header = ID_INITIAL_SYNC_PARTIAL;
+		bitStreamPart.WriteBits((const unsigned char*)&header,8*sizeof(unsigned char));
+		bitStreamPart.WriteBits((const unsigned char*)sendPtr,8*packetSize);
+		sizeRemaining -= packetSize;
+		sendPtr += packetSize;
+		rakInterface->Send(
+			&bitStreamPart,
 			HIGH_PRIORITY,
 			RELIABLE_ORDERED,//UNRELIABLE_SEQUENCED,
 			ORDERING_CHANNEL_SYNC,
 			guid,
 			false
 		       );
+	}
+	{
+		RakNet::BitStream bitStreamPart(65536);
+		unsigned char header = ID_INITIAL_SYNC_COMPLETE;
+		bitStreamPart.WriteBits((const unsigned char*)&header,8*sizeof(unsigned char));
+		bitStreamPart.WriteBits((const unsigned char*)sendPtr,8*sizeRemaining);
+		rakInterface->Send(
+			&bitStreamPart,
+			LOW_PRIORITY,
+			RELIABLE_ORDERED,//UNRELIABLE_SEQUENCED,
+			ORDERING_CHANNEL_SYNC,
+			guid,
+			false
+		       );
+	}
+	//
+
         cout << "FINISHED SENDING BLOCKS TO CLIENT\n";
 	cout << "SERVER: Done with initial snapshot\n";
 	cout << "OUT OF CRITICAL AREA\n";
@@ -288,6 +361,7 @@ void Server::sync()
 	{
 		MemoryBlock &block = blocks[blockIndex];
 		MemoryBlock &staleBlock = staleBlocks[blockIndex];
+		MemoryBlock &initialBlock = initialBlocks[blockIndex];
 		MemoryBlock &xorBlock = xorBlocks[blockIndex];
 
 		if(block.size != staleBlock.size || block.size != xorBlock.size)
@@ -312,6 +386,10 @@ void Server::sync()
         }
 		//dirty=true;
 		memcpy(staleBlock.data,block.data,block.size);
+		if(firstSync)
+		{
+			memcpy(initialBlock.data,block.data,block.size);
+		}
 		if(dirty && !anyDirty)
 		{
 			//First dirty block
@@ -335,7 +413,7 @@ void Server::sync()
             uncompressedPtr += xorBlock.size;
 		}
 	}
-	if(anyDirty)
+	if(anyDirty && firstSync==false)
 	{
         printf("BLOCK CHECKSUM: %d\n",int(blockChecksum));
         printf("XOR CHECKSUM: %d\n",int(xorChecksum));
@@ -359,29 +437,66 @@ void Server::sync()
 		9
 		);
 	int compressedSize = (int)compressedSizeLong;
-		
-	int sendMessageSize = 1+sizeof(int)+sizeof(int)+compressedSize;
-	unsigned char *sendMessage = (unsigned char*)malloc(sendMessageSize);
-	sendMessage[0] = ID_RESYNC;
-	memcpy(sendMessage+1,&uncompressedSize,sizeof(int));
-	memcpy(sendMessage+1+sizeof(int),&compressedSize,sizeof(int));
-	memcpy(sendMessage+1+sizeof(int)+sizeof(int),compressedBuffer,compressedSize);
 	printf("SYNC SIZE: %d\n",compressedSize);
 
-	rakInterface->Send(
-			(const char*)sendMessage,
-			sendMessageSize,
-            LOW_PRIORITY,
-			RELIABLE_ORDERED,
-			ORDERING_CHANNEL_SYNC,
-			RakNet::UNASSIGNED_SYSTEM_ADDRESS,
-			true
-		       );
+	int SYNC_PACKET_SIZE=1024*1024*64;
+	if(syncTransferSeconds)
+		SYNC_PACKET_SIZE = compressedSize/60/syncTransferSeconds;
+		
+	int sendMessageSize = 1+sizeof(int)+sizeof(int)+min(SYNC_PACKET_SIZE,compressedSize);
+	unsigned char *sendMessage = syncBuffer;
+	sendMessage[0] = ID_RESYNC_PARTIAL;
+	if(compressedSize<=SYNC_PACKET_SIZE)
+		sendMessage[0] = ID_RESYNC_COMPLETE;
+	memcpy(sendMessage+1,&uncompressedSize,sizeof(int));
+	memcpy(sendMessage+1+sizeof(int),&compressedSize,sizeof(int));
+	memcpy(sendMessage+1+sizeof(int)+sizeof(int),compressedBuffer,min(SYNC_PACKET_SIZE,compressedSize) );
+
+	syncPacketQueue.push_back(make_pair(sendMessage,sendMessageSize));
+	sendMessage += sendMessageSize;
+	compressedSize -= SYNC_PACKET_SIZE;
+	int atIndex = SYNC_PACKET_SIZE;
+
+	while(compressedSize>0)
+	{
+		sendMessageSize = 1+min(SYNC_PACKET_SIZE,compressedSize);
+		sendMessage[0] = ID_RESYNC_PARTIAL;
+		if(compressedSize<=SYNC_PACKET_SIZE)
+			sendMessage[0] = ID_RESYNC_COMPLETE;
+		memcpy(sendMessage+1,compressedBuffer+atIndex,min(SYNC_PACKET_SIZE,compressedSize) );
+		compressedSize -= SYNC_PACKET_SIZE;
+		atIndex += SYNC_PACKET_SIZE;
+
+		syncPacketQueue.push_back(make_pair(sendMessage,sendMessageSize));
+		sendMessage += sendMessageSize;
+	}
+
 	}
 	//if(runTimes%1==0) cout << "BYTES SYNCED: " << bytesSynched << endl;
 	//cout << "OUT OF CRITICAL AREA\n";
 	//cout.flush();
+	firstSync=false;
 	memoryBlocksLocked=false;
+}
+
+void Server::popSyncQueue()
+{
+	if(syncPacketQueue.size())
+	{
+	pair<unsigned char *,int> syncPacket = syncPacketQueue.front();
+	//printf("Sending sync message of size %d (%d packets left)\n",syncPacket.second,syncPacketQueue.size());
+	syncPacketQueue.pop_front();
+
+	rakInterface->Send(
+		(const char*)syncPacket.first,
+		syncPacket.second,
+       		HIGH_PRIORITY,
+		RELIABLE_ORDERED,
+		ORDERING_CHANNEL_SYNC,
+		RakNet::UNASSIGNED_SYSTEM_ADDRESS,
+		true
+	       );
+	}
 }
 
 void Server::addConstBlock(unsigned char *tmpdata,int size)
@@ -408,6 +523,8 @@ void Server::addConstBlock(unsigned char *tmpdata,int size)
 
     int compressedSizeInt = (int)compressedSize;
 
+    //cout << "COMPRESSING DATA FROM " << size << " TO " << compressedSize << endl;
+
     int sendMessageSize = 1+sizeof(int)+sizeof(int)+compressedSize;
 	unsigned char *sendMessage = (unsigned char*)malloc(sendMessageSize);
 	sendMessage[0] = ID_CONST_DATA;
@@ -418,7 +535,7 @@ void Server::addConstBlock(unsigned char *tmpdata,int size)
 	rakInterface->Send(
 			(const char*)sendMessage,
 			sendMessageSize,
-			LOW_PRIORITY,
+			HIGH_PRIORITY,
 			UNRELIABLE,
 			ORDERING_CHANNEL_CONST_DATA,
 			RakNet::UNASSIGNED_SYSTEM_ADDRESS,

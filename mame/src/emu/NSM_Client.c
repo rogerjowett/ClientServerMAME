@@ -31,9 +31,11 @@ void deleteGlobalClient()
     netClient = NULL;
 }
 
-extern z_stream strm;
 extern unsigned char compressedBuffer[MAX_ZLIB_BUF_SIZE];
 extern unsigned char uncompressedBuffer[MAX_ZLIB_BUF_SIZE];
+extern unsigned char syncBuffer[MAX_ZLIB_BUF_SIZE];
+
+bool needToSkipAhead=false;
 
 #include "unicode.h"
 #include "ui.h"
@@ -48,6 +50,11 @@ Client::Client()
     strm.zalloc = Z_NULL;
     strm.zfree = Z_NULL;
     strm.opaque = Z_NULL;
+
+    initComplete=false;
+    firstResync=true;
+
+    syncPtr = compressedBuffer;
 }
 
 Client::~Client()
@@ -64,6 +71,7 @@ MemoryBlock Client::createMemoryBlock(int size)
     blocks.push_back(MemoryBlock(size));
     xorBlocks.push_back(MemoryBlock(size));
     staleBlocks.push_back(MemoryBlock(size));
+    syncCheckBlocks.push_back(MemoryBlock(size));
     return blocks.back();
 }
 
@@ -72,6 +80,7 @@ MemoryBlock Client::createMemoryBlock(unsigned char *ptr,int size)
     blocks.push_back(MemoryBlock(ptr,size));
     xorBlocks.push_back(MemoryBlock(size));
     staleBlocks.push_back(MemoryBlock(size));
+    syncCheckBlocks.push_back(MemoryBlock(size));
     return blocks.back();
 }
 
@@ -123,7 +132,10 @@ int GetPacketSize(RakNet::Packet *p)
 	}
 }
 
-bool Client::initializeConnection(const char *hostname,const char *port)
+extern void video_frame_update(running_machine *machine, int debug);
+int initialSyncPercentComplete=0;
+
+bool Client::initializeConnection(const char *hostname,const char *port,running_machine *machine)
 {
     RakNet::SocketDescriptor socketDescriptor(0,0);
     rakInterface->Startup(8,&socketDescriptor,1);
@@ -138,18 +150,22 @@ bool Client::initializeConnection(const char *hostname,const char *port)
         return false;
     }
 
-    bool initComplete=false;
+    unsigned char *snapshotPtr = syncBuffer;
+    unsigned char *snapshotPtrStart = syncBuffer;
+
     while(initComplete==false)
     {
         RakNet::Packet *p = rakInterface->Receive();
 	if(!p) 
 	{
-	  ui_popup_time(1,"Waiting for server to send entire game state for the first time");
 		printf("WAITING FOR SERVER TO SEND GAME WORLD...\n");
-		osd_sleep(osd_ticks_per_second());
+		video_frame_update(machine, false);
+		osd_sleep(osd_ticks_per_second()/10);
 		continue; //We need the first few packets, so stall until we get them
 	}
 	unsigned char packetID = GetPacketIdentifier(p);
+
+	printf("GOT PACKET: %d",int(packetID));
 
 	switch(packetID)
 	{
@@ -199,9 +215,25 @@ bool Client::initializeConnection(const char *hostname,const char *port)
 				printf("ID_CONNECTION_REQUEST_ACCEPTED to %s with GUID %s\n", p->systemAddress.ToString(true), p->guid.ToString());
 				printf("My external address is %s\n", rakInterface->GetExternalID(p->systemAddress).ToString(true));
 				break;
-			case ID_INITIAL_SYNC:
-			    loadInitialData(GetPacketData(p),GetPacketSize(p));
+			case ID_INITIAL_SYNC_PARTIAL:
+				printf("GOT PARTIAL SYNC FROM SERVER\n");
+				initialSyncPercentComplete++;
+				memcpy(snapshotPtr,GetPacketData(p),GetPacketSize(p));
+				snapshotPtr += GetPacketSize(p);
+				break;
+			case ID_INITIAL_SYNC_COMPLETE:
+			    printf("GOT INITIAL SYNC FROM SERVER!\n");
+				memcpy(snapshotPtr,GetPacketData(p),GetPacketSize(p));
+				snapshotPtr += GetPacketSize(p);
+				if((snapshotPtr-snapshotPtrStart)>=MAX_ZLIB_BUF_SIZE/2)
+				{
+					printf("DANGER: GAME RAM IS TOO BIG FOR BUFFER! INCREASE MAX_ZLIB_BUF_SIZE IN CODE!!!!!\n");
+				}
+			    loadInitialData(snapshotPtrStart,(snapshotPtr-snapshotPtrStart));
 			    initComplete=true;
+			    break;
+			case ID_CONST_DATA:
+			    addConstData(GetPacketData(p),GetPacketSize(p));
 			    break;
 			default:
 			    //printf("GOT AN INVALID PACKET TYPE: %d\n",int(packetID));
@@ -217,6 +249,17 @@ bool Client::initializeConnection(const char *hostname,const char *port)
 void Client::loadInitialData(unsigned char *data,int size)
 {
     unsigned char *initialData = data;
+
+	int compressedSize;
+	memcpy(&compressedSize,data,sizeof(int));
+	data += sizeof(int);
+	uLongf destLen = MAX_ZLIB_BUF_SIZE;
+	uncompress(uncompressedBuffer,&destLen,data,compressedSize);
+
+	printf("COMPRESSED SIZE: %d\n",compressedSize/1024/8);
+
+	data = uncompressedBuffer;
+	
     cout << "READING NUM BLOCKS\n";
     int numBlocks;
     memcpy(&numBlocks,data,sizeof(int));
@@ -297,23 +340,41 @@ void Client::loadInitialData(unsigned char *data,int size)
 	data += sizeof(int);
 
         constBlocks.push_back(MemoryBlock(0));
-	constBlocks[blockIndex].size = blockSize;
-	constBlocks[blockIndex].data = (unsigned char*)malloc(constBlocks[blockIndex].size);
+	constBlocks.back().size = blockSize;
+	constBlocks.back().data = (unsigned char*)malloc(constBlocks.back().size);
 
-	memcpy(constBlocks[blockIndex].data,data,constBlocks[blockIndex].size);
-	data += constBlocks[blockIndex].size;
+	memcpy(constBlocks.back().data,data,constBlocks.back().size);
+	data += constBlocks.back().size;
     }
-    if((data-initialData)>size)
-    {
-        cout << "ERROR: BLEW THROUGH INITIAL DATA BUFFER!\n";
-    }
+
     cout << "CLIENT INITIALIZED!\n";
 }
+
+void Client::updateSyncCheck()
+{
+	printf("UPDATING SYNC CHECK\n");
+	for(int blockIndex=0;blockIndex<int(blocks.size());blockIndex++)
+	{
+		memcpy(
+			syncCheckBlocks[blockIndex].data,
+			blocks[blockIndex].data,
+			blocks[blockIndex].size
+			);
+	}
+}
+
+
+bool printWhenCheck=false;
 
 std::pair<bool,bool> Client::syncAndUpdate() 
 {
     osd_sleep(0);
-    while(true)
+    if(printWhenCheck) 
+    {
+	    printWhenCheck=false;
+	    //printf("Checking for packets\n");
+    }
+    for(int packetCount=0;packetCount<1;packetCount++)
     {
         RakNet::Packet *p = rakInterface->Receive();
 	if(!p) 
@@ -321,6 +382,7 @@ std::pair<bool,bool> Client::syncAndUpdate()
 	    break;
 	}
 	unsigned char packetID = GetPacketIdentifier(p);
+	bool hadToResync;
 
 	switch(packetID)
 	{
@@ -378,12 +440,32 @@ std::pair<bool,bool> Client::syncAndUpdate()
 				printf("ID_CONNECTION_REQUEST_ACCEPTED to %s with GUID %s\n", p->systemAddress.ToString(true), p->guid.ToString());
 				printf("My external address is %s\n", rakInterface->GetExternalID(p->systemAddress).ToString(true));
 				break;
-			case ID_RESYNC:
-			    resync(GetPacketData(p),GetPacketSize(p));
+			case ID_RESYNC_PARTIAL:
+				memcpy(syncPtr,GetPacketData(p),GetPacketSize(p));
+				syncPtr += GetPacketSize(p);
+				//printf("GOT PARTIAL RESYNC\n");
+				printWhenCheck=true;
+				break;
+			case ID_RESYNC_COMPLETE:
+				//printf("GOT COMPLETE RESYNC\n");
+				memcpy(syncPtr,GetPacketData(p),GetPacketSize(p));
+				syncPtr += GetPacketSize(p);
+			        hadToResync = resync(compressedBuffer,int(syncPtr-compressedBuffer));
 
-                //We have to return here because processing two syncs without a frame
-                //in between can cause crashes
-			    return std::pair<bool,bool>(true,true);
+	                    //We have to return here because processing two syncs without a frame
+           	            //in between can cause crashes
+			    syncPtr = compressedBuffer;
+			    if(firstResync || hadToResync)
+			    {
+                    printf("BEGINNING VIDEO SKIP\n");
+                    needToSkipAhead=true;
+				    firstResync=false;
+				    return std::pair<bool,bool>(true,true);
+			    }
+			    else
+			    {
+				    return std::pair<bool,bool>(true,false);
+			    }
 			    break;
 			case ID_CONST_DATA:
 			    addConstData(GetPacketData(p),GetPacketSize(p));
@@ -399,14 +481,8 @@ std::pair<bool,bool> Client::syncAndUpdate()
     return std::pair<bool,bool>(true,false);
 }
 
-void Client::resync(unsigned char *data,int size)
+bool Client::resync(unsigned char *data,int size)
 {
-            //If the client has predicted anything, erase the prediction
-            for(int a=0;a<int(blocks.size());a++)
-            {
-                memcpy(blocks[a].data,staleBlocks[a].data,blocks[a].size);
-            }
-
 	int uncompressedSize,compressedSize;
 	memcpy(&uncompressedSize,data,sizeof(int));
 	data += sizeof(int);
@@ -416,7 +492,96 @@ void Client::resync(unsigned char *data,int size)
 	uncompress(uncompressedBuffer,&destLen,data,compressedSize);
 	unsigned char *uncompressedPtr = uncompressedBuffer;
 
+
+	//Check to see if the client is clean
+	bool clientIsClean=true;
+
+	int badBlockCount=0;
+	int totalBlockCount=0;
+
+            while(true)
+            {
+                int blockIndex;
+		memcpy(
+			&blockIndex,
+			uncompressedPtr,
+			sizeof(int)
+		      );
+		uncompressedPtr += sizeof(int);
+
+                if(blockIndex==-1)
+                {
+                    //cout << "GOT TERMINAL BLOCK INDEX\n";
+                    break;
+                }
+
+                if(blockIndex >= int(blocks.size()) || blockIndex<0)
+                {
+                    cout << "GOT AN INVALID BLOCK INDEX: " << blockIndex << endl;
+                    break;
+                }
+
+                //boost::asio::read(*clientSocket,boost::asio::buffer(&clientSizeOfNextMessage, sizeof(int)));
+
+                MemoryBlock &block = blocks[blockIndex];
+                MemoryBlock &syncCheckBlock = syncCheckBlocks[blockIndex];
+                MemoryBlock &staleBlock = staleBlocks[blockIndex];
+                MemoryBlock &xorBlock = xorBlocks[blockIndex];
+
+                //cout << "CLIENT: GOT MESSAGE FOR INDEX: " << blockIndex << endl;
+
+                //if(clientSizeOfNextMessage!=block.size)
+                //{
+                //cout << "ERROR!: SIZE MISMATCH " << clientSizeOfNextMessage
+                //<< " != " << block.size << endl;
+                //}
+
+		memcpy(
+			xorBlock.data,
+			uncompressedPtr,
+			xorBlock.size
+		      );
+        	uncompressedPtr += xorBlock.size;
+                //cout << "BYTES READ: " << (xorBlock.size-strm.avail_out) << endl;
+                for(int a=0;a<block.size;a++)
+                {
+			totalBlockCount++;
+			if(syncCheckBlock.data[a] != (xorBlock.data[a] ^ staleBlock.data[a]))
+			{
+				badBlockCount++;
+				if(badBlockCount<50)
+				{
+					printf("BLOCK %d BYTE %d IS BAD\n",blockIndex,a);
+					clientIsClean=false;
+				}
+				//break;
+			}
+                }
+            }
+
+	    if(clientIsClean)
+	    {
+		    printf("CLIENT IS CLEAN\n");
+	            for(int a=0;a<int(blocks.size());a++)
+        	    {
+                	memcpy(staleBlocks[a].data,syncCheckBlocks[a].data,syncCheckBlocks[a].size);
+		    }
+		    return false;
+	    }
+
+	    printf("CLIENT IS DIRTY (%d bad blocks, %f%% of total)\n",badBlockCount,float(badBlockCount)*100.0f/totalBlockCount);
+	    ui_popup_time(3, "You are out of sync with the server, resyncing...");
+
+	//The client is not clean and needs to be resynced
+	
+            //If the client has predicted anything, erase the prediction
+            for(int a=0;a<int(blocks.size());a++)
+            {
+                memcpy(blocks[a].data,staleBlocks[a].data,blocks[a].size);
+            }
+	
 #if 1
+	uncompressedPtr = uncompressedBuffer;
             unsigned char blockChecksum=0;
             unsigned char xorChecksum=0;
             unsigned char staleChecksum=0;
@@ -478,6 +643,7 @@ void Client::resync(unsigned char *data,int size)
             printf("XOR CHECKSUM: %d\n",int(xorChecksum));
             printf("STALE CHECKSUM: %d\n",int(staleChecksum));
 #endif
+	    return true;
 }
 
 void Client::addConstData(unsigned char *data,int size)
@@ -503,6 +669,11 @@ void Client::addConstData(unsigned char *data,int size)
             data,
             size-(sizeof(int)*2)
             );
+
+	if(constBlocks.back().data[0]>1)
+	{
+		printf("ERROR! GOT CONST BLOCK WITH ID OUT OF RANGE!!!\n");
+	}
 }
 
 void Client::checkMatch(Server *server)

@@ -2469,6 +2469,7 @@ extern void deserializePlayerInputFromBuffer(running_machine *machine, const uns
 extern void doPostLoad(running_machine *machine);
 
 std::map<attotime,MemoryBlock> clientInputDatabase;
+std::map<attotime,MemoryBlock> clientInputDatabaseHistory;
 
 string serverInputDatabases[MAX_PLAYERS];
 
@@ -2658,7 +2659,7 @@ profiler_mark_start(PROFILER_INPUT);
     }
 
     // comment to see performance
-	if(netClient)
+	if(netClient && netClient->isInitComplete())
 	{
 		//Send player 1 data to the server
 		static char tmpbuffer[1024*1024*1];
@@ -2679,7 +2680,15 @@ profiler_mark_start(PROFILER_INPUT);
             {
                 //cout << "FOUND INPUT FROM SERVER\n";
                 deserializePlayerInputFromBuffer(machine,clientInputDatabase[curtime].data,clientInputDatabase[curtime].size,-1);
+		clientInputDatabaseHistory[curtime] = 
+			clientInputDatabase[curtime];
                 clientInputDatabase.erase(clientInputDatabase.find(curtime));
+                //break;
+            }
+	    else if(clientInputDatabaseHistory.find(curtime)!=clientInputDatabaseHistory.end())
+            {
+                //cout << "FOUND INPUT FROM SERVER\n";
+                deserializePlayerInputFromBuffer(machine,clientInputDatabaseHistory[curtime].data,clientInputDatabaseHistory[curtime].size,-1);
                 //break;
             }
             else
@@ -2724,6 +2733,7 @@ profiler_mark_start(PROFILER_INPUT);
         //cout << counter << ") ADDING BLOCK FOR: " << curtime.seconds << " " << curtime.attoseconds << endl;
         counter++;
 		netServer->addConstBlock((unsigned char*)tmpbuffer,bytesUsed+1);
+		netServer->popSyncQueue();
 		//cout << "CALLING SYNC\n";
     }
 

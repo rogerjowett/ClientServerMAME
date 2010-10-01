@@ -37,12 +37,19 @@ protected:
 
     vector<Session> sessions;
 
-	vector<MemoryBlock> blocks,staleBlocks,xorBlocks;
+	vector<MemoryBlock> blocks,staleBlocks,initialBlocks,xorBlocks;
 
     vector<MemoryBlock> constBlocks;
 
     string port;
 
+	z_stream strm;
+
+	bool firstSync;
+
+	list<pair<unsigned char *,int> > syncPacketQueue;
+
+	int syncTransferSeconds;
 public:
 	Server(string _port);
 
@@ -91,6 +98,8 @@ public:
 
     void sendString(const string &outputString);
 
+    void popSyncQueue();
+
     void addConstBlock(unsigned char *tmpdata,int size);
 
     int getClientID(int i)
@@ -101,5 +110,10 @@ public:
 	string getLatencyString(int connectionIndex);
 
 	string getStatisticsString();
+
+	void setSyncTransferTime(int _syncTransferSeconds)
+	{
+		syncTransferSeconds = _syncTransferSeconds;
+	}
 };
 
