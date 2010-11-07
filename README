@@ -3,7 +3,7 @@ Alright, the way it should work if you follow these steps:
 1) Find one or more friends (this can often be the hardest part)
 2) Both of you get the rom you are going to play and ClientServerMAME from here: 
 
-http://www.underworldhockeyclub.com/ClientServerMAME/ClientServerMAME_v0_1_Win32.zip
+http://github.com/MisterTea/ClientServerMAME/downloads
 
 3) If anyone is running linux, he or she will need some additional packages: SDL and expat.  Find them and install them from your package manager.
 4) Decide who is going to be the server
