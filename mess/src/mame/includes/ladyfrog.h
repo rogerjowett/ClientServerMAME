@@ -4,13 +4,12 @@
 
 *************************************************************************/
 
-class ladyfrog_state : public driver_data_t
+class ladyfrog_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, ladyfrog_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, ladyfrog_state(machine)); }
 
-	ladyfrog_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	ladyfrog_state(running_machine &machine) { }
 
 	/* memory pointers */
 	UINT8 *    videoram;

@@ -114,7 +114,7 @@ DEVICE_IMAGE_LOAD(pce_cart)
 {
 	UINT32 size;
 	int split_rom = 0, offset = 0;
-	const char *extrainfo = NULL;
+	const char *extrainfo;
 	unsigned char *ROM;
 	logerror("*** DEVICE_IMAGE_LOAD(pce_cart) : %s\n", image.filename());
 
@@ -141,11 +141,13 @@ DEVICE_IMAGE_LOAD(pce_cart)
 	{
 		image.fseek(offset, SEEK_SET);
 		image.fread( ROM, size);
-		if (strcmp(image.extrainfo(), ""))
-			extrainfo = image.extrainfo();
+		extrainfo = image.extrainfo();
 	}
 	else
+	{
 		memcpy(ROM, image.get_software_region("rom") + offset, size);
+		extrainfo = NULL;
+	}
 
 	if (extrainfo)
 	{
@@ -1089,7 +1091,7 @@ static UINT8 pce_cd_get_cd_data_byte(running_machine *machine)
 		if ( pce_cd.scsi_IO )
 		{
 			pce_cd.scsi_ACK = 1;
-			timer_set(machine, machine->device<cpu_device>("maincpu")->cycles_to_attotime(15), NULL, 0, pce_cd_clear_ack );
+			timer_set(machine, cputag_clocks_to_attotime(machine, "maincpu", 15), NULL, 0, pce_cd_clear_ack );
 		}
 	}
 	return data;

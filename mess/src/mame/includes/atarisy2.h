@@ -6,13 +6,14 @@
 
 #include "machine/atarigen.h"
 
-class atarisy2_state : public atarigen_state
+class atarisy2_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, atarisy2_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, atarisy2_state(machine)); }
 
-	atarisy2_state(running_machine &machine)
-		: atarigen_state(machine) { }
+	atarisy2_state(running_machine &machine) { }
+
+	atarigen_state	atarigen;
 
 	UINT16 *		slapstic_base;
 

@@ -342,6 +342,7 @@ enum
 	IPT_UI_PASTE,
 	IPT_UI_SAVE_STATE,
 	IPT_UI_LOAD_STATE,
+    IPT_UI_TOGGLE_NETSTATS,
 
 	/* additional OSD-specified UI port types (up to 16) */
 	IPT_OSD_1,

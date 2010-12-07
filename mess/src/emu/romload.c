@@ -1224,7 +1224,7 @@ static UINT32 normalize_flags_for_device(running_machine *machine, UINT32 startf
 {
 	device_t *device = machine->device(rgntag);
 	device_memory_interface *memory;
-	if (device->interface(memory))
+	if (device->dev_interface(memory))
 	{
 		const address_space_config *spaceconfig = memory->space_config();
 		if (device != NULL && spaceconfig != NULL)

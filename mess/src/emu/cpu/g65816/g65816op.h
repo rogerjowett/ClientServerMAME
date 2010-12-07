@@ -2377,8 +2377,7 @@ TABLE_FUNCTION(int, execute, (g65816i_cpu_struct *cpustate, int clocks))
 
 			REGISTER_PC++;
 			REGISTER_IR = read_8_IMM(REGISTER_PB | REGISTER_PPC);
-
-            FTABLE_OPCODES[REGISTER_IR](cpustate);
+			FTABLE_OPCODES[REGISTER_IR](cpustate);
 		} while((CLOCKS > 0) && g65816i_correct_mode(cpustate));
 		return clocks - CLOCKS;
 	}

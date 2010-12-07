@@ -24,13 +24,12 @@ SOUND : (none)
 #include "cpu/z80/z80.h"
 
 
-class dotrikun_state : public driver_data_t
+class dotrikun_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, dotrikun_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, dotrikun_state(machine)); }
 
-	dotrikun_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	dotrikun_state(running_machine &machine) { }
 
 	/* memory pointers */
 	UINT8 *        videoram;
@@ -49,7 +48,7 @@ public:
 
 static WRITE8_HANDLER( dotrikun_color_w )
 {
-	dotrikun_state *state = space->machine->driver_data<dotrikun_state>();
+	dotrikun_state *state = (dotrikun_state *)space->machine->driver_data;
 	space->machine->primary_screen->update_partial(space->machine->primary_screen->vpos());
 	state->color = data;
 }
@@ -57,7 +56,7 @@ static WRITE8_HANDLER( dotrikun_color_w )
 
 static VIDEO_UPDATE( dotrikun )
 {
-	dotrikun_state *state = screen->machine->driver_data<dotrikun_state>();
+	dotrikun_state *state = (dotrikun_state *)screen->machine->driver_data;
 	int offs;
 
 	pen_t back_pen = MAKE_RGB(pal1bit(state->color >> 3), pal1bit(state->color >> 4), pal1bit(state->color >> 5));
@@ -134,13 +133,13 @@ INPUT_PORTS_END
 
 static MACHINE_START( dotrikun )
 {
-	dotrikun_state *state = machine->driver_data<dotrikun_state>();
+	dotrikun_state *state = (dotrikun_state *)machine->driver_data;
 	state_save_register_global(machine, state->color);
 }
 
 static MACHINE_RESET( dotrikun )
 {
-	dotrikun_state *state = machine->driver_data<dotrikun_state>();
+	dotrikun_state *state = (dotrikun_state *)machine->driver_data;
 
 	state->color = 0;
 }

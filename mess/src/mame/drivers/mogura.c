@@ -5,13 +5,12 @@
 #include "sound/dac.h"
 #include "includes/konamipt.h"
 
-class mogura_state : public driver_data_t
+class mogura_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, mogura_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, mogura_state(machine)); }
 
-	mogura_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	mogura_state(running_machine &machine) { }
 
 	/* memory pointers */
 	UINT8 *   tileram;
@@ -61,7 +60,7 @@ static PALETTE_INIT( mogura )
 
 static TILE_GET_INFO( get_mogura_tile_info )
 {
-	mogura_state *state = machine->driver_data<mogura_state>();
+	mogura_state *state = (mogura_state *)machine->driver_data;
 	int code = state->tileram[tile_index];
 	int attr = state->tileram[tile_index + 0x800];
 
@@ -75,14 +74,14 @@ static TILE_GET_INFO( get_mogura_tile_info )
 
 static VIDEO_START( mogura )
 {
-	mogura_state *state = machine->driver_data<mogura_state>();
+	mogura_state *state = (mogura_state *)machine->driver_data;
 	gfx_element_set_source(machine->gfx[0], state->gfxram);
 	state->tilemap = tilemap_create(machine, get_mogura_tile_info, tilemap_scan_rows, 8, 8, 64, 32);
 }
 
 static VIDEO_UPDATE( mogura )
 {
-	mogura_state *state = screen->machine->driver_data<mogura_state>();
+	mogura_state *state = (mogura_state *)screen->machine->driver_data;
 	const rectangle &visarea = screen->visible_area();
 
 	/* tilemap layout is a bit strange ... */
@@ -106,14 +105,14 @@ static VIDEO_UPDATE( mogura )
 
 static WRITE8_HANDLER( mogura_tileram_w )
 {
-	mogura_state *state = space->machine->driver_data<mogura_state>();
+	mogura_state *state = (mogura_state *)space->machine->driver_data;
 	state->tileram[offset] = data;
 	tilemap_mark_tile_dirty(state->tilemap, offset & 0x7ff);
 }
 
 static WRITE8_HANDLER(mogura_dac_w)
 {
-	mogura_state *state = space->machine->driver_data<mogura_state>();
+	mogura_state *state = (mogura_state *)space->machine->driver_data;
 	dac_data_w(state->dac1, data & 0xf0);	/* left */
 	dac_data_w(state->dac2, (data & 0x0f) << 4);	/* right */
 }
@@ -121,7 +120,7 @@ static WRITE8_HANDLER(mogura_dac_w)
 
 static WRITE8_HANDLER ( mogura_gfxram_w )
 {
-	mogura_state *state = space->machine->driver_data<mogura_state>();
+	mogura_state *state = (mogura_state *)space->machine->driver_data;
 	state->gfxram[offset] = data ;
 
 	gfx_element_mark_dirty(space->machine->gfx[0], offset / 16);
@@ -194,7 +193,7 @@ GFXDECODE_END
 
 static MACHINE_START( mogura )
 {
-	mogura_state *state = machine->driver_data<mogura_state>();
+	mogura_state *state = (mogura_state *)machine->driver_data;
 
 	state->maincpu = machine->device("maincpu");
 	state->dac1 = machine->device("dac1");

@@ -4,13 +4,12 @@
 
 *************************************************************************/
 
-class dbz_state : public driver_data_t
+class dbz_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, dbz_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, dbz_state(machine)); }
 
-	dbz_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	dbz_state(running_machine &machine) { }
 
 	/* memory pointers */
 	UINT16 *      bg1_videoram;

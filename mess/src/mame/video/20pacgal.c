@@ -93,13 +93,12 @@ static void do_pen_lookup(running_machine *machine, const _20pacgal_state *state
  *
  *************************************/
 
-static void draw_sprite(running_machine* machine, const _20pacgal_state *state, bitmap_t *bitmap, int y, int x,
+static void draw_sprite(const _20pacgal_state *state, bitmap_t *bitmap, int y, int x,
 						UINT8 code, UINT8 color, int flip_y, int flip_x)
 {
 	int sy;
 
-	offs_t pen_base = (color & 0x1f) << 2;
-	pen_base += state->sprite_pal_base;
+	offs_t pen_base = (color & 0x3f) << 2;
 
 	if (flip_y)
 		y = y + 0x0f;
@@ -163,7 +162,7 @@ static void draw_sprite(running_machine* machine, const _20pacgal_state *state, 
 }
 
 
-static void draw_sprites(running_machine* machine,const _20pacgal_state *state, bitmap_t *bitmap)
+static void draw_sprites(const _20pacgal_state *state, bitmap_t *bitmap)
 {
 	int offs;
 
@@ -199,7 +198,7 @@ static void draw_sprites(running_machine* machine,const _20pacgal_state *state, 
 
 		for (y = 0; y <= size_y; y++)
 			for (x = 0; x <= size_x; x++)
-				draw_sprite(machine,state, bitmap,
+				draw_sprite(state, bitmap,
 							sy + (16 * y), sx + (16 * x),
 							code + code_offs[y ^ (size_y * flip_y)][x ^ (size_x * flip_x)],
 							color,
@@ -408,12 +407,12 @@ static void draw_stars(_20pacgal_state *state, bitmap_t *bitmap, const rectangle
 
 static VIDEO_UPDATE( 20pacgal )
 {
-	_20pacgal_state *state = screen->machine->driver_data<_20pacgal_state>();
+	_20pacgal_state *state = (_20pacgal_state *)screen->machine->driver_data;
 
 	bitmap_fill(bitmap,cliprect,0);
 	draw_stars(state, bitmap,cliprect);
 	draw_chars(state, bitmap);
-	draw_sprites(screen->machine,state, bitmap);
+	draw_sprites(state, bitmap);
 	do_pen_lookup(screen->machine, state, bitmap, cliprect);
 
 	return 0;

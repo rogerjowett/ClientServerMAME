@@ -395,13 +395,12 @@ struct snes_superscope
 typedef void (*snes_io_read)(running_machine *machine);
 typedef UINT8 (*snes_oldjoy_read)(running_machine *machine);
 
-class snes_state : public driver_data_t
+class snes_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, snes_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, snes_state(machine)); }
 
-	snes_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	snes_state(running_machine &machine) { }
 
 	/* misc */
 	UINT16                htmult;		/* in 512 wide, we run HTOTAL double and halve it on latching */

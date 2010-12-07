@@ -963,7 +963,7 @@ static CPU_INIT( cdp1802 )
 	/* set up the state table */
 	{
 		device_state_interface *state;
-		device->interface(state);
+		device->dev_interface(state);
 		state->state_add(STATE_GENPC, "GENPC", R[P]).noshow();
 		state->state_add(STATE_GENFLAGS, "GENFLAGS", cpustate->flags).mask(0x7).callimport().callexport().noshow().formatstr("%3s");
 

@@ -7,14 +7,13 @@
 #include "sound/okim6295.h"
 #include "video/deco16ic.h"
 
-class dassault_state : public driver_data_t
+class dassault_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, dassault_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, dassault_state(machine)); }
 
 	dassault_state(running_machine &machine)
-		: driver_data_t(machine),
-		  maincpu(machine.device<cpu_device>("maincpu")),
+		: maincpu(machine.device<cpu_device>("maincpu")),
 		  audiocpu(machine.device<cpu_device>("audiocpu")),
 		  subcpu(machine.device<cpu_device>("sub")),
 		  deco16ic(machine.device<deco16ic_device>("deco_custom")),

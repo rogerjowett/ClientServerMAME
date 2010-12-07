@@ -1,11 +1,10 @@
 
-class lemmings_state : public driver_data_t
+class lemmings_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, lemmings_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, lemmings_state(machine)); }
 
-	lemmings_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	lemmings_state(running_machine &machine) { }
 
 	/* memory pointers */
 	UINT16 *  pixel_0_data;

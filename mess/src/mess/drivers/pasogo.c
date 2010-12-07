@@ -53,13 +53,12 @@ struct _ems_t
 	} mapper[26];
 };
 
-class pasogo_state : public driver_data_t
+class pasogo_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, pasogo_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, pasogo_state(machine)); }
 
-	pasogo_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	pasogo_state(running_machine &machine) { }
 
 
 	struct _vg230_t vg230;
@@ -69,7 +68,7 @@ public:
 
 static TIMER_CALLBACK( vg230_timer )
 {
-	pasogo_state *state = machine->driver_data<pasogo_state>();
+	pasogo_state *state = (pasogo_state *)machine->driver_data;
 	vg230_t *vg230 = &state->vg230;
 
 	vg230->rtc.seconds+=1;
@@ -100,7 +99,7 @@ static TIMER_CALLBACK( vg230_timer )
 
 static void vg230_reset(running_machine *machine)
 {
-	pasogo_state *state = machine->driver_data<pasogo_state>();
+	pasogo_state *state = (pasogo_state *)machine->driver_data;
 	vg230_t *vg230 = &state->vg230;
 	system_time systime;
 
@@ -127,7 +126,7 @@ static void vg230_init(running_machine *machine)
 
 static READ8_HANDLER( vg230_io_r )
 {
-	pasogo_state *state = space->machine->driver_data<pasogo_state>();
+	pasogo_state *state = (pasogo_state *)space->machine->driver_data;
 	vg230_t *vg230 = &state->vg230;
 	int log=TRUE;
 	UINT8 data=0;
@@ -192,7 +191,7 @@ static READ8_HANDLER( vg230_io_r )
 
 static WRITE8_HANDLER( vg230_io_w )
 {
-	pasogo_state *state = space->machine->driver_data<pasogo_state>();
+	pasogo_state *state = (pasogo_state *)space->machine->driver_data;
 	vg230_t *vg230 = &state->vg230;
 	int log=TRUE;
 
@@ -237,7 +236,7 @@ static WRITE8_HANDLER( vg230_io_w )
 
 static READ8_HANDLER( ems_r )
 {
-	pasogo_state *state = space->machine->driver_data<pasogo_state>();
+	pasogo_state *state = (pasogo_state *)space->machine->driver_data;
 	ems_t *ems = &state->ems;
 	UINT8 data=0;
 
@@ -251,7 +250,7 @@ static READ8_HANDLER( ems_r )
 
 static WRITE8_HANDLER( ems_w )
 {
-	pasogo_state *state = space->machine->driver_data<pasogo_state>();
+	pasogo_state *state = (pasogo_state *)space->machine->driver_data;
 	ems_t *ems = &state->ems;
 	char bank[10];
 
@@ -575,7 +574,7 @@ ROM_END
 
 static DRIVER_INIT( pasogo )
 {
-	pasogo_state *state = machine->driver_data<pasogo_state>();
+	pasogo_state *state = (pasogo_state *)machine->driver_data;
 	vg230_init(machine);
 	memset(&state->ems, 0, sizeof(state->ems));
 	memory_set_bankptr( machine, "bank27", memory_region(machine, "user1") + 0x00000 );

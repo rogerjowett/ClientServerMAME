@@ -4,13 +4,12 @@
 
 *************************************************************************/
 
-class tail2nos_state : public driver_data_t
+class tail2nos_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, tail2nos_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, tail2nos_state(machine)); }
 
-	tail2nos_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	tail2nos_state(running_machine &machine) { }
 
 	/* memory pointers */
 	UINT16 *    bgvideoram;

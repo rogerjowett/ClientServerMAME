@@ -37,7 +37,6 @@ OBJDIRS += \
 #-------------------------------------------------
 
 EMUOBJS = \
-	$(EMUOBJ)/addrmap.o \
 	$(EMUOBJ)/attotime.o \
 	$(EMUOBJ)/audit.o \
 	$(EMUOBJ)/cheat.o \
@@ -76,6 +75,7 @@ EMUOBJS = \
 	$(EMUOBJ)/machine.o \
 	$(EMUOBJ)/mconfig.o \
 	$(EMUOBJ)/memory.o \
+	$(EMUOBJ)/NSM_Common.o \
 	$(EMUOBJ)/NSM_Client.o \
 	$(EMUOBJ)/NSM_Server.o \
 	$(EMUOBJ)/output.o \

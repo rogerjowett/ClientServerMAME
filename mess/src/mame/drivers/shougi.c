@@ -87,13 +87,12 @@ PROM  : Type MB7051
 #include "sound/ay8910.h"
 #include "video/resnet.h"
 
-class shougi_state : public driver_data_t
+class shougi_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, shougi_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, shougi_state(machine)); }
 
-	shougi_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	shougi_state(running_machine &machine) { }
 
 	UINT8 *videoram;
 	int nmi_enabled;
@@ -164,7 +163,7 @@ static PALETTE_INIT( shougi )
 
 static VIDEO_UPDATE( shougi )
 {
-	shougi_state *state = screen->machine->driver_data<shougi_state>();
+	shougi_state *state = (shougi_state *)screen->machine->driver_data;
 	int offs;
 
 	for (offs = 0;offs <0x4000; offs++)
@@ -247,7 +246,7 @@ static WRITE8_HANDLER( shougi_mcu_halt_on_w )
 
 static WRITE8_HANDLER( nmi_disable_and_clear_line_w )
 {
-	shougi_state *state = space->machine->driver_data<shougi_state>();
+	shougi_state *state = (shougi_state *)space->machine->driver_data;
 
 	state->nmi_enabled = 0; /* disable NMIs */
 
@@ -258,14 +257,14 @@ static WRITE8_HANDLER( nmi_disable_and_clear_line_w )
 
 static WRITE8_HANDLER( nmi_enable_w )
 {
-	shougi_state *state = space->machine->driver_data<shougi_state>();
+	shougi_state *state = (shougi_state *)space->machine->driver_data;
 
 	state->nmi_enabled = 1; /* enable NMIs */
 }
 
 static INTERRUPT_GEN( shougi_vblank_nmi )
 {
-	shougi_state *state = device->machine->driver_data<shougi_state>();
+	shougi_state *state = (shougi_state *)device->machine->driver_data;
 
 	if ( state->nmi_enabled == 1 )
 	{
@@ -307,7 +306,7 @@ ADDRESS_MAP_END
 /* sub */
 static READ8_HANDLER ( dummy_r )
 {
-	shougi_state *state = space->machine->driver_data<shougi_state>();
+	shougi_state *state = (shougi_state *)space->machine->driver_data;
 	state->r ^= 1;
 
 	if(state->r)

@@ -122,7 +122,7 @@ void driver_list_get_approx_matches(const game_driver * const driverlist[], cons
 				templist[driver_count++] = driverlist[drvnum];
 
 		/* seed the RNG first */
-		srand(osd_ticks());
+		srand(1234);
 
 		/* shuffle */
 		for (shufnum = 0; shufnum < 4 * driver_count; shufnum++)

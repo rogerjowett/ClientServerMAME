@@ -1,11 +1,10 @@
 
-class f1gp_state : public driver_data_t
+class f1gp_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, f1gp_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, f1gp_state(machine)); }
 
-	f1gp_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	f1gp_state(running_machine &machine) { }
 
 	/* memory pointers */
 	UINT16 *  sharedram;

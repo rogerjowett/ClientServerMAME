@@ -17,13 +17,12 @@
  *
  *************************************/
 
-class skeetsht_state : public driver_data_t
+class skeetsht_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, skeetsht_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, skeetsht_state(machine)); }
 
-	skeetsht_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	skeetsht_state(running_machine &machine) { }
 
 	UINT16 *tms_vram;
 	UINT8 porta_latch;
@@ -43,7 +42,7 @@ public:
 
 static MACHINE_RESET( skeetsht )
 {
-	skeetsht_state *state = machine->driver_data<skeetsht_state>();
+	skeetsht_state *state = (skeetsht_state *)machine->driver_data;
 
 	state->ay = machine->device("aysnd");
 	state->tms = machine->device("tms");
@@ -65,7 +64,7 @@ static VIDEO_START ( skeetsht )
 
 static void skeetsht_scanline_update(screen_device &screen, bitmap_t *bitmap, int scanline, const tms34010_display_params *params)
 {
-	skeetsht_state *state = screen.machine->driver_data<skeetsht_state>();
+	skeetsht_state *state = (skeetsht_state *)screen.machine->driver_data;
 	const rgb_t *const pens = tlc34076_get_pens();
 	UINT16 *vram = &state->tms_vram[(params->rowaddr << 8) & 0x3ff00];
 	UINT32 *dest = BITMAP_ADDR32(bitmap, scanline, 0);
@@ -115,7 +114,7 @@ static void skeetsht_tms_irq(running_device *device, int state)
 
 static WRITE8_HANDLER( tms_w )
 {
-	skeetsht_state *state = space->machine->driver_data<skeetsht_state>();
+	skeetsht_state *state = (skeetsht_state *)space->machine->driver_data;
 
 	if ((offset & 1) == 0)
 		state->lastdataw = data;
@@ -125,7 +124,7 @@ static WRITE8_HANDLER( tms_w )
 
 static READ8_HANDLER( tms_r )
 {
-	skeetsht_state *state = space->machine->driver_data<skeetsht_state>();
+	skeetsht_state *state = (skeetsht_state *)space->machine->driver_data;
 
 	if ((offset & 1) == 0)
 		state->lastdatar = tms34010_host_r(state->tms, offset >> 1);
@@ -142,14 +141,14 @@ static READ8_HANDLER( tms_r )
 
 static READ8_HANDLER( hc11_porta_r )
 {
-	skeetsht_state *state = space->machine->driver_data<skeetsht_state>();
+	skeetsht_state *state = (skeetsht_state *)space->machine->driver_data;
 
 	return state->porta_latch;
 }
 
 static WRITE8_HANDLER( hc11_porta_w )
 {
-	skeetsht_state *state = space->machine->driver_data<skeetsht_state>();
+	skeetsht_state *state = (skeetsht_state *)space->machine->driver_data;
 
 	if (!(data & 0x8) && (state->porta_latch & 8))
 		state->ay_sel = state->porta_latch & 0x10;
@@ -159,7 +158,7 @@ static WRITE8_HANDLER( hc11_porta_w )
 
 static WRITE8_HANDLER( ay8910_w )
 {
-	skeetsht_state *state = space->machine->driver_data<skeetsht_state>();
+	skeetsht_state *state = (skeetsht_state *)space->machine->driver_data;
 
 	if (state->ay_sel)
 		ay8910_data_w(state->ay, 0, data);

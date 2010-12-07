@@ -11,13 +11,12 @@ Atari Flyball Driver
 
 
 
-class flyball_state : public driver_data_t
+class flyball_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, flyball_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, flyball_state(machine)); }
 
-	flyball_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	flyball_state(running_machine &machine) { }
 
 	/* memory pointers */
 	UINT8 *  rombase;
@@ -57,7 +56,7 @@ static TILEMAP_MAPPER( flyball_get_memory_offset )
 
 static TILE_GET_INFO( flyball_get_tile_info )
 {
-	flyball_state *state = machine->driver_data<flyball_state>();
+	flyball_state *state = (flyball_state *)machine->driver_data;
 	UINT8 data = state->playfield_ram[tile_index];
 	int flags = ((data & 0x40) ? TILE_FLIPX : 0) | ((data & 0x80) ? TILE_FLIPY : 0);
 	int code = data & 63;
@@ -73,14 +72,14 @@ static TILE_GET_INFO( flyball_get_tile_info )
 
 static VIDEO_START( flyball )
 {
-	flyball_state *state = machine->driver_data<flyball_state>();
+	flyball_state *state = (flyball_state *)machine->driver_data;
 	state->tmap = tilemap_create(machine, flyball_get_tile_info, flyball_get_memory_offset, 8, 16, 32, 16);
 }
 
 
 static VIDEO_UPDATE( flyball )
 {
-	flyball_state *state = screen->machine->driver_data<flyball_state>();
+	flyball_state *state = (flyball_state *)screen->machine->driver_data;
 	int pitcherx = state->pitcher_horz;
 	int pitchery = state->pitcher_vert - 31;
 
@@ -113,7 +112,7 @@ static VIDEO_UPDATE( flyball )
 
 static TIMER_CALLBACK( flyball_joystick_callback )
 {
-	flyball_state *state = machine->driver_data<flyball_state>();
+	flyball_state *state = (flyball_state *)machine->driver_data;
 	int potsense = param;
 
 	if (potsense & ~state->potmask)
@@ -125,7 +124,7 @@ static TIMER_CALLBACK( flyball_joystick_callback )
 
 static TIMER_CALLBACK( flyball_quarter_callback	)
 {
-	flyball_state *state = machine->driver_data<flyball_state>();
+	flyball_state *state = (flyball_state *)machine->driver_data;
 	int scanline = param;
 	int potsense[64], i;
 
@@ -169,43 +168,43 @@ static READ8_HANDLER( flyball_scanline_r )
 
 static READ8_HANDLER( flyball_potsense_r )
 {
-	flyball_state *state = space->machine->driver_data<flyball_state>();
+	flyball_state *state = (flyball_state *)space->machine->driver_data;
 	return state->potsense & ~state->potmask;
 }
 
 static WRITE8_HANDLER( flyball_potmask_w )
 {
-	flyball_state *state = space->machine->driver_data<flyball_state>();
+	flyball_state *state = (flyball_state *)space->machine->driver_data;
 	state->potmask |= data & 0xf;
 }
 
 static WRITE8_HANDLER( flyball_pitcher_pic_w )
 {
-	flyball_state *state = space->machine->driver_data<flyball_state>();
+	flyball_state *state = (flyball_state *)space->machine->driver_data;
 	state->pitcher_pic = data & 0xf;
 }
 
 static WRITE8_HANDLER( flyball_ball_vert_w )
 {
-	flyball_state *state = space->machine->driver_data<flyball_state>();
+	flyball_state *state = (flyball_state *)space->machine->driver_data;
 	state->ball_vert = data;
 }
 
 static WRITE8_HANDLER( flyball_ball_horz_w )
 {
-	flyball_state *state = space->machine->driver_data<flyball_state>();
+	flyball_state *state = (flyball_state *)space->machine->driver_data;
 	state->ball_horz = data;
 }
 
 static WRITE8_HANDLER( flyball_pitcher_vert_w )
 {
-	flyball_state *state = space->machine->driver_data<flyball_state>();
+	flyball_state *state = (flyball_state *)space->machine->driver_data;
 	state->pitcher_vert = data;
 }
 
 static WRITE8_HANDLER( flyball_pitcher_horz_w )
 {
-	flyball_state *state = space->machine->driver_data<flyball_state>();
+	flyball_state *state = (flyball_state *)space->machine->driver_data;
 	state->pitcher_horz = data;
 }
 
@@ -363,7 +362,7 @@ static PALETTE_INIT( flyball )
 
 static MACHINE_START( flyball )
 {
-	flyball_state *state = machine->driver_data<flyball_state>();
+	flyball_state *state = (flyball_state *)machine->driver_data;
 
 	state->maincpu = machine->device("maincpu");
 
@@ -378,7 +377,7 @@ static MACHINE_START( flyball )
 
 static MACHINE_RESET( flyball )
 {
-	flyball_state *state = machine->driver_data<flyball_state>();
+	flyball_state *state = (flyball_state *)machine->driver_data;
 	int i;
 
 	/* address bits 0 through 8 are inverted */

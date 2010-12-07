@@ -276,8 +276,12 @@ static void ui_exit(running_machine &machine)
     various startup screens
 -------------------------------------------------*/
 
+extern Server *netServer;
+extern Client *netClient;
+
 int ui_display_startup_screens(running_machine *machine, int first_time, int show_disclaimer)
 {
+
 	const int maxstate = 3;
 	int str = options_get_int(machine->options(), OPTION_SECONDS_TO_RUN);
 	int show_gameinfo = !options_get_bool(machine->options(), OPTION_SKIP_GAMEINFO);
@@ -288,6 +292,8 @@ int ui_display_startup_screens(running_machine *machine, int first_time, int sho
        or if we are debugging */
 	if (!first_time || (str > 0 && str < 60*5) || machine->gamedrv == &GAME_NAME(empty) || (machine->debug_flags & DEBUG_FLAG_ENABLED) != 0)
 		show_gameinfo = show_warnings = show_disclaimer = FALSE;
+    if(netClient || netServer)
+        show_gameinfo = show_warnings = show_disclaimer = FALSE;
 
 	/* initialize the on-screen display system */
 	slider_list = slider_current = slider_init(machine);
@@ -379,6 +385,9 @@ extern Server *netServer;
 list< ChatLog > chatLogs;
 vector<char> chatString;
 int chatEnabled=false;
+int statsVisible=true;
+
+extern int initialSyncPercentComplete;
 
 void ui_update_and_render(running_machine *machine, render_container *container)
 {
@@ -410,20 +419,45 @@ void ui_update_and_render(running_machine *machine, render_container *container)
 	else
 		popup_text_end = 0;
 
+	if(
+	(!netClient && options_get_bool(mame_options(), "client")) ||
+	(netClient && netClient->isInitComplete()==false)
+	)
+        {
+	  ui_draw_text_box(container,"Please wait for server to send entire game RAM...",JUSTIFY_CENTER,0.5f,0.5f,MAKE_ARGB(255,0,0,128));
+	  ui_draw_text_box(container,"This could take several minutes depending on your connection and rom chosen...",JUSTIFY_CENTER,0.5f,0.6f,MAKE_ARGB(255,0,0,128));
+	  ui_draw_text_box(container,"Once the initial sync is complete, it may take a few minutes to stablize, please be patient",JUSTIFY_CENTER,0.5f,0.7f,MAKE_ARGB(255,0,0,128));
+	  char buf[4096];
+	  sprintf(buf,"%0.2f%% Complete (Could be over 100 for large roms)...",float(initialSyncPercentComplete)/10.0f);
+	  ui_draw_text_box(container,buf,JUSTIFY_CENTER,0.5f,0.8f,MAKE_ARGB(255,0,0,128));
+	}
+
+	if(statsVisible)
+	{
 	if(netClient)
         {
-	  ui_draw_text_box(container,netClient->getLatencyString().c_str(),JUSTIFY_CENTER,0.9f,0.1f,MAKE_ARGB(255,0,0,128));
+		string allLatencyString;
+		for(int a=0;a<netClient->getNumOtherPeers();a++)
+		{
+		    if(netClient->getOtherPeerID(a)==netClient->getSelfPeerID())
+                continue;
+			allLatencyString += netClient->getLatencyString(netClient->getOtherPeerID(a)) + string("\n");
+		}
+		ui_draw_text_box(container,allLatencyString.c_str(),JUSTIFY_CENTER,0.9f,0.1f,MAKE_ARGB(255,0,0,128));
 	  ui_draw_text_box(container,netClient->getStatisticsString().c_str(),JUSTIFY_CENTER,0.1f,0.1f,MAKE_ARGB(255,0,0,128));
         }
 	else if(netServer)
 	{
 		string allLatencyString;
-		for(int a=0;a<netServer->getNumSessions();a++)
+		for(int a=0;a<netServer->getNumOtherPeers();a++)
 		{
-			allLatencyString += netServer->getLatencyString(a) + string("\n");
+		    if(netServer->getOtherPeerID(a)==netServer->getSelfPeerID())
+                continue;
+			allLatencyString += netServer->getLatencyString(netServer->getOtherPeerID(a)) + string("\n");
 		}
 		ui_draw_text_box(container,allLatencyString.c_str(),JUSTIFY_CENTER,0.9f,0.1f,MAKE_ARGB(255,0,0,128));
 		ui_draw_text_box(container,netServer->getStatisticsString().c_str(),JUSTIFY_CENTER,0.1f,0.1f,MAKE_ARGB(255,0,0,128));
+	}
 	}
 
 	time_t curTime = time(NULL);
@@ -454,11 +488,11 @@ void ui_update_and_render(running_machine *machine, render_container *container)
 	  {
 	    MAKE_ARGB(255,0,0,0),
 	    MAKE_ARGB(255,255,0,0),
-	    MAKE_ARGB(255,0,255,0),
+	    MAKE_ARGB(255,0,128,0),
 	    MAKE_ARGB(255,0,0,255),
-	    MAKE_ARGB(255,255,255,0),
-	    MAKE_ARGB(255,255,0,255),
-	    MAKE_ARGB(255,0,255,255),
+	    MAKE_ARGB(255,128,128,0),
+	    MAKE_ARGB(255,128,0,128),
+	    MAKE_ARGB(255,0,128,128),
 	    MAKE_ARGB(255,128,255,255),
 	    MAKE_ARGB(255,255,128,255),
 	    MAKE_ARGB(255,255,255,128),
@@ -504,14 +538,19 @@ void ui_update_and_render(running_machine *machine, render_container *container)
 	  }
 	if(chatEnabled)
 	{
-		string promptString = string("Chat: ")+string(&chatString[0],chatString.size())
+		string promptString("Chat: _");
+		if(chatString.size())
+		{
+		promptString = string("Chat: ")+string(&chatString[0],chatString.size())
 							+ string("_");
+		}
+
 		ui_draw_text_box(
 						 container,
 						 promptString.c_str(),
 						 JUSTIFY_CENTER,
-						 0.5,
-						 0.8,
+						 0.5f,
+						 0.8f,
 						 MAKE_ARGB(255,0,0,0)
 						 );
 	}
@@ -1435,6 +1474,11 @@ static UINT32 handler_ingame(running_machine *machine, render_container *contain
 	if(chatEnabled==false)
 	{
 
+	if(input_code_pressed_once(machine, KEYCODE_N))
+	{
+		statsVisible = !statsVisible;
+	}
+
 	/* is ScrLk UI toggling applicable here? */
 	if (input_machine_has_keyboard(machine))
 	{
@@ -1485,7 +1529,10 @@ static UINT32 handler_ingame(running_machine *machine, render_container *contain
 
 	/* if the user pressed ESC, stop the emulation (except in MESS with newui, where ESC toggles the menubar) */
 	if (ui_input_pressed(machine, IPT_UI_CANCEL) && !ui_use_newui())
+	{
+	    printf("USER PRESSED ESCAPE\n");
 		machine->schedule_exit();
+	}
 
 	/* turn on menus if requested */
 	if (ui_input_pressed(machine, IPT_UI_CONFIGURE) && !ui_use_newui())
@@ -1607,7 +1654,7 @@ static UINT32 handler_ingame(running_machine *machine, render_container *contain
 	}
 	else
 		video_set_fastforward(FALSE);
-		
+	
 	}
 
 	if(!ui_disabled)
@@ -1635,23 +1682,35 @@ static UINT32 handler_ingame(running_machine *machine, render_container *contain
 							chatString.push_back(0);
 							//Send chat
 							printf("SENDING CHAT %s\n",&chatString[0]);
-							astring chatAString = astring(&chatString[0]);
 							if(netClient)
 							{
+								{
+									char buf[4096];
+									sprintf(buf,"%s: %s",netClient->getPeerNameFromID(netClient->getSelfPeerID()).c_str(),&chatString[0]);
+									astring chatAString = astring(buf);
+									chatLogs.push_back(ChatLog(0,time(NULL),chatAString));
+								}
+								//the '1' indicates that the string is a chat message
 								chatString.insert(chatString.begin(),1);
-								netClient->sendString(string(&chatString[0]));
+								netClient->sendInputs(string(&chatString[0],chatString.size()));
 							}
 							if(netServer)
 							{
-								chatLogs.push_back(ChatLog(0,time(NULL),chatAString));
+								{
+									char buf[4096];
+									sprintf(buf,"%s: %s",netServer->getPeerNameFromID(netServer->getSelfPeerID()).c_str(),&chatString[0]);
+									astring chatAString = astring(buf);
+									chatLogs.push_back(ChatLog(0,time(NULL),chatAString));
+								}
+								//the '1' indicates that the string is a chat message
 								chatString.insert(chatString.begin(),1);
-								netServer->addConstBlock((unsigned char*)&chatString[0],chatString.size());
+								netServer->sendInputs(string(&chatString[0],chatString.size()));
 							}
 							chatString.clear();
 						}
 						chatEnabled=false;
 					}
-					else if(event.ch==127)
+					else if(event.ch==127 || event.ch==8)
 					{
 						chatString.pop_back();
 					}

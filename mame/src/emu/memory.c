@@ -836,7 +836,7 @@ address_map *address_map_alloc(const device_config *devconfig, const game_driver
 	address_map *map = global_alloc_clear(address_map);
 
 	const device_config_memory_interface *memintf;
-	if (!devconfig->interface(memintf))
+	if (!devconfig->dev_interface(memintf))
 		throw emu_fatalerror("No memory interface defined for device '%s'\n", devconfig->tag());
 
 	const address_space_config *spaceconfig = memintf->space_config(spacenum);

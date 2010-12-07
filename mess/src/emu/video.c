@@ -38,6 +38,7 @@
 ***************************************************************************/
 
 #include "NSM_Client.h"
+#include "NSM_Server.h"
 
 #include "emu.h"
 #include "emuopts.h"
@@ -201,8 +202,16 @@ static void rgb888_draw_primitives(const render_primitive *primlist, void *dstda
     forward
 -------------------------------------------------*/
 
+extern Client *netClient;
+extern Server *netServer;
+
 INLINE int effective_autoframeskip(running_machine *machine)
 {
+    if(netClient || netServer)
+    {
+        //JJG: Frameskip is disabled in networked mode
+        return FALSE;
+    }
 	/* if we're fast forwarding or paused, autoframeskip is disabled */
 	if (global.fastforward || machine->paused())
 		return FALSE;
@@ -422,9 +431,8 @@ static TIMER_CALLBACK( screenless_update_callback )
 }
 
 
-extern std::map<attotime,MemoryBlock> clientInputDatabase;
-extern Client *netClient;
-extern Server *netServer;
+extern attotime mostRecentReport;
+extern bool needToSkipAhead;
 
 /*-------------------------------------------------
     video_frame_update - handle frameskipping and
@@ -435,7 +443,29 @@ extern Server *netServer;
 void video_frame_update(running_machine *machine, int debug)
 {
 	attotime current_time = timer_get_time(machine);
-	int skipped_it = global.skipping_this_frame;
+    int skipped_it;
+    if(netClient || netServer)
+    {
+	if(needToSkipAhead)
+	{
+		//cout << "CURRENT TIME: " << current_time.seconds << ',' << current_time.attoseconds << endl;
+		//cout << "MOST RECENT REPORT TIME: " << mostRecentReport.seconds << ',' << mostRecentReport.attoseconds << endl;
+    if(mostRecentReport.seconds || mostRecentReport.attoseconds)
+    {
+        if(mostRecentReport<=current_time)
+        {
+            printf("DONE WITH VIDEO SKIP %d\n",needToSkipAhead);
+            needToSkipAhead=false;
+        }
+    }
+	}
+
+        skipped_it = global.skipping_this_frame || needToSkipAhead;
+    }
+    else
+    {
+        skipped_it = global.skipping_this_frame;
+    }
 	int phase = machine->phase();
 
 	/* validate */
@@ -451,7 +481,16 @@ void video_frame_update(running_machine *machine, int debug)
            mark this frame as skipped to prevent throttling; this helps for games that
            don't update their screen at the monitor refresh rate */
 		if (!anything_changed && !global.auto_frameskip && global.frameskip_level == 0 && global.empty_skip_count++ < 3)
+        {
+            if(netServer || netClient)
+            {
+                //JJG: Can't skip frames in networked mode (I think that includes this line)
+            }
+            else
+            {
 			skipped_it = TRUE;
+            }
+        }
 		else
 			global.empty_skip_count = 0;
 	}
@@ -721,7 +760,7 @@ void video_set_fastforward(int _fastforward)
 
 static void update_throttle(running_machine *machine, attotime emutime)
 {
-/*
+    /*
 
    Throttling theory:
 
@@ -753,7 +792,7 @@ static void update_throttle(running_machine *machine, attotime emutime)
        * emulated time could jump due to resetting the machine or
            restoring from a saved state
 
-*/
+    */
 	static const UINT8 popcount[256] =
 	{
 		0,1,1,2,1,2,2,3, 1,2,2,3,2,3,3,4, 1,2,2,3,2,3,3,4, 2,3,3,4,3,4,4,5,
@@ -802,25 +841,60 @@ static void update_throttle(running_machine *machine, attotime emutime)
 	emu_delta_attoseconds = attotime_to_attoseconds(attotime_sub(emutime, global.throttle_emutime));
 	if (emu_delta_attoseconds < 0 || emu_delta_attoseconds > ATTOSECONDS_PER_SECOND / 10)
 	{
+        if(!netClient && !netServer)
+        {
 		if (LOG_THROTTLE)
 			logerror("Resync due to weird emutime delta: %s\n", attotime_string(attotime_make(0, emu_delta_attoseconds), 18));
 		goto resync;
 	}
+    }
 
 	/* now determine the current real time in OSD-specified ticks; we have to be careful
        here because counters can wrap, so we only use the difference between the last
        read value and the current value in our computations */
+    if( (netClient && netClient->isInitComplete()) || netServer)
+    {
+        //cout << "REPORT TIME: " << mostRecentReport.seconds << '.' << mostRecentReport.attoseconds <<
+        //" EMU TIME: " << emutime.seconds << '.' << emutime.attoseconds << endl;
+        osd_ticks_t cur_ticks=0;
+        if(netClient && netClient->isInitComplete())
+        {
+            double osd_ticks_per_raknet_tick = osd_ticks_per_second()/1000000.0;
+            cur_ticks = osd_ticks_t(netClient->getTimeSinceStartup()*osd_ticks_per_raknet_tick);
+            //cout << "CUR TICKS: " << cur_ticks/double(osd_ticks_per_second()) << endl;
+
+            //cout << "CUR TICKS: " << cur_ticks/double(osd_ticks_per_second()) << endl;
+        }
+        if(netServer)
+        {
+            double osd_ticks_per_raknet_tick = osd_ticks_per_second()/1000000.0;
+            cur_ticks = osd_ticks_t(netServer->getTimeSinceStartup()*osd_ticks_per_raknet_tick);
+            //cout << "CUR TICKS: " << cur_ticks/double(osd_ticks_per_second()) << endl;
+            //cout << "CURRENT TIME: " << netServer->getTimeSinceStartup()/1000000.0 << endl;
+        }
+        global.throttle_last_ticks = cur_ticks;
+
+        /* now update our real and emulated timers with the current values */
+        global.throttle_emutime = emutime;
+        global.throttle_realtime.seconds = cur_ticks/osd_ticks_per_second();
+        global.throttle_realtime.attoseconds = cur_ticks%osd_ticks_per_second()*attoseconds_per_tick;
+    }
+    else
+    {
 	diff_ticks = osd_ticks() - global.throttle_last_ticks;
 	global.throttle_last_ticks += diff_ticks;
 
 	/* if it has been more than a full second of real time since the last call to this
        function, we just need to resynchronize */
+        if(!netClient && !netServer)
+        {
 	if (diff_ticks >= ticks_per_second)
 	{
 		if (LOG_THROTTLE)
 			logerror("Resync due to real time advancing by more than 1 second\n");
 		goto resync;
 	}
+        }
 
 	/* convert this value into attoseconds for easier comparison */
 	real_delta_attoseconds = diff_ticks * attoseconds_per_tick;
@@ -829,32 +903,17 @@ static void update_throttle(running_machine *machine, attotime emutime)
 	global.throttle_emutime = emutime;
 	global.throttle_realtime = attotime_add_attoseconds(global.throttle_realtime, real_delta_attoseconds);
 
-    if(netClient)
-    {
-        if(clientInputDatabase.size())
-        {
-            //If we are a client, use the timstamp from the last packet from the server to represent "real time"
-            global.throttle_realtime = clientInputDatabase.rbegin()->first;
-            //global.throttle_realtime.seconds -= 10;
-            //cout << "EMUTIME: " << global.throttle_emutime.seconds << global.throttle_emutime.attoseconds << endl;
-            //cout << "REALTIME: " << global.throttle_realtime.seconds << global.throttle_realtime.attoseconds << endl;
-        }
-        else
-        {
-            cout << "WE ARE MISSING AN INPUT REPORT!!!\n";
-        }
-    }
-	
 	/* keep a history of whether or not emulated time beat real time over the last few
        updates; this can be used for future heuristics */
 	global.throttle_history = (global.throttle_history << 1) | (emu_delta_attoseconds > real_delta_attoseconds);
+    }
 
 	/* determine how far ahead real time is versus emulated time; note that we use the
        accumulated times for this instead of the deltas for the current update because
        we want to track time over a longer duration than a single update */
 	real_is_ahead_attoseconds = attotime_to_attoseconds(attotime_sub(global.throttle_emutime, global.throttle_realtime));
 
-	/*Do not try to resync if you are too far behind and are playing a networked game*/
+    //JJG: Do not try to resync if you are too far behind and are playing a networked game
 	if(!netClient && !netServer)
 	{
 	/* if we're more than 1/10th of a second out, or if we are behind at all and emulation
@@ -870,19 +929,10 @@ static void update_throttle(running_machine *machine, attotime emutime)
 
 	/* if we're behind, it's time to just get out */
 	if (real_is_ahead_attoseconds < 0)
-    {
 		return;
-    }
 
 	/* compute the target real time, in ticks, where we want to be */
 	target_ticks = global.throttle_last_ticks + real_is_ahead_attoseconds / attoseconds_per_tick;
-
-    if(netClient && clientInputDatabase.size())
-    {
-        //If we are a client, compute target_ticks based on the current time
-        // since we do not use throttle_last_ticks
-	    target_ticks = osd_ticks() + real_is_ahead_attoseconds / attoseconds_per_tick;
-    }
 
 	/* throttle until we read the target, and update real time to match the final time */
 	diff_ticks = throttle_until_ticks(machine, target_ticks) - global.throttle_last_ticks;
@@ -891,6 +941,10 @@ static void update_throttle(running_machine *machine, attotime emutime)
 	return;
 
 resync:
+    if(netClient || netServer)
+    {
+        cout << "OOPS! SHOULD NOT GET HERE!\n";
+    }
 	/* reset realtime and emutime to the same value */
 	global.throttle_realtime = global.throttle_emutime = emutime;
 }
@@ -906,6 +960,17 @@ static osd_ticks_t throttle_until_ticks(running_machine *machine, osd_ticks_t ta
 {
 	osd_ticks_t minimum_sleep = osd_ticks_per_second() / 1000;
 	osd_ticks_t current_ticks = osd_ticks();
+    if(netServer)
+    {
+        double osd_ticks_per_raknet_tick = osd_ticks_per_second()/1000000.0;
+        current_ticks = osd_ticks_t(netServer->getTimeSinceStartup()*osd_ticks_per_raknet_tick);
+        //cout << "CURRENT TICKS: " << current_ticks << endl;
+    }
+    if(netClient && netClient->isInitComplete())
+    {
+        double osd_ticks_per_raknet_tick = osd_ticks_per_second()/1000000.0;
+        current_ticks = osd_ticks_t(netClient->getTimeSinceStartup()*osd_ticks_per_raknet_tick);
+    }
 	osd_ticks_t new_ticks;
 	int allowed_to_sleep = FALSE;
 
@@ -935,6 +1000,18 @@ static osd_ticks_t throttle_until_ticks(running_machine *machine, osd_ticks_t ta
 
 		/* read the new value */
 		new_ticks = osd_ticks();
+        if(netServer)
+        {
+            double osd_ticks_per_raknet_tick = osd_ticks_per_second()/1000000.0;
+            new_ticks = osd_ticks_t(netServer->getTimeSinceStartup()*osd_ticks_per_raknet_tick);
+            //cout << "NEW TICKS: " << new_ticks << endl;
+        }
+        if(netClient && netClient->isInitComplete())
+        {
+            double osd_ticks_per_raknet_tick = osd_ticks_per_second()/1000000.0;
+            new_ticks = osd_ticks_t(netClient->getTimeSinceStartup()*osd_ticks_per_raknet_tick);
+            break;
+        }
 
 		/* keep some metrics on the sleeping patterns of the OSD layer */
 		if (slept)
@@ -968,6 +1045,14 @@ static osd_ticks_t throttle_until_ticks(running_machine *machine, osd_ticks_t ta
 
 static void update_frameskip(running_machine *machine)
 {
+    if(netClient || netServer)
+    {
+        //JJG: Can't frameskip in networked mode
+        global.frameskip_level=0;
+        global.skipping_this_frame=0;
+        return;
+    }
+
 	/* if we're throttling and autoframeskip is on, adjust */
 	if (effective_throttle(machine) && effective_autoframeskip(machine) && global.frameskip_counter == 0)
 	{
@@ -1069,6 +1154,16 @@ static void recompute_speed(running_machine *machine, attotime emutime)
 	if (global.speed_last_realtime == 0 || machine->paused())
 	{
 		global.speed_last_realtime = osd_ticks();
+        if(netServer)
+        {
+            double osd_ticks_per_raknet_tick = osd_ticks_per_second()/1000000.0;
+            global.speed_last_realtime = osd_ticks_t(netServer->getTimeSinceStartup()*osd_ticks_per_raknet_tick);
+        }
+        if(netClient && netClient->isInitComplete())
+        {
+            double osd_ticks_per_raknet_tick = osd_ticks_per_second()/1000000.0;
+            global.speed_last_realtime = osd_ticks_t(netClient->getTimeSinceStartup()*osd_ticks_per_raknet_tick);
+        }
 		global.speed_last_emutime = emutime;
 	}
 
@@ -2059,10 +2154,21 @@ void screen_device::realloc_screen_bitmaps()
 		palette_t *palette = NULL;
 		switch (m_config.m_format)
 		{
-			case BITMAP_FORMAT_INDEXED16:	m_texture_format = TEXFORMAT_PALETTE16;	palette = machine->palette;	break;
-			case BITMAP_FORMAT_RGB15:		m_texture_format = TEXFORMAT_RGB15;		palette = NULL;				break;
-			case BITMAP_FORMAT_RGB32:		m_texture_format = TEXFORMAT_RGB32;		palette = NULL;				break;
-			default:						fatalerror("Invalid bitmap format!");												break;
+        case BITMAP_FORMAT_INDEXED16:
+            m_texture_format = TEXFORMAT_PALETTE16;
+            palette = machine->palette;
+            break;
+        case BITMAP_FORMAT_RGB15:
+            m_texture_format = TEXFORMAT_RGB15;
+            palette = NULL;
+            break;
+        case BITMAP_FORMAT_RGB32:
+            m_texture_format = TEXFORMAT_RGB32;
+            palette = NULL;
+            break;
+        default:
+            fatalerror("Invalid bitmap format!");
+            break;
 		}
 
 		// allocate bitmaps
@@ -2459,6 +2565,7 @@ void screen_device::update_burnin()
 	int dstheight = m_burnin->height;
 	int xstep = (srcwidth << 16) / dstwidth;
 	int ystep = (srcheight << 16) / dstheight;
+    printf("USING WRONG RAND!!!\n");
 	int xstart = ((UINT32)rand() % 32767) * xstep / 32767;
 	int ystart = ((UINT32)rand() % 32767) * ystep / 32767;
 	int srcx, srcy;

@@ -1,10 +1,9 @@
-class shadfrce_state : public driver_data_t
+class shadfrce_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, shadfrce_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, shadfrce_state(machine)); }
 
-	shadfrce_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	shadfrce_state(running_machine &machine) { }
 
 	tilemap_t *fgtilemap;
 	tilemap_t *bg0tilemap;

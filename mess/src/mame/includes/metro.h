@@ -8,14 +8,13 @@
 #include "sound/2151intf.h"
 #include "video/konicdev.h"
 
-class metro_state : public driver_data_t
+class metro_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, metro_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, metro_state(machine)); }
 
 	metro_state(running_machine &machine)
-		: driver_data_t(machine),
-		  maincpu(machine.device<cpu_device>("maincpu")),
+		: maincpu(machine.device<cpu_device>("maincpu")),
 		  audiocpu(machine.device<cpu_device>("audiocpu")),
 		  oki(machine.device<okim6295_device>("oki")),
 		  ymsnd(machine.device("ymsnd")),

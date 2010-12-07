@@ -106,7 +106,7 @@ static const char * const device_tags[NUM_TYPES] = { "ins8250", "ins8250a", "ns1
 #define COM_LOG(n,m,a) LOG(VERBOSE_COM,n,m,a)
 
 typedef struct {
-	const ins8250_interface *interface;
+	const ins8250_interface *dev_interface;
 	int	device_type;
 
 	UINT8 thr;  /* 0 -W transmitter holding register */
@@ -212,8 +212,8 @@ static void ins8250_update_interrupt(running_device *device)
 	}
 
 	/* set or clear the int */
-	if (ins8250->interface->interrupt)
-		ins8250->interface->interrupt(device, state);
+	if (ins8250->dev_interface->interrupt)
+		ins8250->dev_interface->interrupt(device, state);
 }
 
 
@@ -254,7 +254,7 @@ WRITE8_DEVICE_HANDLER( ins8250_w )
 				ins8250->dll = data;
 				tmp = ins8250->dlm * 256 + ins8250->dll;
 				COM_LOG(1,"COM_dll_w",("COM \"%s\" $%02x: [$%04x = %d baud]\n", device->tag(),
-					 data, tmp, (tmp)?(int)(ins8250->interface->clockin/16/tmp):0));
+					 data, tmp, (tmp)?(int)(ins8250->dev_interface->clockin/16/tmp):0));
 			}
 			else
 			{
@@ -268,8 +268,8 @@ WRITE8_DEVICE_HANDLER( ins8250_w )
 					ins8250_trigger_int( device, COM_INT_PENDING_RECEIVED_DATA_AVAILABLE );
 				}
 
-				if ( ins8250->interface->transmit )
-					ins8250->interface->transmit(device, ins8250->thr);
+				if ( ins8250->dev_interface->transmit )
+					ins8250->dev_interface->transmit(device, ins8250->thr);
 
 				/* writing to thr will clear the int */
 				ins8250_clear_int(device, COM_INT_PENDING_TRANSMITTER_HOLDING_REGISTER_EMPTY);
@@ -281,7 +281,7 @@ WRITE8_DEVICE_HANDLER( ins8250_w )
 				ins8250->dlm = data;
 				tmp = ins8250->dlm * 256 + ins8250->dll;
                 COM_LOG(1,"COM_dlm_w",("COM \"%s\" $%02x: [$%04x = %d baud]\n", device->tag(),
-					data, tmp, (tmp)?(int)(ins8250->interface->clockin/16/tmp):0));
+					data, tmp, (tmp)?(int)(ins8250->dev_interface->clockin/16/tmp):0));
 			}
 			else
 			{
@@ -306,8 +306,8 @@ WRITE8_DEVICE_HANDLER( ins8250_w )
 				ins8250->mcr = data & 0x1f;
 				COM_LOG(1,"COM_mcr_w",("COM \"%s\" $%02x DTR %d, RTS %d, OUT1 %d, OUT2 %d, loopback %d\n", device->tag(),
 					data, data&1, (data>>1)&1, (data>>2)&1, (data>>3)&1, (data>>4)&1));
-				if (ins8250->interface->handshake_out)
-					ins8250->interface->handshake_out(device,data);
+				if (ins8250->dev_interface->handshake_out)
+					ins8250->dev_interface->handshake_out(device,data);
 
 				if ( ins8250->mcr & 0x10 )		/* loopback test */
 				{
@@ -370,8 +370,8 @@ WRITE8_DEVICE_HANDLER( ins8250_w )
             break;
 	}
 
-	if (ins8250->interface->refresh_connected)
-		ins8250->interface->refresh_connected(device);
+	if (ins8250->dev_interface->refresh_connected)
+		ins8250->dev_interface->refresh_connected(device);
 }
 
 
@@ -473,8 +473,8 @@ READ8_DEVICE_HANDLER( ins8250_r )
             break;
 	}
 
-	if (ins8250->interface->refresh_connected)
-		ins8250->interface->refresh_connected(device);
+	if (ins8250->dev_interface->refresh_connected)
+		ins8250->dev_interface->refresh_connected(device);
 
     return data;
 }
@@ -544,7 +544,7 @@ static void common_start( running_device *device, int device_type )
 {
 	ins8250_t	*ins8250 = get_safe_token(device);
 
-	ins8250->interface = (const ins8250_interface*)device->baseconfig().static_config();
+	ins8250->dev_interface = (const ins8250_interface*)device->baseconfig().static_config();
 	ins8250->device_type = device_type;
 }
 
@@ -598,8 +598,8 @@ static DEVICE_RESET( ins8250 )
 	ins8250->send.active=0;
 
 	/* refresh with reset state of register */
-	if (ins8250->interface->refresh_connected)
-		ins8250->interface->refresh_connected(device);
+	if (ins8250->dev_interface->refresh_connected)
+		ins8250->dev_interface->refresh_connected(device);
 }
 
 

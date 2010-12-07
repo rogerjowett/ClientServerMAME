@@ -185,7 +185,7 @@ static READ8_DEVICE_HANDLER( via0_pa_r )
 
     */
 
-	vic20_state *state = device->machine->driver_data<vic20_state>();
+	vic20_state *state = (vic20_state *)device->machine->driver_data;
 	UINT8 data = 0xfc;
 
 	/* serial clock in */
@@ -223,7 +223,7 @@ static WRITE8_DEVICE_HANDLER( via0_pa_w )
 
     */
 
-	vic20_state *state = device->machine->driver_data<vic20_state>();
+	vic20_state *state = (vic20_state *)device->machine->driver_data;
 
 	/* serial attention out */
 	cbm_iec_atn_w(state->iec, device, !BIT(data, 7));
@@ -269,7 +269,7 @@ static WRITE8_DEVICE_HANDLER( via0_pb_w )
 
 static WRITE8_DEVICE_HANDLER( via0_ca2_w )
 {
-	vic20_state *state = device->machine->driver_data<vic20_state>();
+	vic20_state *state = (vic20_state *)device->machine->driver_data;
 
 	if (!BIT(data, 0))
 	{
@@ -319,7 +319,7 @@ static READ8_DEVICE_HANDLER( via1_pa_r )
 
     */
 
-	vic20_state *state = device->machine->driver_data<vic20_state>();
+	vic20_state *state = (vic20_state *)device->machine->driver_data;
 	UINT8 data = 0xff;
 
 	if (!BIT(state->key_col, 0)) data &= input_port_read(device->machine, "ROW0");
@@ -376,7 +376,7 @@ static WRITE8_DEVICE_HANDLER( via1_pb_w )
 
     */
 
-	vic20_state *state = device->machine->driver_data<vic20_state>();
+	vic20_state *state = (vic20_state *)device->machine->driver_data;
 
 	/* cassette write */
 	cassette_output(device->machine->device("cassette"), BIT(data, 3) ? -(0x5a9e >> 1) : +(0x5a9e >> 1));
@@ -387,7 +387,7 @@ static WRITE8_DEVICE_HANDLER( via1_pb_w )
 
 static WRITE_LINE_DEVICE_HANDLER( via1_ca2_w )
 {
-	vic20_state *driver_state = device->machine->driver_data<vic20_state>();
+	vic20_state *driver_state = (vic20_state *)device->machine->driver_data;
 
 	/* serial clock out */
 	cbm_iec_clk_w(driver_state->iec, device, !state);
@@ -395,7 +395,7 @@ static WRITE_LINE_DEVICE_HANDLER( via1_ca2_w )
 
 static WRITE_LINE_DEVICE_HANDLER( via1_cb2_w )
 {
-	vic20_state *driver_state = device->machine->driver_data<vic20_state>();
+	vic20_state *driver_state = (vic20_state *)device->machine->driver_data;
 
 	/* serial data out */
 	cbm_iec_data_w(driver_state->iec, device, !state);
@@ -424,7 +424,7 @@ static const via6522_interface vic20_via1_intf =
 
 static TIMER_DEVICE_CALLBACK( cassette_tick )
 {
-	vic20_state *state = timer.machine->driver_data<vic20_state>();
+	vic20_state *state = (vic20_state *)timer.machine->driver_data;
 	int data = (cassette_input(state->cassette) > +0.0) ? 1 : 0;
 
 	via_ca1_w(state->via1, data);
@@ -516,7 +516,7 @@ static const mos6560_interface vic20_6561_intf =
 
 static MACHINE_START( vic20 )
 {
-	vic20_state *state = machine->driver_data<vic20_state>();
+	vic20_state *state = (vic20_state *)machine->driver_data;
 	const address_space *program = cputag_get_address_space(machine, M6502_TAG, ADDRESS_SPACE_PROGRAM);
 
 	/* find devices */
@@ -558,67 +558,38 @@ static DEVICE_IMAGE_LOAD( vic20_cart )
 {
 	const address_space *program = cputag_get_address_space(image.device().machine, M6502_TAG, ADDRESS_SPACE_PROGRAM);
 	const char *filetype = image.filetype();
-	UINT32 address = 0;
-	UINT32 size;
-	UINT8 *ptr = memory_region(image.device().machine, M6502_TAG);
+	int address = 0;
+	int size = image.length();
+	UINT8 *ptr;
 
-	if (image.software_entry() == NULL)
+	if (!mame_stricmp(filetype, "20"))
+		address = 0x2000;
+	else if (!mame_stricmp(filetype, "40"))
+		address = 0x4000;
+	else if (!mame_stricmp(filetype, "60"))
+		address = 0x6000;
+	else if (!mame_stricmp(filetype, "70"))
+		address = 0x7000;
+	else if (!mame_stricmp(filetype, "a0"))
+		address = 0xa000;
+	else if (!mame_stricmp(filetype, "b0"))
+		address = 0xb000;
+
+	ptr = memory_region(image.device().machine, M6502_TAG);
+
+	if (size == 0x4000 && address != 0x4000)
 	{
-		size = image.length();
+		image.fread( ptr + address, 0x2000);
+		image.fread( ptr + 0xa000, 0x2000);
 
-		if (!mame_stricmp(filetype, "20"))
-			address = 0x2000;
-		else if (!mame_stricmp(filetype, "40"))
-			address = 0x4000;
-		else if (!mame_stricmp(filetype, "60"))
-			address = 0x6000;
-		else if (!mame_stricmp(filetype, "70"))
-			address = 0x7000;
-		else if (!mame_stricmp(filetype, "a0"))
-			address = 0xa000;
-		else if (!mame_stricmp(filetype, "b0"))
-			address = 0xb000;
-
-		// special case for a 16K image containing two 8K files glued together
-		if (size == 0x4000 && address != 0x4000)
-		{
-			image.fread(ptr + address, 0x2000);
-			image.fread(ptr + 0xa000, 0x2000);
-			
-			memory_install_rom(program, address, address + 0x1fff, 0, 0, ptr + address);
-			memory_install_rom(program, 0xa000, 0xbfff, 0, 0, ptr + 0xa000);
-		}
-		else
-		{
-			image.fread(ptr + address, size);
-			memory_install_rom(program, address, (address + size) - 1, 0, 0, ptr + address);
-		}
+		memory_install_rom(program, address, address + 0x1fff, 0, 0, ptr + address);
+		memory_install_rom(program, 0xa000, 0xbfff, 0, 0, ptr + 0xa000);
 	}
 	else
 	{
-		size = image.get_software_region_length("4000");
-		if (size)
-		{
-			address = 0x4000;
-			memcpy(ptr + address, image.get_software_region("4000"), size);
-			memory_install_rom(program, address, (address + size) - 1, 0, 0, ptr + address);
-		}
-		
-		size = image.get_software_region_length("6000");
-		if (size)
-		{
-			address = 0x6000;
-			memcpy(ptr + address, image.get_software_region("6000"), size);
-			memory_install_rom(program, address, (address + size) - 1, 0, 0, ptr + address);
-		}
-		
-		size = image.get_software_region_length("a000");
-		if (size)
-		{
-			address = 0xa000;
-			memcpy(ptr + address, image.get_software_region("a000"), size);
-			memory_install_rom(program, address, (address + size) - 1, 0, 0, ptr + address);
-		}
+		image.fread( ptr + address, size);
+
+		memory_install_rom(program, address, (address + size) - 1, 0, 0, ptr + address);
 	}
 
 	return IMAGE_INIT_PASS;
@@ -651,7 +622,7 @@ static PALETTE_INIT( vic20 )
 
 static VIDEO_UPDATE( vic20 )
 {
-	vic20_state *state = screen->machine->driver_data<vic20_state>();
+	vic20_state *state = (vic20_state *)screen->machine->driver_data;
 	mos6560_video_update(state->mos6560, bitmap, cliprect);
 	return 0;
 }
@@ -660,7 +631,7 @@ static VIDEO_UPDATE( vic20 )
 
 static INTERRUPT_GEN( vic20_raster_interrupt )
 {
-	vic20_state *state = device->machine->driver_data<vic20_state>();
+	vic20_state *state = (vic20_state *)device->machine->driver_data;
 	mos6560_raster_interrupt_gen(state->mos6560);
 }
 
@@ -685,11 +656,7 @@ static MACHINE_DRIVER_START( vic20_common )
 	MDRV_CARTSLOT_ADD("cart")
 	MDRV_CARTSLOT_EXTENSION_LIST("20,40,60,70,a0,b0")
 	MDRV_CARTSLOT_NOT_MANDATORY
-	MDRV_CARTSLOT_INTERFACE("vic1001_cart")
 	MDRV_CARTSLOT_LOAD(vic20_cart)
-
-	/* software lists */
-	MDRV_SOFTWARE_LIST_ADD("cart_list","vic1001_cart")
 
 	/* internal ram */
 	MDRV_RAM_ADD("messram")

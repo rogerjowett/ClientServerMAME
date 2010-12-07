@@ -42,8 +42,6 @@ static VIDEO_START( a310 )
 
 static VIDEO_UPDATE( a310 )
 {
-	bitmap_fill(bitmap, cliprect, screen->machine->pens[0x10]);
-
 	return 0;
 }
 

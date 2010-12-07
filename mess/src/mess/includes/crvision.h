@@ -12,13 +12,12 @@
 #define BANK_ROM1		"bank1"
 #define BANK_ROM2		"bank2"
 
-class crvision_state : public driver_data_t
+class crvision_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, crvision_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, crvision_state(machine)); }
 
-	crvision_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	crvision_state(running_machine &machine) { }
 
 	/* keyboard state */
 	UINT8 keylatch;

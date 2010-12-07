@@ -13,13 +13,12 @@
 #define MCLK 10000000
 
 
-class mayumi_state : public driver_data_t
+class mayumi_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, mayumi_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, mayumi_state(machine)); }
 
-	mayumi_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	mayumi_state(running_machine &machine) { }
 
 	/* memory pointers */
 	UINT8 *    videoram;
@@ -42,7 +41,7 @@ public:
 
 static TILE_GET_INFO( get_tile_info )
 {
-	mayumi_state *state = machine->driver_data<mayumi_state>();
+	mayumi_state *state = (mayumi_state *)machine->driver_data;
 	int code = state->videoram[tile_index] + (state->videoram[tile_index + 0x800] & 0x1f) * 0x100;
 	int col = (state->videoram[tile_index + 0x1000] >> 3) & 0x1f;
 
@@ -51,20 +50,20 @@ static TILE_GET_INFO( get_tile_info )
 
 static VIDEO_START( mayumi )
 {
-	mayumi_state *state = machine->driver_data<mayumi_state>();
+	mayumi_state *state = (mayumi_state *)machine->driver_data;
 	state->tilemap = tilemap_create(machine, get_tile_info, tilemap_scan_rows, 8, 8, 64, 32);
 }
 
 static WRITE8_HANDLER( mayumi_videoram_w )
 {
-	mayumi_state *state = space->machine->driver_data<mayumi_state>();
+	mayumi_state *state = (mayumi_state *)space->machine->driver_data;
 	state->videoram[offset] = data;
 	tilemap_mark_tile_dirty(state->tilemap, offset & 0x7ff);
 }
 
 static VIDEO_UPDATE( mayumi )
 {
-	mayumi_state *state = screen->machine->driver_data<mayumi_state>();
+	mayumi_state *state = (mayumi_state *)screen->machine->driver_data;
 	tilemap_draw(bitmap, cliprect, state->tilemap, 0, 0);
 	return 0;
 }
@@ -77,7 +76,7 @@ static VIDEO_UPDATE( mayumi )
 
 static INTERRUPT_GEN( mayumi_interrupt )
 {
-	mayumi_state *state = device->machine->driver_data<mayumi_state>();
+	mayumi_state *state = (mayumi_state *)device->machine->driver_data;
 
 	if (state->int_enable)
 		 cpu_set_input_line(device, 0, HOLD_LINE);
@@ -91,7 +90,7 @@ static INTERRUPT_GEN( mayumi_interrupt )
 
 static WRITE8_HANDLER( bank_sel_w )
 {
-	mayumi_state *state = space->machine->driver_data<mayumi_state>();
+	mayumi_state *state = (mayumi_state *)space->machine->driver_data;
 	int bank = BIT(data, 7) | (BIT(data, 6) << 1);
 
 	memory_set_bank(space->machine, "bank1", bank);
@@ -103,13 +102,13 @@ static WRITE8_HANDLER( bank_sel_w )
 
 static WRITE8_HANDLER( input_sel_w )
 {
-	mayumi_state *state = space->machine->driver_data<mayumi_state>();
+	mayumi_state *state = (mayumi_state *)space->machine->driver_data;
 	state->input_sel = data;
 }
 
 static READ8_HANDLER( key_matrix_r )
 {
-	mayumi_state *state = space->machine->driver_data<mayumi_state>();
+	mayumi_state *state = (mayumi_state *)space->machine->driver_data;
 	int p, i, ret;
 	static const char *const keynames[2][5] =
 			{
@@ -350,7 +349,7 @@ static const ym2203_interface ym2203_config =
 
 static MACHINE_START( mayumi )
 {
-	mayumi_state *state = machine->driver_data<mayumi_state>();
+	mayumi_state *state = (mayumi_state *)machine->driver_data;
 	UINT8 *ROM = memory_region(machine, "maincpu");
 
 	memory_configure_bank(machine, "bank1", 0, 4, &ROM[0x10000], 0x4000);
@@ -362,7 +361,7 @@ static MACHINE_START( mayumi )
 
 static MACHINE_RESET( mayumi )
 {
-	mayumi_state *state = machine->driver_data<mayumi_state>();
+	mayumi_state *state = (mayumi_state *)machine->driver_data;
 
 	state->int_enable = 0;
 	state->input_sel = 0;

@@ -157,17 +157,6 @@ typedef struct _generic_audio_private generic_audio_private;
 typedef tagged_list<region_info> region_list;
 
 
-// base class for all driver data structures
-class driver_data_t
-{
-public:
-	driver_data_t(running_machine &machine);
-	virtual ~driver_data_t();
-
-	running_machine &	m_machine;
-};
-
-
 // memory region
 class region_info
 {
@@ -242,7 +231,6 @@ struct generic_pointers
 };
 
 
-// system time description, both local and UTC
 class system_time
 {
 public:
@@ -397,8 +385,7 @@ public:
 	debug_view_manager *	m_debug_view;		// internal data from debugvw.c
 
 	// driver-specific information
-	template<class T>
-	T *driver_data() const { return downcast<T *>(m_driver_data); }
+	void *					driver_data;		// drivers can hang data off of here instead of using globals
 
 private:
 	void start();
@@ -461,8 +448,6 @@ private:
 
 	// base time
 	time_t					m_base_time;
-
-	driver_data_t *			m_driver_data;		// drivers can hang data off of here instead of using globals
 };
 
 

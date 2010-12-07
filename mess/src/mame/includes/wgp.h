@@ -4,13 +4,12 @@
 
 *************************************************************************/
 
-class wgp_state : public driver_data_t
+class wgp_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, wgp_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, wgp_state(machine)); }
 
-	wgp_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	wgp_state(running_machine &machine) { }
 
 	/* memory pointers */
 	UINT16 *    spritemap;

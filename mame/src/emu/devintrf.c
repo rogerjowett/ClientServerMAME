@@ -857,7 +857,7 @@ void device_t::start()
 	state_registrations = state_save_get_reg_count(machine) - state_registrations;
 	device_execute_interface *exec;
 	device_sound_interface *sound;
-	if (state_registrations == 0 && (interface(exec) || interface(sound)))
+	if (state_registrations == 0 && (dev_interface(exec) || dev_interface(sound)))
 	{
 		logerror("Device '%s' did not register any state to save!\n", tag());
 		if ((m_machine.gamedrv->flags & GAME_SUPPORTS_SAVE) != 0)

@@ -153,13 +153,12 @@ Notes:
     TYPE DEFINITIONS
 ***************************************************************************/
 
-class vtech1_state : public driver_data_t
+class vtech1_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, vtech1_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, vtech1_state(machine)); }
 
-	vtech1_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	vtech1_state(running_machine &machine) { }
 
 	/* devices */
 	running_device *mc6847;
@@ -192,7 +191,7 @@ public:
 
 static SNAPSHOT_LOAD( vtech1 )
 {
-	vtech1_state *vtech1 = image.device().machine->driver_data<vtech1_state>();
+	vtech1_state *vtech1 = (vtech1_state *)image.device().machine->driver_data;
 	const address_space *space = cputag_get_address_space(image.device().machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 	UINT8 i, header[24];
 	UINT16 start, end, size;
@@ -301,7 +300,7 @@ static Z80BIN_EXECUTE( vtech1 )
 ***************************************************************************/
 static void vtech1_load_proc(device_image_interface &image)
 {
-	vtech1_state *vtech1 = image.device().machine->driver_data<vtech1_state>();
+	vtech1_state *vtech1 = (vtech1_state *)image.device().machine->driver_data;
 	int id = floppy_get_drive(&image.device());
 
 	if (image.is_writable())
@@ -312,7 +311,7 @@ static void vtech1_load_proc(device_image_interface &image)
 
 static void vtech1_get_track(running_machine *machine)
 {
-	vtech1_state *vtech1 = machine->driver_data<vtech1_state>();
+	vtech1_state *vtech1 = (vtech1_state *)machine->driver_data;
 	device_image_interface *image = dynamic_cast<device_image_interface *>(floppy_get_device(machine,vtech1->drive));
 
 	/* drive selected or and image file ok? */
@@ -332,7 +331,7 @@ static void vtech1_get_track(running_machine *machine)
 
 static void vtech1_put_track(running_machine *machine)
 {
-	vtech1_state *vtech1 = machine->driver_data<vtech1_state>();
+	vtech1_state *vtech1 = (vtech1_state *)machine->driver_data;
 
 
     /* drive selected and image file ok? */
@@ -350,7 +349,7 @@ static void vtech1_put_track(running_machine *machine)
 
 static READ8_HANDLER( vtech1_fdc_r )
 {
-	vtech1_state *vtech1 = space->machine->driver_data<vtech1_state>();
+	vtech1_state *vtech1 = (vtech1_state *)space->machine->driver_data;
     int data = 0xff;
 
     switch (offset)
@@ -398,7 +397,7 @@ static READ8_HANDLER( vtech1_fdc_r )
 
 static WRITE8_HANDLER( vtech1_fdc_w )
 {
-	vtech1_state *vtech1 = space->machine->driver_data<vtech1_state>();
+	vtech1_state *vtech1 = (vtech1_state *)space->machine->driver_data;
 	int drive;
 
     switch (offset)
@@ -584,7 +583,7 @@ static READ8_HANDLER( vtech1_joystick_r )
 
 static READ8_HANDLER( vtech1_keyboard_r )
 {
-	vtech1_state *vtech1 = space->machine->driver_data<vtech1_state>();
+	vtech1_state *vtech1 = (vtech1_state *)space->machine->driver_data;
 	UINT8 result = 0x3f;
 
 	/* bit 0 to 5, keyboard input */
@@ -613,7 +612,7 @@ static READ8_HANDLER( vtech1_keyboard_r )
 
 static WRITE8_HANDLER( vtech1_latch_w )
 {
-	vtech1_state *vtech1 = space->machine->driver_data<vtech1_state>();
+	vtech1_state *vtech1 = (vtech1_state *)space->machine->driver_data;
 
 	if (LOG_VTECH1_LATCH)
 		logerror("vtech1_latch_w $%02X\n", data);
@@ -643,7 +642,7 @@ static WRITE8_HANDLER( vtech1_latch_w )
 
 static WRITE8_HANDLER( vtech1_memory_bank_w )
 {
-	vtech1_state *vtech1 = space->machine->driver_data<vtech1_state>();
+	vtech1_state *vtech1 = (vtech1_state *)space->machine->driver_data;
 
 	logerror("vtech1_memory_bank_w $%02X\n", data);
 
@@ -673,7 +672,7 @@ static READ8_DEVICE_HANDLER( vtech1_mc6847_videoram_r )
 
 static VIDEO_UPDATE( vtech1 )
 {
-	vtech1_state *vtech1 = screen->machine->driver_data<vtech1_state>();
+	vtech1_state *vtech1 = (vtech1_state *)screen->machine->driver_data;
 	return mc6847_update(vtech1->mc6847, bitmap, cliprect);
 }
 
@@ -684,7 +683,7 @@ static VIDEO_UPDATE( vtech1 )
 
 static DRIVER_INIT( vtech1 )
 {
-	vtech1_state *vtech1 = machine->driver_data<vtech1_state>();
+	vtech1_state *vtech1 = (vtech1_state *)machine->driver_data;
 	const address_space *prg = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 	int id;
 

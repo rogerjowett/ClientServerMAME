@@ -1237,7 +1237,7 @@ static void define_state(running_device *device)
 	UINT32 addrmask = (m68k->cpu_type & MASK_24BIT_SPACE) ? 0xffffff : 0xffffffff;
 
 	device_state_interface *state;
-	device->interface(state);
+	device->dev_interface(state);
 	state->state_add(M68K_PC,         "PC",        m68k->pc).mask(addrmask);
 	state->state_add(STATE_GENPC,     "GENPC",     m68k->pc).mask(addrmask).noshow();
 	state->state_add(STATE_GENPCBASE, "GENPCBASE", m68k->ppc).mask(addrmask).noshow();

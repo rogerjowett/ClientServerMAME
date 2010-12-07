@@ -124,13 +124,12 @@ Notes:
 
 #define IDLE_LOOP_SPEEDUP
 
-class crystal_state : public driver_data_t
+class crystal_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, crystal_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, crystal_state(machine)); }
 
-	crystal_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	crystal_state(running_machine &machine) { }
 
 	/* memory pointers */
 	UINT32 *  workram;
@@ -160,7 +159,7 @@ public:
 
 static void IntReq( running_machine *machine, int num )
 {
-	crystal_state *state = machine->driver_data<crystal_state>();
+	crystal_state *state = (crystal_state *)machine->driver_data;
 	const address_space *space = cpu_get_address_space(state->maincpu, ADDRESS_SPACE_PROGRAM);
 	UINT32 IntEn = memory_read_dword(space, 0x01800c08);
 	UINT32 IntPend = memory_read_dword(space, 0x01800c0c);
@@ -178,7 +177,7 @@ static void IntReq( running_machine *machine, int num )
 
 static READ32_HANDLER( FlipCount_r )
 {
-	crystal_state *state = space->machine->driver_data<crystal_state>();
+	crystal_state *state = (crystal_state *)space->machine->driver_data;
 
 #ifdef IDLE_LOOP_SPEEDUP
 	UINT32 IntPend = memory_read_dword(space, 0x01800c0c);
@@ -191,7 +190,7 @@ static READ32_HANDLER( FlipCount_r )
 
 static WRITE32_HANDLER( FlipCount_w )
 {
-	crystal_state *state = space->machine->driver_data<crystal_state>();
+	crystal_state *state = (crystal_state *)space->machine->driver_data;
 
 	if (mem_mask & 0x00ff0000)
 	{
@@ -205,7 +204,7 @@ static WRITE32_HANDLER( FlipCount_w )
 
 static READ32_HANDLER( Input_r )
 {
-	crystal_state *state = space->machine->driver_data<crystal_state>();
+	crystal_state *state = (crystal_state *)space->machine->driver_data;
 
 	if (offset == 0)
 		return input_port_read(space->machine, "P1_P2");
@@ -226,7 +225,7 @@ static READ32_HANDLER( Input_r )
 
 static WRITE32_HANDLER( IntAck_w )
 {
-	crystal_state *state = space->machine->driver_data<crystal_state>();
+	crystal_state *state = (crystal_state *)space->machine->driver_data;
 	UINT32 IntPend = memory_read_dword(space, 0x01800c0c);
 
 	if (mem_mask & 0xff)
@@ -242,7 +241,7 @@ static WRITE32_HANDLER( IntAck_w )
 
 static IRQ_CALLBACK( icallback )
 {
-	crystal_state *state = device->machine->driver_data<crystal_state>();
+	crystal_state *state = (crystal_state *)device->machine->driver_data;
 	const address_space *space = cpu_get_address_space(device, ADDRESS_SPACE_PROGRAM);
 	UINT32 IntPend = memory_read_dword(space, 0x01800c0c);
 	int i;
@@ -259,7 +258,7 @@ static IRQ_CALLBACK( icallback )
 
 static WRITE32_HANDLER( Banksw_w )
 {
-	crystal_state *state = space->machine->driver_data<crystal_state>();
+	crystal_state *state = (crystal_state *)space->machine->driver_data;
 
 	state->Bank = (data >> 1) & 7;
 	if (state->Bank <= 2)
@@ -270,7 +269,7 @@ static WRITE32_HANDLER( Banksw_w )
 
 static TIMER_CALLBACK( Timercb )
 {
-	crystal_state *state = machine->driver_data<crystal_state>();
+	crystal_state *state = (crystal_state *)machine->driver_data;
 	int which = (int)(FPTR)ptr;
 	static const int num[] = { 0, 1, 9, 10 };
 
@@ -282,7 +281,7 @@ static TIMER_CALLBACK( Timercb )
 
 INLINE void Timer_w( const address_space *space, int which, UINT32 data, UINT32 mem_mask )
 {
-	crystal_state *state = space->machine->driver_data<crystal_state>();
+	crystal_state *state = (crystal_state *)space->machine->driver_data;
 
 	if (((data ^ state->Timerctrl[which]) & 1) && (data & 1))	//Timer activate
 	{
@@ -305,7 +304,7 @@ static WRITE32_HANDLER( Timer0_w )
 
 static READ32_HANDLER( Timer0_r )
 {
-	crystal_state *state = space->machine->driver_data<crystal_state>();
+	crystal_state *state = (crystal_state *)space->machine->driver_data;
 	return state->Timerctrl[0];
 }
 
@@ -316,7 +315,7 @@ static WRITE32_HANDLER( Timer1_w )
 
 static READ32_HANDLER( Timer1_r )
 {
-	crystal_state *state = space->machine->driver_data<crystal_state>();
+	crystal_state *state = (crystal_state *)space->machine->driver_data;
 	return state->Timerctrl[1];
 }
 
@@ -327,7 +326,7 @@ static WRITE32_HANDLER( Timer2_w )
 
 static READ32_HANDLER( Timer2_r )
 {
-	crystal_state *state = space->machine->driver_data<crystal_state>();
+	crystal_state *state = (crystal_state *)space->machine->driver_data;
 	return state->Timerctrl[2];
 }
 
@@ -338,13 +337,13 @@ static WRITE32_HANDLER( Timer3_w )
 
 static READ32_HANDLER( Timer3_r )
 {
-	crystal_state *state = space->machine->driver_data<crystal_state>();
+	crystal_state *state = (crystal_state *)space->machine->driver_data;
 	return state->Timerctrl[3];
 }
 
 static READ32_HANDLER( FlashCmd_r )
 {
-	crystal_state *state = space->machine->driver_data<crystal_state>();
+	crystal_state *state = (crystal_state *)space->machine->driver_data;
 
 	if ((state->FlashCmd & 0xff) == 0xff)
 	{
@@ -368,19 +367,19 @@ static READ32_HANDLER( FlashCmd_r )
 
 static WRITE32_HANDLER( FlashCmd_w )
 {
-	crystal_state *state = space->machine->driver_data<crystal_state>();
+	crystal_state *state = (crystal_state *)space->machine->driver_data;
 	state->FlashCmd = data;
 }
 
 static READ32_HANDLER( PIO_r )
 {
-	crystal_state *state = space->machine->driver_data<crystal_state>();
+	crystal_state *state = (crystal_state *)space->machine->driver_data;
 	return state->PIO;
 }
 
 static WRITE32_HANDLER( PIO_w )
 {
-	crystal_state *state = space->machine->driver_data<crystal_state>();
+	crystal_state *state = (crystal_state *)space->machine->driver_data;
 	UINT32 RST = data & 0x01000000;
 	UINT32 CLK = data & 0x02000000;
 	UINT32 DAT = data & 0x10000000;
@@ -401,7 +400,7 @@ static WRITE32_HANDLER( PIO_w )
 
 INLINE void DMA_w( const address_space *space, int which, UINT32 data, UINT32 mem_mask )
 {
-	crystal_state *state = space->machine->driver_data<crystal_state>();
+	crystal_state *state = (crystal_state *)space->machine->driver_data;
 
 	if (((data ^ state->DMActrl[which]) & (1 << 10)) && (data & (1 << 10)))	//DMAOn
 	{
@@ -444,7 +443,7 @@ INLINE void DMA_w( const address_space *space, int which, UINT32 data, UINT32 me
 
 static READ32_HANDLER( DMA0_r )
 {
-	crystal_state *state = space->machine->driver_data<crystal_state>();
+	crystal_state *state = (crystal_state *)space->machine->driver_data;
 	return state->DMActrl[0];
 }
 
@@ -455,7 +454,7 @@ static WRITE32_HANDLER( DMA0_w )
 
 static READ32_HANDLER( DMA1_r )
 {
-	crystal_state *state = space->machine->driver_data<crystal_state>();
+	crystal_state *state = (crystal_state *)space->machine->driver_data;
 	return state->DMActrl[1];
 }
 
@@ -523,7 +522,7 @@ loop:
     JMP Loop1
 */
 
-	crystal_state *state = machine->driver_data<crystal_state>();
+	crystal_state *state = (crystal_state *)machine->driver_data;
 
 #if 1
 	static const UINT32 Patch[] =
@@ -551,7 +550,7 @@ loop:
 
 static STATE_POSTLOAD( crystal_banksw_postload )
 {
-	crystal_state *state = machine->driver_data<crystal_state>();
+	crystal_state *state = (crystal_state *)machine->driver_data;
 
 	if (state->Bank <= 2)
 		memory_set_bankptr(machine, "bank1", memory_region(machine, "user1") + state->Bank * 0x1000000);
@@ -561,7 +560,7 @@ static STATE_POSTLOAD( crystal_banksw_postload )
 
 static MACHINE_START( crystal )
 {
-	crystal_state *state = machine->driver_data<crystal_state>();
+	crystal_state *state = (crystal_state *)machine->driver_data;
 	int i;
 
 	state->maincpu = machine->device("maincpu");
@@ -591,7 +590,7 @@ static MACHINE_START( crystal )
 
 static MACHINE_RESET( crystal )
 {
-	crystal_state *state = machine->driver_data<crystal_state>();
+	crystal_state *state = (crystal_state *)machine->driver_data;
 	int i;
 
 	memset(state->sysregs, 0, 0x10000);
@@ -634,7 +633,7 @@ static void SetVidReg( const address_space *space, UINT16 reg, UINT16 val )
 
 static VIDEO_UPDATE( crystal )
 {
-	crystal_state *state = screen->machine->driver_data<crystal_state>();
+	crystal_state *state = (crystal_state *)screen->machine->driver_data;
 	const address_space *space = cputag_get_address_space(screen->machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 	int DoFlip;
 
@@ -695,7 +694,7 @@ static VIDEO_UPDATE( crystal )
 
 static VIDEO_EOF(crystal)
 {
-	crystal_state *state = machine->driver_data<crystal_state>();
+	crystal_state *state = (crystal_state *)machine->driver_data;
 	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 	UINT16 head, tail;
 	int DoFlip = 0;

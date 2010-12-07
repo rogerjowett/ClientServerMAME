@@ -163,10 +163,12 @@ const options_entry mame_core_options[] =
 	{ "bios",                        NULL,        0,                 "select the system BIOS to use" },
 	{ "cheat;c",                     "0",         OPTION_BOOLEAN,    "enable cheat subsystem" },
 	{ "skip_gameinfo",               "1",         OPTION_BOOLEAN,    "skip displaying the information screen at startup" },
+	{ "username",               "Player",         0,    "Username for displaying network info" },
 	{ "server",               "0",         OPTION_BOOLEAN,    "Is this a server in the network" },
 	{ "client",               "0",         OPTION_BOOLEAN,    "Is this a client in the network" },
 	{ "hostname",               "127.0.0.1",         0,    "hostname of server to connect to" },
 	{ "port",               "5805",         0,    "port of server to connect to" },
+	{ "selfport",               "5805",         0,    "local port for other peers to connect to" },
 	{ "secondsbetweensync",               "30",         0,    "Number of seconds to wait between syncs" },
 	{ "synctransferseconds",               "10",         0,    "Number of seconds to spend transfering the sync" },
 

@@ -289,7 +289,7 @@ DEVICE_IMAGE_LOAD( a5200_cart )
 		const char *info;
 		memcpy(&mem[0x4000], &mem[0x8000], 0x4000);
 		info = image.extrainfo();
-		if (strcmp(info, "") && !strcmp(info, "A13MIRRORING"))
+		if (info!=NULL && strcmp(info, "A13MIRRORING")==0)
 		{
 			memcpy(&mem[0x8000], &mem[0xa000], 0x2000);
 			memcpy(&mem[0x6000], &mem[0x4000], 0x2000);

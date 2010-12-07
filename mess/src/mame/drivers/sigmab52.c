@@ -336,11 +336,9 @@ ADDRESS_MAP_END
 
 */
 
-#ifdef UNUSED_CODE
 static ADDRESS_MAP_START( sound_prog_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x8000, 0xffff) AM_ROM
 ADDRESS_MAP_END
-#endif
 
 /* Unknown R/W:
 

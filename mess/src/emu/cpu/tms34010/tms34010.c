@@ -633,7 +633,7 @@ static CPU_INIT( tms34010 )
 	/* set up the state table */
 	{
 		device_state_interface *state;
-		device->interface(state);
+		device->dev_interface(state);
 		state->state_add(TMS34010_PC,     "PC",        tms->pc);
 		state->state_add(STATE_GENPC,     "GENPC",     tms->pc).noshow();
 		state->state_add(STATE_GENPCBASE, "GENPCBASE", tms->ppc).noshow();

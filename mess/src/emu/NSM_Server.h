@@ -2,51 +2,43 @@
 
 #include "zlib.h"
 
-Server *createGlobalServer(string _port);
+Server *createGlobalServer(string _username,unsigned short _port);
 
 void deleteGlobalServer();
 
-class Session
+class Server : public Common
 {
 protected:
-    vector< string > inputBufferQueue;
-    RakNet::RakNetGUID guid;
+    //vector<Session> sessions;
+
+	vector<MemoryBlock> initialBlocks;
+
+    int port;
+
+	bool firstSync;
+
+	list<pair<unsigned char *,int> > syncPacketQueue;
+
+	int syncTransferSeconds;
+
+	RakNet::TimeUS syncTime;
+
+    std::vector<RakNet::SystemAddress> acceptedPeers;
+    std::map<RakNet::SystemAddress,std::vector<RakNet::SystemAddress> > waitingForAcceptFrom;
+    int lastUsedPeerID;
+    int maxPeerID;
+    std::map<RakNet::SystemAddress,int> deadPeerIDs;
+
+    std::map<RakNet::SystemAddress,string> candidateNames;
 
 public:
-    Session(const RakNet::RakNetGUID &_guid);
-
-    void pushInputBuffer(const string &s);
-
-    string popInputBuffer();
-
-    const RakNet::RakNetGUID &getGUID() const
-    {
-	    return guid;
-    }
-
-    void setGUID(const RakNet::RakNetGUID &_guid)
-    {
-	    guid = _guid;
-    }
-};
-
-class Server
-{
-protected:
-	RakNet::RakPeerInterface *rakInterface;
-
-    vector<Session> sessions;
-
-	vector<MemoryBlock> blocks,staleBlocks,xorBlocks;
-
-    vector<MemoryBlock> constBlocks;
-
-    string port;
-
-public:
-	Server(string _port);
+	Server(string _username,int _port);
 
     ~Server();
+
+    void acceptPeer(RakNet::SystemAddress saToAccept);
+
+    void removePeer(RakNet::SystemAddress sa);
 
 	bool initializeConnection();
 
@@ -54,52 +46,24 @@ public:
 
 	MemoryBlock createMemoryBlock(unsigned char* ptr,int size);
 
-    string popInputBuffer(int clientIndex)
-    {
-        return sessions[clientIndex].popInputBuffer();
-    }
-
-	int getNumBlocks()
-	{
-		return int(blocks.size());
-	}
-
-	MemoryBlock getMemoryBlock(int i)
-	{
-		return blocks[i];
-	}
-
-	void initialSync(const RakNet::RakNetGUID &guid);
+	void initialSync(const RakNet::SystemAddress &sa);
 
 	void update();
 
 	void sync();
 
-	int getNumSessions() { return int(sessions.size()); }
-
-    int getSessionIndexFromGUID(const RakNet::RakNetGUID &guid)
-	{
-		for(int a=0;a<(int)sessions.size();a++)
-		{
-			if(sessions[a].getGUID()==guid)
-			{
-				return a;
-			}
-		}
-        return -1;
-	}
-
-    void sendString(const string &outputString);
-
-    void addConstBlock(unsigned char *tmpdata,int size);
+    void popSyncQueue();
 
     int getClientID(int i)
     {
 	    return i+1;
     }
-	
-	string getLatencyString(int connectionIndex);
 
-	string getStatisticsString();
+	void setSyncTransferTime(int _syncTransferSeconds)
+	{
+		syncTransferSeconds = _syncTransferSeconds;
+	}
+
+    void sendInputs(const string &inputString);
 };
 

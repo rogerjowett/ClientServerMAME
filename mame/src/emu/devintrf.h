@@ -182,7 +182,7 @@ public:
 	bool first(I *&intf) const
 	{
 		for (T *cur = super::first(); cur != NULL; cur = cur->next())
-			if (cur->interface(intf))
+			if (cur->dev_interface(intf))
 				return true;
 		return false;
 	}
@@ -244,11 +244,11 @@ public:
 	device_config *owner() const { return m_owner; }
 
 	// interface helpers
-	template<class T> bool interface(const T *&intf) const { intf = dynamic_cast<const T *>(this); return (intf != NULL); }
+	template<class T> bool dev_interface(const T *&intf) const { intf = dynamic_cast<const T *>(this); return (intf != NULL); }
 	template<class T> bool next(T *&intf) const
 	{
 		for (device_config *cur = m_next; cur != NULL; cur = cur->m_next)
-			if (cur->interface(intf))
+			if (cur->dev_interface(intf))
 				return true;
 		return false;
 	}
@@ -367,19 +367,19 @@ public:
 	device_t *owner() const { return m_owner; }
 
 	// interface helpers
-	template<class T> bool interface(T *&intf) { intf = dynamic_cast<T *>(this); return (intf != NULL); }
+	template<class T> bool dev_interface(T *&intf) { intf = dynamic_cast<T *>(this); return (intf != NULL); }
 	template<class T> bool next(T *&intf)
 	{
 		for (device_t *cur = m_next; cur != NULL; cur = cur->m_next)
-			if (cur->interface(intf))
+			if (cur->dev_interface(intf))
 				return true;
 		return false;
 	}
 
 	// specialized helpers
-	bool interface(device_execute_interface *&intf) { intf = m_execute; return (intf != NULL); }
-	bool interface(device_memory_interface *&intf) { intf = m_memory; return (intf != NULL); }
-	bool interface(device_state_interface *&intf) { intf = m_state; return (intf != NULL); }
+	bool dev_interface(device_execute_interface *&intf) { intf = m_execute; return (intf != NULL); }
+	bool dev_interface(device_memory_interface *&intf) { intf = m_memory; return (intf != NULL); }
+	bool dev_interface(device_state_interface *&intf) { intf = m_state; return (intf != NULL); }
 
 	// owned object helpers
 	astring &subtag(astring &dest, const char *tag) const { return m_baseconfig.subtag(dest, tag); }

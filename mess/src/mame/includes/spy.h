@@ -4,13 +4,12 @@
 
 *************************************************************************/
 
-class spy_state : public driver_data_t
+class spy_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, spy_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, spy_state(machine)); }
 
-	spy_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	spy_state(running_machine &machine) { }
 
 	/* memory pointers */
 	UINT8 *    ram;

@@ -46,14 +46,13 @@ LOIPOIO-B
 #include "sound/mos6560.h"
 
 
-class attckufo_state : public driver_data_t
+class attckufo_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, attckufo_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, attckufo_state(machine)); }
 
 	attckufo_state(running_machine &machine)
-		: driver_data_t(machine),
-		  maincpu(machine.device<cpu_device>("maincpu")),
+		: maincpu(machine.device<cpu_device>("maincpu")),
 		  mos6560(machine.device("mos6560")) { }
 
 	/* memory pointers */
@@ -158,26 +157,26 @@ INPUT_PORTS_END
 
 static INTERRUPT_GEN( attckufo_raster_interrupt )
 {
-	attckufo_state *state = device->machine->driver_data<attckufo_state>();
+	attckufo_state *state = (attckufo_state *)device->machine->driver_data;
 	mos6560_raster_interrupt_gen(state->mos6560);
 }
 
 static VIDEO_UPDATE( attckufo )
 {
-	attckufo_state *state = screen->machine->driver_data<attckufo_state>();
+	attckufo_state *state = (attckufo_state *)screen->machine->driver_data;
 	mos6560_video_update(state->mos6560, bitmap, cliprect);
 	return 0;
 }
 
 static int attckufo_dma_read( running_machine *machine, int offset )
 {
-	attckufo_state *state = machine->driver_data<attckufo_state>();
+	attckufo_state *state = (attckufo_state *)machine->driver_data;
 	return memory_read_byte(state->maincpu->space(AS_PROGRAM), offset);
 }
 
 static int attckufo_dma_read_color( running_machine *machine, int offset )
 {
-	attckufo_state *state = machine->driver_data<attckufo_state>();
+	attckufo_state *state = (attckufo_state *)machine->driver_data;
 	return memory_read_byte(state->maincpu->space(AS_PROGRAM), offset + 0x400);
 }
 

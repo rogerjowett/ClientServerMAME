@@ -26,13 +26,12 @@
 #define UNIO_CENTRONICS1_TAG	"n3"
 #define UNIO_CENTRONICS2_TAG	"n4"
 
-class prof80_state : public driver_data_t
+class prof80_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, prof80_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, prof80_state(machine)); }
 
-	prof80_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	prof80_state(running_machine &machine) { }
 
 	/* memory state */
 	UINT8 mmu[16];			/* MMU block register */

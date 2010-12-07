@@ -124,6 +124,16 @@ public:
         return seconds<other.seconds || (seconds==other.seconds && attoseconds<other.attoseconds);
     }
 
+    bool operator<=(const attotime &other) const
+    {
+        return seconds<other.seconds || (seconds==other.seconds && attoseconds<=other.attoseconds);
+    }
+
+    bool operator>=(const attotime &other) const
+    {
+        return seconds>other.seconds || (seconds==other.seconds && attoseconds>=other.attoseconds);
+    }
+
     bool operator>(const attotime &other) const
     {
         return seconds>other.seconds || (seconds==other.seconds && attoseconds>other.attoseconds);

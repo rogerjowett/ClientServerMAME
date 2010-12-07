@@ -17,6 +17,7 @@ OBJDIRS += \
 	$(LIBOBJ)/util \
 	$(LIBOBJ)/expat \
 	$(LIBOBJ)/zlib \
+	$(LIBOBJ)/miniupnpc-1.4.20100609 \
 	$(LIBOBJ)/softfloat \
 
 
@@ -55,6 +56,24 @@ UTILOBJS = \
 
 $(OBJ)/libutil.a: $(UTILOBJS)
 
+MINIUPNPCOBJS = \
+	$(LIBOBJ)/miniupnpc-1.4.20100609/connecthostport.o \
+	$(LIBOBJ)/miniupnpc-1.4.20100609/igd_desc_parse.o \
+	$(LIBOBJ)/miniupnpc-1.4.20100609/minissdpc.o \
+	$(LIBOBJ)/miniupnpc-1.4.20100609/minisoap.o \
+	$(LIBOBJ)/miniupnpc-1.4.20100609/miniupnpc.o \
+	$(LIBOBJ)/miniupnpc-1.4.20100609/miniwget.o \
+	$(LIBOBJ)/miniupnpc-1.4.20100609/minixml.o \
+	$(LIBOBJ)/miniupnpc-1.4.20100609/upnpc.o \
+	$(LIBOBJ)/miniupnpc-1.4.20100609/upnpcommands.o \
+	$(LIBOBJ)/miniupnpc-1.4.20100609/upnperrors.o \
+	$(LIBOBJ)/miniupnpc-1.4.20100609/upnpreplyparse.o \
+
+$(OBJ)/libminiupnpc.a: $(MINIUPNPCOBJS)
+
+$(LIBOBJ)/miniupnpc-1.4.20100609/%.o: $(LIBSRC)/miniupnpc-1.4.20100609/%.c | $(OSPREBUILD)
+	@echo Compiling $<...
+	$(CC) $(CDEFS) $(CCOMFLAGS) $(CONLYFLAGS) -c $< -o $@
 
 
 #-------------------------------------------------
@@ -111,4 +130,5 @@ SOFTFLOATOBJS = \
 $(OBJ)/libsoftfloat.a: $(SOFTFLOATOBJS)
 
 $(LIBOBJ)/softfloat/softfloat.o: $(LIBSRC)/softfloat/softfloat.c $(LIBSRC)/softfloat/softfloat.h $(LIBSRC)/softfloat/softfloat-macros $(LIBSRC)/softfloat/softfloat-specialize
+
 

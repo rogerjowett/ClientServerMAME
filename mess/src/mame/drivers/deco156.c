@@ -22,14 +22,13 @@
 #include "sound/ymz280b.h"
 #include "video/deco16ic.h"
 
-class deco156_state : public driver_data_t
+class deco156_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, deco156_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, deco156_state(machine)); }
 
 	deco156_state(running_machine &machine)
-		: driver_data_t(machine),
-		  oki2(machine.device<okim6295_device>("oki2")) { }
+		: oki2(machine.device<okim6295_device>("oki2")) { }
 
 	/* memory pointers */
 	UINT16 *  pf1_rowscroll;
@@ -44,7 +43,7 @@ public:
 
 static VIDEO_START( wcvol95 )
 {
-	deco156_state *state = machine->driver_data<deco156_state>();
+	deco156_state *state = (deco156_state *)machine->driver_data;
 
 	/* allocate the ram as 16-bit (we do it here because the CPU is 32-bit) */
 	state->pf1_rowscroll = auto_alloc_array(machine, UINT16, 0x800/2);
@@ -139,7 +138,7 @@ static void draw_sprites(running_machine *machine, bitmap_t *bitmap,const rectan
 
 static VIDEO_UPDATE( wcvol95 )
 {
-	deco156_state *state = screen->machine->driver_data<deco156_state>();
+	deco156_state *state = (deco156_state *)screen->machine->driver_data;
 
 	bitmap_fill(screen->machine->priority_bitmap, NULL, 0);
 	bitmap_fill(bitmap, NULL, 0);
@@ -156,7 +155,7 @@ static VIDEO_UPDATE( wcvol95 )
 
 static WRITE32_HANDLER(hvysmsh_eeprom_w)
 {
-	deco156_state *state = space->machine->driver_data<deco156_state>();
+	deco156_state *state = (deco156_state *)space->machine->driver_data;
 	if (ACCESSING_BITS_0_7)
 	{
 		state->oki2->set_bank_base(0x40000 * (data & 0x7));
@@ -190,10 +189,10 @@ static WRITE32_HANDLER( deco156_nonbuffered_palette_w )
 	palette_set_color(space->machine,offset,MAKE_RGB(r,g,b));
 }
 
-static READ32_HANDLER( wcvol95_pf1_rowscroll_r ) { deco156_state *state = space->machine->driver_data<deco156_state>(); return state->pf1_rowscroll[offset] ^ 0xffff0000; }
-static READ32_HANDLER( wcvol95_pf2_rowscroll_r ) { deco156_state *state = space->machine->driver_data<deco156_state>();	return state->pf2_rowscroll[offset] ^ 0xffff0000; }
-static WRITE32_HANDLER( wcvol95_pf1_rowscroll_w ) { deco156_state *state = space->machine->driver_data<deco156_state>(); data &= 0x0000ffff; mem_mask &= 0x0000ffff; COMBINE_DATA(&state->pf1_rowscroll[offset]); }
-static WRITE32_HANDLER( wcvol95_pf2_rowscroll_w ) { deco156_state *state = space->machine->driver_data<deco156_state>(); data &= 0x0000ffff; mem_mask &= 0x0000ffff; COMBINE_DATA(&state->pf2_rowscroll[offset]); }
+static READ32_HANDLER( wcvol95_pf1_rowscroll_r ) { deco156_state *state = (deco156_state *)space->machine->driver_data; return state->pf1_rowscroll[offset] ^ 0xffff0000; }
+static READ32_HANDLER( wcvol95_pf2_rowscroll_r ) { deco156_state *state = (deco156_state *)space->machine->driver_data;	return state->pf2_rowscroll[offset] ^ 0xffff0000; }
+static WRITE32_HANDLER( wcvol95_pf1_rowscroll_w ) { deco156_state *state = (deco156_state *)space->machine->driver_data; data &= 0x0000ffff; mem_mask &= 0x0000ffff; COMBINE_DATA(&state->pf1_rowscroll[offset]); }
+static WRITE32_HANDLER( wcvol95_pf2_rowscroll_w ) { deco156_state *state = (deco156_state *)space->machine->driver_data; data &= 0x0000ffff; mem_mask &= 0x0000ffff; COMBINE_DATA(&state->pf2_rowscroll[offset]); }
 
 
 static ADDRESS_MAP_START( hvysmsh_map, ADDRESS_SPACE_PROGRAM, 32 )
@@ -403,7 +402,7 @@ static const deco16ic_interface deco156_deco16ic_intf =
 
 static MACHINE_START( deco156 )
 {
-	deco156_state *state = machine->driver_data<deco156_state>();
+	deco156_state *state = (deco156_state *)machine->driver_data;
 
 	state->maincpu = machine->device<cpu_device>("maincpu");
 	state->deco16ic = machine->device<deco16ic_device>("deco_custom");

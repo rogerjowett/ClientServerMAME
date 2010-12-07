@@ -11,13 +11,12 @@
 #include "sound/dac.h"
 #include "4004clk.lh"
 
-class _4004clk_state : public driver_data_t
+class _4004clk_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, _4004clk_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, _4004clk_state(machine)); }
 
-	_4004clk_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	_4004clk_state(running_machine &machine) { }
 
 	UINT16 nixie[16];
 	UINT8 timer;
@@ -56,7 +55,7 @@ INLINE void output_set_neon_value(int index, int value)
 
 static void update_nixie(running_machine *machine)
 {
-	_4004clk_state *state = machine->driver_data<_4004clk_state>();
+	_4004clk_state *state = (_4004clk_state *)machine->driver_data;
 
 	output_set_nixie_value(5,nixie_to_num(((state->nixie[2] & 3)<<8) | (state->nixie[1] << 4) | state->nixie[0]));
 	output_set_nixie_value(4,nixie_to_num((state->nixie[4] << 6) | (state->nixie[3] << 2) | (state->nixie[2] >>2)));
@@ -68,7 +67,7 @@ static void update_nixie(running_machine *machine)
 
 static WRITE8_HANDLER(nixie_w)
 {
-	_4004clk_state *state = space->machine->driver_data<_4004clk_state>();
+	_4004clk_state *state = (_4004clk_state *)space->machine->driver_data;
 	state->nixie[offset] = data;
 	update_nixie(space->machine);
 }
@@ -83,7 +82,7 @@ static WRITE8_HANDLER(neon_w)
 
 static WRITE8_HANDLER(relays_w)
 {
-	_4004clk_state *state = space->machine->driver_data<_4004clk_state>();
+	_4004clk_state *state = (_4004clk_state *)space->machine->driver_data;
 	dac_data_w(state->dac, (data & 1) ? 0x80 : 0x40); //tick - tock
 }
 
@@ -128,14 +127,14 @@ INPUT_PORTS_END
 
 static TIMER_CALLBACK(timer_callback)
 {
-	_4004clk_state *state = machine->driver_data<_4004clk_state>();
+	_4004clk_state *state = (_4004clk_state *)machine->driver_data;
 	i4004_set_test(machine->device("maincpu"),state->timer);
 	state->timer^=1;
 }
 
 static MACHINE_START(4004clk)
 {
-	_4004clk_state *state = machine->driver_data<_4004clk_state>();
+	_4004clk_state *state = (_4004clk_state *)machine->driver_data;
 	state->timer = 0;
 	state->dac = machine->device("dac");
 

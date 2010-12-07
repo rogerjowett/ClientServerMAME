@@ -326,7 +326,7 @@ void debug_cpu_source_script(running_machine *machine, const char *file)
 int debug_cpu_translate(const address_space *space, int intention, offs_t *address)
 {
 	device_memory_interface *memory;
-	if (space->cpu->interface(memory))
+	if (space->cpu->dev_interface(memory))
 		return memory->translate(space->spacenum, intention, *address);
 	return TRUE;
 }
@@ -774,7 +774,7 @@ UINT64 debug_read_opcode(const address_space *space, offs_t address, int size, i
 	/* return early if we got the result directly */
 	memory_set_debugger_access(space, global->debugger_access = TRUE);
 	device_memory_interface *memory;
-	if (space->cpu->interface(memory) && memory->readop(address, size, result2))
+	if (space->cpu->dev_interface(memory) && memory->readop(address, size, result2))
 	{
 		memory_set_debugger_access(space, global->debugger_access = FALSE);
 		return result2;
@@ -1581,10 +1581,10 @@ device_debug::device_debug(device_t &device, symbol_table *globalsyms)
 	memset(m_wplist, 0, sizeof(m_wplist));
 
 	// find out which interfaces we have to work with
-	device.interface(m_exec);
-	device.interface(m_memory);
-	device.interface(m_state);
-	device.interface(m_disasm);
+	device.dev_interface(m_exec);
+	device.dev_interface(m_memory);
+	device.dev_interface(m_state);
+	device.dev_interface(m_disasm);
 
 	// set up state-related stuff
 	if (m_state != NULL)

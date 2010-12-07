@@ -50,13 +50,12 @@ modified by Hau
 #include "cpu/i8085/i8085.h"
 #include "sound/samples.h"
 
-class safarir_state : public driver_data_t
+class safarir_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, safarir_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, safarir_state(machine)); }
 
-	safarir_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	safarir_state(running_machine &machine) { }
 
 	UINT8 *ram_1, *ram_2;
 	size_t ram_size;
@@ -78,7 +77,7 @@ public:
 
 static WRITE8_HANDLER( ram_w )
 {
-	safarir_state *state = space->machine->driver_data<safarir_state>();
+	safarir_state *state = (safarir_state *)space->machine->driver_data;
 
 	if (state->ram_bank)
 		state->ram_2[offset] = data;
@@ -91,7 +90,7 @@ static WRITE8_HANDLER( ram_w )
 
 static READ8_HANDLER( ram_r )
 {
-	safarir_state *state = space->machine->driver_data<safarir_state>();
+	safarir_state *state = (safarir_state *)space->machine->driver_data;
 
 	return state->ram_bank ? state->ram_2[offset] : state->ram_1[offset];
 }
@@ -99,7 +98,7 @@ static READ8_HANDLER( ram_r )
 
 static WRITE8_HANDLER( ram_bank_w )
 {
-	safarir_state *state = space->machine->driver_data<safarir_state>();
+	safarir_state *state = (safarir_state *)space->machine->driver_data;
 
 	state->ram_bank = data & 0x01;
 
@@ -185,7 +184,7 @@ static TILE_GET_INFO( get_fg_tile_info )
 
 static VIDEO_START( safarir )
 {
-	safarir_state *state = machine->driver_data<safarir_state>();
+	safarir_state *state = (safarir_state *)machine->driver_data;
 
 	state->bg_tilemap = tilemap_create(machine, get_bg_tile_info, tilemap_scan_rows, 8, 8, 32, 32);
 	state->fg_tilemap = tilemap_create(machine, get_fg_tile_info, tilemap_scan_rows, 8, 8, 32, 32);
@@ -196,7 +195,7 @@ static VIDEO_START( safarir )
 
 static VIDEO_UPDATE( safarir )
 {
-	safarir_state *state = screen->machine->driver_data<safarir_state>();
+	safarir_state *state = (safarir_state *)screen->machine->driver_data;
 
 	tilemap_set_scrollx(state->bg_tilemap, 0, *state->bg_scroll);
 
@@ -234,7 +233,7 @@ static VIDEO_UPDATE( safarir )
 
 static WRITE8_HANDLER( safarir_audio_w )
 {
-	safarir_state *state = space->machine->driver_data<safarir_state>();
+	safarir_state *state = (safarir_state *)space->machine->driver_data;
 	running_device *samples = state->samples;
 	UINT8 rising_bits = data & ~state->port_last;
 
@@ -313,7 +312,7 @@ MACHINE_DRIVER_END
 
 static MACHINE_START( safarir )
 {
-	safarir_state *state = machine->driver_data<safarir_state>();
+	safarir_state *state = (safarir_state *)machine->driver_data;
 
 	state->ram_1 = auto_alloc_array(machine, UINT8, state->ram_size);
 	state->ram_2 = auto_alloc_array(machine, UINT8, state->ram_size);

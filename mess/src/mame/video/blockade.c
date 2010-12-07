@@ -3,7 +3,7 @@
 
 WRITE8_HANDLER( blockade_videoram_w )
 {
-	blockade_state *state = space->machine->driver_data<blockade_state>();
+	blockade_state *state = (blockade_state *)space->machine->driver_data;
 	state->videoram[offset] = data;
 	tilemap_mark_tile_dirty(state->bg_tilemap, offset);
 
@@ -16,7 +16,7 @@ WRITE8_HANDLER( blockade_videoram_w )
 
 static TILE_GET_INFO( get_bg_tile_info )
 {
-	blockade_state *state = machine->driver_data<blockade_state>();
+	blockade_state *state = (blockade_state *)machine->driver_data;
 	int code = state->videoram[tile_index];
 
 	SET_TILE_INFO(0, code, 0, 0);
@@ -24,13 +24,13 @@ static TILE_GET_INFO( get_bg_tile_info )
 
 VIDEO_START( blockade )
 {
-	blockade_state *state = machine->driver_data<blockade_state>();
+	blockade_state *state = (blockade_state *)machine->driver_data;
 	state->bg_tilemap = tilemap_create(machine, get_bg_tile_info, tilemap_scan_rows, 8, 8, 32, 32);
 }
 
 VIDEO_UPDATE( blockade )
 {
-	blockade_state *state = screen->machine->driver_data<blockade_state>();
+	blockade_state *state = (blockade_state *)screen->machine->driver_data;
 
 	tilemap_draw(bitmap, cliprect, state->bg_tilemap, 0, 0);
 	return 0;

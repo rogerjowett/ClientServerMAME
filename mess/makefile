@@ -180,9 +180,6 @@ endif
 # uncomment next line to include the internal profiler
 # PROFILER = 1
 
-# uncomment next line to include gprof profiler support
-# GPROF = 1
-
 # uncomment the force the universal DRC to always use the C backend
 # you may need to do this if your target architecture does not have
 # a native backend
@@ -213,6 +210,13 @@ BUILD_ZLIB = 1
 
 # uncomment next line to include the symbols
 # SYMBOLS = 1
+
+# specify symbols level or leave commented to use the default
+# (default is SYMLEVEL = 2 normally; use 1 if you only need backtrace)
+# SYMLEVEL = 2
+
+# uncomment next line to dump the symbols to a .sym file
+# DUMPSYM = 1
 
 # uncomment next line to include profiling information from the compiler
 # PROFILE = 1
@@ -254,10 +258,20 @@ endif
 endif
 
 # allow gprof profiling as well, which overrides the internal PROFILER
-ifdef GPROF
-CCOMFLAGS += -pg
+# also enable symbols as it is useless without them
+ifdef PROFILE
 PROFILER =
-# LIBS += -lc_p
+SYMBOLS = 1
+ifndef SYMLEVEL
+SYMLEVEL = 1
+endif
+endif
+
+# set the symbols level
+ifdef SYMBOLS
+ifndef SYMLEVEL
+SYMLEVEL = 2
+endif
 endif
 
 
@@ -285,6 +299,7 @@ CC = @gcc
 LD = @g++
 MD = -mkdir$(EXE)
 RM = @rm -f
+OBJDUMP = @objdump
 
 
 
@@ -296,7 +311,7 @@ RM = @rm -f
 PREFIXSDL =
 SUFFIX64 =
 SUFFIXDEBUG =
-SUFFIXGPROF =
+SUFFIXPROFILE =
 
 # Windows SDL builds get an SDL prefix
 ifeq ($(OSD),sdl)
@@ -316,8 +331,8 @@ SUFFIXDEBUG = d
 endif
 
 # gprof builds get an addition 'p' suffix
-ifdef GPROF
-SUFFIXGPROF = p
+ifdef PROFILE
+SUFFIXPROFILE = p
 endif
 
 # the name is just 'target' if no subtarget; otherwise it is
@@ -329,7 +344,7 @@ NAME = $(TARGET)$(SUBTARGET)
 endif
 
 # fullname is prefix+name+suffix+suffix64+suffixdebug
-FULLNAME = $(PREFIX)$(PREFIXSDL)$(NAME)$(SUFFIX)$(SUFFIX64)$(SUFFIXDEBUG)$(SUFFIXGPROF)
+FULLNAME = $(PREFIX)$(PREFIXSDL)$(NAME)$(SUFFIX)$(SUFFIX64)$(SUFFIXDEBUG)$(SUFFIXPROFILE)
 
 # add an EXE suffix to get the final emulator name
 EMULATOR = $(FULLNAME)$(EXE)
@@ -356,11 +371,14 @@ OBJ = obj/$(OSD)/$(FULLNAME)
 DEFS = -DCRLF=2
 
 ifeq ($(TARGETOS),win32)
-DEFS = -DCRLF=3
+DEFS = -DCRLF=3 -DWIN32
 endif
 ifeq ($(TARGETOS),os2)
 DEFS = -DCRLF=3
 endif
+
+#Define STATICLIB for miniupnpc
+DEFS += -DSTATICLIB
 
 # map the INLINE to something digestible by GCC
 DEFS += -DINLINE="static inline"
@@ -418,7 +436,7 @@ CCOMFLAGS += -pipe
 
 # add -g if we need symbols, and ensure we have frame pointers
 ifdef SYMBOLS
-CCOMFLAGS += -g -fno-omit-frame-pointer
+CCOMFLAGS += -g$(SYMLEVEL) -fno-omit-frame-pointer
 endif
 
 # add -v if we need verbose build information
@@ -468,6 +486,7 @@ COBJFLAGS += \
 	-Wpointer-arith 
 
 
+
 #-------------------------------------------------
 # include paths
 #-------------------------------------------------
@@ -480,6 +499,7 @@ CCOMFLAGS += \
 	-I$(OBJ)/emu \
 	-I$(OBJ)/emu/layout \
 	-I$(SRC)/lib/util \
+	-I$(SRC)/lib/miniupnpc-1.4.20100609 \
 	-I$(SRC)/osd \
 	-I$(SRC)/osd/$(OSD) \
 	-I$(SRC)/../../../Libraries/RakNet/Source \
@@ -523,10 +543,8 @@ endif
 
 # strip symbols and other metadata in non-symbols and non profiling builds
 ifndef SYMBOLS
-ifndef PROFILE
 ifneq ($(TARGETOS),macosx)
 LDFLAGS += -s
-endif
 endif
 endif
 
@@ -571,9 +589,6 @@ VERSIONOBJ = $(OBJ)/version.o
 # start with an empty set of libs
 LIBS = 
 
-# add boost
-#LIBS += -Lc:\Libraries\boost-trunk -lboost_thread-mt -lboost_system-mt
-
 # add RakNet
 ifdef MSVC_BUILD
 # Do nothing, this has to be taken care of in the windows osd makefile
@@ -592,7 +607,6 @@ LIBS += -L${SRC}/../../../Libraries/RakNet32/Lib/LibStatic -lRakNetStatic
 endif
 endif
 endif
-
 
 # add expat XML library
 ifeq ($(BUILD_EXPAT),1)
@@ -614,6 +628,8 @@ endif
 
 # add SoftFloat floating point emulation library
 SOFTFLOAT = $(OBJ)/libsoftfloat.a
+
+
 
 #-------------------------------------------------
 # 'default' target needs to go here, before the 
@@ -703,11 +719,16 @@ $(sort $(OBJDIRS)):
 ifndef EXECUTABLE_DEFINED
 
 # always recompile the version string
-$(VERSIONOBJ): $(DRVLIBS) $(LIBOSD) $(LIBEMU) $(LIBCPU) $(LIBSOUND) $(LIBUTIL) $(EXPAT) $(ZLIB) $(SOFTFLOAT) $(LIBOCORE) $(RESFILE)
+$(VERSIONOBJ): $(DRVLIBS) $(LIBOSD) $(LIBCPU) $(LIBEMU) $(LIBSOUND) $(LIBUTIL) $(EXPAT) $(ZLIB) $(OBJ)/libminiupnpc.a $(SOFTFLOAT) $(LIBOCORE) $(RESFILE)
 
-$(EMULATOR): $(VERSIONOBJ) $(DRVLIBS) $(LIBOSD) $(LIBEMU) $(LIBCPU) $(LIBDASM) $(LIBSOUND) $(LIBUTIL) $(EXPAT) $(SOFTFLOAT) $(ZLIB) $(LIBOCORE) $(RESFILE)
+$(EMULATOR): $(VERSIONOBJ) $(DRVLIBS) $(LIBOSD) $(LIBCPU) $(LIBEMU) $(LIBDASM) $(LIBSOUND) $(LIBUTIL) $(EXPAT) $(SOFTFLOAT) $(ZLIB) $(OBJ)/libminiupnpc.a $(LIBOCORE) $(RESFILE)
 	@echo Linking $@...
-	$(LD) $(LDFLAGS) $(LDFLAGSEMULATOR) $^ $(LIBS) -o $@
+	$(LD) $(LDFLAGS) $(LDFLAGSEMULATOR) $^ $(LIBS) -lIphlpapi -lws2_32 -o $@
+ifeq ($(TARGETOS),win32)
+ifdef SYMBOLS
+	$(OBJDUMP) --section=.text --line-numbers --syms --demangle $@ >$(FULLNAME).sym
+endif
+endif
 
 endif
 

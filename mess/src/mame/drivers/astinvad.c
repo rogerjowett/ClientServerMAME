@@ -41,13 +41,12 @@ enum
 };
 
 
-class astinvad_state : public driver_data_t
+class astinvad_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, astinvad_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, astinvad_state(machine)); }
 
-	astinvad_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	astinvad_state(running_machine &machine) { }
 
 	UINT8 *    colorram;
 	UINT8 *    videoram;
@@ -106,7 +105,7 @@ static const ppi8255_interface ppi8255_intf[2] =
 
 static VIDEO_START( spaceint )
 {
-	astinvad_state *state = machine->driver_data<astinvad_state>();
+	astinvad_state *state = (astinvad_state *)machine->driver_data;
 	state->colorram = auto_alloc_array(machine, UINT8, state->videoram_size);
 
 	state_save_register_global(machine, state->color_latch);
@@ -116,14 +115,14 @@ static VIDEO_START( spaceint )
 
 static WRITE8_HANDLER( color_latch_w )
 {
-	astinvad_state *state = space->machine->driver_data<astinvad_state>();
+	astinvad_state *state = (astinvad_state *)space->machine->driver_data;
 	state->color_latch = data & 0x0f;
 }
 
 
 static WRITE8_HANDLER( spaceint_videoram_w )
 {
-	astinvad_state *state = space->machine->driver_data<astinvad_state>();
+	astinvad_state *state = (astinvad_state *)space->machine->driver_data;
 	state->videoram[offset] = data;
 	state->colorram[offset] = state->color_latch;
 }
@@ -138,7 +137,7 @@ static WRITE8_HANDLER( spaceint_videoram_w )
 
 static void plot_byte( running_machine *machine, bitmap_t *bitmap, UINT8 y, UINT8 x, UINT8 data, UINT8 color )
 {
-	astinvad_state *state = machine->driver_data<astinvad_state>();
+	astinvad_state *state = (astinvad_state *)machine->driver_data;
 	pen_t fore_pen = MAKE_RGB(pal1bit(color >> 0), pal1bit(color >> 2), pal1bit(color >> 1));
 	UINT8 flip_xor = state->screen_flip & 7;
 
@@ -155,7 +154,7 @@ static void plot_byte( running_machine *machine, bitmap_t *bitmap, UINT8 y, UINT
 
 static VIDEO_UPDATE( astinvad )
 {
-	astinvad_state *state = screen->machine->driver_data<astinvad_state>();
+	astinvad_state *state = (astinvad_state *)screen->machine->driver_data;
 	const UINT8 *color_prom = memory_region(screen->machine, "proms");
 	UINT8 yoffs = state->flip_yoffs & state->screen_flip;
 	int x, y;
@@ -175,7 +174,7 @@ static VIDEO_UPDATE( astinvad )
 
 static VIDEO_UPDATE( spaceint )
 {
-	astinvad_state *state = screen->machine->driver_data<astinvad_state>();
+	astinvad_state *state = (astinvad_state *)screen->machine->driver_data;
 	const UINT8 *color_prom = memory_region(screen->machine, "proms");
 	int offs;
 
@@ -207,14 +206,14 @@ static VIDEO_UPDATE( spaceint )
 
 static TIMER_CALLBACK( kamikaze_int_off )
 {
-	astinvad_state *state = machine->driver_data<astinvad_state>();
+	astinvad_state *state = (astinvad_state *)machine->driver_data;
 	cpu_set_input_line(state->maincpu, 0, CLEAR_LINE);
 }
 
 
 static TIMER_CALLBACK( kamizake_int_gen )
 {
-	astinvad_state *state = machine->driver_data<astinvad_state>();
+	astinvad_state *state = (astinvad_state *)machine->driver_data;
 	/* interrupts are asserted on every state change of the 128V line */
 	cpu_set_input_line(state->maincpu, 0, ASSERT_LINE);
 	param ^= 128;
@@ -227,7 +226,7 @@ static TIMER_CALLBACK( kamizake_int_gen )
 
 static MACHINE_START( kamikaze )
 {
-	astinvad_state *state = machine->driver_data<astinvad_state>();
+	astinvad_state *state = (astinvad_state *)machine->driver_data;
 
 	state->maincpu = machine->device("maincpu");
 	state->ppi8255_0 = machine->device("ppi8255_0");
@@ -244,7 +243,7 @@ static MACHINE_START( kamikaze )
 
 static MACHINE_RESET( kamikaze )
 {
-	astinvad_state *state = machine->driver_data<astinvad_state>();
+	astinvad_state *state = (astinvad_state *)machine->driver_data;
 
 	state->screen_flip = 0;
 	state->screen_red = 0;
@@ -255,7 +254,7 @@ static MACHINE_RESET( kamikaze )
 
 static MACHINE_START( spaceint )
 {
-	astinvad_state *state = machine->driver_data<astinvad_state>();
+	astinvad_state *state = (astinvad_state *)machine->driver_data;
 
 	state->maincpu = machine->device("maincpu");
 	state->samples = machine->device("samples");
@@ -266,7 +265,7 @@ static MACHINE_START( spaceint )
 
 static MACHINE_RESET( spaceint )
 {
-	astinvad_state *state = machine->driver_data<astinvad_state>();
+	astinvad_state *state = (astinvad_state *)machine->driver_data;
 
 	state->screen_flip = 0;
 	state->sound_state[0] = 0;
@@ -277,7 +276,7 @@ static MACHINE_RESET( spaceint )
 
 static INPUT_CHANGED( spaceint_coin_inserted )
 {
-	astinvad_state *state = field->port->machine->driver_data<astinvad_state>();
+	astinvad_state *state = (astinvad_state *)field->port->machine->driver_data;
 	/* coin insertion causes an NMI */
 	cpu_set_input_line(state->maincpu, INPUT_LINE_NMI, newval ? ASSERT_LINE : CLEAR_LINE);
 }
@@ -292,7 +291,7 @@ static INPUT_CHANGED( spaceint_coin_inserted )
 
 static READ8_HANDLER( kamikaze_ppi_r )
 {
-	astinvad_state *state = space->machine->driver_data<astinvad_state>();
+	astinvad_state *state = (astinvad_state *)space->machine->driver_data;
 	UINT8 result = 0xff;
 
 	/* the address lines are used for /CS; yes, they can overlap! */
@@ -306,7 +305,7 @@ static READ8_HANDLER( kamikaze_ppi_r )
 
 static WRITE8_HANDLER( kamikaze_ppi_w )
 {
-	astinvad_state *state = space->machine->driver_data<astinvad_state>();
+	astinvad_state *state = (astinvad_state *)space->machine->driver_data;
 
 	/* the address lines are used for /CS; yes, they can overlap! */
 	if (!(offset & 4))
@@ -325,7 +324,7 @@ static WRITE8_HANDLER( kamikaze_ppi_w )
 
 static WRITE8_DEVICE_HANDLER( astinvad_sound1_w )
 {
-	astinvad_state *state = device->machine->driver_data<astinvad_state>();
+	astinvad_state *state = (astinvad_state *)device->machine->driver_data;
 	int bits_gone_hi = data & ~state->sound_state[0];
 	state->sound_state[0] = data;
 
@@ -342,7 +341,7 @@ static WRITE8_DEVICE_HANDLER( astinvad_sound1_w )
 
 static WRITE8_DEVICE_HANDLER( astinvad_sound2_w )
 {
-	astinvad_state *state = device->machine->driver_data<astinvad_state>();
+	astinvad_state *state = (astinvad_state *)device->machine->driver_data;
 	int bits_gone_hi = data & ~state->sound_state[1];
 	state->sound_state[1] = data;
 
@@ -358,7 +357,7 @@ static WRITE8_DEVICE_HANDLER( astinvad_sound2_w )
 
 static WRITE8_HANDLER( spaceint_sound1_w )
 {
-	astinvad_state *state = space->machine->driver_data<astinvad_state>();
+	astinvad_state *state = (astinvad_state *)space->machine->driver_data;
 	int bits_gone_hi = data & ~state->sound_state[0];
 	state->sound_state[0] = data;
 
@@ -377,7 +376,7 @@ static WRITE8_HANDLER( spaceint_sound1_w )
 
 static WRITE8_HANDLER( spaceint_sound2_w )
 {
-	astinvad_state *state = space->machine->driver_data<astinvad_state>();
+	astinvad_state *state = (astinvad_state *)space->machine->driver_data;
 	int bits_gone_hi = data & ~state->sound_state[1];
 	state->sound_state[1] = data;
 
@@ -753,7 +752,7 @@ ROM_END
 
 static DRIVER_INIT( kamikaze )
 {
-	astinvad_state *state = machine->driver_data<astinvad_state>();
+	astinvad_state *state = (astinvad_state *)machine->driver_data;
 
 	/* the flip screen logic adds 32 to the Y after flipping */
 	state->flip_yoffs = 32;
@@ -762,7 +761,7 @@ static DRIVER_INIT( kamikaze )
 
 static DRIVER_INIT( spcking2 )
 {
-	astinvad_state *state = machine->driver_data<astinvad_state>();
+	astinvad_state *state = (astinvad_state *)machine->driver_data;
 
 	/* don't have the schematics, but the blanking must center the screen here */
 	state->flip_yoffs = 0;

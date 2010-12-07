@@ -560,7 +560,7 @@ static DEVICE_IMAGE_LOAD( a2600_cart )
 	running_machine *machine = image.device().machine;
 	const struct _extrainfo_banking_def *eibd;
 	UINT8 *cart = CART;
-	const char	*extrainfo = NULL;
+	const char	*extrainfo;
 
 	cart_size = image.length();
 
@@ -596,14 +596,13 @@ static DEVICE_IMAGE_LOAD( a2600_cart )
 		}
 	}
 
-	if (strcmp(image.extrainfo(), ""))
-		extrainfo = image.extrainfo();
+	extrainfo = image.extrainfo();
 
-	if (extrainfo && extrainfo[0])
+	if ( extrainfo && extrainfo[0] )
 	{
-		for (eibd = extrainfo_banking_defs; eibd->extrainfo[0]; eibd++)
+		for ( eibd = extrainfo_banking_defs; eibd->extrainfo[0]; eibd++ )
 		{
-			if (! mame_stricmp(eibd->extrainfo, extrainfo))
+			if ( ! mame_stricmp( eibd->extrainfo, extrainfo ) )
 			{
 				banking_mode = eibd->bank_mode;
 			}

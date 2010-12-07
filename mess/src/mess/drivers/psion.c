@@ -11,8 +11,7 @@
 		- move HD44780 implementation in a device
 
 		Note:
-		- 4 lines display has an custom LCD controller derived from an HD66780
-		- NVRAM works only if the machine is turned off (with OFF menu) before closing MESS
+		- 4 lines dysplay has an custom LCD controller derived from an HD66780
 
         16/07/2010 Skeleton driver.
 
@@ -24,40 +23,20 @@
 #include "emu.h"
 #include "cpu/m6800/m6800.h"
 #include "sound/beep.h"
-#include "devices/cartslot.h"
-
-struct datapack
-{
-	UINT8 id;
-	UINT8 len;
-	UINT16 counter;
-	UINT8 page;
-	UINT8* data;
-};
 
 static struct _psion
 {
-	UINT16 kb_counter;
+	UINT8 kb_counter;
 	UINT8 enable_nmi;
 	UINT8 *sys_register;
 	UINT8 tcsr_value;
-	UINT8 stby_pwr;
 
 	/* RAM/ROM banks */
 	UINT8 *ram;
-	size_t ram_size;
-	UINT8 *paged_ram;
 	UINT8 rom_bank;
 	UINT8 ram_bank;
 	UINT8 ram_bank_count;
 	UINT8 rom_bank_count;
-
-	UINT8 port2_ddr;
-	UINT8 port6_ddr;
-	UINT8 port6;
-
-	struct datapack pack1;
-	struct datapack pack2;
 } psion;
 
 /*************************************************
@@ -281,7 +260,7 @@ UINT8 kb_read(running_machine *machine)
 void update_bank(running_machine *machine)
 {
 	if (psion.ram_bank < psion.ram_bank_count && psion.ram_bank_count)
-		memory_set_bankptr(machine,"rambank", psion.paged_ram + psion.ram_bank*0x4000);
+		memory_set_bankptr(machine,"rambank", psion.ram + psion.ram_bank*0x4000);
 
 	if (psion.rom_bank_count)
 	{
@@ -292,102 +271,12 @@ void update_bank(running_machine *machine)
 	}
 }
 
-struct datapack *get_active_slot(running_machine *machine, UINT8 data)
-{
-	switch(data & 0x70)
-	{
-		case 0x60:
-			return &psion.pack1;
-		case 0x50:
-			return &psion.pack2;
-	}
-
-	return NULL;
-}
-
-void datapack_w(running_machine *machine, UINT8 data)
-{
-	//TODO
-}
-
-UINT8 datapack_r(running_machine *machine)
-{
-	struct datapack *pack = get_active_slot(machine, psion.port6);
-
-	if (pack != NULL && pack->len > 0 && !(psion.port6 & 0x80))
- 	{
-		UINT32 pack_addr = pack->counter + ((pack->id & 0x04) ? 0x100 * pack->page : 0);
-
-		if (pack_addr < pack->len * 0x2000)
-			return pack->data[pack_addr];
- 	}
-
-	return 0;
-}
-
 WRITE8_HANDLER( hd63701_int_reg_w )
 {
 	switch (offset)
 	{
-	case 0x01:
-		psion.port2_ddr = data;
-		break;
-	case 0x03:
-		/* datapack i/o data bus */
-		datapack_w(space->machine, data);
-		break;
 	case 0x08:
 		psion.tcsr_value = data;
-		break;
-	case 0x15:
-		/* read-only */
-		break;
-	case 0x16:
-		psion.port6_ddr = data;
-		break;
-	case 0x17:
-		/*
-		datapack control lines
-		x--- ---- slot on/off
-		-x-- ---- slot 3
-		--x- ---- slot 2
-		---x ---- slot 1
-		---- x--- output enable
-		---- -x-- program line
-		---- --x- reset line
-		---- ---x clock line
-		*/
-		if (psion.port6_ddr == 0xff)
-		{
-			struct datapack *pack = get_active_slot(space->machine, data);
-
-			if (pack != NULL)
- 			{
-				if ((psion.port6 & 0x01) != (data & 0x01))
-				{
-					pack->counter++;
-
-					if (pack->counter >= ((pack->id & 0x04) ? 0x100 : (pack->len * 0x2000)))
-						pack->counter = 0;
-				}
-
-				if ((psion.port6 & 0x04) && !(data & 0x04))
-				{
-					pack->page++;
-
-					if (pack->page >= (pack->len * 0x2000) / 0x100)
-						pack->page = 0;
-				}
-
-				if (psion.port6 & 0x02)
-				{
-					pack->counter = 0;
-					pack->page = 0;
-				}
- 			}
-
-			psion.port6 = data;
-		}
 		break;
 	}
 
@@ -398,11 +287,6 @@ READ8_HANDLER( hd63701_int_reg_r )
 {
 	switch (offset)
 	{
-	case 0x03:
-		/* datapack i/o data bus */
-		return datapack_r(space->machine);
-	case 0x14:
-		return (hd63701_internal_registers_r(space, offset)&0x7f) | (psion.stby_pwr<<7);
 	case 0x15:
 		/*
 		x--- ---- ON key active high
@@ -410,9 +294,7 @@ READ8_HANDLER( hd63701_int_reg_r )
 		---- --x- ??
 		---- ---x battery status
 		*/
-		return kb_read(space->machine) | input_port_read(space->machine, "BATTERY") | input_port_read(space->machine, "ON") | (psion.kb_counter == 0x7ff)<<1;
-	case 0x17:
-		return psion.port6;
+		return kb_read(space->machine) | input_port_read(space->machine, "BATTERY") | input_port_read(space->machine, "ON");
 	case 0x08:
 		hd63701_internal_registers_w(space, offset, psion.tcsr_value);
 	default:
@@ -423,16 +305,10 @@ READ8_HANDLER( hd63701_int_reg_r )
 /* Read/Write common */
 void io_rw(const address_space* space, UINT16 offset)
 {
-	if (space->debugger_access)
-		return;
-
 	switch (offset & 0xffc0)
 	{
 	case 0xc0:
-		/* switch off, CPU goes into standby mode */
-		psion.enable_nmi = 0;
-		psion.stby_pwr = 1;
-		space->machine->device<cpu_device>("maincpu")->suspend(SUSPEND_REASON_HALT, 1);
+		//Switch off
 		break;
 	case 0x100:
 		//Pulse enable
@@ -511,21 +387,12 @@ READ8_HANDLER( io_r )
 	return 0;
 }
 
-static INPUT_CHANGED( psion_on )
-{
-	cpu_device *cpu = field->port->machine->device<cpu_device>("maincpu");
-
-	/* reset the CPU for resume from standby */
-	if (cpu->suspended(SUSPEND_REASON_HALT))
-		cpu->reset();
-}
-
 static ADDRESS_MAP_START(psioncm_mem, ADDRESS_SPACE_PROGRAM, 8)
 	ADDRESS_MAP_UNMAP_LOW
 	AM_RANGE(0x0000, 0x001f) AM_READWRITE(hd63701_int_reg_r, hd63701_int_reg_w)
 	AM_RANGE(0x0040, 0x00ff) AM_RAM AM_BASE(&psion.sys_register)
 	AM_RANGE(0x0100, 0x03ff) AM_READWRITE(io_r, io_w)
-	AM_RANGE(0x2000, 0x3fff) AM_RAM AM_BASE(&psion.ram) AM_SIZE(&psion.ram_size)
+	AM_RANGE(0x2000, 0x3fff) AM_RAM
 	AM_RANGE(0x8000, 0xffff) AM_ROM
 ADDRESS_MAP_END
 
@@ -534,7 +401,7 @@ static ADDRESS_MAP_START(psionla_mem, ADDRESS_SPACE_PROGRAM, 8)
 	AM_RANGE(0x0000, 0x001f) AM_READWRITE(hd63701_int_reg_r, hd63701_int_reg_w)
 	AM_RANGE(0x0040, 0x00ff) AM_RAM AM_BASE(&psion.sys_register)
 	AM_RANGE(0x0100, 0x03ff) AM_READWRITE(io_r, io_w)
-	AM_RANGE(0x0400, 0x5fff) AM_RAM AM_BASE(&psion.ram) AM_SIZE(&psion.ram_size)
+	AM_RANGE(0x0400, 0x5fff) AM_RAM
 	AM_RANGE(0x8000, 0xffff) AM_ROM
 ADDRESS_MAP_END
 
@@ -543,7 +410,7 @@ static ADDRESS_MAP_START(psionp350_mem, ADDRESS_SPACE_PROGRAM, 8)
 	AM_RANGE(0x0000, 0x001f) AM_READWRITE(hd63701_int_reg_r, hd63701_int_reg_w)
 	AM_RANGE(0x0040, 0x00ff) AM_RAM AM_BASE(&psion.sys_register)
 	AM_RANGE(0x0100, 0x03ff) AM_READWRITE(io_r, io_w)
-	AM_RANGE(0x0400, 0x3fff) AM_RAM AM_BASE(&psion.ram) AM_SIZE(&psion.ram_size)
+	AM_RANGE(0x0400, 0x3fff) AM_RAM
 	AM_RANGE(0x4000, 0x7fff) AM_RAMBANK("rambank")
 	AM_RANGE(0x8000, 0xffff) AM_ROM
 ADDRESS_MAP_END
@@ -553,7 +420,7 @@ static ADDRESS_MAP_START(psionlam_mem, ADDRESS_SPACE_PROGRAM, 8)
 	AM_RANGE(0x0000, 0x001f) AM_READWRITE(hd63701_int_reg_r, hd63701_int_reg_w)
 	AM_RANGE(0x0040, 0x00ff) AM_RAM AM_BASE(&psion.sys_register)
 	AM_RANGE(0x0100, 0x03ff) AM_READWRITE(io_r, io_w)
-	AM_RANGE(0x0400, 0x7fff) AM_RAM AM_BASE(&psion.ram) AM_SIZE(&psion.ram_size)
+	AM_RANGE(0x0400, 0x7fff) AM_RAM
 	AM_RANGE(0x8000, 0xbfff) AM_ROMBANK("rombank")
 	AM_RANGE(0xc000, 0xffff) AM_ROM
 ADDRESS_MAP_END
@@ -563,7 +430,7 @@ static ADDRESS_MAP_START(psionlz_mem, ADDRESS_SPACE_PROGRAM, 8)
 	AM_RANGE(0x0000, 0x001f) AM_READWRITE(hd63701_int_reg_r, hd63701_int_reg_w)
 	AM_RANGE(0x0040, 0x00ff) AM_RAM AM_BASE(&psion.sys_register)
 	AM_RANGE(0x0100, 0x03ff) AM_READWRITE(io_r, io_w)
-	AM_RANGE(0x0400, 0x3fff) AM_RAM AM_BASE(&psion.ram) AM_SIZE(&psion.ram_size)
+	AM_RANGE(0x0400, 0x3fff) AM_RAM
 	AM_RANGE(0x4000, 0x7fff) AM_RAMBANK("rambank")
 	AM_RANGE(0x8000, 0xbfff) AM_ROMBANK("rombank")
 	AM_RANGE(0xc000, 0xffff) AM_ROM
@@ -577,7 +444,7 @@ INPUT_PORTS_START( psion )
 		PORT_CONFSETTING( 0x01, "Low Battery" )
 
 	PORT_START("ON")
-		PORT_BIT(0x80, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_NAME("ON/CLEAR") PORT_CODE(KEYCODE_F10)  PORT_CHANGED(psion_on, 0)
+		PORT_BIT(0x80, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_NAME("ON/CLEAR") PORT_CODE(KEYCODE_F10)
 
 	PORT_START("K1")
 		PORT_BIT(0x04, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("MODE") PORT_CODE(KEYCODE_EQUALS)
@@ -629,76 +496,6 @@ INPUT_PORTS_START( psion )
 		PORT_BIT(0x40, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("D [)]") PORT_CODE(KEYCODE_D)
 INPUT_PORTS_END
 
-int datapack_load(device_image_interface &image, struct datapack &pack)
-{
-	running_machine *machine = image.device().machine;
-	char opk_head[6];
-	UINT8 pack_id, pack_len;
-
-	image.fread(opk_head, 6);
-	image.fread(&pack_id, 1);
-	image.fread(&pack_len, 1);
-
-	if(strcmp(opk_head, "OPK") || pack_len * 0x2000 < image.length() - 6)
-		return IMAGE_INIT_FAIL;
-
-	pack.id = pack_id;
-	pack.len = pack_len;
-	image.fseek(6, SEEK_SET);
-	pack.data = auto_alloc_array(machine, UINT8, pack.len * 0x2000);
-	memset(pack.data, 0xff, pack.len * 0x2000);
-	image.fread(pack.data, image.length() - 6);
-
-	return IMAGE_INIT_PASS;
-}
-
-static DEVICE_IMAGE_LOAD( psion_pack1 )
-{
-	return datapack_load(image, psion.pack1);
-}
-
-static DEVICE_IMAGE_UNLOAD( psion_pack1 )
-{
-	auto_free(image.device().machine, psion.pack1.data);
-	memset(&psion.pack1, 0, sizeof(psion.pack1));
-}
-
-static DEVICE_IMAGE_LOAD( psion_pack2 )
-{
-	return datapack_load(image, psion.pack2);
-}
-
-static DEVICE_IMAGE_UNLOAD( psion_pack2 )
-{
-	auto_free(image.device().machine, psion.pack2.data);
-	memset(&psion.pack2, 0, sizeof(psion.pack2));
-}
-
-static NVRAM_HANDLER( psion )
-{
-	if (read_or_write)
-	{
-		mame_fwrite(file, psion.sys_register, 0xc0);
-		mame_fwrite(file, psion.ram, psion.ram_size);
-		if (psion.ram_bank_count)
-			mame_fwrite(file, psion.paged_ram, psion.ram_bank_count * 0x4000);
-	}
-	else
-	{
-		if (file)
-		{
-			mame_fread(file, psion.sys_register, 0xc0);
-			mame_fread(file, psion.ram, psion.ram_size);
-			if (psion.ram_bank_count)
-				mame_fread(file, psion.paged_ram, psion.ram_bank_count * 0x4000);
-
-			psion.stby_pwr = 1;
-		}
-		else
-			psion.stby_pwr = 0;
-	}
-}
-
 static MACHINE_START(psion)
 {
 	if (!strcmp(machine->gamedrv->name, "psionlam"))
@@ -728,7 +525,7 @@ static MACHINE_START(psion)
 	}
 
 	if (psion.ram_bank_count)
-		psion.paged_ram = auto_alloc_array(machine, UINT8, psion.ram_bank_count * 0x4000);
+		psion.ram = auto_alloc_array(machine, UINT8, psion.ram_bank_count * 0x4000);
 
 	timer_pulse(machine, ATTOTIME_IN_SEC(1), NULL, 0, nmi_timer);
 	timer_pulse(machine, ATTOTIME_IN_MSEC(500), NULL, 0, blink_timer);
@@ -805,7 +602,7 @@ static VIDEO_UPDATE( psion_2lines )
 					*BITMAP_ADDR16(bitmap, (cur_y-1) * 9 + l, cur_x*6 + i) = 1;
 	}
 
-#if(0)
+#if(1)
 	popmessage("cur: %u, pos %u, shift %u", hd44780.cursor_on, hd44780.ddram_a, hd44780.disp_shift);
 #endif
     return 0;
@@ -876,7 +673,7 @@ static VIDEO_UPDATE( psion_4lines )
 					*BITMAP_ADDR16(bitmap, (cur_y-1) * 9 + l, cur_x*6 + i) = 1;
 	}
 
-#if(0)
+#if(1)
 	popmessage("cur: %u, pos %u, shift %u", hd44780.cursor_on, hd44780.cursor_pos, hd44780.disp_shift);
 #endif
     return 0;
@@ -902,23 +699,6 @@ static const gfx_layout psion_charlayout =
 static GFXDECODE_START( psion )
 	GFXDECODE_ENTRY( "chargen", 0x0000, psion_charlayout, 0, 1 )
 GFXDECODE_END
-
-
-static MACHINE_DRIVER_START( psion_slot )
-	/* Datapack slot 1 */
-	MDRV_CARTSLOT_ADD("pack1")
-	MDRV_CARTSLOT_EXTENSION_LIST("opk")
-	MDRV_CARTSLOT_NOT_MANDATORY
-	MDRV_CARTSLOT_LOAD(psion_pack1)
-	MDRV_CARTSLOT_UNLOAD(psion_pack1)
-
-	/* Datapack slot 2 */
-	MDRV_CARTSLOT_ADD("pack2")
-	MDRV_CARTSLOT_EXTENSION_LIST("opk")
-	MDRV_CARTSLOT_NOT_MANDATORY
-	MDRV_CARTSLOT_LOAD(psion_pack2)
-	MDRV_CARTSLOT_UNLOAD(psion_pack2)
-MACHINE_DRIVER_END
 
 /* basic configuration for 2 lines display */
 static MACHINE_DRIVER_START( psion_2lines )
@@ -948,9 +728,6 @@ static MACHINE_DRIVER_START( psion_2lines )
 	MDRV_SOUND_ADD( "beep", BEEP, 0 )
 	MDRV_SOUND_ROUTE( ALL_OUTPUTS, "mono", 1.00 )
 
-	MDRV_NVRAM_HANDLER(psion)
-
-	MDRV_IMPORT_FROM( psion_slot )
 MACHINE_DRIVER_END
 
 /* basic configuration for 4 lines display */
@@ -980,10 +757,6 @@ static MACHINE_DRIVER_START( psion_4lines )
 	MDRV_SPEAKER_STANDARD_MONO( "mono" )
 	MDRV_SOUND_ADD( "beep", BEEP, 0 )
 	MDRV_SOUND_ROUTE( ALL_OUTPUTS, "mono", 1.00 )
-
-	MDRV_NVRAM_HANDLER(psion)
-
-	MDRV_IMPORT_FROM( psion_slot )
 MACHINE_DRIVER_END
 
 static MACHINE_DRIVER_START( psioncm )

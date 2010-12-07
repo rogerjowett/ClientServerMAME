@@ -2,24 +2,33 @@
 
 #include "zlib.h"
 
-Client *createGlobalClient();
+Client *createGlobalClient(string _username);
 
 void deleteGlobalClient();
 
 #define MAX_COMPRESSED_OUTBUF_SIZE (1024*1024*64)
 
-class Client
+class running_machine;
+
+class Client : public Common
 {
 protected:
-	RakNet::RakPeerInterface *rakInterface;
 
-	vector<MemoryBlock> blocks,staleBlocks,xorBlocks;
+	vector<MemoryBlock> syncCheckBlocks;
     vector<unsigned char> incomingMsg;
 
-    vector<MemoryBlock> constBlocks;
+    bool initComplete;
+
+	unsigned char *syncPtr;
+
+	bool firstResync;
+
+	vector<unsigned char> initialSyncBuffer;
+
+    RakNet::TimeUS timeBeforeSync;
 
 public:
-	Client();
+	Client(string _username);
 
     ~Client();
 
@@ -27,41 +36,26 @@ public:
 
 	MemoryBlock createMemoryBlock(unsigned char* ptr,int size);
 
-	bool initializeConnection(const char *hostname,const char *port);
+	bool initializeConnection(unsigned short selfPort,const char *hostname,unsigned short port,running_machine *machine);
+
+	void updateSyncCheck();
 
     std::pair<bool,bool> syncAndUpdate();
 
     void loadInitialData(unsigned char *data,int size);
 
-    void resync(unsigned char *data,int size);
+    bool resync(unsigned char *data,int size);
 
     void addConstData(unsigned char *data,int size);
 
 	void checkMatch(Server *server);
 
-    void sendString(const string &outputString);
-
-    string getLatencyString();
-
-    string getStatisticsString();
-
-	MemoryBlock getMemoryBlock(int i)
-	{
-		return blocks[i];
-	}
-
-    int getNumConstBlocks()
+    inline bool isInitComplete()
     {
-        return int(constBlocks.size());
+	    return initComplete;
     }
 
-    MemoryBlock* getConstBlock(int i)
-    {
-        return &constBlocks[i];
-    }
+    int getNumSessions();
 
-    void destroyConstBlock(int i)
-    {
-      constBlocks.erase(constBlocks.begin()+i);
-    }
+    void sendInputs(const string &inputString);
 };

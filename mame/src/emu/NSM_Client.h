@@ -2,7 +2,7 @@
 
 #include "zlib.h"
 
-Client *createGlobalClient();
+Client *createGlobalClient(string _username);
 
 void deleteGlobalClient();
 
@@ -10,26 +10,25 @@ void deleteGlobalClient();
 
 class running_machine;
 
-class Client
+class Client : public Common
 {
 protected:
-	RakNet::RakPeerInterface *rakInterface;
 
-	vector<MemoryBlock> blocks,staleBlocks,xorBlocks,syncCheckBlocks;
+	vector<MemoryBlock> syncCheckBlocks;
     vector<unsigned char> incomingMsg;
-
-    vector<MemoryBlock> constBlocks;
 
     bool initComplete;
 
-	z_stream strm;
-
 	unsigned char *syncPtr;
-    
+
 	bool firstResync;
 
+	vector<unsigned char> initialSyncBuffer;
+
+    RakNet::TimeUS timeBeforeSync;
+
 public:
-	Client();
+	Client(string _username);
 
     ~Client();
 
@@ -37,7 +36,7 @@ public:
 
 	MemoryBlock createMemoryBlock(unsigned char* ptr,int size);
 
-	bool initializeConnection(const char *hostname,const char *port,running_machine *machine);
+	bool initializeConnection(unsigned short selfPort,const char *hostname,unsigned short port,running_machine *machine);
 
 	void updateSyncCheck();
 
@@ -51,34 +50,12 @@ public:
 
 	void checkMatch(Server *server);
 
-    void sendString(const string &outputString);
-
     inline bool isInitComplete()
     {
 	    return initComplete;
     }
 
-    string getLatencyString();
+    int getNumSessions();
 
-    string getStatisticsString();
-
-	MemoryBlock getMemoryBlock(int i)
-	{
-		return blocks[i];
-	}
-
-    int getNumConstBlocks()
-    {
-        return int(constBlocks.size());
-    }
-
-    MemoryBlock* getConstBlock(int i)
-    {
-        return &constBlocks[i];
-    }
-
-    void destroyConstBlock(int i)
-    {
-      constBlocks.erase(constBlocks.begin()+i);
-    }
+    void sendInputs(const string &inputString);
 };

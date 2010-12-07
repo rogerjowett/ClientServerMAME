@@ -11,13 +11,12 @@
 #include "cpu/i8008/i8008.h"
 #include "machine/teleprinter.h"
 
-class mod8_state : public driver_data_t
+class mod8_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, mod8_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, mod8_state(machine)); }
 
-	mod8_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	mod8_state(running_machine &machine) { }
 
 	UINT16 tty_data;
 	UINT8 tty_key_data;
@@ -26,7 +25,7 @@ public:
 
 static WRITE8_HANDLER(out_w)
 {
-	mod8_state *state = space->machine->driver_data<mod8_state>();
+	mod8_state *state = (mod8_state *)space->machine->driver_data;
 	running_device *devconf = space->machine->device(TELEPRINTER_TAG);
 
 	state->tty_data >>= 1;
@@ -40,7 +39,7 @@ static WRITE8_HANDLER(out_w)
 
 static WRITE8_HANDLER(tty_w)
 {
-	mod8_state *state = space->machine->driver_data<mod8_state>();
+	mod8_state *state = (mod8_state *)space->machine->driver_data;
 
 	state->tty_data = 0;
 	state->tty_cnt = 0;
@@ -48,7 +47,7 @@ static WRITE8_HANDLER(tty_w)
 
 static READ8_HANDLER(tty_r)
 {
-	mod8_state *state = space->machine->driver_data<mod8_state>();
+	mod8_state *state = (mod8_state *)space->machine->driver_data;
 	UINT8 d = state->tty_key_data & 0x01;
 
 	state->tty_key_data >>= 1;
@@ -85,7 +84,7 @@ static MACHINE_RESET(mod8)
 
 static WRITE8_DEVICE_HANDLER( mod8_kbd_put )
 {
-	mod8_state *state = device->machine->driver_data<mod8_state>();
+	mod8_state *state = (mod8_state *)device->machine->driver_data;
 
 	state->tty_key_data = data ^ 0xff;
 	cputag_set_input_line(device->machine, "maincpu", 0, HOLD_LINE);

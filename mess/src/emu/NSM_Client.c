@@ -5,6 +5,7 @@
 #include "BitStream.h"
 #include "PacketLogger.h"
 #include "RakNetTypes.h"
+#include "RakSleep.h"
 
 #include "NSM_Client.h"
 
@@ -17,9 +18,9 @@
 
 Client *netClient=NULL;
 
-Client *createGlobalClient()
+Client *createGlobalClient(string _username)
 {
-    netClient = new Client();
+    netClient = new Client(_username);
     return netClient;
 }
 
@@ -29,15 +30,22 @@ void deleteGlobalClient()
     netClient = NULL;
 }
 
+#include "osdcore.h"
+#include "emu.h"
+
+extern unsigned char compressedBuffer[MAX_ZLIB_BUF_SIZE];
+extern unsigned char uncompressedBuffer[MAX_ZLIB_BUF_SIZE];
+extern unsigned char syncBuffer[MAX_ZLIB_BUF_SIZE];
+
+bool needToSkipAhead=false;
+
 #include "unicode.h"
 #include "ui.h"
 #include "osdcore.h"
 
-extern z_stream strm;
-extern unsigned char compressedBuffer[MAX_ZLIB_BUF_SIZE];
-extern unsigned char uncompressedBuffer[MAX_ZLIB_BUF_SIZE];
-
-Client::Client() 
+Client::Client(string _username)
+    :
+    Common(_username)
 {
     rakInterface = RakNet::RakPeerInterface::GetInstance();
     rakInterface->AllowConnectionResponseIPMigration(false);
@@ -46,6 +54,13 @@ Client::Client()
     strm.zalloc = Z_NULL;
     strm.zfree = Z_NULL;
     strm.opaque = Z_NULL;
+
+    initComplete=false;
+    firstResync=true;
+
+    syncPtr = compressedBuffer;
+
+    selfPeerID = 0;
 }
 
 Client::~Client()
@@ -62,6 +77,7 @@ MemoryBlock Client::createMemoryBlock(int size)
     blocks.push_back(MemoryBlock(size));
     xorBlocks.push_back(MemoryBlock(size));
     staleBlocks.push_back(MemoryBlock(size));
+    syncCheckBlocks.push_back(MemoryBlock(size));
     return blocks.back();
 }
 
@@ -70,6 +86,7 @@ MemoryBlock Client::createMemoryBlock(unsigned char *ptr,int size)
     blocks.push_back(MemoryBlock(ptr,size));
     xorBlocks.push_back(MemoryBlock(size));
     staleBlocks.push_back(MemoryBlock(size));
+    syncCheckBlocks.push_back(MemoryBlock(size));
     return blocks.back();
 }
 
@@ -121,39 +138,68 @@ int GetPacketSize(RakNet::Packet *p)
 	}
 }
 
-bool Client::initializeConnection(const char *hostname,const char *port)
+extern void video_frame_update(running_machine *machine, int debug);
+int initialSyncPercentComplete=0;
+
+bool Client::initializeConnection(unsigned short selfPort,const char *hostname,unsigned short port,running_machine *machine)
 {
     RakNet::SocketDescriptor socketDescriptor(0,0);
-    rakInterface->Startup(8,&socketDescriptor,1);
+    socketDescriptor.port = selfPort;
+    printf("Client running on port %d\n",selfPort);
+    RakNet::StartupResult retval = rakInterface->Startup(8,&socketDescriptor,1);
+    rakInterface->SetMaximumIncomingConnections(512);
+	rakInterface->SetIncomingPassword("MAME",(int)strlen("MAME"));
+	rakInterface->SetTimeoutTime(30000,RakNet::UNASSIGNED_SYSTEM_ADDRESS);
     rakInterface->SetOccasionalPing(true);
 	rakInterface->SetUnreliableTimeout(1000);
-    bool connected = 
-	    rakInterface->Connect(hostname,atoi(port),"MAME",(int)strlen("MAME")) == 
-	    RakNet::CONNECTION_ATTEMPT_STARTED;
-    if(!connected)
+
+	if(retval != RakNet::RAKNET_STARTED)
+	{
+		printf("Client failed to start. Terminating\n");
+		return false;
+	}
+
+    peerInputs[1] = vector<string>();
+
+    RakNet::SystemAddress sa = ConnectBlocking(hostname,port);
+    if(sa==RakNet::UNASSIGNED_SYSTEM_ADDRESS)
     {
-        printf("CONNECTION ATTEMPT FAILED!\n");
+        printf("Could not connect to server!\n");
         return false;
     }
 
-    bool initComplete=false;
+    {
+        char buf[4096];
+        buf[0] = ID_CLIENT_INFO;
+        strcpy(buf+1,username.c_str());
+        rakInterface->Send(buf,1+username.length()+1,HIGH_PRIORITY,RELIABLE_ORDERED,0,sa,false);
+    }
+
+    peerIDs[sa] = 1;
+
     while(initComplete==false)
     {
         RakNet::Packet *p = rakInterface->Receive();
-	if(!p) 
+	if(!p)
 	{
-	  ui_popup_time(1,"Waiting for server to send entire game state for the first time");
 		printf("WAITING FOR SERVER TO SEND GAME WORLD...\n");
-		osd_sleep(osd_ticks_per_second());
+		video_frame_update(machine, false);
+		RakSleep(10);
 		continue; //We need the first few packets, so stall until we get them
 	}
 	unsigned char packetID = GetPacketIdentifier(p);
+
+	printf("GOT PACKET: %d\n",int(packetID));
 
 	switch(packetID)
 	{
 			case ID_DISCONNECTION_NOTIFICATION:
 				// Connection lost normally
 				printf("ID_DISCONNECTION_NOTIFICATION\n");
+                if(selfPeerID==0)
+                {
+                    printf("Disconnected because there was no slots available or because a connection could not be made between you and another peer.\n");
+                }
 				return false;
 			case ID_ALREADY_CONNECTED:
 				printf("ID_ALREADY_CONNECTED\n");
@@ -162,11 +208,11 @@ bool Client::initializeConnection(const char *hostname,const char *port)
 				printf("ID_INCOMPATIBLE_PROTOCOL_VERSION\n");
 				return false;
 			case ID_REMOTE_DISCONNECTION_NOTIFICATION: // Server telling the clients of another client disconnecting gracefully.  You can manually broadcast this in a peer to peer enviroment if you want.
-				printf("ID_REMOTE_DISCONNECTION_NOTIFICATION\n"); 
-				break;
+				printf("ID_REMOTE_DISCONNECTION_NOTIFICATION\n");
+				return false;
 			case ID_REMOTE_CONNECTION_LOST: // Server telling the clients of another client disconnecting forcefully.  You can manually broadcast this in a peer to peer enviroment if you want.
 				printf("ID_REMOTE_CONNECTION_LOST\n");
-				break;
+				return false;
 			case ID_REMOTE_NEW_INCOMING_CONNECTION: // Server telling the clients of another client connecting.  You can manually broadcast this in a peer to peer enviroment if you want.
 				printf("ID_REMOTE_NEW_INCOMING_CONNECTION\n");
 				break;
@@ -197,10 +243,86 @@ bool Client::initializeConnection(const char *hostname,const char *port)
 				printf("ID_CONNECTION_REQUEST_ACCEPTED to %s with GUID %s\n", p->systemAddress.ToString(true), p->guid.ToString());
 				printf("My external address is %s\n", rakInterface->GetExternalID(p->systemAddress).ToString(true));
 				break;
-			case ID_INITIAL_SYNC:
-			    loadInitialData(GetPacketData(p),GetPacketSize(p));
+
+            case ID_HOST_ACCEPTED:
+                {
+                    int peerID;
+                    memcpy(&peerID,p->data+1,sizeof(int));
+                    RakNet::SystemAddress sa;
+                    memcpy(&(sa.binaryAddress),p->data+1+sizeof(int),sizeof(uint32_t));
+                    memcpy(&(sa.port),p->data+1+sizeof(int)+sizeof(uint32_t),sizeof(unsigned short));
+
+                    char buf[4096];
+                    strcpy(buf,(char*)(p->data+1+sizeof(int)+sizeof(uint32_t)+sizeof(unsigned short)));
+                    if(rakInterface->GetExternalID(p->systemAddress)==sa)
+                    {
+                        //This is me, set my own ID and name
+                        selfPeerID = peerID;
+                        peerIDs[sa] = peerID;
+                        peerNames[peerID] = buf;
+                    }
+                    else
+                    {
+                        //This is someone else, set their ID and name
+                        peerIDs[sa] = peerID;
+                        peerNames[peerID] = buf;
+                    }
+                }
+                break;
+
+            case ID_SEND_PEER_ID:
+                {
+                    int peerID;
+                    memcpy(&peerID,p->data+1,sizeof(int));
+                    cout << "Matching: " << p->systemAddress.ToString() << " To " << peerID << endl;
+                    peerIDs[p->systemAddress] = peerID;
+                }
+                break;
+
+
+			case ID_INITIAL_SYNC_PARTIAL:
+			{
+ 				printf("GOT PARTIAL SYNC FROM SERVER\n");
+				initialSyncPercentComplete++;
+				int curPos = (int)initialSyncBuffer.size();
+				initialSyncBuffer.resize(initialSyncBuffer.size()+GetPacketSize(p));
+				memcpy(&initialSyncBuffer[curPos],GetPacketData(p),GetPacketSize(p));
+			}
+            break;
+			case ID_INITIAL_SYNC_COMPLETE:
+			{
+			    printf("GOT INITIAL SYNC FROM SERVER!\n");
+				int curPos = (int)initialSyncBuffer.size();
+				initialSyncBuffer.resize(initialSyncBuffer.size()+GetPacketSize(p));
+				memcpy(&initialSyncBuffer[curPos],GetPacketData(p),GetPacketSize(p));
+			    loadInitialData(&initialSyncBuffer[0],(int)initialSyncBuffer.size());
 			    initComplete=true;
+			}
+            break;
+			case ID_CONST_DATA:
+			    addConstData(GetPacketData(p),GetPacketSize(p));
 			    break;
+            case ID_CLIENT_INPUTS:
+                if(peerIDs.find(p->systemAddress)==peerIDs.end() || peerInputs.find(peerIDs[p->systemAddress])==peerInputs.end())
+                {
+                    cout << __FILE__ << ":" << __LINE__ << " OOPS!!!!\n";
+                }
+                peerInputs[peerIDs[p->systemAddress]].push_back(string((char*)GetPacketData(p),(int)GetPacketSize(p)));
+                break;
+            case ID_SERVER_INPUTS:
+            {
+                peerInputs[1].push_back(string(((char*)GetPacketData(p)),(int)GetPacketSize(p)));
+            }
+            break;
+            case ID_SETTINGS:
+	    {
+                memcpy(&secondsBetweenSync,p->data+1,sizeof(int));
+		char buf[4096];
+		strcpy(buf,(const char*)(p->data+1+sizeof(int)));
+		string s(buf,strlen(buf));
+		peerNames[1] = s;
+	    }
+	    break;
 			default:
 			    //printf("GOT AN INVALID PACKET TYPE: %d\n",int(packetID));
 			    //throw std::runtime_error("OOPS");
@@ -212,13 +334,40 @@ bool Client::initializeConnection(const char *hostname,const char *port)
     return true;
 }
 
+extern attotime zeroInputMinTime;
+
 void Client::loadInitialData(unsigned char *data,int size)
 {
-    unsigned char *initialData = data;
+	int uncompressedSize;
+	memcpy(&uncompressedSize,data,sizeof(int));
+	data += sizeof(int);
+
+	int compressedSize;
+	memcpy(&compressedSize,data,sizeof(int));
+	data += sizeof(int);
+
+    vector<unsigned char> initialSyncBuffer(uncompressedSize + 128);
+
+	uLongf destLen = uncompressedSize+128;
+	uncompress(&initialSyncBuffer[0],&destLen,data,compressedSize);
+
+	RakNet::BitStream initialSyncStream(&initialSyncBuffer[0],uncompressedSize + 128,false);
+
+	printf("COMPRESSED SIZE: %d\n",compressedSize/1024/8);
+
+    RakNet::TimeUS timeBeforeSync;
+    initialSyncStream.Read(timeBeforeSync);
+
+    initialSyncStream.Read(zeroInputMinTime);
+    zeroInputMinTime.seconds += 2;
+
+    if(startupTime<timeBeforeSync)
+        printf("STARTUP TIME IS TOO EARLY!!!");
+    startupTime -= timeBeforeSync;
+
     cout << "READING NUM BLOCKS\n";
     int numBlocks;
-    memcpy(&numBlocks,data,sizeof(int));
-    data += sizeof(int);
+    initialSyncStream.Read(numBlocks);
 
     cout << "LOADING " << numBlocks << " BLOCKS\n";
             unsigned char checksum = 0;
@@ -228,18 +377,16 @@ void Client::loadInitialData(unsigned char *data,int size)
         for(int blockIndex=0;blockIndex<numBlocks;blockIndex++)
         {
             int blockSize;
-	    memcpy(&blockSize,data,sizeof(int));
-	    data += sizeof(int);
-            
+            initialSyncStream.Read(blockSize);
+
             cout << "GOT INITIAL BLOCK OF SIZE: " << blockSize << endl;
 
             blocks.push_back(MemoryBlock(blockSize));
             xorBlocks.push_back(MemoryBlock(blockSize));
             staleBlocks.push_back(MemoryBlock(blockSize));
 
-	    memcpy(blocks.back().data,data,blockSize);
-	    data += blockSize;
-	    memcpy(staleBlocks.back().data,blocks.back().data,blockSize);
+            initialSyncStream.ReadBits(blocks.back().data,blockSize*8);
+            memcpy(staleBlocks.back().data,blocks.back().data,blockSize);
 
             for(int a=0;a<blockSize;a++)
             {
@@ -261,8 +408,7 @@ void Client::loadInitialData(unsigned char *data,int size)
         {
             //cout << "ON INDEX: " << blockIndex << " OF " << numBlocks << endl;
             int blockSize;
-	    memcpy(&blockSize,data,sizeof(int));
-	    data += sizeof(int);
+            initialSyncStream.Read(blockSize);
 
             if(blockSize != blocks[blockIndex].size)
             {
@@ -271,9 +417,8 @@ void Client::loadInitialData(unsigned char *data,int size)
                 exit(1);
             }
 
-	    memcpy(blocks[blockIndex].data,data,blockSize);
-	    data += blockSize;
-	    memcpy(staleBlocks[blockIndex].data,blocks[blockIndex].data,blockSize);
+            initialSyncStream.ReadBits(staleBlocks[blockIndex].data,blockSize*8);
+            memcpy(blocks[blockIndex].data,staleBlocks[blockIndex].data,blockSize);
 
             for(int a=0;a<blockSize;a++)
             {
@@ -281,51 +426,145 @@ void Client::loadInitialData(unsigned char *data,int size)
             }
         }
     }
-    cout << "INITIAL CHECKSUM: " << int(checksum) << endl;
 
     int numConstBlocks;
-    memcpy(&numConstBlocks,data,sizeof(int));
-    data += sizeof(int);
+    initialSyncStream.Read(numConstBlocks);
 
     for(int blockIndex=0;blockIndex<numConstBlocks;blockIndex++)
     {
-	int blockSize;
-	//cout << "BLOCK SIZE FOR INDEX " << blockIndex << ": " << constBlocks[blockIndex].size << endl;
-	memcpy(&blockSize,data,sizeof(int));
-	data += sizeof(int);
+        int blockSize;
+        initialSyncStream.Read(blockSize);
+        //cout << "BLOCK SIZE FOR INDEX " << blockIndex << ": " << constBlocks[blockIndex].size << endl;
 
         constBlocks.push_back(MemoryBlock(0));
-	constBlocks[blockIndex].size = blockSize;
-	constBlocks[blockIndex].data = (unsigned char*)malloc(constBlocks[blockIndex].size);
+        constBlocks.back().size = blockSize;
+        constBlocks.back().data = (unsigned char*)malloc(constBlocks.back().size);
 
-	memcpy(constBlocks[blockIndex].data,data,constBlocks[blockIndex].size);
-	data += constBlocks[blockIndex].size;
+        initialSyncStream.ReadBits(constBlocks.back().data,constBlocks.back().size*8);
     }
-    if((data-initialData)>size)
+
+    while(true)
     {
-        cout << "ERROR: BLEW THROUGH INITIAL DATA BUFFER!\n";
+        int peerID;
+        initialSyncStream.Read(peerID);
+        cout << "Read peer id: " << peerID << endl;
+        if(peerID==-1)
+            break;
+
+        int numStrings;
+        initialSyncStream.Read(numStrings);
+        cout << "# strings: " << numStrings << endl;
+        for(int a=0;a<numStrings;a++)
+        {
+            int strlen;
+            initialSyncStream.Read(strlen);
+
+            vector<char> buf(strlen,'\0');
+
+            if(buf.size()!=strlen)
+            {
+                printf("OOPS\n");
+                exit(1);
+            }
+
+            initialSyncStream.ReadBits((unsigned char*)(&buf[0]),strlen*8);
+            if(peerInputs.find(peerID)==peerInputs.end())
+            {
+                cout << __FILE__ << ":" << __LINE__ << " OOPS!!!!\n";
+            }
+            peerInputs[peerID].push_back(string((&buf[0]),strlen));
+
+            for(int b=0;b<strlen;b++)
+            {
+                checksum = checksum ^ buf[b];
+            }
+        }
     }
+
+    needToSkipAhead=true;
+
+    cout << "CHECKSUM: " << int(checksum) << endl;
+
     cout << "CLIENT INITIALIZED!\n";
 }
 
-std::pair<bool,bool> Client::syncAndUpdate() 
+void Client::updateSyncCheck()
 {
-    osd_sleep(0);
-    while(true)
+	printf("UPDATING SYNC CHECK\n");
+	for(int blockIndex=0;blockIndex<int(blocks.size());blockIndex++)
+	{
+		memcpy(
+			syncCheckBlocks[blockIndex].data,
+			blocks[blockIndex].data,
+			blocks[blockIndex].size
+			);
+	}
+}
+
+
+bool printWhenCheck=false;
+
+std::pair<bool,bool> Client::syncAndUpdate()
+{
+    for(
+        map<RakNet::SystemAddress,vector< string > >::iterator it = unknownPeerInputs.begin();
+        it != unknownPeerInputs.end();
+        )
+    {
+        if(peerIDs.find(it->first)!=peerIDs.end())
+        {
+            int ID = peerIDs[it->first];
+            for(int a=0;a<it->second.size();a++)
+            {
+                peerInputs[ID].push_back(it->second[a]);
+            }
+            map<RakNet::SystemAddress,vector< string > >::iterator itold = it;
+            it++;
+            unknownPeerInputs.erase(itold);
+        }
+        else
+        {
+            it++;
+        }
+    }
+
+    RakSleep(0);
+    if(printWhenCheck)
+    {
+	    printWhenCheck=false;
+	    //printf("Checking for packets\n");
+    }
+    for(int packetCount=0;;packetCount++)
     {
         RakNet::Packet *p = rakInterface->Receive();
-	if(!p) 
+	if(!p)
 	{
 	    break;
 	}
 	unsigned char packetID = GetPacketIdentifier(p);
+	bool hadToResync;
 
 	switch(packetID)
 	{
+			case ID_CONNECTION_LOST:
+				// Couldn't deliver a reliable packet - i.e. the other system was abnormally
+				// terminated
+				printf("ID_CONNECTION_LOST\n");
 			case ID_DISCONNECTION_NOTIFICATION:
 				// Connection lost normally
 				printf("ID_DISCONNECTION_NOTIFICATION\n");
-			    return std::pair<bool,bool>(false,false);
+				if(peerIDs.find(p->systemAddress)!=peerIDs.end())
+				{
+                    if(peerIDs[p->systemAddress]==1)
+                    {
+                        //Server quit, we are done.
+                        return std::pair<bool,bool>(false,false);
+                    }
+                    else
+                    {
+                        peerIDs.erase(p->systemAddress);
+                    }
+				}
 				break;
 			case ID_ALREADY_CONNECTED:
 				printf("ID_ALREADY_CONNECTED\n");
@@ -336,7 +575,7 @@ std::pair<bool,bool> Client::syncAndUpdate()
 			    return std::pair<bool,bool>(false,false);
 				break;
 			case ID_REMOTE_DISCONNECTION_NOTIFICATION: // Server telling the clients of another client disconnecting gracefully.  You can manually broadcast this in a peer to peer enviroment if you want.
-				printf("ID_REMOTE_DISCONNECTION_NOTIFICATION\n"); 
+				printf("ID_REMOTE_DISCONNECTION_NOTIFICATION\n");
 				break;
 			case ID_REMOTE_CONNECTION_LOST: // Server telling the clients of another client disconnecting forcefully.  You can manually broadcast this in a peer to peer enviroment if you want.
 				printf("ID_REMOTE_CONNECTION_LOST\n");
@@ -347,7 +586,7 @@ std::pair<bool,bool> Client::syncAndUpdate()
 			case ID_CONNECTION_BANNED: // Banned from this server
 				printf("We are banned from this server.\n");
 			    return std::pair<bool,bool>(false,false);
-				break;			
+				break;
 			case ID_CONNECTION_ATTEMPT_FAILED:
 				printf("Connection attempt failed\n");
 			    return std::pair<bool,bool>(false,false);
@@ -364,27 +603,121 @@ std::pair<bool,bool> Client::syncAndUpdate()
 			    return std::pair<bool,bool>(false,false);
 				break;
 
-			case ID_CONNECTION_LOST:
-				// Couldn't deliver a reliable packet - i.e. the other system was abnormally
-				// terminated
-				printf("ID_CONNECTION_LOST\n");
-			    return std::pair<bool,bool>(false,false);
-				break;
-
 			case ID_CONNECTION_REQUEST_ACCEPTED:
 				// This tells the client they have connected
 				printf("ID_CONNECTION_REQUEST_ACCEPTED to %s with GUID %s\n", p->systemAddress.ToString(true), p->guid.ToString());
 				printf("My external address is %s\n", rakInterface->GetExternalID(p->systemAddress).ToString(true));
 				break;
-			case ID_RESYNC:
-			    resync(GetPacketData(p),GetPacketSize(p));
 
-                //We have to return here because processing two syncs without a frame
-                //in between can cause crashes
-			    return std::pair<bool,bool>(true,true);
+            case ID_ADVERTISE_SYSTEM:
+                {
+                    RakNet::SystemAddress sa;
+                    memcpy(&(sa.binaryAddress),p->data+1,sizeof(uint32_t));
+                    memcpy(&(sa.port),p->data+1+sizeof(uint32_t),sizeof(unsigned short));
+                    RakNet::SystemAddress sa2 = ConnectBlocking(sa.ToString(false),sa.port);
+                    if(sa2 != RakNet::UNASSIGNED_SYSTEM_ADDRESS)
+                    {
+                        cout << "Sending ID\n";
+                        //Tell the new guy your ID
+                        char buf[4096];
+                        buf[0] = ID_SEND_PEER_ID;
+                        memcpy(buf+1,&selfPeerID,sizeof(int));
+                        rakInterface->Send(buf,1+sizeof(int),HIGH_PRIORITY,RELIABLE_ORDERED,0,sa2,false);
+                    }
+                    RakNet::RakNetGUID guid = rakInterface->GetGuidFromSystemAddress(sa);
+                    cout << sa.binaryAddress << ':' << sa.port << endl;
+                    cout << sa2.binaryAddress << ':' << sa2.port << endl;
+                    if(sa2==RakNet::UNASSIGNED_SYSTEM_ADDRESS)
+                    {
+                        //Tell the boss that you can't accept this guy
+                        char buf[4096];
+                        buf[0] = ID_REJECT_NEW_HOST;
+                        memcpy(buf+1,&(sa.binaryAddress),sizeof(uint32_t));
+                        memcpy(buf+1+sizeof(uint32_t),&(sa.port),sizeof(unsigned short));
+                        rakInterface->Send(buf,1+sizeof(uint32_t)+sizeof(unsigned short),HIGH_PRIORITY,RELIABLE_ORDERED,0,rakInterface->GetSystemAddressFromIndex(0),false);
+                    }
+                    else
+                    {
+                        //Tell the boss that you can't accept this guy
+                        char buf[4096];
+                        buf[0] = ID_ACCEPT_NEW_HOST;
+                        memcpy(buf+1,&(sa.binaryAddress),sizeof(uint32_t));
+                        memcpy(buf+1+sizeof(uint32_t),&(sa.port),sizeof(unsigned short));
+                        rakInterface->Send(buf,1+sizeof(uint32_t)+sizeof(unsigned short),HIGH_PRIORITY,RELIABLE_ORDERED,0,rakInterface->GetSystemAddressFromIndex(0),false);
+                    }
+
+                }
+                break;
+
+            case ID_HOST_ACCEPTED:
+                {
+                    int peerID;
+                    memcpy(&peerID,p->data+1,sizeof(int));
+                    RakNet::SystemAddress sa;
+                    memcpy(&(sa.binaryAddress),p->data+1+sizeof(int),sizeof(uint32_t));
+                    memcpy(&(sa.port),p->data+1+sizeof(int)+sizeof(uint32_t),sizeof(unsigned short));
+                    if(rakInterface->GetExternalID(p->systemAddress)==sa)
+                    {
+                        //This is me, set my own ID
+                        selfPeerID = peerID;
+                    }
+                    else
+                    {
+                        //This is someone else, set their ID
+                        peerIDs[sa] = peerID;
+                    }
+                    if(peerInputs.find(peerID)!=peerInputs.end())
+                    {
+                        printf("A PEER INPUT ALREADY EXITED, THIS IS WEIRD\n");
+                    }
+                    peerInputs[peerID] = vector<string>();
+                }
+                break;
+
+			case ID_RESYNC_PARTIAL:
+				memcpy(syncPtr,GetPacketData(p),GetPacketSize(p));
+				syncPtr += GetPacketSize(p);
+				//printf("GOT PARTIAL RESYNC\n");
+				printWhenCheck=true;
+				break;
+			case ID_RESYNC_COMPLETE:
+				printf("GOT COMPLETE RESYNC\n");
+				memcpy(syncPtr,GetPacketData(p),GetPacketSize(p));
+				syncPtr += GetPacketSize(p);
+			        hadToResync = resync(compressedBuffer,int(syncPtr-compressedBuffer));
+
+	                    //We have to return here because processing two syncs without a frame
+           	            //in between can cause crashes
+			    syncPtr = compressedBuffer;
+			    if(firstResync || hadToResync)
+			    {
+                    printf("BEGINNING VIDEO SKIP\n");
+                    needToSkipAhead=true;
+				    firstResync=false;
+				    return std::pair<bool,bool>(true,true);
+			    }
+			    else
+			    {
+				    return std::pair<bool,bool>(true,false);
+			    }
 			    break;
 			case ID_CONST_DATA:
 			    addConstData(GetPacketData(p),GetPacketSize(p));
+			    break;
+            case ID_CLIENT_INPUTS:
+                if(peerIDs.find(p->systemAddress)==peerIDs.end() || peerInputs.find(peerIDs[p->systemAddress])==peerInputs.end())
+                {
+                    cout << __FILE__ << ":" << __LINE__ << " OOPS!!!!\n";
+                }
+                peerInputs[peerIDs[p->systemAddress]].push_back(string((char*)GetPacketData(p),(int)GetPacketSize(p)));
+                break;
+            case ID_SERVER_INPUTS:
+            {
+                peerInputs[1].push_back(string(((char*)GetPacketData(p)),(int)GetPacketSize(p)));
+            }
+            break;
+            case ID_SETTINGS:
+                memcpy(&secondsBetweenSync,p->data+1,sizeof(int));
 			    break;
 			default:
 			    printf("GOT AN INVALID PACKET TYPE: %d\n",int(packetID));
@@ -397,14 +730,10 @@ std::pair<bool,bool> Client::syncAndUpdate()
     return std::pair<bool,bool>(true,false);
 }
 
-void Client::resync(unsigned char *data,int size)
-{
-            //If the client has predicted anything, erase the prediction
-            for(int a=0;a<int(blocks.size());a++)
-            {
-                memcpy(blocks[a].data,staleBlocks[a].data,blocks[a].size);
-            }
+extern unsigned char gotAnonymous;
 
+bool Client::resync(unsigned char *data,int size)
+{
 	int uncompressedSize,compressedSize;
 	memcpy(&uncompressedSize,data,sizeof(int));
 	data += sizeof(int);
@@ -414,7 +743,102 @@ void Client::resync(unsigned char *data,int size)
 	uncompress(uncompressedBuffer,&destLen,data,compressedSize);
 	unsigned char *uncompressedPtr = uncompressedBuffer;
 
+
+	//Check to see if the client is clean
+	bool clientIsClean=true;
+
+	int badBlockCount=0;
+	int totalBlockCount=0;
+
+            while(true)
+            {
+                int blockIndex;
+		memcpy(
+			&blockIndex,
+			uncompressedPtr,
+			sizeof(int)
+		      );
+		uncompressedPtr += sizeof(int);
+
+                if(blockIndex==-1)
+                {
+                    //cout << "GOT TERMINAL BLOCK INDEX\n";
+                    break;
+                }
+
+                if(blockIndex >= int(blocks.size()) || blockIndex<0)
+                {
+                    cout << "GOT AN INVALID BLOCK INDEX: " << blockIndex << endl;
+                    break;
+                }
+
+                //boost::asio::read(*clientSocket,boost::asio::buffer(&clientSizeOfNextMessage, sizeof(int)));
+
+                MemoryBlock &block = blocks[blockIndex];
+                MemoryBlock &syncCheckBlock = syncCheckBlocks[blockIndex];
+                MemoryBlock &staleBlock = staleBlocks[blockIndex];
+                MemoryBlock &xorBlock = xorBlocks[blockIndex];
+
+                //cout << "CLIENT: GOT MESSAGE FOR INDEX: " << blockIndex << endl;
+
+                //if(clientSizeOfNextMessage!=block.size)
+                //{
+                //cout << "ERROR!: SIZE MISMATCH " << clientSizeOfNextMessage
+                //<< " != " << block.size << endl;
+                //}
+
+		memcpy(
+			xorBlock.data,
+			uncompressedPtr,
+			xorBlock.size
+		      );
+        	uncompressedPtr += xorBlock.size;
+                //cout << "BYTES READ: " << (xorBlock.size-strm.avail_out) << endl;
+                for(int a=0;a<block.size;a++)
+                {
+			totalBlockCount++;
+			if(syncCheckBlock.data[a] != (xorBlock.data[a] ^ staleBlock.data[a]))
+			{
+				badBlockCount++;
+				if(badBlockCount<50)
+				{
+					printf("BLOCK %d BYTE %d IS BAD\n",blockIndex,a);
+					clientIsClean=false;
+				}
+				//break;
+			}
+                }
+            }
+
+	    if(clientIsClean)
+	    {
+		    printf("CLIENT IS CLEAN\n");
+	            for(int a=0;a<int(blocks.size());a++)
+        	    {
+                	memcpy(staleBlocks[a].data,syncCheckBlocks[a].data,syncCheckBlocks[a].size);
+		    }
+		    return false;
+	    }
+
+	    if(gotAnonymous)
+	    {
+	        printf("CLIENT IS DIRTY BUT HAD ANONYMOUS TIMER SO CAN'T FIX!\n");
+		    return false;
+	    }
+
+	    printf("CLIENT IS DIRTY (%d bad blocks, %f%% of total)\n",badBlockCount,float(badBlockCount)*100.0f/totalBlockCount);
+	    ui_popup_time(3, "You are out of sync with the server, resyncing...");
+
+	//The client is not clean and needs to be resynced
+
+            //If the client has predicted anything, erase the prediction
+            for(int a=0;a<int(blocks.size());a++)
+            {
+                memcpy(blocks[a].data,staleBlocks[a].data,blocks[a].size);
+            }
+
 #if 1
+	uncompressedPtr = uncompressedBuffer;
             unsigned char blockChecksum=0;
             unsigned char xorChecksum=0;
             unsigned char staleChecksum=0;
@@ -476,6 +900,7 @@ void Client::resync(unsigned char *data,int size)
             printf("XOR CHECKSUM: %d\n",int(xorChecksum));
             printf("STALE CHECKSUM: %d\n",int(staleChecksum));
 #endif
+	    return true;
 }
 
 void Client::addConstData(unsigned char *data,int size)
@@ -490,7 +915,7 @@ void Client::addConstData(unsigned char *data,int size)
 	    memcpy(&compressedblockSize,data,sizeof(int));
 	    data += sizeof(int);
 
-	    constBlocks.back().size = blockSize;	    
+	    constBlocks.back().size = blockSize;
         constBlocks.back().data = (unsigned char*)malloc(blockSize);
 
         uLongf destLen = blockSize;
@@ -501,6 +926,11 @@ void Client::addConstData(unsigned char *data,int size)
             data,
             size-(sizeof(int)*2)
             );
+
+	if(constBlocks.back().data[0]>1)
+	{
+		printf("ERROR! GOT CONST BLOCK WITH ID OUT OF RANGE!!!\n");
+	}
 }
 
 void Client::checkMatch(Server *server)
@@ -529,7 +959,7 @@ void Client::checkMatch(Server *server)
         if(memcmp(getMemoryBlock(a).data,server->getMemoryBlock(a).data,getMemoryBlock(a).size))
         {
             cout << "CLIENT AND SERVER ARE OUT OF SYNC\n";
-            cout << "CLIENT BITCOUNT: " << getMemoryBlock(a).getBitCount() 
+            cout << "CLIENT BITCOUNT: " << getMemoryBlock(a).getBitCount()
                 << " SERVER BITCOUNT: " << server->getMemoryBlock(a).getBitCount()
                 << endl;
             errorCount++;
@@ -539,36 +969,27 @@ void Client::checkMatch(Server *server)
     cout << "CLIENT AND SERVER ARE IN SYNC\n";
 }
 
-void Client::sendString(const string &outputString)
+int Client::getNumSessions()
 {
-        char* dataToSend = (char*)malloc(outputString.length()+1);
+    return rakInterface->NumberOfConnections();
+}
+
+void Client::sendInputs(const string &inputString)
+{
+    peerInputs[selfPeerID].push_back(inputString);
+    char* dataToSend = (char*)malloc(inputString.length()+1);
     dataToSend[0] = ID_CLIENT_INPUTS;
-    memcpy(dataToSend+1,outputString.c_str(),outputString.length());
+    memcpy(dataToSend+1,inputString.c_str(),inputString.length());
         //cout << "SENDING MESSAGE WITH LENGTH: " << intSize << endl;
     rakInterface->Send(
 		    dataToSend,
-		    (int)(outputString.length()+1),
+		    (int)(inputString.length()+1),
 		    HIGH_PRIORITY,
-		    UNRELIABLE,
+		    RELIABLE_ORDERED,
 		    ORDERING_CHANNEL_CLIENT_INPUTS,
-		    rakInterface->GetSystemAddressFromIndex(0),
-		    false
+		    RakNet::UNASSIGNED_SYSTEM_ADDRESS,
+		    true
 		   );
     free(dataToSend);
 }
 
-string Client::getLatencyString()
-{
-  char buf[4096];
-  sprintf(buf,"Server Ping: %d ms", rakInterface->GetAveragePing(rakInterface->GetSystemAddressFromIndex(0)));
-  return string(buf);
-}
-
-string Client::getStatisticsString()
-{
-  RakNet::RakNetStatistics *rss;
-  char message[4096];
-  rss=rakInterface->GetStatistics(rakInterface->GetSystemAddressFromIndex(0));
-  StatisticsToString(rss, message, 0);
-  return string(message);
-}

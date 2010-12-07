@@ -64,7 +64,7 @@ void archimedes_request_irq_b(running_machine *machine, int mask)
 
 	if (ioc_regs[10] & mask)
 	{
-		cputag_set_input_line(machine, "maincpu", ARM_IRQ_LINE, HOLD_LINE); //TODO: was PULSE_LINE before
+		cputag_set_input_line(machine, "maincpu", ARM_IRQ_LINE, PULSE_LINE);
 	}
 }
 
@@ -74,7 +74,7 @@ void archimedes_request_fiq(running_machine *machine, int mask)
 
 	if (ioc_regs[14] & mask)
 	{
-		cputag_set_input_line(machine, "maincpu", ARM_FIRQ_LINE, HOLD_LINE); //TODO: was PULSE_LINE before
+		cputag_set_input_line(machine, "maincpu", ARM_FIRQ_LINE, PULSE_LINE);
 	}
 }
 
@@ -153,9 +153,6 @@ void archimedes_reset(running_machine *machine)
 	{
 		memc_pages[i] = -1;		// indicate unmapped
 	}
-
-	ioc_regs[4] = 0x10; //set up POR (Power On Reset) at start-up
-	ioc_regs[8] = 0x02; //set up IL[1] On
 }
 
 void archimedes_init(running_machine *machine)
@@ -322,7 +319,7 @@ READ32_HANDLER(archimedes_ioc_r)
 	#ifdef MESS
 	running_device *fdc = (running_device *)space->machine->device("wd1772");
 	#endif
-	if (offset*4 >= 0x200000 && offset*4 < 0x300000)
+	if (offset >= 0x80000 && offset < 0xc0000)
 	{
 		switch (offset & 0x1f)
 		{
@@ -348,11 +345,11 @@ READ32_HANDLER(archimedes_ioc_r)
 				return (ioc_timerout[3]>>8)&0xff;
 		}
 
-		logerror("IOC: R %s = %02x (PC=%x) %02x\n", ioc_regnames[offset&0x1f], ioc_regs[offset&0x1f], cpu_get_pc( space->cpu ),offset & 0x1f);
+		logerror("IOC: R %s = %02x (PC=%x)\n", ioc_regnames[offset&0x1f], ioc_regs[offset&0x1f], cpu_get_pc( space->cpu ));
 		return ioc_regs[offset&0x1f];
 	}
 	#ifdef MESS
-	else if (offset*4 >= 0x310000 && offset*4 < 0x310040)
+	else if (offset >= 0xc4000 && offset <= 0xc4010)
 	{
 		logerror("17XX: R @ addr %x mask %08x\n", offset*4, mem_mask);
 		return wd17xx_data_r(fdc, offset&0xf);
@@ -373,14 +370,14 @@ WRITE32_HANDLER(archimedes_ioc_w)
 	running_device *fdc = (running_device *)space->machine->device("wd1772");
 	#endif
 
-	if (offset*4 >= 0x200000 && offset*4 < 0x300000)
+	if (offset >= 0x80000 && offset < 0xc0000)
 	{
-//     	logerror("IOC: W %02x @ reg %s (PC=%x)\n", data&0xff, ioc_regnames[offset&0x1f], cpu_get_pc( space->cpu ));
+//      logerror("IOC: W %02x @ reg %s (PC=%x)\n", data&0xff, ioc_regnames[offset&0x1f], cpu_get_pc( space->cpu ));
 
 		switch (offset&0x1f)
 		{
 			case 0:	// I2C bus control
-				//logerror("IOC I2C: CLK %d DAT %d\n", (data>>1)&1, data&1);
+				logerror("IOC I2C: CLK %d DAT %d\n", (data>>1)&1, data&1);
 				break;
 
 			case 5: 	// IRQ clear A
@@ -455,12 +452,12 @@ WRITE32_HANDLER(archimedes_ioc_w)
 		}
 	}
 	#ifdef MESS
-	else if (offset*4 >= 0x310000 && offset*4 < 0x310040)
+	else if (offset >= 0xc4000 && offset <= 0xc4010)
 	{
 		logerror("17XX: %x to addr %x mask %08x\n", data, offset*4, mem_mask);
 		wd17xx_data_w(fdc, offset&0xf, data&0xff);
 	}
-	else if (offset*4 == 0x350018)
+	else if (offset == 0xd40006)
 	{
 		// latch A
 		if (data & 1)
@@ -483,7 +480,7 @@ WRITE32_HANDLER(archimedes_ioc_w)
 		wd17xx_set_side(fdc,(data & 0x10)>>4);
 
 	}
-	else if (offset*4 == 0x350040)
+	else if (offset == 0xd40010)
 	{
 		// latch B
 		wd17xx_dden_w(fdc, BIT(data, 1));
@@ -526,22 +523,7 @@ WRITE32_HANDLER(archimedes_vidc_w)
 	};
 	#endif
 
-	// 0x00 - 0x3c Video Palette Logical Colors (16 colors)
-	// 0x40 Border Color
-	// 0x44 - 0x4c Cursor Palette Logical Colors
-	if (reg >= 0x00 && reg <= 0x4c)
-	{
-		int r,g,b;
-
-		//TODO: 8bpp mode uses a different formula
-		//i = (val & 0x1000) >> 12; //supremacy bit
-		b = (val & 0x0f00) >> 8;
-		g = (val & 0x00f0) >> 4;
-		r = (val & 0x000f) >> 0;
-
-		palette_set_color_rgb(space->machine, reg >> 2, pal4bit(r), pal4bit(g), pal4bit(b) );
-	}
-	else if (reg >= 0x80 && reg <= 0xbc)
+	if (reg >= 0x80 && reg <= 0xbc)
 	{
 		#ifdef DEBUG
 		logerror("VIDC: %s = %d\n", vrnames[(reg-0x80)/4], val>>12);

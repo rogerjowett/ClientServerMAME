@@ -7,13 +7,12 @@
 ****************************************************************************/
 
 
-class stactics_state : public driver_data_t
+class stactics_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, stactics_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, stactics_state(machine)); }
 
-	stactics_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	stactics_state(running_machine &machine) { }
 
 	/* machine state */
 	int    vert_pos;

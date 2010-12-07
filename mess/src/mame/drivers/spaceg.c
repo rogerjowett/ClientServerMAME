@@ -173,13 +173,12 @@ Notes:
  *
  *************************************/
 
-class spaceg_state : public driver_data_t
+class spaceg_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, spaceg_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, spaceg_state(machine)); }
 
-	spaceg_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	spaceg_state(running_machine &machine) { }
 
 	UINT8 *  videoram;
 	UINT8 *  unkram;
@@ -223,7 +222,7 @@ static PALETTE_INIT( spaceg )
 
 static WRITE8_HANDLER( zvideoram_w )
 {
-	spaceg_state *state = space->machine->driver_data<spaceg_state>();
+	spaceg_state *state = (spaceg_state *)space->machine->driver_data;
 	int col;
 
 	col = state->unkram[0x400];
@@ -258,7 +257,7 @@ static WRITE8_HANDLER( zvideoram_w )
 
 static READ8_HANDLER(spaceg_colorram_r)
 {
-	spaceg_state *state = space->machine->driver_data<spaceg_state>();
+	spaceg_state *state = (spaceg_state *)space->machine->driver_data;
 	int rgbcolor;
 
 	if (offset < 0x400)
@@ -290,7 +289,7 @@ static READ8_HANDLER(spaceg_colorram_r)
 
 static VIDEO_UPDATE( spaceg )
 {
-	spaceg_state *state = screen->machine->driver_data<spaceg_state>();
+	spaceg_state *state = (spaceg_state *)screen->machine->driver_data;
 	offs_t offs;
 
 	for (offs = 0; offs < 0x2000; offs++)

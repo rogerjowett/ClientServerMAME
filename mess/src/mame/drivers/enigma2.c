@@ -57,13 +57,12 @@ TODO:
 #define NUM_PENS	(8)
 
 
-class enigma2_state : public driver_data_t
+class enigma2_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, enigma2_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, enigma2_state(machine)); }
 
-	enigma2_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	enigma2_state(running_machine &machine) { }
 
 	/* memory pointers */
 	UINT8 *  videoram;
@@ -105,14 +104,14 @@ INLINE int vysnc_chain_counter_to_vpos( UINT16 counter )
 
 static TIMER_CALLBACK( interrupt_clear_callback )
 {
-	enigma2_state *state = machine->driver_data<enigma2_state>();
+	enigma2_state *state = (enigma2_state *)machine->driver_data;
 	cpu_set_input_line(state->maincpu, 0, CLEAR_LINE);
 }
 
 
 static TIMER_CALLBACK( interrupt_assert_callback )
 {
-	enigma2_state *state = machine->driver_data<enigma2_state>();
+	enigma2_state *state = (enigma2_state *)machine->driver_data;
 	UINT16 next_counter;
 	int next_vpos;
 
@@ -136,7 +135,7 @@ static TIMER_CALLBACK( interrupt_assert_callback )
 
 static void create_interrupt_timers( running_machine *machine )
 {
-	enigma2_state *state = machine->driver_data<enigma2_state>();
+	enigma2_state *state = (enigma2_state *)machine->driver_data;
 	state->interrupt_clear_timer = timer_alloc(machine, interrupt_clear_callback, NULL);
 	state->interrupt_assert_timer = timer_alloc(machine, interrupt_assert_callback, NULL);
 }
@@ -144,7 +143,7 @@ static void create_interrupt_timers( running_machine *machine )
 
 static void start_interrupt_timers( running_machine *machine )
 {
-	enigma2_state *state = machine->driver_data<enigma2_state>();
+	enigma2_state *state = (enigma2_state *)machine->driver_data;
 	int vpos = vysnc_chain_counter_to_vpos(INT_TRIGGER_COUNT_1);
 	timer_adjust_oneshot(state->interrupt_assert_timer, machine->primary_screen->time_until_pos(vpos), 0);
 }
@@ -153,7 +152,7 @@ static void start_interrupt_timers( running_machine *machine )
 
 static MACHINE_START( enigma2 )
 {
-	enigma2_state *state = machine->driver_data<enigma2_state>();
+	enigma2_state *state = (enigma2_state *)machine->driver_data;
 	create_interrupt_timers(machine);
 
 	state->maincpu = machine->device("maincpu");
@@ -169,7 +168,7 @@ static MACHINE_START( enigma2 )
 
 static MACHINE_RESET( enigma2 )
 {
-	enigma2_state *state = machine->driver_data<enigma2_state>();
+	enigma2_state *state = (enigma2_state *)machine->driver_data;
 	cputag_set_input_line(machine, "audiocpu", INPUT_LINE_NMI, CLEAR_LINE);
 
 	state->last_sound_data = 0;
@@ -202,7 +201,7 @@ static void get_pens(pen_t *pens)
 
 static VIDEO_UPDATE( enigma2 )
 {
-	enigma2_state *state = screen->machine->driver_data<enigma2_state>();
+	enigma2_state *state = (enigma2_state *)screen->machine->driver_data;
 	pen_t pens[NUM_PENS];
 
 	const rectangle &visarea = screen->visible_area();
@@ -290,7 +289,7 @@ static VIDEO_UPDATE( enigma2 )
 
 static VIDEO_UPDATE( enigma2a )
 {
-	enigma2_state *state = screen->machine->driver_data<enigma2_state>();
+	enigma2_state *state = (enigma2_state *)screen->machine->driver_data;
 	UINT8 x = 0;
 	const rectangle &visarea = screen->visible_area();
 	UINT16 bitmap_y = visarea.min_y;
@@ -352,7 +351,7 @@ static VIDEO_UPDATE( enigma2a )
 
 static READ8_HANDLER( dip_switch_r )
 {
-	enigma2_state *state = space->machine->driver_data<enigma2_state>();
+	enigma2_state *state = (enigma2_state *)space->machine->driver_data;
 	UINT8 ret = 0x00;
 
 	if (LOG_PROT) logerror("DIP SW Read: %x at %x (prot data %x)\n", offset, cpu_get_pc(space->cpu), state->protection_data);
@@ -383,7 +382,7 @@ static READ8_HANDLER( dip_switch_r )
 
 static WRITE8_HANDLER( sound_data_w )
 {
-	enigma2_state *state = space->machine->driver_data<enigma2_state>();
+	enigma2_state *state = (enigma2_state *)space->machine->driver_data;
 	/* clock sound latch shift register on rising edge of D2 */
 	if (!(data & 0x04) && (state->last_sound_data & 0x04))
 		state->sound_latch = (state->sound_latch << 1) | (~data & 0x01);
@@ -396,14 +395,14 @@ static WRITE8_HANDLER( sound_data_w )
 
 static READ8_DEVICE_HANDLER( sound_latch_r )
 {
-	enigma2_state *state = device->machine->driver_data<enigma2_state>();
+	enigma2_state *state = (enigma2_state *)device->machine->driver_data;
 	return BITSWAP8(state->sound_latch,0,1,2,3,4,5,6,7);
 }
 
 
 static WRITE8_DEVICE_HANDLER( protection_data_w )
 {
-	enigma2_state *state = device->machine->driver_data<enigma2_state>();
+	enigma2_state *state = (enigma2_state *)device->machine->driver_data;
 	if (LOG_PROT) logerror("%s: Protection Data Write: %x\n", cpuexec_describe_context(device->machine), data);
 	state->protection_data = data;
 }
@@ -411,7 +410,7 @@ static WRITE8_DEVICE_HANDLER( protection_data_w )
 
 static WRITE8_HANDLER( enigma2_flip_screen_w )
 {
-	enigma2_state *state = space->machine->driver_data<enigma2_state>();
+	enigma2_state *state = (enigma2_state *)space->machine->driver_data;
 	state->flip_screen = ((data >> 5) & 0x01) && ((input_port_read(space->machine, "DSW") & 0x20) == 0x20);
 }
 
@@ -424,7 +423,7 @@ static CUSTOM_INPUT( p1_controls_r )
 
 static CUSTOM_INPUT( p2_controls_r )
 {
-	enigma2_state *state = field->port->machine->driver_data<enigma2_state>();
+	enigma2_state *state = (enigma2_state *)field->port->machine->driver_data;
 	if (state->flip_screen)
 		return input_port_read(field->port->machine, "P2CONTROLS");
 	else

@@ -96,7 +96,7 @@ int debug_comment_init(running_machine *machine)
 	/* allocate memory for the comments */
 	device_disasm_interface *disasm;
 	for (device_t *device = machine->m_devicelist.first(); device != NULL; device = device->next())
-		if (device->interface(disasm))
+		if (device->dev_interface(disasm))
 			device->debug()->m_comments = auto_alloc_clear(machine, debug_cpu_comment_group);
 
 	/* automatically load em up */

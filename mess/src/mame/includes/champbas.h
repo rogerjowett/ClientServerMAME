@@ -8,13 +8,12 @@
 #define CPUTAG_MCU "mcu"
 
 
-class champbas_state : public driver_data_t
+class champbas_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, champbas_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, champbas_state(machine)); }
 
-	champbas_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	champbas_state(running_machine &machine) { }
 
 	/* memory pointers */
 	UINT8 *        bg_videoram;

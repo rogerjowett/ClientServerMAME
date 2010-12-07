@@ -3477,7 +3477,7 @@ static CPU_INIT( z80 )
 	/* set up the state table */
 	{
 		device_state_interface *state;
-		device->interface(state);
+		device->dev_interface(state);
 		state->state_add(Z80_PC,          "PC",        z80->pc.w.l);
 		state->state_add(STATE_GENPC,     "GENPC",     z80->pc.w.l).noshow();
 		state->state_add(STATE_GENPCBASE, "GENPCBASE", z80->prvpc.w.l).noshow();

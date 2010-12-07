@@ -8,6 +8,9 @@
 //for guid, systemaddress, etc.
 #include "RakNetTypes.h"
 
+//For RakNet::GetTimeUS
+#include "GetTime.h"
+
 #include <algorithm>
 #include <cstdlib>
 #include <deque>
@@ -18,6 +21,8 @@
 #include <string>
 #include <map>
 #include <cstring>
+
+#include "zlib.h"
 
 using namespace std;
 
@@ -32,11 +37,19 @@ enum OrderingChannelType
 
 enum CustomPacketType
 {
-    ID_CLIENT_INPUTS=ID_USER_PACKET_ENUM,
-    ID_SERVER_INPUTS,
-    ID_INITIAL_SYNC,
-    ID_RESYNC,
+    ID_SERVER_INPUTS=ID_USER_PACKET_ENUM,
+    ID_CLIENT_INPUTS,
+    ID_INITIAL_SYNC_PARTIAL,
+    ID_INITIAL_SYNC_COMPLETE,
+    ID_RESYNC_PARTIAL,
+    ID_RESYNC_COMPLETE,
     ID_CONST_DATA,
+    ID_SETTINGS,
+    ID_REJECT_NEW_HOST,
+	ID_ACCEPT_NEW_HOST,
+    ID_HOST_ACCEPTED,
+    ID_SEND_PEER_ID,
+    ID_CLIENT_INFO,
     ID_END
 };
 
@@ -88,6 +101,129 @@ public:
 		}
 		return bitCount;
 	}
+};
+
+class Common
+{
+protected:
+	RakNet::RakPeerInterface *rakInterface;
+
+    int secondsBetweenSync;
+
+    vector<MemoryBlock> constBlocks;
+
+	vector<MemoryBlock> blocks,staleBlocks,xorBlocks;
+
+	z_stream strm;
+
+    int selfPeerID;
+
+    std::map<RakNet::SystemAddress,int> peerIDs;
+
+    string username;
+    std::map<int,string> peerNames;
+
+    map<int,vector< string > > peerInputs;
+    map<RakNet::SystemAddress,vector< string > > unknownPeerInputs;
+    map<int,vector< string > > oldPeerInputs;
+
+    RakNet::TimeUS startupTime;
+
+public:
+
+    Common(string _username);
+
+    RakNet::SystemAddress ConnectBlocking(const char *defaultAddress, unsigned short defaultPort);
+
+    int getSecondsBetweenSync()
+    {
+        return secondsBetweenSync;
+    }
+
+    void setSecondsBetweenSync(int _secondsBetweenSync)
+    {
+        secondsBetweenSync = _secondsBetweenSync;
+    }
+
+    void addConstBlock(unsigned char *tmpdata,int size);
+
+	int getNumBlocks()
+	{
+		return int(blocks.size());
+	}
+
+    int getNumConstBlocks()
+    {
+        return int(constBlocks.size());
+    }
+
+    MemoryBlock* getConstBlock(int i)
+    {
+        return &constBlocks[i];
+    }
+
+    void destroyConstBlock(int i)
+    {
+      constBlocks.erase(constBlocks.begin()+i);
+    }
+
+	MemoryBlock getMemoryBlock(int i)
+	{
+		return blocks[i];
+	}
+
+	string getLatencyString(int peerID);
+
+	string getStatisticsString();
+
+    vector<int> getPeerIDs()
+    {
+        vector<int> retval;
+        for(
+            std::map<RakNet::SystemAddress,int>::iterator it = peerIDs.begin();
+            it != peerIDs.end();
+            it++
+            )
+        {
+            retval.push_back(it->second);
+        }
+        return retval;
+    }
+
+    //Note, this doesn't include yourself
+    int getNumOtherPeers()
+    {
+        return int(peerIDs.size())-1;
+    }
+
+    int getOtherPeerID(int a);
+
+    string popInputBuffer(int clientIndex);
+
+    inline int getSelfPeerID()
+    {
+        return selfPeerID;
+    }
+
+    inline const string &getPeerNameFromID(int id)
+    {
+        return peerNames[id];
+    }
+
+    inline RakNet::TimeUS getStartupTime()
+    {
+        return startupTime;
+    }
+
+    inline RakNet::TimeUS getTime()
+    {
+        return RakNet::GetTimeUS();
+    }
+
+    inline RakNet::TimeUS getTimeSinceStartup()
+    {
+        return RakNet::GetTimeUS() - startupTime;
+    }
 };
 
 #endif

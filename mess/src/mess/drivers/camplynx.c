@@ -81,13 +81,12 @@
 #include "video/mc6845.h"
 #include "sound/dac.h"
 
-class camplynx_state : public driver_data_t
+class camplynx_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, camplynx_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, camplynx_state(machine)); }
 
-	camplynx_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	camplynx_state(running_machine &machine) { }
 
 	running_device *mc6845;
 };
@@ -410,14 +409,14 @@ static MC6845_UPDATE_ROW( lynx128k_update_row )
 
 static VIDEO_START( lynx48k )
 {
-	camplynx_state *state = machine->driver_data<camplynx_state>();
+	camplynx_state *state = (camplynx_state *)machine->driver_data;
 
 	state->mc6845 = machine->device("crtc");
 }
 
 static VIDEO_UPDATE( lynx48k )
 {
-	camplynx_state *state = screen->machine->driver_data<camplynx_state>();
+	camplynx_state *state = (camplynx_state *)screen->machine->driver_data;
 
 	mc6845_update(state->mc6845, bitmap, cliprect);
 	return 0;

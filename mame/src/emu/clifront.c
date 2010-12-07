@@ -188,6 +188,10 @@ int cli_execute(int argc, char **argv, const options_entry *osd_options)
 	{
 		fprintf(stderr, "Out of memory!\n");
 	}
+	catch (std::exception &ex)
+	{
+		fprintf(stderr, "%s\n", ex.what());
+	}
 	catch (...)
 	{
 		fprintf(stderr, "Caught unhandled exception\n");

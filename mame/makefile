@@ -368,14 +368,17 @@ OBJ = obj/$(OSD)/$(FULLNAME)
 #-------------------------------------------------
 
 # CR/LF setup: use both on win32/os2, CR only on everything else
-DEFS = -DCRLF=2
+DEFS = -DCRLF=2 
 
 ifeq ($(TARGETOS),win32)
-DEFS = -DCRLF=3
+DEFS = -DCRLF=3 -DWIN32
 endif
 ifeq ($(TARGETOS),os2)
 DEFS = -DCRLF=3
 endif
+
+#Define STATICLIB for miniupnpc
+DEFS += -DSTATICLIB
 
 # map the INLINE to something digestible by GCC
 DEFS += -DINLINE="static inline"
@@ -496,6 +499,7 @@ CCOMFLAGS += \
 	-I$(OBJ)/emu \
 	-I$(OBJ)/emu/layout \
 	-I$(SRC)/lib/util \
+	-I$(SRC)/lib/miniupnpc-1.4.20100609 \
 	-I$(SRC)/osd \
 	-I$(SRC)/osd/$(OSD) \
 	-I$(SRC)/../../../Libraries/RakNet/Source \
@@ -583,7 +587,7 @@ VERSIONOBJ = $(OBJ)/version.o
 #-------------------------------------------------
 
 # start with an empty set of libs
-LIBS = 
+LIBS =
 
 # add RakNet
 ifdef MSVC_BUILD
@@ -715,11 +719,11 @@ $(sort $(OBJDIRS)):
 ifndef EXECUTABLE_DEFINED
 
 # always recompile the version string
-$(VERSIONOBJ): $(DRVLIBS) $(LIBOSD) $(LIBCPU) $(LIBEMU) $(LIBSOUND) $(LIBUTIL) $(EXPAT) $(ZLIB) $(SOFTFLOAT) $(LIBOCORE) $(RESFILE)
+$(VERSIONOBJ): $(DRVLIBS) $(LIBOSD) $(LIBCPU) $(LIBEMU) $(LIBSOUND) $(LIBUTIL) $(EXPAT) $(ZLIB) $(OBJ)/libminiupnpc.a $(SOFTFLOAT) $(LIBOCORE) $(RESFILE)
 
-$(EMULATOR): $(VERSIONOBJ) $(DRVLIBS) $(LIBOSD) $(LIBCPU) $(LIBEMU) $(LIBDASM) $(LIBSOUND) $(LIBUTIL) $(EXPAT) $(SOFTFLOAT) $(ZLIB) $(LIBOCORE) $(RESFILE)
+$(EMULATOR): $(VERSIONOBJ) $(DRVLIBS) $(LIBOSD) $(LIBCPU) $(LIBEMU) $(LIBDASM) $(LIBSOUND) $(LIBUTIL) $(EXPAT) $(SOFTFLOAT) $(ZLIB) $(OBJ)/libminiupnpc.a $(LIBOCORE) $(RESFILE)
 	@echo Linking $@...
-	$(LD) $(LDFLAGS) $(LDFLAGSEMULATOR) $^ $(LIBS) -o $@
+	$(LD) $(LDFLAGS) $(LDFLAGSEMULATOR) $^ $(LIBS) -lIphlpapi -lws2_32 -o $@
 ifeq ($(TARGETOS),win32)
 ifdef SYMBOLS
 	$(OBJDUMP) --section=.text --line-numbers --syms --demangle $@ >$(FULLNAME).sym

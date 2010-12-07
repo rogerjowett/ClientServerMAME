@@ -71,6 +71,9 @@ struct _input_seq
 /* ----- state queries ----- */
 
 /* return TRUE if the given switch sequence has been pressed */
+int input_seq_pressed_raw(running_machine *machine, const input_seq *seq);
+
+/* return TRUE if the given switch sequence has been pressed */
 int input_seq_pressed(running_machine *machine, const input_seq *seq);
 
 /* return the value of an axis sequence */

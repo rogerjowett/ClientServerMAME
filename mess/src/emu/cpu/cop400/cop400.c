@@ -827,7 +827,7 @@ static void define_state_table(running_device *device)
 	cop400_state *cpustate = get_safe_token(device);
 
 	device_state_interface *state;
-	device->interface(state);
+	device->dev_interface(state);
 	state->state_add(STATE_GENPC,     "GENPC",     cpustate->pc).mask(0xfff).noshow();
 	state->state_add(STATE_GENPCBASE, "GENPCBASE", cpustate->prevpc).mask(0xfff).noshow();
 	state->state_add(STATE_GENSP,     "GENSP",     cpustate->n).mask(0x3).noshow();
@@ -1258,11 +1258,9 @@ static ADDRESS_MAP_START( data_128b, ADDRESS_SPACE_DATA, 8 )
 	AM_RANGE(0x00, 0x7f) AM_RAM
 ADDRESS_MAP_END
 
-#ifdef UNUSED_CODE
 static ADDRESS_MAP_START( data_160b, ADDRESS_SPACE_DATA, 8 )
 	AM_RANGE(0x00, 0x9f) AM_RAM
 ADDRESS_MAP_END
-#endif
 
 /***************************************************************************
     VALIDITY CHECKS

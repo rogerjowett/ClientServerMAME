@@ -65,13 +65,12 @@ SOFT  PSG & VOICE  BY M.C & S.H
 #include "video/resnet.h"
 #include "sound/ay8910.h"
 
-class meijinsn_state : public driver_data_t
+class meijinsn_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, meijinsn_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, meijinsn_state(machine)); }
 
-	meijinsn_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	meijinsn_state(running_machine &machine) { }
 
 	/* memory pointers */
 	UINT16 *   shared_ram;
@@ -97,7 +96,7 @@ static WRITE16_HANDLER( sound_w )
 
 static READ16_HANDLER( alpha_mcu_r )
 {
-	meijinsn_state *state = space->machine->driver_data<meijinsn_state>();
+	meijinsn_state *state = (meijinsn_state *)space->machine->driver_data;
 	static const UINT8 coinage1[2][2] = {{1,1}, {1,2}};
 	static const UINT8 coinage2[2][2] = {{1,5}, {2,1}};
 
@@ -281,7 +280,7 @@ static PALETTE_INIT( meijinsn )
 
 static VIDEO_UPDATE(meijinsn)
 {
-	meijinsn_state *state = screen->machine->driver_data<meijinsn_state>();
+	meijinsn_state *state = (meijinsn_state *)screen->machine->driver_data;
 	int offs;
 
 	for (offs = 0; offs < 0x4000; offs++)
@@ -322,7 +321,7 @@ static const ay8910_interface ay8910_config =
 
 static MACHINE_START( meijinsn )
 {
-	meijinsn_state *state = machine->driver_data<meijinsn_state>();
+	meijinsn_state *state = (meijinsn_state *)machine->driver_data;
 
 	state_save_register_global(machine, state->deposits1);
 	state_save_register_global(machine, state->deposits2);
@@ -331,7 +330,7 @@ static MACHINE_START( meijinsn )
 
 static MACHINE_RESET( meijinsn )
 {
-	meijinsn_state *state = machine->driver_data<meijinsn_state>();
+	meijinsn_state *state = (meijinsn_state *)machine->driver_data;
 
 	state->deposits1 = 0;
 	state->deposits2 = 0;

@@ -9,13 +9,12 @@
 #include "emu.h"
 #include "cpu/z80/z80.h"
 
-class z9001_state : public driver_data_t
+class z9001_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, z9001_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, z9001_state(machine)); }
 
-	z9001_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	z9001_state(running_machine &machine) { }
 
 	UINT8 *videoram;
 };
@@ -48,7 +47,7 @@ static VIDEO_START( z9001 )
 
 static VIDEO_UPDATE( z9001 )
 {
-	z9001_state *state = screen->machine->driver_data<z9001_state>();
+	z9001_state *state = (z9001_state *)screen->machine->driver_data;
 	UINT8 code;
 	UINT8 line;
 	int y, x, j, b;

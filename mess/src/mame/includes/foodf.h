@@ -6,13 +6,14 @@
 
 #include "machine/atarigen.h"
 
-class foodf_state : public atarigen_state
+class foodf_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, foodf_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, foodf_state(machine)); }
 
-	foodf_state(running_machine &machine)
-		: atarigen_state(machine) { }
+	foodf_state(running_machine &machine) { }
+
+	atarigen_state	atarigen;
 
 	double			rweights[3];
 	double			gweights[3];

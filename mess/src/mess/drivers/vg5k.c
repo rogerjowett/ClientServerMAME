@@ -50,13 +50,12 @@
 #include "formats/vg5k_cas.h"
 
 
-class vg5k_state : public driver_data_t
+class vg5k_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, vg5k_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, vg5k_state(machine)); }
 
-	vg5k_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	vg5k_state(running_machine &machine) { }
 
 	running_device *ef9345;
 	running_device *dac;
@@ -69,7 +68,7 @@ public:
 
 READ8_HANDLER( printer_r )
 {
-	vg5k_state *vg5k = space->machine->driver_data<vg5k_state>();
+	vg5k_state *vg5k = (vg5k_state *)space->machine->driver_data;
 
 	return (printer_is_ready(vg5k->printer) ? 0x00 : 0xff);
 }
@@ -77,7 +76,7 @@ READ8_HANDLER( printer_r )
 
 WRITE8_HANDLER( printer_w )
 {
-	vg5k_state *vg5k = space->machine->driver_data<vg5k_state>();
+	vg5k_state *vg5k = (vg5k_state *)space->machine->driver_data;
 
 	printer_output(vg5k->printer, data);
 }
@@ -85,7 +84,7 @@ WRITE8_HANDLER( printer_w )
 
 WRITE8_HANDLER ( ef9345_offset_w )
 {
-	vg5k_state *vg5k = space->machine->driver_data<vg5k_state>();
+	vg5k_state *vg5k = (vg5k_state *)space->machine->driver_data;
 
 	vg5k->ef9345_offset = data;
 }
@@ -93,7 +92,7 @@ WRITE8_HANDLER ( ef9345_offset_w )
 
 READ8_HANDLER ( ef9345_io_r )
 {
-	vg5k_state *vg5k = space->machine->driver_data<vg5k_state>();
+	vg5k_state *vg5k = (vg5k_state *)space->machine->driver_data;
 
 	return ef9345_r(vg5k->ef9345, vg5k->ef9345_offset);
 }
@@ -101,7 +100,7 @@ READ8_HANDLER ( ef9345_io_r )
 
 WRITE8_HANDLER ( ef9345_io_w )
 {
-	vg5k_state *vg5k = space->machine->driver_data<vg5k_state>();
+	vg5k_state *vg5k = (vg5k_state *)space->machine->driver_data;
 
 	ef9345_w(vg5k->ef9345, vg5k->ef9345_offset, data);
 }
@@ -109,7 +108,7 @@ WRITE8_HANDLER ( ef9345_io_w )
 
 READ8_HANDLER ( cassette_r )
 {
-	vg5k_state *vg5k = space->machine->driver_data<vg5k_state>();
+	vg5k_state *vg5k = (vg5k_state *)space->machine->driver_data;
 	double level;
 
 	level = cassette_input(vg5k->cassette);
@@ -120,7 +119,7 @@ READ8_HANDLER ( cassette_r )
 
 WRITE8_HANDLER ( cassette_w )
 {
-	vg5k_state *vg5k = space->machine->driver_data<vg5k_state>();
+	vg5k_state *vg5k = (vg5k_state *)space->machine->driver_data;
 
 	dac_data_w(vg5k->dac, data <<2);
 
@@ -291,7 +290,7 @@ static TIMER_CALLBACK( z80_irq )
 
 static TIMER_DEVICE_CALLBACK( vg5k_scanline )
 {
-	vg5k_state *vg5k = timer.machine->driver_data<vg5k_state>();
+	vg5k_state *vg5k = (vg5k_state *)timer.machine->driver_data;
 
 	ef9345_scanline(vg5k->ef9345, (UINT16)param);
 }
@@ -299,7 +298,7 @@ static TIMER_DEVICE_CALLBACK( vg5k_scanline )
 
 static MACHINE_START( vg5k )
 {
-	vg5k_state *vg5k = machine->driver_data<vg5k_state>();
+	vg5k_state *vg5k = (vg5k_state *)machine->driver_data;
 
 	vg5k->ef9345 = machine->device("ef9345");
 	vg5k->dac = machine->device("dac");
@@ -313,7 +312,7 @@ static MACHINE_START( vg5k )
 
 static MACHINE_RESET( vg5k )
 {
-	vg5k_state *vg5k = machine->driver_data<vg5k_state>();
+	vg5k_state *vg5k = (vg5k_state *)machine->driver_data;
 
 	vg5k->ef9345_offset = 0;
 }
@@ -324,7 +323,7 @@ static VIDEO_START( vg5k )
 
 static VIDEO_UPDATE( vg5k )
 {
-	vg5k_state *vg5k = screen->machine->driver_data<vg5k_state>();
+	vg5k_state *vg5k = (vg5k_state *)screen->machine->driver_data;
 
 	video_update_ef9345(vg5k->ef9345, bitmap, cliprect);
 

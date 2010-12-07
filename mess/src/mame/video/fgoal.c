@@ -10,28 +10,28 @@
 
 WRITE8_HANDLER( fgoal_color_w )
 {
-	fgoal_state *state = space->machine->driver_data<fgoal_state>();
+	fgoal_state *state = (fgoal_state *)space->machine->driver_data;
 	state->current_color = data & 3;
 }
 
 
 WRITE8_HANDLER( fgoal_ypos_w )
 {
-	fgoal_state *state = space->machine->driver_data<fgoal_state>();
+	fgoal_state *state = (fgoal_state *)space->machine->driver_data;
 	state->ypos = data;
 }
 
 
 WRITE8_HANDLER( fgoal_xpos_w )
 {
-	fgoal_state *state = space->machine->driver_data<fgoal_state>();
+	fgoal_state *state = (fgoal_state *)space->machine->driver_data;
 	state->xpos = data;
 }
 
 
 VIDEO_START( fgoal )
 {
-	fgoal_state *state = machine->driver_data<fgoal_state>();
+	fgoal_state *state = (fgoal_state *)machine->driver_data;
 	state->fgbitmap = machine->primary_screen->alloc_compatible_bitmap();
 	state->bgbitmap = machine->primary_screen->alloc_compatible_bitmap();
 
@@ -42,7 +42,7 @@ VIDEO_START( fgoal )
 
 VIDEO_UPDATE( fgoal )
 {
-	fgoal_state *state = screen->machine->driver_data<fgoal_state>();
+	fgoal_state *state = (fgoal_state *)screen->machine->driver_data;
 	const UINT8* VRAM = state->video_ram;
 
 	int x;

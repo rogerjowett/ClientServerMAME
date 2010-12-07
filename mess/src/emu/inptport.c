@@ -91,10 +91,12 @@
 
 ***************************************************************************/
 
+#include <map>
+#include <vector>
+#include <string>
+
 #include "NSM_Server.h"
 #include "NSM_Client.h"
-#include <map>
-#include <fstream>
 
 #include "emu.h"
 #include "emuopts.h"
@@ -223,7 +225,6 @@ struct _input_field_state
 	UINT8						impulse;			/* counter for impulse controls */
 	UINT8						last;				/* were we pressed last time? */
 	UINT8						joydir;				/* digital joystick direction index */
-    UINT8                       curstate;           /* Used by the server to figure out the port->digital status*/
 	char *						name;				/* overridden name */
 };
 
@@ -977,9 +978,6 @@ static WRITE_LINE_DEVICE_HANDLER( changed_write_line_device )
     system
 -------------------------------------------------*/
 
-extern Server *netServer;
-extern Client *netClient;
-
 time_t input_port_init(running_machine *machine, const input_port_token *tokens)
 {
 	//input_port_private *portdata;
@@ -1103,10 +1101,10 @@ const char *input_field_name(const input_field_config *field)
     input_field_seq - return the input sequence
     for the given input field
 -------------------------------------------------*/
+const input_seq ip_none = SEQ_DEF_0;
 
 const input_seq *input_field_seq(const input_field_config *field, input_seq_type seqtype)
 {
-	static const input_seq ip_none = SEQ_DEF_0;
 	const input_seq *portseq = &ip_none;
 
 	/* if the field is disabled, return no key */
@@ -1472,9 +1470,23 @@ void input_type_set_seq(running_machine *machine, int type, int player, input_se
     is pressed
 -------------------------------------------------*/
 
+extern Server *netServer;
+extern Client *netClient;
+
 int input_type_pressed(running_machine *machine, int type, int player)
 {
-	return input_seq_pressed(machine, input_type_seq(machine, type, player, SEQ_TYPE_STANDARD));
+    if(netClient || netServer)
+    {
+        if(type==169)
+        {
+            //Can't fast forward in netplay
+            return 0;
+        }
+    }
+    printf("CHECKING INPUT TYPE %d %d...",type,player);
+	int retval = input_seq_pressed(machine, input_type_seq(machine, type, player, SEQ_TYPE_STANDARD));
+	printf("DONE\n");
+	return retval;
 }
 
 
@@ -2460,33 +2472,144 @@ static void input_port_update_hook(running_machine *machine, const input_port_co
 }
 
 
+std::map< attotime, std::map<const input_seq*,char> > playerInput;
+std::map< attotime, unsigned int > playerInputReceived;
+std::map<const input_field_config *,const input_field_config *> playerInputFieldMap[MAX_PLAYERS];
+extern attotime mostRecentReport;
+extern attotime mostRecentSentReport;
+attotime zeroInputMinTime;
+
 /*-------------------------------------------------
     frame_update - core logic for per-frame input
     port updating
 -------------------------------------------------*/
-extern int serializePlayerInputToBuffer(running_machine *machine, char *tmpbuffer);
-extern void deserializePlayerInputFromBuffer(running_machine *machine, const unsigned char *tmpbuffer, int size, int playerIndex);
-extern void doPostLoad(running_machine *machine);
 
-std::map<attotime,MemoryBlock> clientInputDatabase;
+void deserializePlayerInputFromBuffer(running_machine *machine,int peerID,const char *buf,int len)
+{
+    //cout << "Deserializing input from peer " << peerID << endl;
+    //cout.flush();
 
-string serverInputDatabases[MAX_PLAYERS];
+    if(peerID-1<0)
+    {
+        cout << "INPUT FIELD MAP NOT FOUND\n";
+        return;
+    }
 
-std::map<const input_field_config *,const input_field_config *> playerInputFieldMap[MAX_PLAYERS];
+    //printf("Got input from %d\n",peerID);
+
+	attotime futureInputTime;
+	memcpy(&(futureInputTime.seconds),buf,sizeof(futureInputTime.seconds));
+	memcpy(&(futureInputTime.attoseconds),buf+sizeof(futureInputTime.seconds),sizeof(futureInputTime.attoseconds));
+	int bufPos = sizeof(futureInputTime.seconds)+sizeof(futureInputTime.attoseconds);
+
+	//cout << "GOT INPUT REPORT FROM " << peerID << " FOR TIME " << futureInputTime.seconds << "." << futureInputTime.attoseconds << endl;
+
+	if(peerID==1 && mostRecentReport<futureInputTime)
+	{
+	    mostRecentReport = futureInputTime;
+
+	    //Drop the time back a bit to compensate for latency
+	    if(mostRecentReport.attoseconds >= (ATTOSECONDS_PER_SECOND/10)*2)
+	    {
+	        mostRecentReport.attoseconds -= (ATTOSECONDS_PER_SECOND/10)*2;
+	    }
+	    else
+	    {
+	        mostRecentReport.seconds--;
+	        mostRecentReport.attoseconds += (ATTOSECONDS_PER_SECOND/10)*8;
+	    }
+	}
+
+	if(playerInput.find(futureInputTime)==playerInput.end())
+	{
+	    playerInput[futureInputTime] = std::map<const input_seq*,char>();
+	}
+	if(playerInputReceived.find(futureInputTime)==playerInputReceived.end())
+	{
+	    playerInputReceived[futureInputTime] = 0;
+	}
+	playerInputReceived[futureInputTime] |= (1<<peerID);
+
+	const input_port_config *port;
+
+    //cout << "Start des\n";
+	/* loop over all input ports */
+	for (port = machine->m_portlist.first(); port != NULL; port = port->next())
+	{
+		const input_field_config *field;
+
+		/* now loop back and modify based on the inputs */
+		for (field = port->fieldlist; field != NULL; field = field->next)
+		{
+		    if((!netServer && !netClient) || (netServer && field->player==0) || (netClient && field->player==0))
+		    {
+                const input_field_config *newfield = NULL;
+                if(peerID>1)
+                {
+                    std::map<const input_field_config *,const input_field_config *>::iterator it = playerInputFieldMap[peerID-1].find(field);
+                    if(it != playerInputFieldMap[peerID-1].end())
+                    {
+                        newfield = it->second;
+                    }
+                }
+                else
+                {
+                    newfield = field;
+
+                    if(
+                       (newfield->type>=IPT_START2 && newfield->type<=IPT_START8) ||
+                       (newfield->type>=IPT_COIN2 && newfield->type<=IPT_COIN12) ||
+                       (newfield->type>=IPT_SERVICE2 && newfield->type<=IPT_SERVICE4) ||
+                       (newfield->type>=IPT_TILT2 && newfield->type<=IPT_TILT4)
+                       )
+                    {
+                        //Even though these are player 1, they are not owned by player 1
+                        newfield=NULL;
+                    }
+                }
+                if(newfield && input_field_seq(newfield,SEQ_TYPE_STANDARD)!=&ip_none)
+                {
+                    //cout << "Des: " << newfield << ',' << input_field_seq(newfield,SEQ_TYPE_STANDARD) << endl;
+                    if(playerInput[futureInputTime].find(input_field_seq(newfield,SEQ_TYPE_STANDARD))!=playerInput[futureInputTime].end())
+                    {
+                        //if(playerInput[futureInputTime][input_field_seq(newfield,SEQ_TYPE_STANDARD)] != buf[bufPos])
+                            //printf("ERROR: INPUT COLLISION: %d (%d)\n",newfield->type,field->type);
+                    }
+                    playerInput[futureInputTime][input_field_seq(newfield,SEQ_TYPE_STANDARD)] = buf[bufPos++];
+                    if (field->state->analog != NULL)
+                    {
+                        playerInput[futureInputTime][input_field_seq(newfield,SEQ_TYPE_INCREMENT)] = buf[bufPos++];
+                        playerInput[futureInputTime][input_field_seq(newfield,SEQ_TYPE_DECREMENT)] = buf[bufPos++];
+                    }
+                }
+                else
+                {
+                    //cout << "(Skip: No Field)\n";
+                }
+            }
+            else
+            {
+                //cout << "(Skip: Wrong player)\n";
+            }
+		}
+	}
+    //cout << "End des\n";
+
+    if(bufPos!=len)
+    {
+        printf("BUFPOS != LEN: %d %d\n",bufPos,len);
+    }
+
+    //cout << "Finished Deserializing input from peer " << peerID << endl;
+    //cout.flush();
+}
 
 static void frame_update(running_machine *machine)
 {
-	input_port_private *portdata = machine->input_port_data;
-	const input_field_config *mouse_field = NULL;
-	int ui_visible = ui_is_menu_active();
-	attotime curtime = timer_get_time(machine);
+    //printf("INPUT PORT START\n");
 	const input_port_config *port;
-	render_target *mouse_target;
-	INT32 mouse_target_x;
-	INT32 mouse_target_y;
-	int mouse_button;
 
-    if(playerInputFieldMap[0].size()==0)
+    if(playerInputFieldMap[1].size()==0)
     {
         //Initialize input map
 	    for (port = machine->m_portlist.first(); port != NULL; port = port->next())
@@ -2504,18 +2627,20 @@ static void frame_update(running_machine *machine)
                     //Search for a field that is the same as the current field
                     //but for another player
 	                for(
-                        const input_port_config *newPort = machine->m_portlist.first(); 
-                        newPort != NULL; 
+                        const input_port_config *newPort = machine->m_portlist.first();
+                        newPort != NULL;
                         newPort = newPort->next()
                         )
 	                {
 		                for (
-                            const input_field_config* newField = newPort->fieldlist; 
-                            newField != NULL; 
+                            const input_field_config* newField = newPort->fieldlist;
+                            newField != NULL;
                             newField = newField->next
                             )
                         {
-                            
+                            if(field==newField)
+                                continue;
+
                             int inputcount=1;
                             //Special cases,
                             //Assume that coin inputs and start inputs are contiguous
@@ -2540,18 +2665,21 @@ static void frame_update(running_machine *machine)
                             //even though both are considered "player 1"
                             for(int a=0;a<inputcount;a++)
                             {
+                                if(int(newField->player)+a==0)
+                                    continue;
+
                                 UINT32 tmpinputtype = field->type + a;
                                 if(tmpinputtype==newField->type)
                                 {
                                     //The current field for player 0 is the newField for
                                     //player: newField->player
                                     playerInputFieldMap[newField->player+a][field] = newField;
-                                    if(field->name && newField->name)
+                                    //if(field->name && newField->name)
                                     {
-                                        cout << field->name << " on player 0 maps to "
-                                            << newField->name << " on player " << int(newField->player)+a << "\n";
+                                        //cout << field->name << " on player 0 maps to "
+                                            //<< newField->name << " on player " << int(newField->player)+a << "\n";
                                     }
-                                    else
+                                    //else
                                     {
                                         cout << field->type << " on player 0 maps to "
                                             << newField->type << " on player " << int(newField->player)+a << "\n";
@@ -2564,6 +2692,46 @@ static void frame_update(running_machine *machine)
             }
         }
     }
+
+	input_port_private *portdata = machine->input_port_data;
+	const input_field_config *mouse_field = NULL;
+	int ui_visible = ui_is_menu_active();
+	attotime curtime = timer_get_time(machine);
+	attotime futureInputTime = curtime;
+	if(futureInputTime.attoseconds>=((ATTOSECONDS_PER_SECOND/10)*8))
+	{
+	    futureInputTime.attoseconds -= ((ATTOSECONDS_PER_SECOND/10)*8);
+	    futureInputTime.seconds++;
+	}
+	else
+	{
+	    futureInputTime.attoseconds += (ATTOSECONDS_PER_SECOND/10)*2;
+	}
+	if(playerInput.find(futureInputTime)==playerInput.end())
+	{
+        playerInput[futureInputTime] = std::map<const input_seq*,char>();
+	}
+	if(playerInputReceived.find(futureInputTime)==playerInputReceived.end())
+	{
+	    playerInputReceived[futureInputTime] = 0;
+	}
+	int peerID=1;
+	if(netServer)
+        peerID = netServer->getSelfPeerID();
+	if(netClient)
+        peerID = netClient->getSelfPeerID();
+    if(peerID==0)
+    {
+        printf("DON'T HAVE AN ID YET\n");
+        //Not sure what to do if you don't hae an ID yet...
+        return;
+    }
+    playerInputReceived[futureInputTime] |= (1 << peerID);
+
+	render_target *mouse_target;
+	INT32 mouse_target_x;
+	INT32 mouse_target_y;
+	int mouse_button;
 
 profiler_mark_start(PROFILER_INPUT);
 
@@ -2578,154 +2746,8 @@ profiler_mark_start(PROFILER_INPUT);
 	/* update the digital joysticks */
 	frame_update_digital_joysticks(machine);
 
-	/* loop over all input ports */
-    //cout << "DIGITAL PORTS: ";
-	for (port = machine->m_portlist.first(); port != NULL; port = port->next())
-	{
-		const input_field_config *field;
-
-			/* start with 0 values for the digital and VBLANK bits */
-			port->state->digital = 0;
-			port->state->vblank = 0;
-
-		/* now loop back and modify based on the inputs */
-		for (field = port->fieldlist; field != NULL; field = field->next)
-        {
-			if (input_condition_true(port->machine, &field->condition))
-			{
-				/* accumulate VBLANK bits */
-				if (field->type == IPT_VBLANK)
-					port->state->vblank ^= field->mask;
-
-				/* handle analog inputs (done up above now) */
-				else if (field->state->analog != NULL)
-					frame_update_analog_field(machine, field->state->analog);
-
-				/* handle non-analog types, but only when the UI isn't visible */
-				else if (!ui_visible && frame_get_digital_field_state(field, field == mouse_field))
-					port->state->digital |= field->mask;
-			}
-        }
-        //cout << " " << port->state->digital;
-
-		/* hook for MESS's natural keyboard support */
-		input_port_update_hook(machine, port, &port->state->digital);
-    }
-    //cout << endl;
-
-	if(netServer)
-	{
-		for(int a=0;a<netServer->getNumSessions();a++)
-		{
-            if(serverInputDatabases[a+1].length())
-            {
-                deserializePlayerInputFromBuffer(machine,(const unsigned char *)serverInputDatabases[a+1].c_str(),serverInputDatabases[a+1].length(),netServer->getClientID(a));
-            }
-		}
-
-	    /* loop over all input ports */
-        //cout << "ADJUSTED DIGITAL PORTS: ";
-	    for (port = machine->m_portlist.first(); port != NULL; port = port->next())
-	    {
-		    const input_field_config *field;
-
-			/* start with 0 values for the digital and VBLANK bits */
-			port->state->digital = 0;
-
-		    /* now loop back and modify based on the inputs */
-		    for (field = port->fieldlist; field != NULL; field = field->next)
-            {
-			    if (input_condition_true(port->machine, &field->condition))
-			    {
-				    /* accumulate VBLANK bits */
-				    if (field->type == IPT_VBLANK)
-                    {
-                    }
-
-				    /* handle analog inputs (done up above now) */
-				    else if (field->state->analog != NULL)
-                    {
-                    }
-
-				    /* handle non-analog types, but only when the UI isn't visible */
-                    else if (!ui_visible && field->state->curstate)
-					    port->state->digital |= field->mask;
-			    }
-            }
-            //cout << " " << port->state->digital;
-        }
-        //cout << endl;
-    }
-
-    // comment to see performance
-	if(netClient)
-	{
-		//Send player 1 data to the server
-		static char tmpbuffer[1024*1024*1];
-		tmpbuffer[0]=0;
-		int bytesUsed = serializePlayerInputToBuffer(machine,tmpbuffer+1);
-		//cout << "USED " << bytesUsed << " BYTES OF TMPBUFFER\n";
-		if(bytesUsed >= 1024*1024*1)
-		{
-			cout << "OOPS! Blew through tmpbuffer!\n";
-		}
-		netClient->sendString(string(tmpbuffer,bytesUsed+1));
-		//cout << "CALLING SYNC\n";
-
-        //while(true)
-        {
-            //cout << "CHECKING FOR " << curtime.seconds << '.' << curtime.attoseconds << endl;
-            if(clientInputDatabase.find(curtime)!=clientInputDatabase.end())
-            {
-                //cout << "FOUND INPUT FROM SERVER\n";
-                deserializePlayerInputFromBuffer(machine,clientInputDatabase[curtime].data,clientInputDatabase[curtime].size,-1);
-                clientInputDatabase.erase(clientInputDatabase.find(curtime));
-                //break;
-            }
-            else
-            {
-            //cout << "FAILED AT TIME:" << curtime.seconds << '.' << curtime.attoseconds << endl;
-            //throw emu_fatalerror("FAILED TO FIND INPUT PACKET!");
-            cout << "FAILED TO FIND INPUT PACKET!\n";
-            //cout << "WAITING FOR INPUT FROM SERVER FOR TIME: " << curtime.seconds << " " << curtime.attoseconds << "\n";
-            /*
-            if(netClient->syncAndUpdate()) 
-            {
-                printf("EXECUTING POST LOAD\n");
-                fflush(stdout);
-                doPostLoad(machine);
-            }
-            */
-            }
-        }
-    }
-    //
-
-    if(netClient==NULL)
-    {
-        //JJG: Don't run this if you are the client, this comes from the server packet
-	    /* compute default values for all the ports */
-	    input_port_update_defaults(machine);
-    }
-
-    if(netServer)
-    {
-
-		//Send all player data to the server
-		static char tmpbuffer[1024*1024*1];
-		tmpbuffer[0]=0;
-		int bytesUsed = serializePlayerInputToBuffer(machine,tmpbuffer+1);
-		//cout << "USED " << bytesUsed << " BYTES OF TMPBUFFER\n";
-		if(bytesUsed >= 1024*1024*1)
-		{
-			cout << "OOPS! Blew through tmpbuffer!\n";
-		}
-        static int counter=0;
-        //cout << counter << ") ADDING BLOCK FOR: " << curtime.seconds << " " << curtime.attoseconds << endl;
-        counter++;
-		netServer->addConstBlock((unsigned char*)tmpbuffer,bytesUsed+1);
-		//cout << "CALLING SYNC\n";
-    }
+	/* compute default values for all the ports */
+	input_port_update_defaults(machine);
 
 	/* perform the mouse hit test */
 	mouse_target = ui_input_find_mouse(machine, &mouse_target_x, &mouse_target_y, &mouse_button);
@@ -2737,12 +2759,119 @@ profiler_mark_start(PROFILER_INPUT);
 			mouse_field = input_field_by_tag_and_mask(machine->m_portlist, tag, mask);
 	}
 
+	char sendBuf[4096];
+	sendBuf[0] = 0;
+	memcpy(sendBuf+1,&(futureInputTime.seconds),sizeof(futureInputTime.seconds));
+	memcpy(sendBuf+1+sizeof(futureInputTime.seconds),&(futureInputTime.attoseconds),sizeof(futureInputTime.attoseconds));
+	int sendBufLength = 1+sizeof(futureInputTime.seconds)+sizeof(futureInputTime.attoseconds);
+
+    bool processRawInput=false;
+    if(mostRecentSentReport<futureInputTime)
+    {
+        processRawInput=true;
+    }
+    else
+    {
+        printf("SKIPPING INPUT\n");
+    }
+
 	/* loop over all input ports */
+    //cout << "Start Ser\n";
 	for (port = machine->m_portlist.first(); port != NULL; port = port->next())
 	{
-	    device_field_info *device_field;
-	    input_port_value newvalue;
-	    
+		const input_field_config *field;
+		device_field_info *device_field;
+		input_port_value newvalue;
+
+		/* start with 0 values for the digital and VBLANK bits */
+		port->state->digital = 0;
+		port->state->vblank = 0;
+
+		/* now loop back and modify based on the inputs */
+		for (field = port->fieldlist; field != NULL; field = field->next)
+		{
+		    if((!netServer && !netClient) || (netServer && field->player==0) || (netClient && field->player==0))
+		    {
+		        const input_field_config *newfield = NULL;
+		        if(netClient)
+		        {
+		            std::map<const input_field_config *,const input_field_config *>::iterator it = playerInputFieldMap[peerID-1].find(field);
+		            if(it != playerInputFieldMap[peerID-1].end())
+		            {
+		                newfield = it->second;
+		            }
+		        }
+		        if(netServer)
+		        {
+		            newfield = field;
+
+                    if(
+                       (newfield->type>=IPT_START2 && newfield->type<=IPT_START8) ||
+                       (newfield->type>=IPT_COIN2 && newfield->type<=IPT_COIN12) ||
+                       (newfield->type>=IPT_SERVICE2 && newfield->type<=IPT_SERVICE4) ||
+                       (newfield->type>=IPT_TILT2 && newfield->type<=IPT_TILT4)
+                       )
+                    {
+                        //Even though these are player 1, they are not owned by player 1
+                        newfield=NULL;
+                    }
+		        }
+		        if(processRawInput && newfield && input_field_seq(newfield,SEQ_TYPE_STANDARD)!=&ip_none)
+		        {
+		            //printf("CHECKING INPUT TYPE %d PLAYER %d...",newfield->type,newfield->player);
+                    if(netClient && zeroInputMinTime>=curtime)
+                    {
+                        //cout << "Ser: " << newfield << ',' << field << endl;
+                        sendBuf[sendBufLength++] = playerInput[futureInputTime][input_field_seq(newfield,SEQ_TYPE_STANDARD)] = 0;
+                        if (newfield->state->analog != NULL)
+                        {
+                            sendBuf[sendBufLength++] = playerInput[futureInputTime][input_field_seq(newfield,SEQ_TYPE_INCREMENT)] = 0;
+                            sendBuf[sendBufLength++] = playerInput[futureInputTime][input_field_seq(newfield,SEQ_TYPE_DECREMENT)] = 0;
+                        }
+                    }
+                    else
+                    {
+                    //cout << "Ser: " << newfield << ',' << field << endl;
+                    sendBuf[sendBufLength++] = playerInput[futureInputTime][input_field_seq(newfield,SEQ_TYPE_STANDARD)] = (char)input_seq_pressed_raw(machine,input_field_seq(field,SEQ_TYPE_STANDARD));
+                    if (newfield->state->analog != NULL)
+                    {
+                        sendBuf[sendBufLength++] = playerInput[futureInputTime][input_field_seq(newfield,SEQ_TYPE_INCREMENT)] = (char)input_seq_pressed_raw(machine,input_field_seq(field,SEQ_TYPE_INCREMENT));
+                        sendBuf[sendBufLength++] = playerInput[futureInputTime][input_field_seq(newfield,SEQ_TYPE_DECREMENT)] = (char)input_seq_pressed_raw(machine,input_field_seq(field,SEQ_TYPE_DECREMENT));
+                    }
+		        }
+                    //printf("DONE\n");
+		        }
+                else
+                {
+                    //cout << "(Skip: No Field)\n";
+                }
+            }
+            else
+            {
+                //cout << "(Skip: Wrong player)\n";
+            }
+
+			if (input_condition_true(port->machine, &field->condition))
+			{
+			    //printf("CHECKING FIELD TYPE %d %PLAYER %d...",field->type,field->player);
+				/* accumulate VBLANK bits */
+				if (field->type == IPT_VBLANK)
+					port->state->vblank ^= field->mask;
+
+				/* handle analog inputs */
+				else if (field->state->analog != NULL)
+					frame_update_analog_field(machine, field->state->analog);
+
+				/* handle non-analog types, but only when the UI isn't visible */
+				else if (!ui_visible && frame_get_digital_field_state(field, field == mouse_field))
+					port->state->digital |= field->mask;
+                //printf("DONE\n");
+			}
+		}
+
+		/* hook for MESS's natural keyboard support */
+		input_port_update_hook(machine, port, &port->state->digital);
+
 		/* handle playback/record */
 		playback_port(port);
 		record_port(port);
@@ -2750,6 +2879,7 @@ profiler_mark_start(PROFILER_INPUT);
 		/* call device line changed handlers */
 		newvalue = input_port_read_direct(port);
 		for (device_field = port->state->writedevicelist; device_field; device_field = device_field->next)
+		{
 			if (device_field->field->type != IPT_OUTPUT && input_condition_true(port->machine, &device_field->field->condition))
 			{
 				input_port_value newval = (newvalue & device_field->field->mask) >> device_field->shift;
@@ -2762,104 +2892,37 @@ profiler_mark_start(PROFILER_INPUT);
 					device_field->oldval = newval;
 				}
 			}
-	}
-
-
-#if 0
-	for(int a=int(inputArray.size())-1;a>=0;a--)
-	{
-		attotime curtime = timer_get_time(machine);
-	        attotime clientTime;
-		memcpy(
-			(unsigned char*)&clientTime,
-			&(inputArray[0]),
-			sizeof(attotime)
-			);
-		if(clientTime==curtime)
-		{
-			deserializePlayerInputFromBuffer(machine,inputArray[a].c_str(),int(inputArray[a].length()));
-			inputArray.erase(inputArray.begin()+a);
-            break;
-		}
-		else if(clientTime>curtime)
-		{
-			cout << "WAITING FOR FUTURE COMMAND\n";
-		}
-		else
-		{
-			cout << "OOPS, MISSED A COMMAND\n";
-			inputArray.erase(inputArray.begin()+a);
 		}
 	}
-#endif
+    //cout << "End Ser\n";
 
-#if 0
-    static char tmpbuf[1024*1024*1];
-    int bytesUsed = serializePlayerInputToBuffer(machine,tmpbuf);
-
-
-    //
-    static int first=1;
-    if(first)
+    //If you have a report from the future, it means you just logged in and you are trying
+    //to catch up
+    if(processRawInput)
     {
-        first=0;
-        FILE *infile = fopen("inputs.dat","rb");
-
-        while(true)
+        if(netClient)
         {
-            attotime newtime;
-            char buf[65536];
-	    memset(buf,0,65536);
-
-            newtime.seconds = 0;
-            newtime.attoseconds = 0;
-
-	    unsigned int atto1,atto2;
-	    int len;
-
-        fread(&newtime,sizeof(attotime),1,infile);
-
-        if(feof(infile))
+            //cout << "Sending inputs with time : " << futureInputTime.seconds << '.' << futureInputTime.attoseconds << endl;
+            netClient->sendInputs(std::string(sendBuf,sendBufLength));
+        }
+        if(netServer)
         {
-            break;
+            //cout << "Sending inputs with time : " << futureInputTime.seconds << '.' << futureInputTime.attoseconds << endl;
+            //This line is here because it needs to run at 60hz
+            netServer->popSyncQueue();
+
+            netServer->sendInputs(std::string(sendBuf,sendBufLength));
         }
-
-        fread(&len,sizeof(int),1,infile);
-        fread(buf,len,1,infile);
-
-            cout << newtime.seconds << ' ' << newtime.attoseconds << ' ' << len << endl;
-
-            inputDatabase[newtime] = string(buf,len);
-        }
-	fclose(infile);
+        mostRecentSentReport = futureInputTime;
     }
-
-    //
-
-    /*
-    inputDatabase[curtime] = string(tmpbuf,bytesUsed);
-    static int serializeCounter=0;
-    serializeCounter++;
-    if(serializeCounter%1000==0)
+    else
     {
-        cout << "SERIALIZING INPUT DATABASE\n";
-        FILE *outfile = fopen("inputs.dat","wb");
-        for(map<attotime,string>::iterator it = inputDatabase.begin();
-            it != inputDatabase.end();
-            it++
-            )
-        {
-            fwrite(&(it->first),sizeof(attotime),1,outfile);
-            int len = int(it->second.length());
-            fwrite(&len,sizeof(int),1,outfile);
-            fwrite(it->second.c_str(),len,1,outfile);
-        }
-        fclose(outfile);
+        //cout << "Skipping input with time: " << futureInputTime.seconds << '.' << futureInputTime.attoseconds << endl;
     }
-    */
-#endif
+    //cout << "Current time: " << curtime.seconds << '.' << curtime.attoseconds << endl;
 
 profiler_mark_end();
+    //printf("INPUT PORT END\n");
 }
 
 
@@ -3109,10 +3172,7 @@ static int frame_get_digital_field_state(const input_field_config *field, int mo
 	}
 
 	if (field->type == IPT_KEYBOARD && ui_get_use_natural_keyboard(field->port->machine))
-    {
-        field->state->curstate = FALSE;
 		return FALSE;
-    }
 
 	/* if this is a switch-down event, handle impulse and toggle */
 	if (changed && curstate)
@@ -3160,10 +3220,8 @@ static int frame_get_digital_field_state(const input_field_config *field, int mo
 	if (curstate && field->type >= IPT_COIN1 && field->type <= IPT_COIN12 && coin_lockout_get_state(field->port->machine, field->type - IPT_COIN1) && options_get_bool(mame_options(), OPTION_COIN_LOCKOUT))
 	{
 		ui_popup_time(3, "Coinlock disabled %s.", input_field_name(field));
-        field->state->curstate = FALSE;
 		return FALSE;
 	}
-    field->state->curstate = curstate;
 	return curstate;
 }
 
@@ -4988,478 +5046,6 @@ static void record_frame(running_machine *machine, attotime curtime)
 	}
 }
 
-#define DEBUG_INPUT_SERIALIZATION (0)
-
-int serializePlayerInputToBuffer(running_machine *machine, char *tmpbuffer)
-{
-    char *curptr = tmpbuffer;
-    const input_port_config *port;
-    const input_field_config *field;
-
-    attotime curtime = timer_get_time(machine);
-    //Issue the command 1 second into the future
-    //curtime.seconds++;
-    memcpy(
-        curptr,
-        (unsigned char*)&curtime,
-        sizeof(attotime)
-        );
-    curptr += sizeof(attotime);
-
-    int playerID = -1;
-
-    //JJG: clients always use player 0, and the server disambiguates
-    if(netClient) playerID = 0;
-
-    memcpy(
-        curptr,
-        (unsigned char*)&playerID,
-        sizeof(int)
-        );
-    curptr += sizeof(int);
-#if DEBUG_INPUT_SERIALIZATION
-    cout << "SER: PLAYER ID: " << playerID << endl;
-#endif
-
-
-    for (port = machine->m_portlist.first(); port != NULL; port = port->next())
-    {
-#if DEBUG_INPUT_SERIALIZATION
-        cout << "PORT ";
-#endif
-        if(playerID==-1)
-        {
-            //When getting data from the server, also get the port state
-
-            memcpy(
-                curptr,
-                (unsigned char*)&(((input_port_config *)port)->state->defvalue),
-                sizeof(input_port_value)
-                );
-            curptr += sizeof(input_port_value);
-            memcpy(
-                curptr,
-                (unsigned char*)&(((input_port_config *)port)->state->digital),
-                sizeof(input_port_value)
-                );
-            curptr += sizeof(input_port_value);
-            memcpy(
-                curptr,
-                (unsigned char*)&(((input_port_config *)port)->state->vblank),
-                sizeof(input_port_value)
-                );
-            curptr += sizeof(input_port_value);
-            memcpy(
-                curptr,
-                (unsigned char*)&(((input_port_config *)port)->state->outputvalue),
-                sizeof(input_port_value)
-                );
-            curptr += sizeof(input_port_value);
-        }
-
-        for (field = port->fieldlist; field != NULL; field = field->next)
-        {
-            if(playerID==-1 || field->player==0)
-            {
-#if DEBUG_INPUT_SERIALIZATION
-                cout << "FIELD ";
-#endif
-#if 0
-                memcpy(
-                    curptr,
-                    (unsigned char*)&(field->state->value),
-                    sizeof(input_port_value)
-                    );
-                curptr += sizeof(input_port_value);
-#endif
-                memcpy(
-                    curptr,
-                    (unsigned char*)&(field->state->impulse),
-                    sizeof(UINT8)
-                    );
-                curptr += sizeof(UINT8);
-                memcpy(
-                    curptr,
-                    (unsigned char*)&(field->state->last),
-                    sizeof(UINT8)
-                    );
-                curptr += sizeof(UINT8);
-                memcpy(
-                    curptr,
-                    (unsigned char*)&(field->state->joydir),
-                    sizeof(UINT8)
-                    );
-                curptr += sizeof(UINT8);
-                memcpy(
-                    curptr,
-                    (unsigned char*)&(field->state->curstate),
-                    sizeof(UINT8)
-                    );
-                curptr += sizeof(UINT8);
-                if(field->state->curstate)
-                {
-                    //cout << "SENDING A POSITIVE CURSTATE\n";
-                }
-
-                if(field->state->joystick)
-                {
-#if DEBUG_INPUT_SERIALIZATION
-                    cout << "JOY ";
-#endif
-                    memcpy(
-                        curptr,
-                        (unsigned char*)&(field->state->joystick->inuse),
-                        sizeof(UINT8)
-                        );
-                    curptr += sizeof(UINT8);
-                    memcpy(
-                        curptr,
-                        (unsigned char*)&(field->state->joystick->current),
-                        sizeof(UINT8)
-                        );
-                    curptr += sizeof(UINT8);
-                    memcpy(
-                        curptr,
-                        (unsigned char*)&(field->state->joystick->current4way),
-                        sizeof(UINT8)
-                        );
-                    curptr += sizeof(UINT8);
-                    memcpy(
-                        curptr,
-                        (unsigned char*)&(field->state->joystick->previous),
-                        sizeof(UINT8)
-                        );
-                    curptr += sizeof(UINT8);
-                }
-                if(field->state->analog)
-                {
-#if DEBUG_INPUT_SERIALIZATION
-                    cout << "ANALOG ";
-#endif
-                    memcpy(curptr,(unsigned char*)&(field->state->analog->shift),sizeof(UINT8)); curptr += sizeof(UINT8);
-                    memcpy(curptr,(unsigned char*)&(field->state->analog->adjdefvalue),sizeof(INT32)); curptr += sizeof(INT32);
-                    memcpy(curptr,(unsigned char*)&(field->state->analog->adjmin),sizeof(INT32)); curptr += sizeof(INT32);
-                    memcpy(curptr,(unsigned char*)&(field->state->analog->adjmax),sizeof(INT32)); curptr += sizeof(INT32);
-
-                    memcpy(curptr,(unsigned char*)&(field->state->analog->sensitivity),sizeof(INT32)); curptr += sizeof(INT32);
-                    memcpy(curptr,(unsigned char*)&(field->state->analog->reverse),sizeof(UINT8)); curptr += sizeof(UINT8);
-                    memcpy(curptr,(unsigned char*)&(field->state->analog->delta),sizeof(INT32)); curptr += sizeof(INT32);
-                    memcpy(curptr,(unsigned char*)&(field->state->analog->centerdelta),sizeof(INT32)); curptr += sizeof(INT32);
-
-                    memcpy(curptr,(unsigned char*)&(field->state->analog->accum),sizeof(INT32)); curptr += sizeof(INT32);
-                    memcpy(curptr,(unsigned char*)&(field->state->analog->previous),sizeof(INT32)); curptr += sizeof(INT32);
-                    memcpy(curptr,(unsigned char*)&(field->state->analog->previousanalog),sizeof(INT32)); curptr += sizeof(INT32);
-
-                    memcpy(curptr,(unsigned char*)&(field->state->analog->minimum),sizeof(INT32)); curptr += sizeof(INT32);
-                    memcpy(curptr,(unsigned char*)&(field->state->analog->maximum),sizeof(INT32)); curptr += sizeof(INT32);
-                    memcpy(curptr,(unsigned char*)&(field->state->analog->center),sizeof(INT32)); curptr += sizeof(INT32);
-                    memcpy(curptr,(unsigned char*)&(field->state->analog->reverse_val),sizeof(INT32)); curptr += sizeof(INT32);
-
-                    memcpy(curptr,(unsigned char*)&(field->state->analog->scalepos),sizeof(INT64)); curptr += sizeof(INT64);
-                    memcpy(curptr,(unsigned char*)&(field->state->analog->scaleneg),sizeof(INT64)); curptr += sizeof(INT64);
-                    memcpy(curptr,(unsigned char*)&(field->state->analog->keyscalepos),sizeof(INT64)); curptr += sizeof(INT64);
-                    memcpy(curptr,(unsigned char*)&(field->state->analog->keyscaleneg),sizeof(INT64)); curptr += sizeof(INT64);
-                    memcpy(curptr,(unsigned char*)&(field->state->analog->positionalscale),sizeof(INT64)); curptr += sizeof(INT64);
-
-                    memcpy(curptr,(unsigned char*)&(field->state->analog->absolute),sizeof(UINT8)); curptr += sizeof(UINT8);
-                    memcpy(curptr,(unsigned char*)&(field->state->analog->wraps),sizeof(UINT8)); curptr += sizeof(UINT8);
-                    memcpy(curptr,(unsigned char*)&(field->state->analog->autocenter),sizeof(UINT8)); curptr += sizeof(UINT8);
-                    memcpy(curptr,(unsigned char*)&(field->state->analog->single_scale),sizeof(UINT8)); curptr += sizeof(UINT8);
-                    memcpy(curptr,(unsigned char*)&(field->state->analog->interpolate),sizeof(UINT8)); curptr += sizeof(UINT8);
-                    memcpy(curptr,(unsigned char*)&(field->state->analog->lastdigital),sizeof(UINT8)); curptr += sizeof(UINT8);
-                }
-            }
-            else
-            {
-#if DEBUG_INPUT_SERIALIZATION
-                cout << "FIELD_PASS ";
-#endif
-            }
-        }
-    }
-#if DEBUG_INPUT_SERIALIZATION
-    cout << endl;
-#endif
-    //cout << "SER: SIZE: " << int(curptr-tmpbuffer) << endl;
-    return int(curptr-tmpbuffer);
-}
-
-void deserializePlayerInputFromBuffer(running_machine *machine, const unsigned char *tmpbuffer, int size, int playerIndex)
-{
-    const unsigned char *curptr = tmpbuffer;
-    const input_port_config *port;
-    const input_field_config *field,*originalfield;
-    int playerID;
-
-    attotime curtime = timer_get_time(machine);
-    attotime clientTime;
-    memcpy(
-        (unsigned char*)&clientTime,
-        curptr,
-        sizeof(attotime)
-        );
-    curptr += sizeof(attotime);
-    //cout << sizeof(attotime) << endl;
-
-    memcpy(
-        (unsigned char*)&playerID,
-        (unsigned char*)curptr,
-        sizeof(int)
-        );
-    curptr += sizeof(int);
-#if DEBUG_INPUT_SERIALIZATION
-    cout << "DES: PLAYER ID: " << playerID << endl;
-    cout << "DES: PLAYER INDEX: " << playerIndex << endl;
-#endif
-
-    for (port = machine->m_portlist.first(); port != NULL; port = port->next())
-    {
-#if DEBUG_INPUT_SERIALIZATION
-        cout << "PORT ";
-#endif
-        if(playerID==-1)
-        {
-            memcpy(
-                (unsigned char*)&(((input_port_config *)port)->state->defvalue),
-                curptr,
-                sizeof(input_port_value)
-                );
-            curptr += sizeof(input_port_value);
-            //cout << sizeof(input_port_value) << endl;
-            //printf("DEFAULT VALUE DESERIALIZED TO %d\n",int( ((input_port_config *)port)->state->defvalue ) );
-            memcpy(
-                (unsigned char*)&(((input_port_config *)port)->state->digital),
-                curptr,
-                sizeof(input_port_value)
-                );
-            curptr += sizeof(input_port_value);
-            memcpy(
-                (unsigned char*)&(((input_port_config *)port)->state->vblank),
-                curptr,
-                sizeof(input_port_value)
-                );
-            curptr += sizeof(input_port_value);
-            memcpy(
-                (unsigned char*)&(((input_port_config *)port)->state->outputvalue),
-                curptr,
-                sizeof(input_port_value)
-                );
-            curptr += sizeof(input_port_value);
-        }
-
-        for (originalfield = port->fieldlist; originalfield != NULL; originalfield = originalfield->next)
-        {
-            field = originalfield;
-#if DEBUG_INPUT_SERIALIZATION
-            cout << "(" << int(originalfield->player) << ") ";
-#endif
-            if(playerID==-1 || originalfield->player==0)
-            {
-                if(playerID != -1)
-                {
-                    //Check if this port matches a port for the actual player
-                    std::map<const input_field_config *,const input_field_config *>::iterator it;
-                    it = playerInputFieldMap[playerIndex].find(originalfield);
-                    if(it==playerInputFieldMap[playerIndex].end())
-                    {
-#if DEBUG_INPUT_SERIALIZATION
-                        cout << "FIELD_SKIP ";
-#endif
-#if 0
-                        curptr += sizeof(input_port_value);
-#endif
-                        curptr += sizeof(UINT8);
-                        curptr += sizeof(UINT8);
-                        curptr += sizeof(UINT8);
-                        curptr += sizeof(UINT8);
-
-                        //There is no map between this input and other players, disregard
-                        if(field->state->joystick)
-                        {
-#if DEBUG_INPUT_SERIALIZATION
-                            cout << "JOY_SKIP ";
-#endif
-                            curptr += sizeof(UINT8);
-                            curptr += sizeof(UINT8);
-                            curptr += sizeof(UINT8);
-                            curptr += sizeof(UINT8);
-                        }
-                        if(field->state->analog)
-                        {
-#if DEBUG_INPUT_SERIALIZATION
-                            cout << "ANALOG_SKIP ";
-#endif
-                            curptr += sizeof(UINT8);
-                            curptr += sizeof(INT32);
-                            curptr += sizeof(INT32);
-                            curptr += sizeof(INT32);
-
-                            curptr += sizeof(INT32);
-                            curptr += sizeof(UINT8);
-                            curptr += sizeof(INT32);
-                            curptr += sizeof(INT32);
-
-                            curptr += sizeof(INT32);
-                            curptr += sizeof(INT32);
-                            curptr += sizeof(INT32);
-
-                            curptr += sizeof(INT32);
-                            curptr += sizeof(INT32);
-                            curptr += sizeof(INT32);
-                            curptr += sizeof(INT32);
-
-                            curptr += sizeof(INT64);
-                            curptr += sizeof(INT64);
-                            curptr += sizeof(INT64);
-                            curptr += sizeof(INT64);
-                            curptr += sizeof(INT64);
-
-                            curptr += sizeof(UINT8);
-                            curptr += sizeof(UINT8);
-                            curptr += sizeof(UINT8);
-                            curptr += sizeof(UINT8);
-                            curptr += sizeof(UINT8);
-                            curptr += sizeof(UINT8);
-                        }
-                        continue;
-                    }
-                    else
-                    {
-                        //Set the mapped field instead of the original field
-                        field = it->second;
-                    }
-                }
-
-                //This assumes that the order of port fields is constant among players
-                //That means if player 1's fields are LEFT,DOWN,RIGHT,UP, so 
-                //is the order for all players.
-
-#if DEBUG_INPUT_SERIALIZATION
-                cout << "FIELD ";
-#endif
-#if 0
-                memcpy(
-                    (unsigned char*)&(field->state->value),
-                    curptr,
-                    sizeof(input_port_value)
-                    );
-                curptr += sizeof(input_port_value);
-#endif
-                memcpy(
-                    (unsigned char*)&(field->state->impulse),
-                    curptr,
-                    sizeof(UINT8)
-                    );
-                curptr += sizeof(UINT8);
-                memcpy(
-                    (unsigned char*)&(field->state->last),
-                    curptr,
-                    sizeof(UINT8)
-                    );
-                curptr += sizeof(UINT8);
-                memcpy(
-                    (unsigned char*)&(field->state->joydir),
-                    curptr,
-                    sizeof(UINT8)
-                    );
-                curptr += sizeof(UINT8);
-                memcpy(
-                    (unsigned char*)&(field->state->curstate),
-                    curptr,
-                    sizeof(UINT8)
-                    );
-                curptr += sizeof(UINT8);
-                if(field->state->curstate)
-                {
-                    //cout << "GOT A POSITIVE CURSTATE\n";
-                }
-
-                if(field->state->joystick)
-                {
-#if DEBUG_INPUT_SERIALIZATION
-                    cout << "JOY ";
-#endif
-                    memcpy(
-                        (unsigned char*)&(field->state->joystick->inuse),
-                        curptr,
-                        sizeof(UINT8)
-                        );
-                    curptr += sizeof(UINT8);
-                    memcpy(
-                        (unsigned char*)&(field->state->joystick->current),
-                        curptr,
-                        sizeof(UINT8)
-                        );
-                    curptr += sizeof(UINT8);
-                    memcpy(
-                        (unsigned char*)&(field->state->joystick->current4way),
-                        curptr,
-                        sizeof(UINT8)
-                        );
-                    curptr += sizeof(UINT8);
-                    memcpy(
-                        (unsigned char*)&(field->state->joystick->previous),
-                        curptr,
-                        sizeof(UINT8)
-                        );
-                    curptr += sizeof(UINT8);
-                }
-                if(field->state->analog)
-                {
-#if DEBUG_INPUT_SERIALIZATION
-                    cout << "ANALOG ";
-#endif
-                    memcpy((unsigned char*)&(field->state->analog->shift),curptr,sizeof(UINT8)); curptr += sizeof(UINT8);
-                    memcpy((unsigned char*)&(field->state->analog->adjdefvalue),curptr,sizeof(INT32)); curptr += sizeof(INT32);
-                    memcpy((unsigned char*)&(field->state->analog->adjmin),curptr,sizeof(INT32)); curptr += sizeof(INT32);
-                    memcpy((unsigned char*)&(field->state->analog->adjmax),curptr,sizeof(INT32)); curptr += sizeof(INT32);
-
-                    memcpy((unsigned char*)&(field->state->analog->sensitivity),curptr,sizeof(INT32)); curptr += sizeof(INT32);
-                    memcpy((unsigned char*)&(field->state->analog->reverse),curptr,sizeof(UINT8)); curptr += sizeof(UINT8);
-                    memcpy((unsigned char*)&(field->state->analog->delta),curptr,sizeof(INT32)); curptr += sizeof(INT32);
-                    memcpy((unsigned char*)&(field->state->analog->centerdelta),curptr,sizeof(INT32)); curptr += sizeof(INT32);
-
-                    memcpy((unsigned char*)&(field->state->analog->accum),curptr,sizeof(INT32)); curptr += sizeof(INT32);
-                    memcpy((unsigned char*)&(field->state->analog->previous),curptr,sizeof(INT32)); curptr += sizeof(INT32);
-                    memcpy((unsigned char*)&(field->state->analog->previousanalog),curptr,sizeof(INT32)); curptr += sizeof(INT32);
-
-                    memcpy((unsigned char*)&(field->state->analog->minimum),curptr,sizeof(INT32)); curptr += sizeof(INT32);
-                    memcpy((unsigned char*)&(field->state->analog->maximum),curptr,sizeof(INT32)); curptr += sizeof(INT32);
-                    memcpy((unsigned char*)&(field->state->analog->center),curptr,sizeof(INT32)); curptr += sizeof(INT32);
-                    memcpy((unsigned char*)&(field->state->analog->reverse_val),curptr,sizeof(INT32)); curptr += sizeof(INT32);
-
-                    memcpy((unsigned char*)&(field->state->analog->scalepos),curptr,sizeof(INT64)); curptr += sizeof(INT64);
-                    memcpy((unsigned char*)&(field->state->analog->scaleneg),curptr,sizeof(INT64)); curptr += sizeof(INT64);
-                    memcpy((unsigned char*)&(field->state->analog->keyscalepos),curptr,sizeof(INT64)); curptr += sizeof(INT64);
-                    memcpy((unsigned char*)&(field->state->analog->keyscaleneg),curptr,sizeof(INT64)); curptr += sizeof(INT64);
-                    memcpy((unsigned char*)&(field->state->analog->positionalscale),curptr,sizeof(INT64)); curptr += sizeof(INT64);
-
-                    memcpy((unsigned char*)&(field->state->analog->absolute),curptr,sizeof(UINT8)); curptr += sizeof(UINT8);
-                    memcpy((unsigned char*)&(field->state->analog->wraps),curptr,sizeof(UINT8)); curptr += sizeof(UINT8);
-                    memcpy((unsigned char*)&(field->state->analog->autocenter),curptr,sizeof(UINT8)); curptr += sizeof(UINT8);
-                    memcpy((unsigned char*)&(field->state->analog->single_scale),curptr,sizeof(UINT8)); curptr += sizeof(UINT8);
-                    memcpy((unsigned char*)&(field->state->analog->interpolate),curptr,sizeof(UINT8)); curptr += sizeof(UINT8);
-                    memcpy((unsigned char*)&(field->state->analog->lastdigital),curptr,sizeof(UINT8)); curptr += sizeof(UINT8);
-                }
-            }
-            else
-            {
-#if DEBUG_INPUT_SERIALIZATION
-                cout << "FIELD_PASS ";
-#endif
-            }
-        }
-    }
-#if DEBUG_INPUT_SERIALIZATION
-    cout << endl;
-#endif
-    int bytesUsed = int(curptr-tmpbuffer);
-    //cout << "DES: SIZE: " << int(curptr-tmpbuffer) << endl;
-    if(bytesUsed != size)
-    {
-        cout << "MESSAGE MISMATCH! : " << bytesUsed << " != " << size << endl;
-    }
-}
 
 /*-------------------------------------------------
     record_port - per-port callback for record

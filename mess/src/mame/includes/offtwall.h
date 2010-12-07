@@ -6,13 +6,14 @@
 
 #include "machine/atarigen.h"
 
-class offtwall_state : public atarigen_state
+class offtwall_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, offtwall_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, offtwall_state(machine)); }
 
-	offtwall_state(running_machine &machine)
-		: atarigen_state(machine) { }
+	offtwall_state(running_machine &machine) { }
+
+	atarigen_state	atarigen;
 
 	UINT16 *bankswitch_base;
 	UINT16 *bankrom_base;

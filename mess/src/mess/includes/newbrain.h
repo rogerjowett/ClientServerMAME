@@ -38,13 +38,12 @@
 #define NEWBRAIN_VIDEO_UCR				0x08
 #define NEWBRAIN_VIDEO_80L				0x40
 
-class newbrain_state : public driver_data_t
+class newbrain_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, newbrain_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, newbrain_state(machine)); }
 
-	newbrain_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	newbrain_state(running_machine &machine) { }
 
 	/* processor state */
 	int pwrup;				/* power up */

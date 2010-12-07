@@ -102,13 +102,12 @@ Notes:
 #include "sound/ay8910.h"
 
 
-class jollyjgr_state : public driver_data_t
+class jollyjgr_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, jollyjgr_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, jollyjgr_state(machine)); }
 
-	jollyjgr_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	jollyjgr_state(running_machine &machine) { }
 
 	/* memory pointers */
 	UINT8 *  videoram;
@@ -133,14 +132,14 @@ public:
 
 static WRITE8_HANDLER( jollyjgr_videoram_w )
 {
-	jollyjgr_state *state = space->machine->driver_data<jollyjgr_state>();
+	jollyjgr_state *state = (jollyjgr_state *)space->machine->driver_data;
 	state->videoram[offset] = data;
 	tilemap_mark_tile_dirty(state->bg_tilemap, offset);
 }
 
 static WRITE8_HANDLER( jollyjgr_attrram_w )
 {
-	jollyjgr_state *state = space->machine->driver_data<jollyjgr_state>();
+	jollyjgr_state *state = (jollyjgr_state *)space->machine->driver_data;
 
 	if (offset & 1)
 	{
@@ -160,7 +159,7 @@ static WRITE8_HANDLER( jollyjgr_attrram_w )
 
 static WRITE8_HANDLER( jollyjgr_misc_w )
 {
-	jollyjgr_state *state = space->machine->driver_data<jollyjgr_state>();
+	jollyjgr_state *state = (jollyjgr_state *)space->machine->driver_data;
 
 	// they could be swapped, because it always set "data & 3"
 	state->flip_x = data & 1;
@@ -427,7 +426,7 @@ static PALETTE_INIT( jollyjgr )
 /* Tilemap is the same as in Galaxian */
 static TILE_GET_INFO( get_bg_tile_info )
 {
-	jollyjgr_state *state = machine->driver_data<jollyjgr_state>();
+	jollyjgr_state *state = (jollyjgr_state *)machine->driver_data;
 	int color = state->colorram[((tile_index & 0x1f) << 1) | 1] & 7;
 	int region = (state->tilemap_bank & 0x20) ? 2 : 0;
 	SET_TILE_INFO(region, state->videoram[tile_index], color, 0);
@@ -435,7 +434,7 @@ static TILE_GET_INFO( get_bg_tile_info )
 
 static VIDEO_START( jollyjgr )
 {
-	jollyjgr_state *state = machine->driver_data<jollyjgr_state>();
+	jollyjgr_state *state = (jollyjgr_state *)machine->driver_data;
 	state->bg_tilemap = tilemap_create(machine, get_bg_tile_info, tilemap_scan_rows, 8, 8, 32, 32);
 
 	tilemap_set_transparent_pen(state->bg_tilemap, 0);
@@ -444,7 +443,7 @@ static VIDEO_START( jollyjgr )
 
 static void draw_bitmap( running_machine *machine, bitmap_t *bitmap )
 {
-	jollyjgr_state *state = machine->driver_data<jollyjgr_state>();
+	jollyjgr_state *state = (jollyjgr_state *)machine->driver_data;
 	int x, y, count;
 	int i, bit0, bit1, bit2;
 	int color;
@@ -481,7 +480,7 @@ static void draw_bitmap( running_machine *machine, bitmap_t *bitmap )
 
 static VIDEO_UPDATE( jollyjgr )
 {
-	jollyjgr_state *state = screen->machine->driver_data<jollyjgr_state>();
+	jollyjgr_state *state = (jollyjgr_state *)screen->machine->driver_data;
 	UINT8 *spriteram = state->spriteram;
 	int offs;
 
@@ -537,7 +536,7 @@ static VIDEO_UPDATE( jollyjgr )
 
 static VIDEO_UPDATE( fspider )
 {
-	jollyjgr_state *state = screen->machine->driver_data<jollyjgr_state>();
+	jollyjgr_state *state = (jollyjgr_state *)screen->machine->driver_data;
 
 	// Draw bg and sprites
 	VIDEO_UPDATE_CALL(jollyjgr);
@@ -610,7 +609,7 @@ GFXDECODE_END
 
 static INTERRUPT_GEN( jollyjgr_interrupt )
 {
-	jollyjgr_state *state = device->machine->driver_data<jollyjgr_state>();
+	jollyjgr_state *state = (jollyjgr_state *)device->machine->driver_data;
 	if(state->nmi_enable)
 		cpu_set_input_line(device, INPUT_LINE_NMI, PULSE_LINE);
 }
@@ -618,7 +617,7 @@ static INTERRUPT_GEN( jollyjgr_interrupt )
 
 static MACHINE_START( jollyjgr )
 {
-	jollyjgr_state *state = machine->driver_data<jollyjgr_state>();
+	jollyjgr_state *state = (jollyjgr_state *)machine->driver_data;
 
 	state_save_register_global(machine, state->nmi_enable);
 	state_save_register_global(machine, state->flip_x);
@@ -629,7 +628,7 @@ static MACHINE_START( jollyjgr )
 
 static MACHINE_RESET( jollyjgr )
 {
-	jollyjgr_state *state = machine->driver_data<jollyjgr_state>();
+	jollyjgr_state *state = (jollyjgr_state *)machine->driver_data;
 
 	state->nmi_enable = 0;
 	state->flip_x = 0;

@@ -4,13 +4,12 @@
 
 *************************************************************************/
 
-class pandoras_state : public driver_data_t
+class pandoras_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, pandoras_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, pandoras_state(machine)); }
 
-	pandoras_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	pandoras_state(running_machine &machine) { }
 
 	/* memory pointers */
 	UINT8 *    videoram;

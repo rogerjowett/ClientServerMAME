@@ -507,7 +507,7 @@ GFXDECODE_END
 
 static MACHINE_START( atarifb )
 {
-	atarifb_state *state = machine->driver_data<atarifb_state>();
+	atarifb_state *state = (atarifb_state *)machine->driver_data;
 
 	state->maincpu = machine->device("maincpu");
 
@@ -532,7 +532,7 @@ static MACHINE_START( atarifb )
 
 static MACHINE_RESET( atarifb )
 {
-	atarifb_state *state = machine->driver_data<atarifb_state>();
+	atarifb_state *state = (atarifb_state *)machine->driver_data;
 
 	state->CTRLD = 0;
 	state->sign_x_1 = 0;

@@ -3,13 +3,12 @@
     40love.c, bking.c and msisaac.c
 */
 
-class buggychl_state : public driver_data_t
+class buggychl_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, buggychl_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, buggychl_state(machine)); }
 
-	buggychl_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	buggychl_state(running_machine &machine) { }
 
 	/* memory pointers */
 	UINT8 *     videoram;	// buggychl, 40love, msisaac

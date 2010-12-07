@@ -72,9 +72,6 @@
 
 ***************************************************************************/
 
-#include "NSM_Server.h"
-#include "NSM_Client.h"
-
 #include "emu.h"
 #include "emuopts.h"
 #include "osdepend.h"
@@ -93,6 +90,8 @@
 #include "debug/debugcon.h"
 
 #include <time.h>
+
+
 
 /***************************************************************************
     GLOBAL VARIABLES
@@ -149,9 +148,6 @@ int mame_is_valid_machine(running_machine *machine)
 /*-------------------------------------------------
     mame_execute - run the core emulation
 -------------------------------------------------*/
-
-extern Server *netServer;
-extern Client *netClient;
 
 int mame_execute(core_options *options)
 {
@@ -580,4 +576,3 @@ static int parse_ini_file(core_options *options, const char *name, int priority)
 	mame_fclose(file);
 	return TRUE;
 }
-

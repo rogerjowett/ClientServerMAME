@@ -18,13 +18,12 @@ TODO:
                                 Video Hardware
 ***************************************************************************/
 
-class spoker_state : public driver_data_t
+class spoker_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, spoker_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, spoker_state(machine)); }
 
-	spoker_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	spoker_state(running_machine &machine) { }
 
 	UINT8   *bg_tile_ram;
 	tilemap_t *bg_tilemap;
@@ -41,7 +40,7 @@ public:
 
 static WRITE8_HANDLER( bg_tile_w )
 {
-	spoker_state *state = space->machine->driver_data<spoker_state>();
+	spoker_state *state = (spoker_state *)space->machine->driver_data;
 
 	state->bg_tile_ram[offset] = data;
 	tilemap_mark_tile_dirty(state->bg_tilemap,offset);
@@ -49,21 +48,21 @@ static WRITE8_HANDLER( bg_tile_w )
 
 static TILE_GET_INFO( get_bg_tile_info )
 {
-	spoker_state *state = machine->driver_data<spoker_state>();
+	spoker_state *state = (spoker_state *)machine->driver_data;
 	int code = state->bg_tile_ram[tile_index];
 	SET_TILE_INFO(1 + (tile_index & 3), code & 0xff, 0, 0);
 }
 
 static TILE_GET_INFO( get_fg_tile_info )
 {
-	spoker_state *state = machine->driver_data<spoker_state>();
+	spoker_state *state = (spoker_state *)machine->driver_data;
 	int code = state->fg_tile_ram[tile_index] | (state->fg_color_ram[tile_index] << 8);
 	SET_TILE_INFO(0, code, (4*(code >> 14)+3), 0);
 }
 
 static WRITE8_HANDLER( fg_tile_w )
 {
-	spoker_state *state = space->machine->driver_data<spoker_state>();
+	spoker_state *state = (spoker_state *)space->machine->driver_data;
 
 	state->fg_tile_ram[offset] = data;
 	tilemap_mark_tile_dirty(state->fg_tilemap,offset);
@@ -71,7 +70,7 @@ static WRITE8_HANDLER( fg_tile_w )
 
 static WRITE8_HANDLER( fg_color_w )
 {
-	spoker_state *state = space->machine->driver_data<spoker_state>();
+	spoker_state *state = (spoker_state *)space->machine->driver_data;
 
 	state->fg_color_ram[offset] = data;
 	tilemap_mark_tile_dirty(state->fg_tilemap,offset);
@@ -79,7 +78,7 @@ static WRITE8_HANDLER( fg_color_w )
 
 static VIDEO_START(spoker)
 {
-	spoker_state *state = machine->driver_data<spoker_state>();
+	spoker_state *state = (spoker_state *)machine->driver_data;
 
 	state->bg_tilemap = tilemap_create(machine, get_bg_tile_info, tilemap_scan_rows,	8,  32,	128, 8);
 	state->fg_tilemap = tilemap_create(machine, get_fg_tile_info, tilemap_scan_rows,	8,  8,	128, 32);
@@ -88,7 +87,7 @@ static VIDEO_START(spoker)
 
 static VIDEO_UPDATE(spoker)
 {
-	spoker_state *state = screen->machine->driver_data<spoker_state>();
+	spoker_state *state = (spoker_state *)screen->machine->driver_data;
 
 	bitmap_fill(bitmap, cliprect, get_black_pen(screen->machine));
 	tilemap_draw(bitmap, cliprect, state->bg_tilemap, 0, 0);
@@ -103,7 +102,7 @@ static VIDEO_UPDATE(spoker)
 static CUSTOM_INPUT( hopper_r )
 {
 	running_machine *machine = field->port->machine;
-	spoker_state *state = machine->driver_data<spoker_state>();
+	spoker_state *state = (spoker_state *)machine->driver_data;
 
 	if (state->hopper) return !(machine->primary_screen->frame_number()%10);
 	return input_code_pressed(machine, KEYCODE_H);
@@ -118,7 +117,7 @@ static void show_out(UINT8 *out)
 
 static WRITE8_HANDLER( spoker_nmi_and_coins_w )
 {
-	spoker_state *state = space->machine->driver_data<spoker_state>();
+	spoker_state *state = (spoker_state *)space->machine->driver_data;
 
 	if ((state->nmi_enable ^ data) & (~0xdd))
 	{
@@ -141,7 +140,7 @@ static WRITE8_HANDLER( spoker_nmi_and_coins_w )
 
 static WRITE8_HANDLER( spoker_video_and_leds_w )
 {
-	spoker_state *state = space->machine->driver_data<spoker_state>();
+	spoker_state *state = (spoker_state *)space->machine->driver_data;
 
 	set_led_status(space->machine, 4,	  data & 0x01);	// start?
 	set_led_status(space->machine, 5,	  data & 0x04);	// l_bet?
@@ -155,7 +154,7 @@ static WRITE8_HANDLER( spoker_video_and_leds_w )
 
 static WRITE8_HANDLER( spoker_leds_w )
 {
-	spoker_state *state = space->machine->driver_data<spoker_state>();
+	spoker_state *state = (spoker_state *)space->machine->driver_data;
 
 	set_led_status(space->machine, 0, data & 0x01);	// stop_1
 	set_led_status(space->machine, 1, data & 0x02);	// stop_2
@@ -169,7 +168,7 @@ static WRITE8_HANDLER( spoker_leds_w )
 
 static WRITE8_HANDLER( spoker_magic_w )
 {
-	spoker_state *state = space->machine->driver_data<spoker_state>();
+	spoker_state *state = (spoker_state *)space->machine->driver_data;
 
 	state->igs_magic[offset] = data;
 
@@ -189,7 +188,7 @@ static WRITE8_HANDLER( spoker_magic_w )
 
 static READ8_HANDLER( spoker_magic_r )
 {
-	spoker_state *state = space->machine->driver_data<spoker_state>();
+	spoker_state *state = (spoker_state *)space->machine->driver_data;
 
 	switch(state->igs_magic[0])
 	{
@@ -371,7 +370,7 @@ GFXDECODE_END
 
 static MACHINE_RESET( spoker )
 {
-	spoker_state *state = machine->driver_data<spoker_state>();
+	spoker_state *state = (spoker_state *)machine->driver_data;
 
 	state->nmi_enable		=	0;
 	state->hopper			=	0;
@@ -380,7 +379,7 @@ static MACHINE_RESET( spoker )
 
 static INTERRUPT_GEN( spoker_interrupt )
 {
-	spoker_state *state = device->machine->driver_data<spoker_state>();
+	spoker_state *state = (spoker_state *)device->machine->driver_data;
 
 	 if (state->nmi_enable & 0x80)
 		cpu_set_input_line(device, INPUT_LINE_NMI, PULSE_LINE);

@@ -13,13 +13,12 @@
 #include "machine/msm8251.h"
 #include "devices/messram.h"
 
-class fk1_state : public driver_data_t
+class fk1_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, fk1_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, fk1_state(machine)); }
 
-	fk1_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	fk1_state(running_machine &machine) { }
 
 	UINT8 video_rol;
 	UINT8 int_vector;
@@ -166,7 +165,7 @@ static WRITE8_DEVICE_HANDLER (fk1_ppi_3_a_w )
 }
 static WRITE8_DEVICE_HANDLER (fk1_ppi_3_b_w )
 {
-	fk1_state *state = device->machine->driver_data<fk1_state>();
+	fk1_state *state = (fk1_state *)device->machine->driver_data;
 
 	state->video_rol = data;
 }
@@ -182,7 +181,7 @@ static READ8_DEVICE_HANDLER (fk1_ppi_3_a_r )
 }
 static READ8_DEVICE_HANDLER (fk1_ppi_3_b_r )
 {
-	fk1_state *state = device->machine->driver_data<fk1_state>();
+	fk1_state *state = (fk1_state *)device->machine->driver_data;
 
 	return state->video_rol;
 }
@@ -342,7 +341,7 @@ INPUT_PORTS_END
 
 static TIMER_CALLBACK(keyboard_callback)
 {
-	fk1_state *state = machine->driver_data<fk1_state>();
+	fk1_state *state = (fk1_state *)machine->driver_data;
 
 	if (input_port_read(machine, "LINE0")) {
 		state->int_vector = 6;
@@ -363,7 +362,7 @@ static TIMER_CALLBACK(keyboard_callback)
 
 static IRQ_CALLBACK (fk1_irq_callback)
 {
-	fk1_state *state = device->machine->driver_data<fk1_state>();
+	fk1_state *state = (fk1_state *)device->machine->driver_data;
 
 	logerror("IRQ %02x\n", state->int_vector*2);
 	return state->int_vector * 2;
@@ -371,7 +370,7 @@ static IRQ_CALLBACK (fk1_irq_callback)
 
 static TIMER_CALLBACK( vsync_callback )
 {
-	fk1_state *state = machine->driver_data<fk1_state>();
+	fk1_state *state = (fk1_state *)machine->driver_data;
 
 	state->int_vector = 3;
 	cputag_set_input_line(machine, "maincpu", 0, HOLD_LINE);
@@ -398,7 +397,7 @@ static MACHINE_START( fk1 )
 
 static VIDEO_UPDATE( fk1 )
 {
-	fk1_state *state = screen->machine->driver_data<fk1_state>();
+	fk1_state *state = (fk1_state *)screen->machine->driver_data;
 	UINT8 code;
 	int y, x, b;
 	UINT8 *ram = messram_get_ptr(screen->machine->device("messram"));

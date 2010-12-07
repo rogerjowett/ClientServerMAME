@@ -276,7 +276,7 @@ void state_save_register_memory(running_machine *machine, const char *module, co
 	/* check for invalid timing */
 	if (!global->reg_allowed)
 	{
-		logerror("Attempt to register save state entry after state registration is closed!\nFile: %s, line %d, module %s tag %s name %s\n", file, line, module, tag, name);
+		printf("Attempt to register save state entry after state registration is closed!\nFile: %s, line %d, module %s tag %s name %s\n", file, line, module, tag, name);
 		if (machine->gamedrv->flags & GAME_SUPPORTS_SAVE)
 			fatalerror("Attempt to register save state entry after state registration is closed!\nFile: %s, line %d, module %s tag %s name %s\n", file, line, module, tag, name);
 		global->illegal_regs++;
@@ -517,6 +517,7 @@ state_save_error state_save_check_file(running_machine *machine, mame_file *file
 
 void doPreSave(running_machine *machine)
 {
+	printf("DOING PRE SAVE\n");
 	state_private *global = machine->state_data;
 	state_callback *func;
 
@@ -572,6 +573,7 @@ state_save_error state_save_write_file(running_machine *machine, mame_file *file
 -------------------------------------------------*/
 void doPostLoad(running_machine *machine)
 {
+	printf("DOING POST LOAD\n");
 	state_private *global = machine->state_data;
 	state_callback *func;
 	/* call the post-load functions */

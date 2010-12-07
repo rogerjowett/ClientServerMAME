@@ -39,7 +39,7 @@ enum
 	MAMERR_IDENT_NONROMS	= 7,	/* identified all non-ROM files */
 	MAMERR_IDENT_PARTIAL	= 8,	/* identified some files but not all */
 	MAMERR_IDENT_NONE		= 9,	/* identified no files */
-	MAMERR_NETWORK    		= 10	/* something in the network failed */
+	MAMERR_NETWORK		= 10 /*Network error in ClientServerMAME*/
 };
 
 

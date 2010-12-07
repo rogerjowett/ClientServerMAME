@@ -109,7 +109,7 @@ static int load_cartridge(device_image_interface *image, const rom_entry *romrgn
 		/* if the region is inverted, do that now */
 		device_memory_interface *memory;
 		cpu = image->device().machine->device(type);
-		if (cpu!=NULL && cpu->interface(memory))
+		if (cpu!=NULL && cpu->dev_interface(memory))
 		{
 			datawidth = device_memory(cpu)->space_config(AS_PROGRAM)->m_databus_width / 8;
 			littleendian = (device_memory(cpu)->space_config()->m_endianness == ENDIANNESS_LITTLE);
@@ -461,9 +461,9 @@ DEVICE_GET_INFO( cartslot )
 			}
 			break;
 		case DEVINFO_STR_IMAGE_INTERFACE:
-			if ( device && downcast<const legacy_image_device_config_base *>(device)->inline_config() && get_config_dev(device)->interface )
+			if ( device && downcast<const legacy_image_device_config_base *>(device)->inline_config() && get_config_dev(device)->dev_interface )
 			{
-				strcpy(info->s, get_config_dev(device)->interface );
+				strcpy(info->s, get_config_dev(device)->dev_interface );
 			}
 			break;
 	}

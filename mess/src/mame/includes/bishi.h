@@ -7,13 +7,12 @@
 #define CPU_CLOCK       (XTAL_24MHz / 2)		/* 68000 clock */
 #define SOUND_CLOCK     XTAL_16_9344MHz		/* YMZ280 clock */
 
-class bishi_state : public driver_data_t
+class bishi_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, bishi_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, bishi_state(machine)); }
 
-	bishi_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	bishi_state(running_machine &machine) { }
 
 	/* memory pointers */
 	UINT8 *    ram;

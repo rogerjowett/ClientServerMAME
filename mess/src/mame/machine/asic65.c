@@ -153,7 +153,7 @@ void asic65_reset(running_machine *machine, int state)
 	/* otherwise, do it manually */
 	else
 	{
-		machine->device<cpu_device>("asic65")->suspend(SUSPEND_REASON_DISABLE, 1);
+		cputag_suspend(machine, "asic65", SUSPEND_REASON_DISABLE, 1);
 
 		/* if reset is being signalled, clear everything */
 		if (state && !asic65.reset_state)

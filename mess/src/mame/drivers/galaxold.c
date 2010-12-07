@@ -824,10 +824,9 @@ static ADDRESS_MAP_START( hunchbkg, ADDRESS_SPACE_PROGRAM, 8 )
 ADDRESS_MAP_END
 
 /* the nmi line seems to be inverted on the cpu plugin board */
-READ8_DEVICE_HANDLER( ttl7474_trampoline ) { return ttl7474_output_comp_r(device); }
 static ADDRESS_MAP_START( hunchbkg_io, ADDRESS_SPACE_IO, 8 )
 	AM_RANGE(S2650_DATA_PORT,  S2650_DATA_PORT) AM_READNOP // not used
-	AM_RANGE(S2650_SENSE_PORT, S2650_SENSE_PORT) AM_DEVREAD("7474_9m_1", ttl7474_trampoline)
+	AM_RANGE(S2650_SENSE_PORT, S2650_SENSE_PORT) AM_DEVREAD("7474_9m_1", ttl7474_output_comp_r)
 ADDRESS_MAP_END
 
 

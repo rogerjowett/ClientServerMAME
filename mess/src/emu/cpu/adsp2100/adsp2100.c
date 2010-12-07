@@ -711,7 +711,7 @@ static adsp2100_state *adsp21xx_init(legacy_cpu_device *device, device_irq_callb
 
 	// eventually this will be built-in
 	device_state_interface *state;
-	device->interface(state);
+	device->dev_interface(state);
 	state->state_add(ADSP2100_PC,      "PC",        adsp->pc);
 	state->state_add(STATE_GENPC,      "GENPC",     adsp->pc).noshow();
 	state->state_add(STATE_GENPCBASE,  "GENPCBASE", adsp->ppc).noshow();

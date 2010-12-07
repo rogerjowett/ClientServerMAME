@@ -20,13 +20,12 @@
 #include "video/deco16ic.h"
 #include "rendlay.h"
 
-class backfire_state : public driver_data_t
+class backfire_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, backfire_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, backfire_state(machine)); }
 
-	backfire_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	backfire_state(running_machine &machine) { }
 
 	/* memory pointers */
 	UINT16 *  pf1_rowscroll;
@@ -56,7 +55,7 @@ public:
 /* I'm using the functions in deco16ic.c ... same chips, why duplicate code? */
 static VIDEO_START( backfire )
 {
-	backfire_state *state = machine->driver_data<backfire_state>();
+	backfire_state *state = (backfire_state *)machine->driver_data;
 
 	/* allocate the ram as 16-bit (we do it here because the CPU is 32-bit) */
 	state->pf1_rowscroll = auto_alloc_array(machine, UINT16, 0x0800/2);
@@ -161,7 +160,7 @@ static void draw_sprites( running_machine *machine, bitmap_t *bitmap, const rect
 
 static VIDEO_UPDATE( backfire )
 {
-	backfire_state *state = screen->machine->driver_data<backfire_state>();
+	backfire_state *state = (backfire_state *)screen->machine->driver_data;
 
 	/* screen 1 uses pf1 as the forground and pf3 as the background */
 	/* screen 2 uses pf2 as the foreground and pf4 as the background */
@@ -225,7 +224,7 @@ static READ32_DEVICE_HANDLER( backfire_eeprom_r )
 
 static READ32_HANDLER( backfire_control2_r )
 {
-	backfire_state *state = space->machine->driver_data<backfire_state>();
+	backfire_state *state = (backfire_state *)space->machine->driver_data;
 
 //  logerror("%08x:Read eprom %08x (%08x)\n", cpu_get_pc(space->cpu), offset << 1, mem_mask);
 	return (eeprom_read_bit(state->eeprom) << 24) | input_port_read(space->machine, "IN1") | (input_port_read(space->machine, "IN1") << 16);
@@ -234,7 +233,7 @@ static READ32_HANDLER( backfire_control2_r )
 #ifdef UNUSED_FUNCTION
 static READ32_HANDLER(backfire_control3_r)
 {
-	backfire_state *state = space->machine->driver_data<backfire_state>();
+	backfire_state *state = (backfire_state *)space->machine->driver_data;
 
 //  logerror("%08x:Read eprom %08x (%08x)\n", cpu_get_pc(space->cpu), offset << 1, mem_mask);
 	return (eeprom_read_bit(state->eeprom) << 24) | input_port_read(space->machine, "IN2") | (input_port_read(space->machine, "IN2") << 16);
@@ -262,14 +261,14 @@ static WRITE32_HANDLER(backfire_nonbuffered_palette_w)
 
 /* map 32-bit writes to 16-bit */
 
-static READ32_HANDLER( backfire_pf1_rowscroll_r ) { backfire_state *state = space->machine->driver_data<backfire_state>(); return state->pf1_rowscroll[offset] ^ 0xffff0000; }
-static READ32_HANDLER( backfire_pf2_rowscroll_r ) { backfire_state *state = space->machine->driver_data<backfire_state>(); return state->pf2_rowscroll[offset] ^ 0xffff0000; }
-static READ32_HANDLER( backfire_pf3_rowscroll_r ) { backfire_state *state = space->machine->driver_data<backfire_state>(); return state->pf3_rowscroll[offset] ^ 0xffff0000; }
-static READ32_HANDLER( backfire_pf4_rowscroll_r ) { backfire_state *state = space->machine->driver_data<backfire_state>(); return state->pf4_rowscroll[offset] ^ 0xffff0000; }
-static WRITE32_HANDLER( backfire_pf1_rowscroll_w ) { backfire_state *state = space->machine->driver_data<backfire_state>(); data &= 0x0000ffff; mem_mask &= 0x0000ffff; COMBINE_DATA(&state->pf1_rowscroll[offset]); }
-static WRITE32_HANDLER( backfire_pf2_rowscroll_w ) { backfire_state *state = space->machine->driver_data<backfire_state>(); data &= 0x0000ffff; mem_mask &= 0x0000ffff; COMBINE_DATA(&state->pf2_rowscroll[offset]); }
-static WRITE32_HANDLER( backfire_pf3_rowscroll_w ) { backfire_state *state = space->machine->driver_data<backfire_state>(); data &= 0x0000ffff; mem_mask &= 0x0000ffff; COMBINE_DATA(&state->pf3_rowscroll[offset]); }
-static WRITE32_HANDLER( backfire_pf4_rowscroll_w ) { backfire_state *state = space->machine->driver_data<backfire_state>(); data &= 0x0000ffff; mem_mask &= 0x0000ffff; COMBINE_DATA(&state->pf4_rowscroll[offset]); }
+static READ32_HANDLER( backfire_pf1_rowscroll_r ) { backfire_state *state = (backfire_state *)space->machine->driver_data; return state->pf1_rowscroll[offset] ^ 0xffff0000; }
+static READ32_HANDLER( backfire_pf2_rowscroll_r ) { backfire_state *state = (backfire_state *)space->machine->driver_data; return state->pf2_rowscroll[offset] ^ 0xffff0000; }
+static READ32_HANDLER( backfire_pf3_rowscroll_r ) { backfire_state *state = (backfire_state *)space->machine->driver_data; return state->pf3_rowscroll[offset] ^ 0xffff0000; }
+static READ32_HANDLER( backfire_pf4_rowscroll_r ) { backfire_state *state = (backfire_state *)space->machine->driver_data; return state->pf4_rowscroll[offset] ^ 0xffff0000; }
+static WRITE32_HANDLER( backfire_pf1_rowscroll_w ) { backfire_state *state = (backfire_state *)space->machine->driver_data; data &= 0x0000ffff; mem_mask &= 0x0000ffff; COMBINE_DATA(&state->pf1_rowscroll[offset]); }
+static WRITE32_HANDLER( backfire_pf2_rowscroll_w ) { backfire_state *state = (backfire_state *)space->machine->driver_data; data &= 0x0000ffff; mem_mask &= 0x0000ffff; COMBINE_DATA(&state->pf2_rowscroll[offset]); }
+static WRITE32_HANDLER( backfire_pf3_rowscroll_w ) { backfire_state *state = (backfire_state *)space->machine->driver_data; data &= 0x0000ffff; mem_mask &= 0x0000ffff; COMBINE_DATA(&state->pf3_rowscroll[offset]); }
+static WRITE32_HANDLER( backfire_pf4_rowscroll_w ) { backfire_state *state = (backfire_state *)space->machine->driver_data; data &= 0x0000ffff; mem_mask &= 0x0000ffff; COMBINE_DATA(&state->pf4_rowscroll[offset]); }
 
 
 #ifdef UNUSED_FUNCTION
@@ -470,7 +469,7 @@ static const deco16ic_interface backfire_deco16ic_intf =
 
 static MACHINE_START( backfire )
 {
-	backfire_state *state = machine->driver_data<backfire_state>();
+	backfire_state *state = (backfire_state *)machine->driver_data;
 
 	state->maincpu = machine->device("maincpu");
 	state->deco16ic = machine->device("deco_custom");
@@ -676,7 +675,7 @@ static void descramble_sound( running_machine *machine )
 
 static READ32_HANDLER( backfire_speedup_r )
 {
-	backfire_state *state = space->machine->driver_data<backfire_state>();
+	backfire_state *state = (backfire_state *)space->machine->driver_data;
 
 	//mame_printf_debug( "%08x\n",cpu_get_pc(space->cpu));
 

@@ -17,13 +17,12 @@
 
 static UINT8 ti_68k_keypad_r (running_machine *machine);
 
-class t68k_state : public driver_data_t
+class t68k_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, t68k_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, t68k_state(machine)); }
 
-	t68k_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	t68k_state(running_machine &machine) { }
 
 	/* HW specifications */
 	UINT8 hw_version;
@@ -62,7 +61,7 @@ public:
 
 static UINT8 ti_68k_keypad_r (running_machine *machine)
 {
-	t68k_state *state = machine->driver_data<t68k_state>();
+	t68k_state *state = (t68k_state *)machine->driver_data;
 	UINT8 port, bit, data = 0xff;
 	static const char *const bitnames[] = {"BIT0", "BIT1", "BIT2", "BIT3", "BIT4", "BIT5", "BIT6", "BIT7"};
 
@@ -76,7 +75,7 @@ static UINT8 ti_68k_keypad_r (running_machine *machine)
 
 WRITE16_HANDLER ( ti68k_io_w )
 {
-	t68k_state *state = space->machine->driver_data<t68k_state>();
+	t68k_state *state = (t68k_state *)space->machine->driver_data;
 
 	switch(offset & 0x0f)
 	{
@@ -85,7 +84,7 @@ WRITE16_HANDLER ( ti68k_io_w )
 			break;
 		case 0x02:
 			if (!(data & 0x10) && data != state->io_hw1[offset])
-				space->machine->device<cpu_device>("maincpu")->suspend(SUSPEND_REASON_DISABLE, 1);
+				cputag_suspend(space->machine, "maincpu", SUSPEND_REASON_DISABLE, 1);
 			break;
 		case 0x08:
 				state->lcd_base = data << 3;
@@ -121,7 +120,7 @@ WRITE16_HANDLER ( ti68k_io_w )
 
 READ16_HANDLER ( ti68k_io_r )
 {
-	t68k_state *state = space->machine->driver_data<t68k_state>();
+	t68k_state *state = (t68k_state *)space->machine->driver_data;
 	UINT16 data;
 
 	switch (offset & 0x0f)
@@ -144,7 +143,7 @@ READ16_HANDLER ( ti68k_io_r )
 
 WRITE16_HANDLER ( ti68k_io2_w )
 {
-	t68k_state *state = space->machine->driver_data<t68k_state>();
+	t68k_state *state = (t68k_state *)space->machine->driver_data;
 	switch(offset & 0x7f)
 	{
 		case 0x0b:
@@ -161,7 +160,7 @@ WRITE16_HANDLER ( ti68k_io2_w )
 
 READ16_HANDLER ( ti68k_io2_r )
 {
-	t68k_state *state = space->machine->driver_data<t68k_state>();
+	t68k_state *state = (t68k_state *)space->machine->driver_data;
 	UINT16 data;
 
 	switch (offset & 0x7f)
@@ -175,7 +174,7 @@ READ16_HANDLER ( ti68k_io2_r )
 
 WRITE16_HANDLER ( flash_w )
 {
-	t68k_state *state = space->machine->driver_data<t68k_state>();
+	t68k_state *state = (t68k_state *)space->machine->driver_data;
 	UINT16 *flash_base = (UINT16 *)memory_region(space->machine, "maincpu");
 
 	/* verification if it is flash memory */
@@ -215,7 +214,7 @@ WRITE16_HANDLER ( flash_w )
 
 READ16_HANDLER ( rom_r )
 {
-	t68k_state *state = space->machine->driver_data<t68k_state>();
+	t68k_state *state = (t68k_state *)space->machine->driver_data;
 	UINT16 *rom_base = (UINT16 *)memory_region(space->machine, "maincpu");
 
 	if (state->mem_type == FLASH)
@@ -242,7 +241,7 @@ READ16_HANDLER ( rom_r )
 
 static TIMER_CALLBACK( ti68k_timer_callback )
  {
-	t68k_state *state = machine->driver_data<t68k_state>();
+	t68k_state *state = (t68k_state *)machine->driver_data;
 	static UINT64 timer;
 
 	timer++;
@@ -324,14 +323,14 @@ ADDRESS_MAP_END
 
 static INPUT_CHANGED( ti68k_on_key )
 {
-	t68k_state *state = field->port->machine->driver_data<t68k_state>();
+	t68k_state *state = (t68k_state *)field->port->machine->driver_data;
 
 	state->on_key = newval;
 
 	if (state->on_key)
 	{
 		if (field->port->machine->device<cpu_device>("maincpu")->suspended(SUSPEND_REASON_DISABLE))
-			field->port->machine->device<cpu_device>("maincpu")->resume(SUSPEND_REASON_DISABLE);
+			cputag_resume(field->port->machine, "maincpu", SUSPEND_REASON_DISABLE);
 
 		cputag_set_input_line(field->port->machine, "maincpu", M68K_IRQ_6, HOLD_LINE);
 	}
@@ -495,7 +494,7 @@ INPUT_PORTS_END
 
 NVRAM_HANDLER( ti68k )
 {
-	t68k_state *state = machine->driver_data<t68k_state>();
+	t68k_state *state = (t68k_state *)machine->driver_data;
 	UINT16 *rom = (UINT16 *)memory_region(machine, "maincpu");
 
 	if (read_or_write)
@@ -522,7 +521,7 @@ NVRAM_HANDLER( ti68k )
 
 static MACHINE_RESET(ti68k)
 {
-	t68k_state *state = machine->driver_data<t68k_state>();
+	t68k_state *state = (t68k_state *)machine->driver_data;
 	cpu_set_reg(machine->device("maincpu"), M68K_PC, state->initial_pc);
 
 	state->kb_mask = 0xff;
@@ -553,7 +552,7 @@ static VIDEO_START( ti68k )
 static VIDEO_UPDATE( ti68k )
 {
 	/* preliminary implementation, doesn't use the contrast value */
-	t68k_state *state = screen->machine->driver_data<t68k_state>();
+	t68k_state *state = (t68k_state *)screen->machine->driver_data;
 	const address_space *space = cputag_get_address_space(screen->machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 	UINT8 width = screen->width();
 	UINT8 height = screen->height();
@@ -576,7 +575,7 @@ static VIDEO_UPDATE( ti68k )
 
 MACHINE_START( ti68k )
 {
-	t68k_state *state = machine->driver_data<t68k_state>();
+	t68k_state *state = (t68k_state *)machine->driver_data;
 	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 	UINT16 *rom = (UINT16 *)memory_region(space->machine, "maincpu");
 	int i;

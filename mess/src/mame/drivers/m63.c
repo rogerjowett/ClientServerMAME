@@ -121,13 +121,12 @@ Dip locations verified for:
 #include "sound/ay8910.h"
 #include "sound/samples.h"
 
-class m63_state : public driver_data_t
+class m63_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, m63_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, m63_state(machine)); }
 
-	m63_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	m63_state(running_machine &machine) { }
 
 	UINT8 *  videoram;
 	UINT8 *  colorram;
@@ -211,7 +210,7 @@ static PALETTE_INIT( m63 )
 
 static WRITE8_HANDLER( m63_videoram_w )
 {
-	m63_state *state = space->machine->driver_data<m63_state>();
+	m63_state *state = (m63_state *)space->machine->driver_data;
 
 	state->videoram[offset] = data;
 	tilemap_mark_tile_dirty(state->bg_tilemap, offset);
@@ -219,7 +218,7 @@ static WRITE8_HANDLER( m63_videoram_w )
 
 static WRITE8_HANDLER( m63_colorram_w )
 {
-	m63_state *state = space->machine->driver_data<m63_state>();
+	m63_state *state = (m63_state *)space->machine->driver_data;
 
 	state->colorram[offset] = data;
 	tilemap_mark_tile_dirty(state->bg_tilemap, offset);
@@ -227,7 +226,7 @@ static WRITE8_HANDLER( m63_colorram_w )
 
 static WRITE8_HANDLER( m63_videoram2_w )
 {
-	m63_state *state = space->machine->driver_data<m63_state>();
+	m63_state *state = (m63_state *)space->machine->driver_data;
 
 	state->videoram2[offset] = data;
 	tilemap_mark_tile_dirty(state->fg_tilemap, offset);
@@ -235,7 +234,7 @@ static WRITE8_HANDLER( m63_videoram2_w )
 
 static WRITE8_HANDLER( m63_palbank_w )
 {
-	m63_state *state = space->machine->driver_data<m63_state>();
+	m63_state *state = (m63_state *)space->machine->driver_data;
 
 	if (state->pal_bank != (data & 0x01))
 	{
@@ -255,7 +254,7 @@ static WRITE8_HANDLER( m63_flipscreen_w )
 
 static WRITE8_HANDLER( fghtbskt_flipscreen_w )
 {
-	m63_state *state = space->machine->driver_data<m63_state>();
+	m63_state *state = (m63_state *)space->machine->driver_data;
 
 	flip_screen_set(space->machine, data);
 	state->fg_flag = flip_screen_get(space->machine) ? TILE_FLIPX : 0;
@@ -264,7 +263,7 @@ static WRITE8_HANDLER( fghtbskt_flipscreen_w )
 
 static TILE_GET_INFO( get_bg_tile_info )
 {
-	m63_state *state = machine->driver_data<m63_state>();
+	m63_state *state = (m63_state *)machine->driver_data;
 
 	int attr = state->colorram[tile_index];
 	int code = state->videoram[tile_index] | ((attr & 0x30) << 4);
@@ -275,7 +274,7 @@ static TILE_GET_INFO( get_bg_tile_info )
 
 static TILE_GET_INFO( get_fg_tile_info )
 {
-	m63_state *state = machine->driver_data<m63_state>();
+	m63_state *state = (m63_state *)machine->driver_data;
 
 	int code = state->videoram2[tile_index];
 
@@ -284,7 +283,7 @@ static TILE_GET_INFO( get_fg_tile_info )
 
 static VIDEO_START( m63 )
 {
-	m63_state *state = machine->driver_data<m63_state>();
+	m63_state *state = (m63_state *)machine->driver_data;
 
 	state->bg_tilemap = tilemap_create(machine, get_bg_tile_info, tilemap_scan_rows, 8, 8, 32, 32);
 	state->fg_tilemap = tilemap_create(machine, get_fg_tile_info, tilemap_scan_rows, 8, 8, 32, 32);
@@ -295,7 +294,7 @@ static VIDEO_START( m63 )
 
 static void draw_sprites( running_machine *machine, bitmap_t *bitmap, const rectangle *cliprect )
 {
-	m63_state *state = machine->driver_data<m63_state>();
+	m63_state *state = (m63_state *)machine->driver_data;
 	int offs;
 
 	for (offs = 0; offs < state->spriteram_size; offs += 4)
@@ -336,7 +335,7 @@ static void draw_sprites( running_machine *machine, bitmap_t *bitmap, const rect
 
 static VIDEO_UPDATE( m63 )
 {
-	m63_state *state = screen->machine->driver_data<m63_state>();
+	m63_state *state = (m63_state *)screen->machine->driver_data;
 
 	int col;
 
@@ -357,14 +356,14 @@ static WRITE8_HANDLER( coin_w )
 
 static WRITE8_HANDLER( snd_irq_w )
 {
-	m63_state *state = space->machine->driver_data<m63_state>();
+	m63_state *state = (m63_state *)space->machine->driver_data;
 	cpu_set_input_line(state->soundcpu, 0, ASSERT_LINE);
 	timer_call_after_resynch(space->machine, NULL, 0, NULL);
 }
 
 static WRITE8_HANDLER( snddata_w )
 {
-	m63_state *state = space->machine->driver_data<m63_state>();
+	m63_state *state = (m63_state *)space->machine->driver_data;
 
 	if ((state->p2 & 0xf0) == 0xe0)
 		ay8910_address_w(state->ay1, 0, offset);
@@ -380,13 +379,13 @@ static WRITE8_HANDLER( snddata_w )
 
 static WRITE8_HANDLER( p1_w )
 {
-	m63_state *state = space->machine->driver_data<m63_state>();
+	m63_state *state = (m63_state *)space->machine->driver_data;
 	state->p1 = data;
 }
 
 static WRITE8_HANDLER( p2_w )
 {
-	m63_state *state = space->machine->driver_data<m63_state>();
+	m63_state *state = (m63_state *)space->machine->driver_data;
 
 	state->p2 = data;
 	if((state->p2 & 0xf0) == 0x50)
@@ -397,13 +396,13 @@ static WRITE8_HANDLER( p2_w )
 
 static READ8_HANDLER( snd_status_r )
 {
-	m63_state *state = space->machine->driver_data<m63_state>();
+	m63_state *state = (m63_state *)space->machine->driver_data;
 	return state->sound_status;
 }
 
 static READ8_HANDLER( irq_r )
 {
-	m63_state *state = space->machine->driver_data<m63_state>();
+	m63_state *state = (m63_state *)space->machine->driver_data;
 
 	if (state->sound_irq)
 	{
@@ -415,7 +414,7 @@ static READ8_HANDLER( irq_r )
 
 static READ8_HANDLER( snddata_r )
 {
-	m63_state *state = space->machine->driver_data<m63_state>();
+	m63_state *state = (m63_state *)space->machine->driver_data;
 	switch (state->p2 & 0xf0)
 	{
 		case 0x60:	return soundlatch_r(space, 0); ;
@@ -426,7 +425,7 @@ static READ8_HANDLER( snddata_r )
 
 static WRITE8_HANDLER( fghtbskt_samples_w )
 {
-	m63_state *state = space->machine->driver_data<m63_state>();
+	m63_state *state = (m63_state *)space->machine->driver_data;
 
 	if (data & 1)
 		sample_start_raw(state->samples, 0, state->samplebuf + ((data & 0xf0) << 8), 0x2000, 8000, 0);
@@ -676,7 +675,7 @@ GFXDECODE_END
 static SAMPLES_START( fghtbskt_sh_start )
 {
 	running_machine *machine = device->machine;
-	m63_state *state = machine->driver_data<m63_state>();
+	m63_state *state = (m63_state *)machine->driver_data;
 	int i, len = memory_region_length(machine, "samples");
 	UINT8 *ROM = memory_region(machine, "samples");
 
@@ -696,13 +695,13 @@ static const samples_interface fghtbskt_samples_interface =
 
 static INTERRUPT_GEN( snd_irq )
 {
-	m63_state *state = device->machine->driver_data<m63_state>();
+	m63_state *state = (m63_state *)device->machine->driver_data;
 	state->sound_irq = 1;
 }
 
 static MACHINE_START( m63 )
 {
-	m63_state *state = machine->driver_data<m63_state>();
+	m63_state *state = (m63_state *)machine->driver_data;
 
 	state->soundcpu = machine->device("soundcpu");
 	state->ay1 = machine->device("ay1");
@@ -722,7 +721,7 @@ static MACHINE_START( m63 )
 
 static MACHINE_RESET( m63 )
 {
-	m63_state *state = machine->driver_data<m63_state>();
+	m63_state *state = (m63_state *)machine->driver_data;
 
 	state->pal_bank = 0;
 	state->fg_flag = 0;
@@ -1001,13 +1000,13 @@ ROM_END
 
 static DRIVER_INIT( wilytowr )
 {
-	m63_state *state = machine->driver_data<m63_state>();
+	m63_state *state = (m63_state *)machine->driver_data;
 	state->sy_offset = 238;
 }
 
 static DRIVER_INIT( fghtbskt )
 {
-	m63_state *state = machine->driver_data<m63_state>();
+	m63_state *state = (m63_state *)machine->driver_data;
 	state->sy_offset = 240;
 }
 

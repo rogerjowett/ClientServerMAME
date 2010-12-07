@@ -66,13 +66,12 @@ Notes:
 #include "deprecat.h"
 #include "cpu/h83002/h8.h"
 
-class lastfght_state : public driver_data_t
+class lastfght_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, lastfght_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, lastfght_state(machine)); }
 
-	lastfght_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	lastfght_state(running_machine &machine) { }
 
 	/* memory pointers */
 	UINT8 *  colorram;
@@ -99,7 +98,7 @@ public:
 
 static VIDEO_START( lastfght )
 {
-	lastfght_state *state = machine->driver_data<lastfght_state>();
+	lastfght_state *state = (lastfght_state *)machine->driver_data;
 	int i;
 	for (i = 0; i < 2; i++)
 		state->bitmap[i] = machine->primary_screen->alloc_compatible_bitmap();
@@ -114,7 +113,7 @@ static VIDEO_START( lastfght )
 
 static VIDEO_UPDATE( lastfght )
 {
-	lastfght_state *state = screen->machine->driver_data<lastfght_state>();
+	lastfght_state *state = (lastfght_state *)screen->machine->driver_data;
 
 #ifdef MAME_DEBUG
 #if 1
@@ -159,7 +158,7 @@ static VIDEO_UPDATE( lastfght )
 
 static WRITE16_HANDLER( colordac_w )
 {
-	lastfght_state *state = space->machine->driver_data<lastfght_state>();
+	lastfght_state *state = (lastfght_state *)space->machine->driver_data;
 
 	if (ACCESSING_BITS_0_7)
 	{
@@ -182,7 +181,7 @@ static WRITE16_HANDLER( colordac_w )
 // high byte of a 16 bit register
 static WRITE16_HANDLER( lastfght_hi_w )
 {
-	lastfght_state *state = space->machine->driver_data<lastfght_state>();
+	lastfght_state *state = (lastfght_state *)space->machine->driver_data;
 
 	if (ACCESSING_BITS_8_15)
 		logerror("%06x: 600000.b = %02x\n", cpu_get_pc(space->cpu), data >> 8);
@@ -196,7 +195,7 @@ static WRITE16_HANDLER( lastfght_hi_w )
 // screen x
 static WRITE16_HANDLER( lastfght_x_w )
 {
-	lastfght_state *state = space->machine->driver_data<lastfght_state>();
+	lastfght_state *state = (lastfght_state *)space->machine->driver_data;
 
 	if (ACCESSING_BITS_8_15)
 		logerror("%06x: 800008.b = %02x\n", cpu_get_pc(space->cpu), data >> 8);
@@ -210,7 +209,7 @@ static WRITE16_HANDLER( lastfght_x_w )
 // screen y, screen width - 1
 static WRITE16_HANDLER( lastfght_yw_w )
 {
-	lastfght_state *state = space->machine->driver_data<lastfght_state>();
+	lastfght_state *state = (lastfght_state *)space->machine->driver_data;
 
 	if (ACCESSING_BITS_8_15)
 	{
@@ -227,7 +226,7 @@ static WRITE16_HANDLER( lastfght_yw_w )
 // screen height - 1
 static WRITE16_HANDLER( lastfght_h_w )
 {
-	lastfght_state *state = space->machine->driver_data<lastfght_state>();
+	lastfght_state *state = (lastfght_state *)space->machine->driver_data;
 
 	if (ACCESSING_BITS_8_15)
 	{
@@ -241,7 +240,7 @@ static WRITE16_HANDLER( lastfght_h_w )
 // source delta x << 6, source x << 6
 static WRITE16_HANDLER( lastfght_sx_w )
 {
-	lastfght_state *state = space->machine->driver_data<lastfght_state>();
+	lastfght_state *state = (lastfght_state *)space->machine->driver_data;
 
 	if (ACCESSING_BITS_8_15)
 	{
@@ -258,7 +257,7 @@ static WRITE16_HANDLER( lastfght_sx_w )
 // source y << 6, source y1 << 6
 static WRITE16_HANDLER( lastfght_sy_w )
 {
-	lastfght_state *state = space->machine->driver_data<lastfght_state>();
+	lastfght_state *state = (lastfght_state *)space->machine->driver_data;
 
 	if (ACCESSING_BITS_8_15)
 	{
@@ -275,7 +274,7 @@ static WRITE16_HANDLER( lastfght_sy_w )
 // source rom (0x200000 bytes), source page (512x256 bytes)
 static WRITE16_HANDLER( lastfght_sr_w )
 {
-	lastfght_state *state = space->machine->driver_data<lastfght_state>();
+	lastfght_state *state = (lastfght_state *)space->machine->driver_data;
 
 	if (ACCESSING_BITS_8_15)
 	{
@@ -292,7 +291,7 @@ static WRITE16_HANDLER( lastfght_sr_w )
 // source x1 << 6, source delta y << 6
 static WRITE16_HANDLER( lastfght_sd_w )
 {
-	lastfght_state *state = space->machine->driver_data<lastfght_state>();
+	lastfght_state *state = (lastfght_state *)space->machine->driver_data;
 
 	if (ACCESSING_BITS_8_15)
 	{
@@ -309,7 +308,7 @@ static WRITE16_HANDLER( lastfght_sd_w )
 // start blit
 static WRITE16_HANDLER( lastfght_blit_w )
 {
-	lastfght_state *state = space->machine->driver_data<lastfght_state>();
+	lastfght_state *state = (lastfght_state *)space->machine->driver_data;
 
 	if (ACCESSING_BITS_8_15)
 	{
@@ -348,7 +347,7 @@ static WRITE16_HANDLER( lastfght_blit_w )
 // toggle framebuffer
 static WRITE16_HANDLER( lastfght_dest_w )
 {
-	lastfght_state *state = space->machine->driver_data<lastfght_state>();
+	lastfght_state *state = (lastfght_state *)space->machine->driver_data;
 
 	if (ACCESSING_BITS_0_7)
 		state->dest ^= 1;
@@ -385,7 +384,7 @@ static READ16_HANDLER( lastfght_c00006_r )
 
 static WRITE16_HANDLER( lastfght_c00006_w )
 {
-	lastfght_state *state = space->machine->driver_data<lastfght_state>();
+	lastfght_state *state = (lastfght_state *)space->machine->driver_data;
 	COMBINE_DATA(&state->c00006);
 	//  popmessage("%04x", state->c00006);
 }
@@ -512,7 +511,7 @@ INPUT_PORTS_END
 
 static INTERRUPT_GEN( unknown_interrupt )
 {
-	lastfght_state *state = device->machine->driver_data<lastfght_state>();
+	lastfght_state *state = (lastfght_state *)device->machine->driver_data;
 	switch (cpu_getiloops(device))
 	{
 		case 0:
@@ -526,7 +525,7 @@ static INTERRUPT_GEN( unknown_interrupt )
 
 static MACHINE_START( lastfght )
 {
-	lastfght_state *state = machine->driver_data<lastfght_state>();
+	lastfght_state *state = (lastfght_state *)machine->driver_data;
 
 	state->maincpu = machine->device("maincpu");
 
@@ -550,7 +549,7 @@ static MACHINE_START( lastfght )
 
 static MACHINE_RESET( lastfght )
 {
-	lastfght_state *state = machine->driver_data<lastfght_state>();
+	lastfght_state *state = (lastfght_state *)machine->driver_data;
 
 	state->clr_offset = 0;
 	state->dest = 0;

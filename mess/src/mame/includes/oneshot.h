@@ -1,11 +1,10 @@
 
-class oneshot_state : public driver_data_t
+class oneshot_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, oneshot_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, oneshot_state(machine)); }
 
-	oneshot_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	oneshot_state(running_machine &machine) { }
 
 	/* memory pointers */
 	UINT16 *        sprites;

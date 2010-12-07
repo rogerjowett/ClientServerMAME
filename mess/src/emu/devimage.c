@@ -345,6 +345,7 @@ bool legacy_image_device_base::load_software(char *swlist, char *swname, rom_ent
 
 bool legacy_image_device_base::load_internal(const char *path, bool is_create, int create_format, option_resolution *create_args)
 {
+    image_error_t err;
     UINT32 open_plan[4];
     int i;
 	bool softload = FALSE;
@@ -359,8 +360,8 @@ bool legacy_image_device_base::load_internal(const char *path, bool is_create, i
     m_is_loading = TRUE;
 
     /* record the filename */
-    m_err = set_image_filename(path);
-    if (m_err)
+    err = set_image_filename(path);
+    if (err)
         goto done;
 
 	/* Check if there's a software list defined for this device and use that if we're not creating an image */
@@ -374,8 +375,8 @@ bool legacy_image_device_base::load_internal(const char *path, bool is_create, i
 		for (i = 0; !m_file && open_plan[i]; i++)
 		{
 			/* open the file */
-			m_err = load_image_by_path(open_plan[i], path);
-			if (m_err && (m_err != IMAGE_ERROR_FILENOTFOUND))
+			err = load_image_by_path(open_plan[i], path);
+			if (err && (err != IMAGE_ERROR_FILENOTFOUND))
 				goto done;
 		}
 	}
@@ -392,7 +393,7 @@ bool legacy_image_device_base::load_internal(const char *path, bool is_create, i
 	/* did we fail to find the file? */
 	if (!is_loaded() && !softload)
 	{
-		m_err = IMAGE_ERROR_FILENOTFOUND;
+		err = IMAGE_ERROR_FILENOTFOUND;
 		goto done;
 	}
 
@@ -401,14 +402,14 @@ bool legacy_image_device_base::load_internal(const char *path, bool is_create, i
 	m_create_args = create_args;
 
 	if (m_init_phase==FALSE) {
-		m_err = (image_error_t)finish_load();
-		if (m_err)
+		err = (image_error_t)finish_load();
+		if (err)
 			goto done;
 	}
     /* success! */
 
 done:
-    if (m_err!=0) {
+    if (m_err) {
 		if (!m_init_phase)
 		{
 			if (machine->phase() == MACHINE_PHASE_RUNNING)
@@ -433,7 +434,7 @@ done:
 			}
 		}
 	}
-	return m_err ? IMAGE_INIT_FAIL : IMAGE_INIT_PASS;
+	return err ? IMAGE_INIT_FAIL : IMAGE_INIT_PASS;
 }
 
 

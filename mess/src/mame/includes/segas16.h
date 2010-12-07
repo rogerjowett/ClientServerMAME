@@ -1,12 +1,11 @@
 
-class segas1x_state : public driver_data_t
+class segas1x_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, segas1x_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, segas1x_state(machine)); }
 
 	segas1x_state(running_machine &machine)
-		: driver_data_t(machine),
-		  interrupt_timer(machine.device<timer_device>("int_timer")) { }
+		: interrupt_timer(machine.device<timer_device>("int_timer")) { }
 
 	/* memory pointers */
 //  UINT16 *  workram;  // this is used in the nvram handler, hence it cannot be added here

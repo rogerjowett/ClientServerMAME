@@ -9,13 +9,12 @@
 #define CASSETTE_TAG	"cassette"
 #define SPEAKER_TAG		"speaker"
 
-class mpf1_state : public driver_data_t
+class mpf1_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, mpf1_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, mpf1_state(machine)); }
 
-	mpf1_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	mpf1_state(running_machine &machine) { }
 
 	int _break;
 	int m1;

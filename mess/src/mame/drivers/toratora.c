@@ -23,13 +23,12 @@ TODO:
 #include "sound/sn76477.h"
 
 
-class toratora_state : public driver_data_t
+class toratora_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, toratora_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, toratora_state(machine)); }
 
-	toratora_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	toratora_state(running_machine &machine) { }
 
 	/* memory pointers */
 	UINT8 *    videoram;
@@ -69,7 +68,7 @@ static WRITE_LINE_DEVICE_HANDLER( cb2_u3_w )
 
 static VIDEO_UPDATE( toratora )
 {
-	toratora_state *state = screen->machine->driver_data<toratora_state>();
+	toratora_state *state = (toratora_state *)screen->machine->driver_data;
 	offs_t offs;
 
 	for (offs = 0; offs < state->videoram_size; offs++)
@@ -102,7 +101,7 @@ static VIDEO_UPDATE( toratora )
 
 static WRITE8_HANDLER( clear_tv_w )
 {
-	toratora_state *state = space->machine->driver_data<toratora_state>();
+	toratora_state *state = (toratora_state *)space->machine->driver_data;
 	state->clear_tv = 1;
 }
 
@@ -130,7 +129,7 @@ static WRITE8_DEVICE_HANDLER( port_b_u1_w )
 
 static WRITE_LINE_DEVICE_HANDLER( main_cpu_irq )
 {
-	toratora_state *toratora = device->machine->driver_data<toratora_state>();
+	toratora_state *toratora = (toratora_state *)device->machine->driver_data;
 	int combined_state = pia6821_get_irq_a(device) | pia6821_get_irq_b(device);
 
 	logerror("GEN IRQ: %x\n", combined_state);
@@ -140,7 +139,7 @@ static WRITE_LINE_DEVICE_HANDLER( main_cpu_irq )
 
 static INTERRUPT_GEN( toratora_timer )
 {
-	toratora_state *state = device->machine->driver_data<toratora_state>();
+	toratora_state *state = (toratora_state *)device->machine->driver_data;
 	state->timer++;	/* timer counting at 16 Hz */
 
 	/* also, when the timer overflows (16 seconds) watchdog would kick in */
@@ -159,13 +158,13 @@ static INTERRUPT_GEN( toratora_timer )
 
 static READ8_HANDLER( timer_r )
 {
-	toratora_state *state = space->machine->driver_data<toratora_state>();
+	toratora_state *state = (toratora_state *)space->machine->driver_data;
 	return state->timer;
 }
 
 static WRITE8_HANDLER( clear_timer_w )
 {
-	toratora_state *state = space->machine->driver_data<toratora_state>();
+	toratora_state *state = (toratora_state *)space->machine->driver_data;
 	state->timer = 0;
 }
 
@@ -375,7 +374,7 @@ INPUT_PORTS_END
 
 static MACHINE_START( toratora )
 {
-	toratora_state *state = machine->driver_data<toratora_state>();
+	toratora_state *state = (toratora_state *)machine->driver_data;
 
 	state->maincpu = machine->device("maincpu");
 	state->pia_u1 = machine->device("pia_u1");
@@ -389,7 +388,7 @@ static MACHINE_START( toratora )
 
 static MACHINE_RESET( toratora )
 {
-	toratora_state *state = machine->driver_data<toratora_state>();
+	toratora_state *state = (toratora_state *)machine->driver_data;
 
 	state->timer = 0xff;
 	state->last = 0;

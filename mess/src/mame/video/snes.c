@@ -1659,7 +1659,6 @@ static void snes_refresh_scanline( running_machine *machine, bitmap_t *bitmap, U
 
 VIDEO_START( snes )
 {
-    printf("STARTING SNES VIDEO!!!!\n");
 	int i,j;
 
 #ifdef SNES_LAYER_DEBUG
@@ -1735,9 +1734,6 @@ VIDEO_START( snes )
 	state_save_register_global(machine, snes_ppu.oam.flip);
 	state_save_register_global(machine, snes_ppu.oam.write_latch);
 
-	state_save_register_global_array(machine, snes_ppu.bgd_offset.horizontal);
-	state_save_register_global_array(machine, snes_ppu.bgd_offset.vertical);
-
 	state_save_register_global(machine, snes_ppu.beam.latch_horz);
 	state_save_register_global(machine, snes_ppu.beam.latch_vert);
 	state_save_register_global(machine, snes_ppu.beam.current_horz);
@@ -1775,11 +1771,6 @@ VIDEO_START( snes )
 	state_save_register_global(machine, snes_ppu.window1_right);
 	state_save_register_global(machine, snes_ppu.window2_left);
 	state_save_register_global(machine, snes_ppu.window2_right);
-
-    for(i=0;i<16;i++)
-    {
-        state_save_register_item_array(machine, "snes_ppu", NULL, i, snes_ppu.mosaic_table[i]);
-    }
 
 	state_save_register_global(machine, snes_ppu.update_windows);
 	state_save_register_global(machine, snes_ppu.update_offsets);
@@ -1821,7 +1812,7 @@ static const UINT16 vram_fgr_shiftab[4] = { 0, 5, 6, 7 };
 // utility function - latches the H/V counters.  Used by IRQ, writes to WRIO, etc.
 void snes_latch_counters( running_machine *machine )
 {
-	snes_state *state = machine->driver_data<snes_state>();
+	snes_state *state = (snes_state *)machine->driver_data;
 
 	snes_ppu.beam.current_horz = machine->primary_screen->hpos() / state->htmult;
 	snes_ppu.beam.latch_vert = machine->primary_screen->vpos();
@@ -1834,7 +1825,7 @@ void snes_latch_counters( running_machine *machine )
 
 static void snes_dynamic_res_change( running_machine *machine )
 {
-	snes_state *state = machine->driver_data<snes_state>();
+	snes_state *state = (snes_state *)machine->driver_data;
 	rectangle visarea = machine->primary_screen->visible_area();
 	attoseconds_t refresh;
 
@@ -1878,7 +1869,7 @@ static void snes_dynamic_res_change( running_machine *machine )
 
 INLINE UINT32 snes_get_vram_address( running_machine *machine )
 {
-	snes_state *state = machine->driver_data<snes_state>();
+	snes_state *state = (snes_state *)machine->driver_data;
 	UINT32 addr = state->vmadd;
 
 	if (state->vram_fgr_count)
@@ -2100,7 +2091,7 @@ static WRITE8_HANDLER( snes_cgram_write )
 
 READ8_HANDLER( snes_ppu_read )
 {
-	snes_state *state = space->machine->driver_data<snes_state>();
+	snes_state *state = (snes_state *)space->machine->driver_data;
 	UINT8 value;
 
 	switch (offset)
@@ -2248,7 +2239,7 @@ READ8_HANDLER( snes_ppu_read )
 
 WRITE8_HANDLER( snes_ppu_write )
 {
-	snes_state *state = space->machine->driver_data<snes_state>();
+	snes_state *state = (snes_state *)space->machine->driver_data;
 
 	switch (offset)
 	{

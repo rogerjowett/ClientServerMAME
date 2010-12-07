@@ -762,7 +762,6 @@ const game_driver * const drivers[] =
 
 	/* TI 99 clones */
 	DRIVER( tutor)	  /* 1983? Tomy Tutor    */
-	DRIVER( pyuuta )	/* 1982 Tomy Pyuuta		*/
 	DRIVER( geneve )	/* 1987? Myarc Geneve 9640    */
 	DRIVER( genmod )	/* 199?? Myarc Geneve 9640    */
 	DRIVER( ti99_4p )   /* 1996 SNUG 99/4P (a.k.a. SGCPU)      */
@@ -790,9 +789,10 @@ const game_driver * const drivers[] =
 	/* NEC */
 	DRIVER( pc6001 )
 	DRIVER( pc6001a )
-	DRIVER( pc6001mk2 )
-	DRIVER( pc6600 )
+	DRIVER( pc6001m2 )
 	DRIVER( pc6001sr )
+	DRIVER( pc6600 )
+	DRIVER( pc6600sr )
 	DRIVER( pc8001 )
 	DRIVER( pc8001mk2 )
 	DRIVER( pc8801 )
@@ -1317,7 +1317,6 @@ const game_driver * const drivers[] =
 	DRIVER( radioram )
 	DRIVER( spektr01 )
 	DRIVER( mikron2 )
-	DRIVER( kr03 )
 	DRIVER( apogee )
 	DRIVER( mikrosha )
 	DRIVER( partner )
@@ -1341,7 +1340,6 @@ const game_driver * const drivers[] =
 
 	/* Robotron 1715 */
 	DRIVER (rt1715)
-	DRIVER (rt1715lc) /* (latin/cyrillic) */
 	DRIVER (rt1715w)
 
 	/* Z1013 */

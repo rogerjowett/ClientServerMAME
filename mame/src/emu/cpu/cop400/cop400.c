@@ -827,7 +827,7 @@ static void define_state_table(running_device *device)
 	cop400_state *cpustate = get_safe_token(device);
 
 	device_state_interface *state;
-	device->interface(state);
+	device->dev_interface(state);
 	state->state_add(STATE_GENPC,     "GENPC",     cpustate->pc).mask(0xfff).noshow();
 	state->state_add(STATE_GENPCBASE, "GENPCBASE", cpustate->prevpc).mask(0xfff).noshow();
 	state->state_add(STATE_GENSP,     "GENSP",     cpustate->n).mask(0x3).noshow();

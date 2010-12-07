@@ -1,10 +1,9 @@
-class sidearms_state : public driver_data_t
+class sidearms_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, sidearms_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, sidearms_state(machine)); }
 
-	sidearms_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	sidearms_state(running_machine &machine) { }
 
 	int gameid;
 

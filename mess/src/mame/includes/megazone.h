@@ -4,13 +4,12 @@
 
 *************************************************************************/
 
-class megazone_state : public driver_data_t
+class megazone_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, megazone_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, megazone_state(machine)); }
 
-	megazone_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	megazone_state(running_machine &machine) { }
 
 	/* memory pointers */
 	UINT8 *       scrollx;

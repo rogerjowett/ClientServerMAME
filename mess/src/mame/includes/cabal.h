@@ -1,10 +1,9 @@
-class cabal_state : public driver_data_t
+class cabal_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, cabal_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, cabal_state(machine)); }
 
-	cabal_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	cabal_state(running_machine &machine) { }
 
 	UINT16 *spriteram;
 	UINT16 *colorram;

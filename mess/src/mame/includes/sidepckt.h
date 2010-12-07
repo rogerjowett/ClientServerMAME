@@ -1,10 +1,9 @@
-class sidepckt_state : public driver_data_t
+class sidepckt_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, sidepckt_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, sidepckt_state(machine)); }
 
-	sidepckt_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	sidepckt_state(running_machine &machine) { }
 
 	tilemap_t *bg_tilemap;
 	UINT8 *colorram;

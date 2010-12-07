@@ -387,7 +387,7 @@ void device_scheduler::rebuild_execute_list()
 				fatalerror("Device '%s' specified for perfect interleave is not present!", m_machine.config->m_perfect_cpu_quantum);
 
 			device_execute_interface *exec;
-			if (!device->interface(exec))
+			if (!device->dev_interface(exec))
 				fatalerror("Device '%s' specified for perfect interleave is not an executing device!", m_machine.config->m_perfect_cpu_quantum);
 
 			attotime cpu_quantum = attotime_make(0, exec->minimum_quantum());

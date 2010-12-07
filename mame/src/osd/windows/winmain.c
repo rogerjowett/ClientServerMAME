@@ -411,6 +411,7 @@ int main(int argc, char *argv[])
 
 	// free symbols
 	symbols = NULL;
+
 	return result;
 }
 

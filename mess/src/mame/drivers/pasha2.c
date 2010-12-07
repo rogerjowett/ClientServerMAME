@@ -76,13 +76,12 @@ Notes:
 #include "machine/eeprom.h"
 #include "sound/okim6295.h"
 
-class pasha2_state : public driver_data_t
+class pasha2_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, pasha2_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, pasha2_state(machine)); }
 
-	pasha2_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	pasha2_state(running_machine &machine) { }
 
 	/* memory pointers */
 	UINT16 *     bitmap0;
@@ -98,7 +97,7 @@ public:
 
 static WRITE16_HANDLER( pasha2_misc_w )
 {
-	pasha2_state *state = space->machine->driver_data<pasha2_state>();
+	pasha2_state *state = (pasha2_state *)space->machine->driver_data;
 
 	if (offset)
 	{
@@ -127,7 +126,7 @@ static WRITE16_HANDLER( pasha2_misc_w )
 
 static WRITE16_HANDLER( pasha2_palette_w )
 {
-	pasha2_state *state = space->machine->driver_data<pasha2_state>();
+	pasha2_state *state = (pasha2_state *)space->machine->driver_data;
 	int color;
 
 	COMBINE_DATA(&state->paletteram[offset]);
@@ -143,25 +142,25 @@ static WRITE16_HANDLER( pasha2_palette_w )
 
 static WRITE16_HANDLER( vbuffer_set_w )
 {
-	pasha2_state *state = space->machine->driver_data<pasha2_state>();
+	pasha2_state *state = (pasha2_state *)space->machine->driver_data;
 	state->vbuffer = 1;
 }
 
 static WRITE16_HANDLER( vbuffer_clear_w )
 {
-	pasha2_state *state = space->machine->driver_data<pasha2_state>();
+	pasha2_state *state = (pasha2_state *)space->machine->driver_data;
 	state->vbuffer = 0;
 }
 
 static WRITE16_HANDLER( bitmap_0_w )
 {
-	pasha2_state *state = space->machine->driver_data<pasha2_state>();
+	pasha2_state *state = (pasha2_state *)space->machine->driver_data;
 	COMBINE_DATA(&state->bitmap0[offset + state->vbuffer * 0x20000 / 2]);
 }
 
 static WRITE16_HANDLER( bitmap_1_w )
 {
-	pasha2_state *state = space->machine->driver_data<pasha2_state>();
+	pasha2_state *state = (pasha2_state *)space->machine->driver_data;
 
 	// handle overlapping pixels without writing them
 	switch (mem_mask)
@@ -340,7 +339,7 @@ INPUT_PORTS_END
 
 static VIDEO_START( pasha2 )
 {
-	pasha2_state *state = machine->driver_data<pasha2_state>();
+	pasha2_state *state = (pasha2_state *)machine->driver_data;
 	state->bitmap0 = auto_alloc_array(machine, UINT16, 0x40000/2);
 	state->bitmap1 = auto_alloc_array(machine, UINT16, 0x40000/2);
 
@@ -350,7 +349,7 @@ static VIDEO_START( pasha2 )
 
 static VIDEO_UPDATE( pasha2 )
 {
-	pasha2_state *state = screen->machine->driver_data<pasha2_state>();
+	pasha2_state *state = (pasha2_state *)screen->machine->driver_data;
 	int x, y, count;
 	int color;
 
@@ -399,7 +398,7 @@ static VIDEO_UPDATE( pasha2 )
 
 static MACHINE_START( pasha2 )
 {
-	pasha2_state *state = machine->driver_data<pasha2_state>();
+	pasha2_state *state = (pasha2_state *)machine->driver_data;
 
 	state_save_register_global(machine, state->old_bank);
 	state_save_register_global(machine, state->vbuffer);
@@ -407,7 +406,7 @@ static MACHINE_START( pasha2 )
 
 static MACHINE_RESET( pasha2 )
 {
-	pasha2_state *state = machine->driver_data<pasha2_state>();
+	pasha2_state *state = (pasha2_state *)machine->driver_data;
 
 	state->old_bank = -1;
 	state->vbuffer = 0;
@@ -480,7 +479,7 @@ ROM_END
 
 static READ16_HANDLER( pasha2_speedup_r )
 {
-	pasha2_state *state = space->machine->driver_data<pasha2_state>();
+	pasha2_state *state = (pasha2_state *)space->machine->driver_data;
 
 	if(cpu_get_pc(space->cpu) == 0x8302)
 		cpu_spinuntil_int(space->cpu);

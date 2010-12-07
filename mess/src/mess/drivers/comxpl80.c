@@ -1,13 +1,12 @@
 #include "emu.h"
 #include "cpu/m6805/m6805.h"
 
-class comxpl80_state : public driver_data_t
+class comxpl80_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, comxpl80_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, comxpl80_state(machine)); }
 
-	comxpl80_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	comxpl80_state(running_machine &machine) { }
 
 	/* printer state */
 	UINT8 centronics_data;	/* centronics data */
@@ -41,7 +40,7 @@ static WRITE8_HANDLER( pl80_port_a_w )
 
     */
 
-	comxpl80_state *state = space->machine->driver_data<comxpl80_state>();
+	comxpl80_state *state = (comxpl80_state *)space->machine->driver_data;
 
 	state->y_motor_phase = data & 0x0f;
 	state->font_addr = (BIT(data, 4) << 12) | (state->font_addr & 0xfff);
@@ -90,7 +89,7 @@ static WRITE8_HANDLER( pl80_port_b_w )
 
     */
 
-	comxpl80_state *state = space->machine->driver_data<comxpl80_state>();
+	comxpl80_state *state = (comxpl80_state *)space->machine->driver_data;
 
 	state->z_motor_phase = data & 0x0f;
 
@@ -114,7 +113,7 @@ static WRITE8_HANDLER( pl80_port_c_w )
 
     */
 
-	comxpl80_state *state = space->machine->driver_data<comxpl80_state>();
+	comxpl80_state *state = (comxpl80_state *)space->machine->driver_data;
 
 	state->font_addr = (state->font_addr & 0x1f00) | data;
 
@@ -141,7 +140,7 @@ static READ8_HANDLER( pl80_port_d_r )
 
     */
 
-	comxpl80_state *state = space->machine->driver_data<comxpl80_state>();
+	comxpl80_state *state = (comxpl80_state *)space->machine->driver_data;
 
 	return state->plotter_data;
 }

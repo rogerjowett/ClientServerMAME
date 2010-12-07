@@ -271,8 +271,9 @@ const image_device_format *device_image_interface::device_get_named_creatable_fo
 void device_image_interface::clear_error()
 {
     m_err = IMAGE_ERROR_SUCCESS;
-    if (m_err_message.len()!=0)
+    if (m_err_message.len()==0)
     {
+        //image_freeptr(image->dev, image->err_message);
         m_err_message.reset();
     }
 }
@@ -283,21 +284,22 @@ void device_image_interface::clear_error()
     error - returns the error text for an image
     error
 -------------------------------------------------*/
-static const char *const messages[] =
-{
-	"",
-	"Internal error",
-	"Unsupported operation",
-	"Out of memory",
-	"File not found",
-	"Invalid image",
-	"File already open",
-	"Unspecified error"
-};
 
 const char *device_image_interface::error()
 {
-    return (m_err_message.len()!=0) ? m_err_message.cstr() : messages[m_err];
+    static const char *const messages[] =
+    {
+        NULL,
+        "Internal error",
+        "Unsupported operation",
+        "Out of memory",
+        "File not found",
+        "Invalid image",
+        "File already open",
+        "Unspecified error"
+    };
+
+    return m_err_message.len()==0 ? m_err_message : astring(messages[m_err]);
 }
 
 

@@ -35,7 +35,7 @@ static void fds_irq(running_device *device, int scanline, int vblank, int blanke
 
 static void init_nes_core( running_machine *machine )
 {
-	nes_state *state = machine->driver_data<nes_state>();
+	nes_state *state = (nes_state *)machine->driver_data;
 	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 	static const char *const bank_names[] = { "bank1", "bank2", "bank3", "bank4" };
 	int prg_banks = (state->prg_chunks == 1) ? (2 * 2) : (state->prg_chunks * 2);
@@ -188,7 +188,7 @@ int nes_ppu_vidaccess( running_device *device, int address, int data )
 
 MACHINE_RESET( nes )
 {
-	nes_state *state = machine->driver_data<nes_state>();
+	nes_state *state = (nes_state *)machine->driver_data;
 
 	/* Reset the mapper variables. Will also mark the char-gen ram as dirty */
 	if (state->disk_expansion && state->pcb_id == NO_BOARD)
@@ -205,14 +205,14 @@ MACHINE_RESET( nes )
 
 static TIMER_CALLBACK( nes_irq_callback )
 {
-	nes_state *state = machine->driver_data<nes_state>();
+	nes_state *state = (nes_state *)machine->driver_data;
 	cpu_set_input_line(state->maincpu, M6502_IRQ_LINE, HOLD_LINE);
 	timer_adjust_oneshot(state->irq_timer, attotime_never, 0);
 }
 
 static STATE_POSTLOAD( nes_banks_restore )
 {
-	nes_state *state = machine->driver_data<nes_state>();
+	nes_state *state = (nes_state *)machine->driver_data;
 
 	memory_set_bank(machine, "bank1", state->prg_bank[0]);
 	memory_set_bank(machine, "bank2", state->prg_bank[1]);
@@ -223,57 +223,16 @@ static STATE_POSTLOAD( nes_banks_restore )
 
 static void nes_state_register( running_machine *machine )
 {
-	nes_state *state = machine->driver_data<nes_state>();
-
-	state_save_register_global(machine, state->in_0.shift);
-	state_save_register_global(machine, state->in_0.i0);
-	state_save_register_global(machine, state->in_0.i1);
-	state_save_register_global(machine, state->in_0.i2);
-	state_save_register_global(machine, state->in_1.shift);
-	state_save_register_global(machine, state->in_1.i0);
-	state_save_register_global(machine, state->in_1.i1);
-	state_save_register_global(machine, state->in_1.i2);
+	nes_state *state = (nes_state *)machine->driver_data;
 
 	state_save_register_global_array(machine, state->prg_bank);
-
-	state_save_register_global(machine, state->chr_open_bus);
-	state_save_register_global(machine, state->prgram_bank5_start);
-	state_save_register_global(machine, state->battery_bank5_start);
-	state_save_register_global(machine, state->empty_bank5_start);
-
-	state_save_register_global(machine, state->ce_mask);
-	state_save_register_global(machine, state->ce_state);
-	state_save_register_global(machine, state->vrc_ls_prg_a);
-	state_save_register_global(machine, state->vrc_ls_prg_b);
-	state_save_register_global(machine, state->vrc_ls_chr);
 
 	state_save_register_global(machine, state->MMC5_floodtile);
 	state_save_register_global(machine, state->MMC5_floodattr);
 	state_save_register_global(machine, state->mmc5_vram_control);
-	state_save_register_global(machine, state->mmc5_high_chr);
-	state_save_register_global(machine, state->mmc5_split_scr);
-
-	state_save_register_global(machine, state->mmc5_last_chr_a);
-	state_save_register_global_array(machine, state->mmc5_vrom_regA);
-	state_save_register_global_array(machine, state->mmc5_vrom_regB);
-	state_save_register_global_array(machine, state->mmc5_prg_regs);
-	state_save_register_global(machine, state->mmc5_bank_security);
-	state_save_register_global(machine, state->mmc5_prg_mode);
-	state_save_register_global(machine, state->mmc5_chr_mode);
-	state_save_register_global(machine, state->mmc5_chr_high);
-	state_save_register_global(machine, state->mmc5_split_ctrl);
-	state_save_register_global(machine, state->mmc5_split_yst);
-	state_save_register_global(machine, state->mmc5_split_bank);
 
 	state_save_register_global_array(machine, state->nes_vram_sprite);
 	state_save_register_global(machine, state->last_frame_flip);
-
-	state_save_register_global(machine, state->mmc_write_low);
-	state_save_register_global(machine, state->mmc_write_mid);
-	state_save_register_global(machine, state->mmc_write);
-	state_save_register_global(machine, state->mmc_read_low);
-	state_save_register_global(machine, state->mmc_read_mid);
-	state_save_register_global(machine, state->mmc_read);
 
 	// shared mapper variables
 	state_save_register_global(machine, state->IRQ_enable);
@@ -284,56 +243,20 @@ static void nes_state_register( running_machine *machine )
 	state_save_register_global(machine, state->IRQ_reset);
 	state_save_register_global(machine, state->IRQ_status);
 	state_save_register_global(machine, state->IRQ_mode);
-	state_save_register_global(machine, state->IRQ_clear);
 	state_save_register_global(machine, state->mult1);
 	state_save_register_global(machine, state->mult2);
-
 	state_save_register_global(machine, state->mmc_chr_source);
-
 	state_save_register_global(machine, state->mmc_cmd1);
 	state_save_register_global(machine, state->mmc_cmd2);
 	state_save_register_global(machine, state->mmc_count);
-
 	state_save_register_global(machine, state->mmc_prg_base);
 	state_save_register_global(machine, state->mmc_prg_mask);
 	state_save_register_global(machine, state->mmc_chr_base);
 	state_save_register_global(machine, state->mmc_chr_mask);
 	state_save_register_global_array(machine, state->mmc_prg_bank);
 	state_save_register_global_array(machine, state->mmc_vrom_bank);
-	state_save_register_global_array(machine, state->MMC5_vrom_bank);
 	state_save_register_global_array(machine, state->mmc_extra_bank);
 
-	state_save_register_global(machine, state->mmc_latch1);
-	state_save_register_global(machine, state->mmc_latch2);
-	state_save_register_global_array(machine, state->mmc_reg);
-	state_save_register_global(machine, state->mmc_dipsetting);
-	
-	state_save_register_global(machine, state->mmc1_reg_write_enable);
-	state_save_register_global(machine, state->mmc1_latch);
-	state_save_register_global(machine, state->mmc1_count);
-
-	state_save_register_global(machine, state->mmc3_latch);
-	state_save_register_global(machine, state->mmc3_wram_protect);
-	state_save_register_global(machine, state->mmc3_alt_irq);
-
-	state_save_register_global(machine, state->MMC5_rom_bank_mode);
-	state_save_register_global(machine, state->MMC5_vrom_bank_mode);
-	state_save_register_global(machine, state->MMC5_vram_protect);
-	state_save_register_global(machine, state->MMC5_scanline);
-	state_save_register_global(machine, state->vrom_page_a);
-	state_save_register_global(machine, state->vrom_page_b);
-
-	state_save_register_global(machine, state->mmc6_reg);
-
-	state_save_register_global_array(machine, state->mapper83_reg);
-	state_save_register_global_array(machine, state->mapper83_low_reg);
-	state_save_register_global_array(machine, state->txc_reg);
-	state_save_register_global_array(machine, state->subor_reg);
-	state_save_register_global_array(machine, state->sachen_reg);
-	state_save_register_global(machine, state->map52_reg_written);
-	state_save_register_global(machine, state->map114_reg);
-	state_save_register_global(machine, state->map114_reg_enabled);
-	
 	state_save_register_global(machine, state->fds_motor_on);
 	state_save_register_global(machine, state->fds_door_closed);
 	state_save_register_global(machine, state->fds_current_side);
@@ -353,7 +276,7 @@ static void nes_state_register( running_machine *machine )
 
 MACHINE_START( nes )
 {
-	nes_state *state = machine->driver_data<nes_state>();
+	nes_state *state = (nes_state *)machine->driver_data;
 
 	init_nes_core(machine);
 	machine->add_notifier(MACHINE_NOTIFY_EXIT, nes_machine_stop);
@@ -369,7 +292,7 @@ MACHINE_START( nes )
 
 static void nes_machine_stop( running_machine &machine )
 {
-	nes_state *state = machine.driver_data<nes_state>();
+	nes_state *state = (nes_state *)machine.driver_data;
 	device_image_interface *image = dynamic_cast<device_image_interface *>(state->cart);
 	/* Write out the battery file if necessary */
 	if (state->battery)
@@ -383,7 +306,7 @@ static void nes_machine_stop( running_machine &machine )
 
 READ8_HANDLER( nes_IN0_r )
 {
-	nes_state *state = space->machine->driver_data<nes_state>();
+	nes_state *state = (nes_state *)space->machine->driver_data;
 	int cfg = input_port_read(space->machine, "CTRLSEL");
 	int ret;
 
@@ -451,7 +374,7 @@ static UINT8 nes_read_subor_keyboard_line( running_machine *machine, UINT8 scan,
 
 READ8_HANDLER( nes_IN1_r )
 {
-	nes_state *state = space->machine->driver_data<nes_state>();
+	nes_state *state = (nes_state *)space->machine->driver_data;
 	int cfg = input_port_read(space->machine, "CTRLSEL");
 	int ret;
 
@@ -530,7 +453,7 @@ READ8_HANDLER( nes_IN1_r )
 // to also emulate the fact that nothing should be in Port 2 if there is a Crazy Climber pad, etc.
 static void nes_read_input_device( running_machine *machine, int cfg, nes_input *vals, int pad_port, int supports_zapper )
 {
-	nes_state *state = machine->driver_data<nes_state>();
+	nes_state *state = (nes_state *)machine->driver_data;
 	static const char *const padnames[] = { "PAD1", "PAD2", "PAD3", "PAD4", "CC_LEFT", "CC_RIGHT" };
 	
 	vals->i0 = 0;
@@ -605,7 +528,7 @@ static TIMER_CALLBACK( lightgun_tick )
 
 WRITE8_HANDLER( nes_IN0_w )
 {
-	nes_state *state = space->machine->driver_data<nes_state>();
+	nes_state *state = (nes_state *)space->machine->driver_data;
 	int cfg = input_port_read(space->machine, "CTRLSEL");
 
 	/* Check if lightgun has been chosen as input: if so, enable crosshair */
@@ -718,12 +641,12 @@ static int nes_cart_get_line( const char *feature )
 
 DEVICE_IMAGE_LOAD( nes_cart )
 {
-	nes_state *state = image.device().machine->driver_data<nes_state>();
+	nes_state *state = (nes_state *)image.device().machine->driver_data;
 	state->pcb_id = NO_BOARD;	// initialization
 
 	if (image.software_entry() == NULL)
 	{
-		const char *mapinfo = NULL;
+		const char *mapinfo;
 		int mapint1 = 0, mapint2 = 0, mapint3 = 0, mapint4 = 0, goodcrcinfo = 0;
 		char magic[4], extend[5];
 		int local_options = 0;
@@ -742,8 +665,7 @@ DEVICE_IMAGE_LOAD( nes_cart )
 			state->prg_ram = 1;	// always map state->wram in bank5 (eventually, this should be enabled only for some mappers)
 
 			// check if the image is recognized by nes.hsi
-			if (strcmp(image.extrainfo(), ""))
-				mapinfo = image.extrainfo();
+			mapinfo = image.extrainfo();
 
 			// image_extrainfo() resets the file position back to start.
 			// Let's skip past the magic header once again.
@@ -840,24 +762,15 @@ DEVICE_IMAGE_LOAD( nes_cart )
 
 			/* Allocate them again with the proper size */
 			prg_size = (state->prg_chunks == 1) ? 2 * 0x4000 : state->prg_chunks * 0x4000;
-			const region_info *ri = image.device().machine->region_alloc("maincpu", 0x10000 + prg_size, 0);
-			state_save_register_global_pointer(image.device().machine, ri->base(), ri->bytes());
-
+			image.device().machine->region_alloc("maincpu", 0x10000 + prg_size, 0);
 			if (state->chr_chunks)
-			{
-				const region_info *ri2 = image.device().machine->region_alloc("gfx1", state->chr_chunks * 0x2000, 0);
-				state_save_register_global_pointer(image.device().machine, ri2->base(), ri2->bytes());
-			}
+				image.device().machine->region_alloc("gfx1", state->chr_chunks * 0x2000, 0);
 
 			state->rom = memory_region(image.device().machine, "maincpu");
 			state->vrom = memory_region(image.device().machine, "gfx1");
 
 			state->vram_chunks = memory_region_length(image.device().machine, "gfx2") / 0x2000;
 			state->vram = memory_region(image.device().machine, "gfx2");
-
-			const region_info *ri3 = image.device().machine->region("gfx2");
-			state_save_register_global_pointer(image.device().machine, ri3->base(), ri3->bytes());
-
 			// FIXME: this should only be allocated if there is actual wram in the cart (i.e. if state->prg_ram = 1)!
 			// or if there is a trainer, I think
 			state->wram_size = 0x10000;
@@ -1598,7 +1511,7 @@ void nes_partialhash( char *dest, const unsigned char *data, unsigned long lengt
 
 static void fds_irq( running_device *device, int scanline, int vblank, int blanked )
 {
-	nes_state *state = device->machine->driver_data<nes_state>();
+	nes_state *state = (nes_state *)device->machine->driver_data;
 
 	if (state->IRQ_enable_latch)
 		cpu_set_input_line(state->maincpu, M6502_IRQ_LINE, HOLD_LINE);
@@ -1618,7 +1531,7 @@ static void fds_irq( running_device *device, int scanline, int vblank, int blank
 
 static READ8_HANDLER( nes_fds_r )
 {
-	nes_state *state = space->machine->driver_data<nes_state>();
+	nes_state *state = (nes_state *)space->machine->driver_data;
 	UINT8 ret = 0x00;
 
 	switch (offset)
@@ -1668,7 +1581,7 @@ static READ8_HANDLER( nes_fds_r )
 
 static WRITE8_HANDLER( nes_fds_w )
 {
-	nes_state *state = space->machine->driver_data<nes_state>();
+	nes_state *state = (nes_state *)space->machine->driver_data;
 
 	switch (offset)
 	{
@@ -1709,7 +1622,7 @@ static WRITE8_HANDLER( nes_fds_w )
 
 static void nes_load_proc( device_image_interface &image )
 {
-	nes_state *state = image.device().machine->driver_data<nes_state>();
+	nes_state *state = (nes_state *)image.device().machine->driver_data;
 	int header = 0;
 	state->fds_sides = 0;
 
@@ -1730,7 +1643,7 @@ static void nes_load_proc( device_image_interface &image )
 
 static void nes_unload_proc( device_image_interface &image )
 {
-	nes_state *state = image.device().machine->driver_data<nes_state>();
+	nes_state *state = (nes_state *)image.device().machine->driver_data;
 
 	/* TODO: should write out changes here as well */
 	state->fds_sides =  0;
@@ -1738,7 +1651,7 @@ static void nes_unload_proc( device_image_interface &image )
 
 DRIVER_INIT( famicom )
 {
-	nes_state *state = machine->driver_data<nes_state>();
+	nes_state *state = (nes_state *)machine->driver_data;
 	int i;
 
 	/* clear some of the variables we don't use */

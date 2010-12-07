@@ -323,7 +323,7 @@ static STATE_POSTLOAD( g65816_restore_state )
 	g65816i_cpu_struct *cpustate = (g65816i_cpu_struct *)param;
 
 	// restore proper function pointers
-	g65816i_set_execution_mode(cpustate, cpustate->executionMode);//(FLAG_M>>4) | (FLAG_X>>4));
+	g65816i_set_execution_mode(cpustate, (FLAG_M>>4) | (FLAG_X>>4));
 
 	// make sure the memory system can keep up
 	g65816i_jumping(REGISTER_PB | REGISTER_PC);
@@ -365,11 +365,6 @@ static CPU_INIT( g65816 )
 	state_save_register_device_item(device, 0, cpustate->irq_delay);
 	state_save_register_device_item(device, 0, cpustate->stopped);
 
-	state_save_register_device_item(device, 0, cpustate->source);
-	state_save_register_device_item(device, 0, cpustate->destination);
-	state_save_register_device_item(device, 0, cpustate->ICount);
-	state_save_register_device_item(device, 0, cpustate->cpu_type);
-	
 	state_save_register_postload(device->machine, g65816_restore_state, cpustate);
 }
 

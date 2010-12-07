@@ -21,12 +21,10 @@ Todo:
 #include "devices/cartslot.h"
 
 UINT8 *gamecom_vram;
+UINT8 *gamecom_iram;
 
 static ADDRESS_MAP_START(gamecom_mem_map, ADDRESS_SPACE_PROGRAM, 8)
-	AM_RANGE( 0x0000, 0x0013 )  AM_RAM
-	AM_RANGE( 0x0014, 0x0017 )  AM_READWRITE( gamecom_pio_r, gamecom_pio_w )        // buttons
-	AM_RANGE( 0x0018, 0x001F )  AM_RAM
-	AM_RANGE( 0x0020, 0x007F )  AM_READWRITE( gamecom_internal_r, gamecom_internal_w )/* CPU internal register file */
+	AM_RANGE( 0x0000, 0x007F )  AM_BASE(&gamecom_iram) AM_READWRITE( gamecom_internal_r, gamecom_internal_w )/* CPU internal register file */
 	AM_RANGE( 0x0080, 0x03FF )  AM_RAM						/* RAM */
 	AM_RANGE( 0x0400, 0x0FFF )  AM_NOP                                              /* Nothing */
 	AM_RANGE( 0x1000, 0x1FFF )  AM_ROM                                              /* Internal ROM (initially), or External ROM/Flash. Controlled by MMU0 (never swapped out in game.com) */
@@ -90,21 +88,15 @@ static PALETTE_INIT( gamecom )
 	}
 }
 
-static INTERRUPT_GEN( gamecom_interrupt )
-{
-	cputag_set_input_line(device->machine, "maincpu", LCDC_INT, ASSERT_LINE );
-}
-
 static MACHINE_DRIVER_START( gamecom )
 	/* basic machine hardware */
 	MDRV_CPU_ADD( "maincpu", SM8500, XTAL_11_0592MHz/2 )   /* actually it's an sm8521 microcontroller containing an sm8500 cpu */
 	MDRV_CPU_PROGRAM_MAP( gamecom_mem_map)
 	MDRV_CPU_CONFIG( gamecom_cpu_config )
-	MDRV_CPU_VBLANK_INT("screen", gamecom_interrupt)
 
 	MDRV_SCREEN_ADD("screen", LCD)
 	MDRV_SCREEN_REFRESH_RATE( 59.732155 )
-	MDRV_SCREEN_VBLANK_TIME(500)
+	MDRV_SCREEN_VBLANK_TIME(0)
 	MDRV_QUANTUM_TIME(HZ(60))
 
 	MDRV_MACHINE_RESET( gamecom )

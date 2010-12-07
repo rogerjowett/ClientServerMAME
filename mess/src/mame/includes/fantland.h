@@ -1,12 +1,11 @@
 
 
-class fantland_state : public driver_data_t
+class fantland_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, fantland_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, fantland_state(machine)); }
 
-	fantland_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	fantland_state(running_machine &machine) { }
 
 	/* memory pointers */
 //  UINT8 *    spriteram;   // currently directly used in a 16bit map...

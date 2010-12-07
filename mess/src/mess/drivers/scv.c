@@ -20,13 +20,12 @@ static WRITE8_HANDLER( scv_cart_ram_w );
 static WRITE8_HANDLER( scv_cart_ram2_w );
 
 
-class scv_state : public driver_data_t
+class scv_state
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, scv_state(machine)); }
+	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, scv_state(machine)); }
 
-	scv_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	scv_state(running_machine &machine) { }
 
 	UINT8	*vram;
 	UINT8	porta;
@@ -154,7 +153,7 @@ INPUT_PORTS_END
 
 static WRITE8_HANDLER( scv_cart_ram_w )
 {
-	scv_state *state = space->machine->driver_data<scv_state>();
+	scv_state *state = (scv_state *)space->machine->driver_data;
 
 	/* Check if cartridge ram is enabled */
 	if ( state->cart_ram_enabled )
@@ -166,7 +165,7 @@ static WRITE8_HANDLER( scv_cart_ram_w )
 
 static WRITE8_HANDLER( scv_cart_ram2_w )
 {
-	scv_state *state = space->machine->driver_data<scv_state>();
+	scv_state *state = (scv_state *)space->machine->driver_data;
 
 	/* Check if cartridge ram is enabled */
 	if ( state->cart_ram_enabled )
@@ -181,7 +180,7 @@ static WRITE8_HANDLER( scv_cart_ram2_w )
 
 static WRITE8_HANDLER( scv_porta_w )
 {
-	scv_state *state = space->machine->driver_data<scv_state>();
+	scv_state *state = (scv_state *)space->machine->driver_data;
 
 	state->porta = data;
 }
@@ -189,7 +188,7 @@ static WRITE8_HANDLER( scv_porta_w )
 
 static READ8_HANDLER( scv_portb_r )
 {
-	scv_state *state = space->machine->driver_data<scv_state>();
+	scv_state *state = (scv_state *)space->machine->driver_data;
 	UINT8 data = 0xff;
 
 	if ( ! ( state->porta & 0x01 ) )
@@ -222,7 +221,7 @@ static READ8_HANDLER( scv_portb_r )
 
 static READ8_HANDLER( scv_portc_r )
 {
-	scv_state *state = space->machine->driver_data<scv_state>();
+	scv_state *state = (scv_state *)space->machine->driver_data;
 	UINT8 data = state->portc;
 
 	data = ( data & 0xfe ) | ( input_port_read( space->machine, "PC0" ) & 0x01 );
@@ -233,7 +232,7 @@ static READ8_HANDLER( scv_portc_r )
 
 static void scv_set_banks( running_machine *machine )
 {
-	scv_state *state = machine->driver_data<scv_state>();
+	scv_state *state = (scv_state *)machine->driver_data;
 
 	state->cart_ram_enabled = false;
 
@@ -304,7 +303,7 @@ static void scv_set_banks( running_machine *machine )
 
 static WRITE8_HANDLER( scv_portc_w )
 {
-	scv_state *state = space->machine->driver_data<scv_state>();
+	scv_state *state = (scv_state *)space->machine->driver_data;
 
 	//logerror("%04x: scv_portc_w: data = 0x%02x\n", cpu_get_pc(space->machine->device("maincpu")), data );
 	state->portc = data;
@@ -316,7 +315,7 @@ static WRITE8_HANDLER( scv_portc_w )
 
 static DEVICE_START( scv_cart )
 {
-	scv_state *state = device->machine->driver_data<scv_state>();
+	scv_state *state = (scv_state *)device->machine->driver_data;
 
 	state->cart_rom = memory_region( device->machine, "cart" );
 	state->cart_rom_size = 0;
@@ -329,7 +328,7 @@ static DEVICE_START( scv_cart )
 
 static DEVICE_IMAGE_LOAD( scv_cart )
 {
-	scv_state *state = image.device().machine->driver_data<scv_state>();
+	scv_state *state = (scv_state *)image.device().machine->driver_data;
 
 	if ( image.software_entry() == NULL )
 	{
@@ -421,7 +420,7 @@ static PALETTE_INIT( scv )
 
 static TIMER_CALLBACK( scv_vb_callback )
 {
-	scv_state *state = machine->driver_data<scv_state>();
+	scv_state *state = (scv_state *)machine->driver_data;
 	int vpos = machine->primary_screen->vpos();
 
 	switch( vpos )
@@ -728,7 +727,7 @@ static WRITE_LINE_DEVICE_HANDLER( scv_upd1771_ack_w )
 
 static MACHINE_START( scv )
 {
-	scv_state *state = machine->driver_data<scv_state>();
+	scv_state *state = (scv_state *)machine->driver_data;
 
 	state->vb_timer = timer_alloc( machine, scv_vb_callback, NULL );
 }
@@ -736,7 +735,7 @@ static MACHINE_START( scv )
 
 static MACHINE_RESET( scv )
 {
-	scv_state *state = machine->driver_data<scv_state>();
+	scv_state *state = (scv_state *)machine->driver_data;
 
 	timer_adjust_oneshot( state->vb_timer, machine->primary_screen->time_until_pos(0, 0 ), 0 );
 }
