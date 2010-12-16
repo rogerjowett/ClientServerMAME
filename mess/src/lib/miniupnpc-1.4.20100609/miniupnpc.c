@@ -312,7 +312,7 @@ int simpleUPnPcommand(int s, const char * url, const char * service,
 	result = simpleUPnPcommand2(s, url, service, action, args, buffer, bufsize, "1.0");
 	if (result < 0 || *bufsize == 0)
 	{
-#if DEBUG
+#ifdef DEBUG
 	    printf("Error or no result from SOAP request; retrying with HTTP/1.1\n");
 #endif
 		*bufsize = origbufsize;

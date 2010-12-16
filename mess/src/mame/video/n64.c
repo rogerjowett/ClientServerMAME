@@ -27,7 +27,7 @@ TODO:
 #include "includes/n64.h"
 #include "video/n64.h"
 
-#define LOG_RDP_EXECUTION		0
+#define LOG_RDP_EXECUTION		1
 
 static FILE *rdp_exec;
 

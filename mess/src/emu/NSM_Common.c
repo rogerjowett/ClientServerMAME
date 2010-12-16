@@ -24,6 +24,7 @@ extern unsigned char uncompressedBuffer[MAX_ZLIB_BUF_SIZE];
 
 Common::Common(string _username)
 :
+secondsBetweenSync(0),
 selfPeerID(0),
 username(_username),
 startupTime(RakNet::GetTimeUS())
@@ -87,6 +88,26 @@ RakNet::SystemAddress Common::ConnectBlocking(const char *defaultAddress, unsign
     }
 }
 
+void Common::setSecondsBetweenSync(int _secondsBetweenSync)
+{
+#ifdef MESS
+    //Disable syncing on MESS because save states are unsupported
+    secondsBetweenSync = 0;
+#else
+    secondsBetweenSync = _secondsBetweenSync;
+#endif
+}
+
+int Common::getLargestPing()
+{
+    int largestPing=1;
+    for(int a=0; a<rakInterface->NumberOfConnections(); a++)
+    {
+        largestPing = max(rakInterface->GetAveragePing(rakInterface->GetSystemAddressFromIndex(a)),largestPing);
+    }
+    return largestPing;
+}
+
 string Common::getLatencyString(int peerID)
 {
     for(
@@ -113,7 +134,7 @@ string Common::getStatisticsString()
     for(int a=0; a<rakInterface->NumberOfConnections(); a++)
     {
         char message[4096];
-        rss=rakInterface->GetStatistics(rakInterface->GetSystemAddressFromIndex(0));
+        rss=rakInterface->GetStatistics(rakInterface->GetSystemAddressFromIndex(a));
         StatisticsToString(rss, message, 0);
         retval += string(message) + string("\n");
     }

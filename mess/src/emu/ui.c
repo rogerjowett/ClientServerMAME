@@ -389,6 +389,10 @@ int statsVisible=true;
 
 extern int initialSyncPercentComplete;
 
+extern attotime oldInputTime;
+extern bool waitingForClientCatchup;
+extern attotime mostRecentReport;
+
 void ui_update_and_render(running_machine *machine, render_container *container)
 {
 	/* always start clean */
@@ -419,14 +423,33 @@ void ui_update_and_render(running_machine *machine, render_container *container)
 	else
 		popup_text_end = 0;
 
-	if(
+	if(waitingForClientCatchup)
+	{
+        attotime globalCurtime = mostRecentReport;
+	    int percentDone = 100;
+	    if(globalCurtime.seconds>0)
+	    {
+	        percentDone = (oldInputTime.seconds*100)/globalCurtime.seconds;
+	    }
+        char buf[4096];
+        if(percentDone)
+        {
+            sprintf(buf,"Waiting for client to catch up (%d%% Complete)",percentDone);
+        }
+        else
+        {
+            sprintf(buf,"A new client is joining, please wait...");
+        }
+        ui_draw_text_box(container,buf,JUSTIFY_CENTER,0.5f,0.5f,MAKE_ARGB(255,0,0,128));
+	}
+	else if(
 	(!netClient && options_get_bool(mame_options(), "client")) ||
 	(netClient && netClient->isInitComplete()==false)
 	)
         {
 	  ui_draw_text_box(container,"Please wait for server to send entire game RAM...",JUSTIFY_CENTER,0.5f,0.5f,MAKE_ARGB(255,0,0,128));
 	  ui_draw_text_box(container,"This could take several minutes depending on your connection and rom chosen...",JUSTIFY_CENTER,0.5f,0.6f,MAKE_ARGB(255,0,0,128));
-	  ui_draw_text_box(container,"Once the initial sync is complete, it may take a few minutes to stablize, please be patient",JUSTIFY_CENTER,0.5f,0.7f,MAKE_ARGB(255,0,0,128));
+	  ui_draw_text_box(container,"Once the initial sync is complete, you may just hear game audio for a few minutes, please be patient",JUSTIFY_CENTER,0.5f,0.7f,MAKE_ARGB(255,0,0,128));
 	  char buf[4096];
 	  sprintf(buf,"%0.2f%% Complete (Could be over 100 for large roms)...",float(initialSyncPercentComplete)/10.0f);
 	  ui_draw_text_box(container,buf,JUSTIFY_CENTER,0.5f,0.8f,MAKE_ARGB(255,0,0,128));

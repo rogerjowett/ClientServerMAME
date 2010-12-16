@@ -2698,35 +2698,58 @@ static void frame_update(running_machine *machine)
 	int ui_visible = ui_is_menu_active();
 	attotime curtime = timer_get_time(machine);
 	attotime futureInputTime = curtime;
-	if(futureInputTime.attoseconds>=((ATTOSECONDS_PER_SECOND/10)*8))
-	{
-	    futureInputTime.attoseconds -= ((ATTOSECONDS_PER_SECOND/10)*8);
-	    futureInputTime.seconds++;
-	}
-	else
-	{
-	    futureInputTime.attoseconds += (ATTOSECONDS_PER_SECOND/10)*2;
-	}
-	if(playerInput.find(futureInputTime)==playerInput.end())
-	{
-        playerInput[futureInputTime] = std::map<const input_seq*,char>();
-	}
-	if(playerInputReceived.find(futureInputTime)==playerInputReceived.end())
-	{
-	    playerInputReceived[futureInputTime] = 0;
-	}
-	int peerID=1;
-	if(netServer)
+
+    int peerID=1;
+    if(netServer)
         peerID = netServer->getSelfPeerID();
-	if(netClient)
+    if(netClient)
         peerID = netClient->getSelfPeerID();
-    if(peerID==0)
+    if( (netServer || netClient) && peerID==0)
     {
         printf("DON'T HAVE AN ID YET\n");
         //Not sure what to do if you don't hae an ID yet...
         return;
     }
-    playerInputReceived[futureInputTime] |= (1 << peerID);
+
+	int delayFromPing=100; //Must be at least 50 because hasFutureInput needs a buffer since time isn't known fully
+	if(netClient)
+	{
+	    delayFromPing = max(delayFromPing,min(300,netClient->getLargestPing()*3/2));
+	}
+	if(netServer)
+	{
+	    delayFromPing = max(delayFromPing,min(300,netServer->getLargestPing()*3/2));
+	}
+	//if(options_get_int(mame_options(), OPTION_FIXED_LATENCY))
+	//delayFromPing = 200;
+	if(futureInputTime.attoseconds >= (ATTOSECONDS_PER_SECOND - (ATTOSECONDS_PER_MILLISECOND*delayFromPing)))
+	{
+	    futureInputTime.attoseconds -= (ATTOSECONDS_PER_SECOND - (ATTOSECONDS_PER_MILLISECOND*delayFromPing));
+	    futureInputTime.seconds++;
+	}
+	else
+	{
+        futureInputTime.attoseconds += (ATTOSECONDS_PER_MILLISECOND*delayFromPing);
+	}
+    bool processRawInput=false;
+    if(mostRecentSentReport<futureInputTime)
+    {
+        processRawInput=true;
+        if(playerInput.find(futureInputTime)==playerInput.end())
+        {
+            playerInput[futureInputTime] = std::map<const input_seq*,char>();
+        }
+        if(playerInputReceived.find(futureInputTime)==playerInputReceived.end())
+        {
+            playerInputReceived[futureInputTime] = 0;
+        }
+        playerInputReceived[futureInputTime] |= (1 << peerID);
+    }
+    else
+    {
+        //printf("SKIPPING INPUT\n");
+        //return;
+    }
 
 	render_target *mouse_target;
 	INT32 mouse_target_x;
@@ -2765,14 +2788,23 @@ profiler_mark_start(PROFILER_INPUT);
 	memcpy(sendBuf+1+sizeof(futureInputTime.seconds),&(futureInputTime.attoseconds),sizeof(futureInputTime.attoseconds));
 	int sendBufLength = 1+sizeof(futureInputTime.seconds)+sizeof(futureInputTime.attoseconds);
 
-    bool processRawInput=false;
-    if(mostRecentSentReport<futureInputTime)
+    if(netServer)
     {
-        processRawInput=true;
-    }
-    else
-    {
-        printf("SKIPPING INPUT\n");
+        if(mostRecentReport<futureInputTime)
+        {
+            mostRecentReport = futureInputTime;
+
+            //Drop the time back a bit to compensate for latency
+            if(mostRecentReport.attoseconds >= (ATTOSECONDS_PER_SECOND/10)*2)
+            {
+                mostRecentReport.attoseconds -= (ATTOSECONDS_PER_SECOND/10)*2;
+            }
+            else
+            {
+                mostRecentReport.seconds--;
+                mostRecentReport.attoseconds += (ATTOSECONDS_PER_SECOND/10)*8;
+            }
+        }
     }
 
 	/* loop over all input ports */

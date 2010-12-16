@@ -1332,10 +1332,12 @@ static DEVICE_START( ppu2c0x )
 	state_save_register_device_item(device, 0, ppu2c0x->tile_page);
 	state_save_register_device_item(device, 0, ppu2c0x->sprite_page);
 	state_save_register_device_item(device, 0, ppu2c0x->back_color);
+	state_save_register_device_item(device, 0, ppu2c0x->color_base);
 	state_save_register_device_item(device, 0, ppu2c0x->scan_scale);
 	state_save_register_device_item(device, 0, ppu2c0x->scanlines_per_frame);
 	state_save_register_device_item_array(device, 0, ppu2c0x->regs);
 	state_save_register_device_item_array(device, 0, ppu2c0x->palette_ram);
+	state_save_register_device_item_array(device, 0, ppu2c0x->palette);
 	state_save_register_device_item_pointer(device, 0, ppu2c0x->spriteram, SPRITERAM_SIZE);
 	state_save_register_device_item_pointer(device, 0, ppu2c0x->colortable, ARRAY_LENGTH(default_colortable));
 	state_save_register_device_item_pointer(device, 0, ppu2c0x->colortable_mono, ARRAY_LENGTH(default_colortable_mono));

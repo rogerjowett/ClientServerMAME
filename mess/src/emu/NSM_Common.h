@@ -133,6 +133,8 @@ public:
 
     Common(string _username);
 
+    int getLargestPing();
+
     RakNet::SystemAddress ConnectBlocking(const char *defaultAddress, unsigned short defaultPort);
 
     int getSecondsBetweenSync()
@@ -140,10 +142,7 @@ public:
         return secondsBetweenSync;
     }
 
-    void setSecondsBetweenSync(int _secondsBetweenSync)
-    {
-        secondsBetweenSync = _secondsBetweenSync;
-    }
+    void setSecondsBetweenSync(int _secondsBetweenSync);
 
     void addConstBlock(unsigned char *tmpdata,int size);
 

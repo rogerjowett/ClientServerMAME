@@ -1842,6 +1842,7 @@ DRIVER_INIT( snes )
 
 	rom = memory_region(machine, "user3");
 	snes_ram = auto_alloc_array_clear(machine, UINT8, 0x1400000);
+	state_save_register_global_array(machine, snes_ram);
 
 	/* all NSS games seem to use MODE 20 */
 	state->cart[0].mode = SNES_MODE_20;
@@ -1909,6 +1910,7 @@ DRIVER_INIT( snes_hirom )
 	rom = memory_region(machine, "user3");
 	snes_ram = auto_alloc_array(machine, UINT8, 0x1400000);
 	memset(snes_ram, 0, 0x1400000);
+	state_save_register_global_array(machine, snes_ram);
 
 	state->cart[0].mode = SNES_MODE_21;
 	state->cart[0].sram_max = 0x40000;

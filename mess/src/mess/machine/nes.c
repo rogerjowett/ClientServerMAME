@@ -225,11 +225,55 @@ static void nes_state_register( running_machine *machine )
 {
 	nes_state *state = (nes_state *)machine->driver_data;
 
+	state_save_register_global(machine, state->in_0.shift);
+	state_save_register_global(machine, state->in_0.i0);
+	state_save_register_global(machine, state->in_0.i1);
+	state_save_register_global(machine, state->in_0.i2);
+	state_save_register_global(machine, state->in_1.shift);
+	state_save_register_global(machine, state->in_1.i0);
+	state_save_register_global(machine, state->in_1.i1);
+	state_save_register_global(machine, state->in_1.i2);
+	state_save_register_global(machine, state->in_2.shift);
+	state_save_register_global(machine, state->in_2.i0);
+	state_save_register_global(machine, state->in_2.i1);
+	state_save_register_global(machine, state->in_2.i2);
+	state_save_register_global(machine, state->in_3.shift);
+	state_save_register_global(machine, state->in_3.i0);
+	state_save_register_global(machine, state->in_3.i1);
+	state_save_register_global(machine, state->in_3.i2);
+
+	state_save_register_global(machine, state->fck_scan);
+	state_save_register_global(machine, state->fck_mode);
+
 	state_save_register_global_array(machine, state->prg_bank);
+
+	state_save_register_global(machine, state->chr_open_bus);
+	state_save_register_global(machine, state->prgram_bank5_start);
+	state_save_register_global(machine, state->battery_bank5_start);
+	state_save_register_global(machine, state->empty_bank5_start);
+	state_save_register_global(machine, state->ce_mask);
+	state_save_register_global(machine, state->ce_state);
+	state_save_register_global(machine, state->vrc_ls_prg_a);
+	state_save_register_global(machine, state->vrc_ls_prg_b);
+	state_save_register_global(machine, state->vrc_ls_chr);
 
 	state_save_register_global(machine, state->MMC5_floodtile);
 	state_save_register_global(machine, state->MMC5_floodattr);
 	state_save_register_global(machine, state->mmc5_vram_control);
+	state_save_register_global(machine, state->mmc5_high_chr);
+	state_save_register_global(machine, state->mmc5_split_scr);
+
+	state_save_register_global(machine, state->mmc5_last_chr_a);
+	state_save_register_global_array(machine, state->mmc5_vrom_regA);
+	state_save_register_global_array(machine, state->mmc5_vrom_regB);
+	state_save_register_global_array(machine, state->mmc5_prg_regs);
+	state_save_register_global(machine, state->mmc5_bank_security);
+	state_save_register_global(machine, state->mmc5_prg_mode);
+	state_save_register_global(machine, state->mmc5_chr_mode);
+	state_save_register_global(machine, state->mmc5_chr_high);
+	state_save_register_global(machine, state->mmc5_split_ctrl);
+	state_save_register_global(machine, state->mmc5_split_yst);
+	state_save_register_global(machine, state->mmc5_split_bank);
 
 	state_save_register_global_array(machine, state->nes_vram_sprite);
 	state_save_register_global(machine, state->last_frame_flip);
@@ -255,7 +299,39 @@ static void nes_state_register( running_machine *machine )
 	state_save_register_global(machine, state->mmc_chr_mask);
 	state_save_register_global_array(machine, state->mmc_prg_bank);
 	state_save_register_global_array(machine, state->mmc_vrom_bank);
+	state_save_register_global_array(machine, state->MMC5_vrom_bank);
 	state_save_register_global_array(machine, state->mmc_extra_bank);
+
+	state_save_register_global(machine, state->mmc_latch1);
+	state_save_register_global(machine, state->mmc_latch2);
+	state_save_register_global_array(machine, state->mmc_reg);
+	state_save_register_global(machine, state->mmc_dipsetting);
+
+	state_save_register_global(machine, state->mmc1_reg_write_enable);
+	state_save_register_global(machine, state->mmc1_latch);
+	state_save_register_global(machine, state->mmc1_count);
+
+	state_save_register_global(machine, state->mmc3_latch);
+	state_save_register_global(machine, state->mmc3_wram_protect);
+	state_save_register_global(machine, state->mmc3_alt_irq);
+
+	state_save_register_global(machine, state->MMC5_rom_bank_mode);
+	state_save_register_global(machine, state->MMC5_vrom_bank_mode);
+	state_save_register_global(machine, state->MMC5_vram_protect);
+	state_save_register_global(machine, state->MMC5_scanline);
+	state_save_register_global(machine, state->vrom_page_a);
+	state_save_register_global(machine, state->vrom_page_b);
+
+	state_save_register_global(machine, state->mmc6_reg);
+
+	state_save_register_global_array(machine, state->mapper83_reg);
+	state_save_register_global_array(machine, state->mapper83_low_reg);
+	state_save_register_global_array(machine, state->txc_reg);
+	state_save_register_global_array(machine, state->subor_reg);
+	state_save_register_global_array(machine, state->sachen_reg);
+	state_save_register_global(machine, state->map52_reg_written);
+	state_save_register_global(machine, state->map114_reg);
+	state_save_register_global(machine, state->map114_reg_enabled);
 
 	state_save_register_global(machine, state->fds_motor_on);
 	state_save_register_global(machine, state->fds_door_closed);
@@ -268,6 +344,8 @@ static void nes_state_register( running_machine *machine )
 	state_save_register_global(machine, state->fds_count);
 
 	state_save_register_global_pointer(machine, state->wram, state->wram_size);
+	state_save_register_global_pointer(machine, state->mapper_ram, state->mapper_ram_size);
+	state_save_register_global_pointer(machine, state->mapper_bram, state->mapper_bram_size);
 	if (state->battery)
 		state_save_register_global_pointer(machine, state->battery_ram, state->battery_size);
 
@@ -449,24 +527,24 @@ READ8_HANDLER( nes_IN1_r )
 }
 
 
-// FIXME: this is getting messier and messier (no pun intended). inputs reading should be simplified and port_categories cleaned up 
+// FIXME: this is getting messier and messier (no pun intended). inputs reading should be simplified and port_categories cleaned up
 // to also emulate the fact that nothing should be in Port 2 if there is a Crazy Climber pad, etc.
 static void nes_read_input_device( running_machine *machine, int cfg, nes_input *vals, int pad_port, int supports_zapper )
 {
 	nes_state *state = (nes_state *)machine->driver_data;
 	static const char *const padnames[] = { "PAD1", "PAD2", "PAD3", "PAD4", "CC_LEFT", "CC_RIGHT" };
-	
+
 	vals->i0 = 0;
 	vals->i1 = 0;
 	vals->i2 = 0;
-	
+
 	switch (cfg & 0x0f)
 	{
 		case 0x01:	/* gamepad */
 			if (pad_port >= 0)
 				vals->i0 = input_port_read(machine, padnames[pad_port]);
 			break;
-			
+
 		case 0x02:	/* zapper 1 */
 			if (supports_zapper)
 			{
@@ -475,7 +553,7 @@ static void nes_read_input_device( running_machine *machine, int cfg, nes_input 
 				vals->i2 = input_port_read(machine, "ZAPPER1_Y");
 			}
 			break;
-			
+
 		case 0x03:	/* zapper 2 */
 			if (supports_zapper)
 			{
@@ -484,12 +562,12 @@ static void nes_read_input_device( running_machine *machine, int cfg, nes_input 
 				vals->i2 = input_port_read(machine, "ZAPPER2_Y");
 			}
 			break;
-			
+
 		case 0x04:	/* arkanoid paddle */
 			if (pad_port == 1)
 				vals->i0 = (UINT8) ((UINT8) input_port_read(machine, "PADDLE") + (UINT8)0x52) ^ 0xff;
 			break;
-			
+
 		case 0x05:	/* crazy climber controller */
 			if (pad_port == 0)
 			{
@@ -556,14 +634,14 @@ WRITE8_HANDLER( nes_IN0_w )
 	{
 		if (data & 0x01)
 			return;
-		
+
 		if (LOG_JOY)
 			logerror("joy 0 bits read: %d\n", state->in_0.shift);
-		
+
 		/* Toggling bit 0 high then low resets both controllers */
 		state->in_0.shift = 0;
 		state->in_1.shift = 0;
-		
+
 		/* Read the input devices */
 		if ((cfg & 0x000f) != 0x06)
 		{
@@ -579,10 +657,10 @@ WRITE8_HANDLER( nes_IN0_w )
 			nes_read_input_device(space->machine, 0, &state->in_3, 3, FALSE);
 			nes_read_input_device(space->machine, cfg >>  0, &state->in_0, 0,  TRUE);
 		}
-		
+
 		if (cfg & 0x0f00)
 			state->in_0.i0 |= (state->in_2.i0 << 8) | (0x08 << 16);
-		
+
 		if (cfg & 0xf000)
 			state->in_1.i0 |= (state->in_3.i0 << 8) | (0x04 << 16);
 	}
@@ -894,16 +972,16 @@ DEVICE_IMAGE_LOAD( nes_cart )
 			/* Allocate internal Mapper RAM for boards which require it */
 			if (state->pcb_id == STD_EXROM)
 				state->mapper_ram = auto_alloc_array(image.device().machine, UINT8, 0x400);
-			
+
 			if (state->pcb_id == TAITO_X1_005 || state->pcb_id == TAITO_X1_005_A)
 				state->mapper_bram = auto_alloc_array(image.device().machine, UINT8, 0x80);
-			
+
 			if (state->pcb_id == TAITO_X1_017)
 				state->mapper_bram = auto_alloc_array(image.device().machine, UINT8, 0x1400);
-			
+
 			if (state->pcb_id == NAMCOT_163)
 				state->mapper_ram = auto_alloc_array(image.device().machine, UINT8, 0x2000);
-			
+
 			/* Position past the header */
 			image.fseek(16, SEEK_SET);
 
@@ -1122,7 +1200,7 @@ DEVICE_IMAGE_LOAD( nes_cart )
 						logerror("[MIRR] chunk found.\n");
 						image.fread(&buffer, 4);
 						chunk_length = buffer[0] | (buffer[1] << 8) | (buffer[2] << 16) | (buffer[3] << 24);
-						
+
 						image.fread(&temp_byte, 1);
 						switch (temp_byte)
 						{
@@ -1152,7 +1230,7 @@ DEVICE_IMAGE_LOAD( nes_cart )
 								state->hard_mirroring = PPU_MIRROR_HORZ;
 								break;
 						}
-						
+
 						read_length += (chunk_length + 8);
 					}
 					else if ((magic2[0] == 'P') && (magic2[1] == 'C') && (magic2[2] == 'K'))

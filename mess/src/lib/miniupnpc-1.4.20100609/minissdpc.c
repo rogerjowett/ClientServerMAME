@@ -1,3 +1,5 @@
+#ifndef WIN32
+
 /* $Id: minissdpc.c,v 1.13 2009/12/04 16:57:29 nanard Exp $ */
 /* Project : miniupnp
  * Author : Thomas BERNARD
@@ -128,3 +130,4 @@ getDevicesFromMiniSSDPD(const char * devtype, const char * socketpath)
 	return devlist;
 }
 
+#endif

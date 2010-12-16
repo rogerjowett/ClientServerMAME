@@ -59,6 +59,7 @@ $(OBJ)/libutil.a: $(UTILOBJS)
 MINIUPNPCOBJS = \
 	$(LIBOBJ)/miniupnpc-1.4.20100609/connecthostport.o \
 	$(LIBOBJ)/miniupnpc-1.4.20100609/igd_desc_parse.o \
+	$(LIBOBJ)/miniupnpc-1.4.20100609/minissdpc.o \
 	$(LIBOBJ)/miniupnpc-1.4.20100609/minisoap.o \
 	$(LIBOBJ)/miniupnpc-1.4.20100609/miniupnpc.o \
 	$(LIBOBJ)/miniupnpc-1.4.20100609/miniwget.o \
