@@ -40,11 +40,11 @@ public:
 
 	void updateSyncCheck();
 
-    std::pair<bool,bool> syncAndUpdate();
+    std::pair<bool,bool> syncAndUpdate(running_machine *machine);
 
     void loadInitialData(unsigned char *data,int size);
 
-    bool resync(unsigned char *data,int size);
+    bool resync(unsigned char *data,int size,running_machine *machine);
 
     void addConstData(unsigned char *data,int size);
 

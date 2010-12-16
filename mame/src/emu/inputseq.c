@@ -151,13 +151,16 @@ int input_seq_pressed(running_machine *machine,const input_seq* seq)
 
 	std::map< attotime, std::map<const input_seq*,char> >::reverse_iterator it = playerInput.rbegin();
     std::map< attotime, std::map<const input_seq*,char> >::reverse_iterator itold = playerInput.rbegin();
+
+    int mostRecentFutureValue=0;
+
 	while(true)
 	{
 	    if(it==playerInput.rend())
 	    {
 	        if(curtime.seconds)
                 std::cout << "ERROR: COULDN'T FIND INPUT FOR TIME" << curtime.seconds << '.' << curtime.attoseconds << '\n';
-			return FALSE;
+			return mostRecentFutureValue;
 	    }
 	    //std::cout << "Checking at " << it->first.seconds << '.' << it->first.attoseconds << std::endl;
 	    if(it->first<curtime)
@@ -166,7 +169,7 @@ int input_seq_pressed(running_machine *machine,const input_seq* seq)
 	        {
                 if(curtime.seconds)
                     std::cout << "ERROR: COULDN'T FIND INPUT FOR TIME" << curtime.seconds << '.' << curtime.attoseconds << '\n';
-	            return FALSE;
+	            return mostRecentFutureValue;
 	        }
             //std::cout << "COULDN'T FIND EXACT INPUT FOR TIME " << curtime.seconds << '.' << curtime.attoseconds
             //<< ". USING " << itold->first.seconds << '.' << itold->first.attoseconds
@@ -179,9 +182,13 @@ int input_seq_pressed(running_machine *machine,const input_seq* seq)
                     //std::cout << "ERROR: COULDN'T FIND INPUT SEQUENCE FOR TIME" << curtime.seconds << '.' << curtime.attoseconds << '\n';
                     //printf("Input seq ptr: %X\n",seq);
                 }
-	            return FALSE;
+	            //return mostRecentFutureValue;
 	        }
-	        return itold->second[seq];
+	        return mostRecentFutureValue;
+	    }
+	    else if(it->second.find(seq) != it->second.end())
+	    {
+	        mostRecentFutureValue = it->second[seq];
 	    }
 
 	    itold = it;

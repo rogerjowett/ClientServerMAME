@@ -140,6 +140,7 @@ int GetPacketSize(RakNet::Packet *p)
 
 extern void video_frame_update(running_machine *machine, int debug);
 int initialSyncPercentComplete=0;
+extern bool waitingForClientCatchup;
 
 bool Client::initializeConnection(unsigned short selfPort,const char *hostname,unsigned short port,running_machine *machine)
 {
@@ -266,7 +267,8 @@ bool Client::initializeConnection(unsigned short selfPort,const char *hostname,u
                         //This is someone else, set their ID and name
                         peerIDs[sa] = peerID;
                         peerNames[peerID] = buf;
-                    }
+                        waitingForClientCatchup=true;
+                   }
                 }
                 break;
 
@@ -338,6 +340,8 @@ extern attotime zeroInputMinTime;
 
 void Client::loadInitialData(unsigned char *data,int size)
 {
+    unsigned char checksum = 0;
+
 	int uncompressedSize;
 	memcpy(&uncompressedSize,data,sizeof(int));
 	data += sizeof(int);
@@ -365,64 +369,40 @@ void Client::loadInitialData(unsigned char *data,int size)
         printf("STARTUP TIME IS TOO EARLY!!!");
     startupTime -= timeBeforeSync;
 
-    cout << "READING NUM BLOCKS\n";
-    int numBlocks;
-    initialSyncStream.Read(numBlocks);
-
-    cout << "LOADING " << numBlocks << " BLOCKS\n";
-            unsigned char checksum = 0;
-    if(blocks.size()==0)
+    if(getSecondsBetweenSync())
     {
-        //Assume the memory is not set up on the client yet and the client will assign the memory to something later
-        for(int blockIndex=0;blockIndex<numBlocks;blockIndex++)
+        cout << "READING NUM BLOCKS\n";
+        int numBlocks;
+        initialSyncStream.Read(numBlocks);
+
+        cout << "LOADING " << numBlocks << " BLOCKS\n";
         {
-            int blockSize;
-            initialSyncStream.Read(blockSize);
-
-            cout << "GOT INITIAL BLOCK OF SIZE: " << blockSize << endl;
-
-            blocks.push_back(MemoryBlock(blockSize));
-            xorBlocks.push_back(MemoryBlock(blockSize));
-            staleBlocks.push_back(MemoryBlock(blockSize));
-
-            initialSyncStream.ReadBits(blocks.back().data,blockSize*8);
-            memcpy(staleBlocks.back().data,blocks.back().data,blockSize);
-
-            for(int a=0;a<blockSize;a++)
+            //Server and client must match on blocks
+            if(blocks.size() != numBlocks)
             {
-                checksum = checksum ^ blocks.back().data[a];
+                cout << "ERROR: CLIENT AND SERVER BLOCK COUNTS DO NOT MATCH!\n";
             }
 
-            //cout << "INITIAL BLOCK COUNT: " << blocks.back().getBitCount() << endl;
-        }
-    }
-    else
-    {
-        //Server and client must match on blocks
-        if(blocks.size() != numBlocks)
-        {
-            cout << "ERROR: CLIENT AND SERVER BLOCK COUNTS DO NOT MATCH!\n";
-        }
-
-        for(int blockIndex=0;blockIndex<numBlocks;blockIndex++)
-        {
-            //cout << "ON INDEX: " << blockIndex << " OF " << numBlocks << endl;
-            int blockSize;
-            initialSyncStream.Read(blockSize);
-
-            if(blockSize != blocks[blockIndex].size)
+            for(int blockIndex=0; blockIndex<numBlocks; blockIndex++)
             {
-                cout << "ERROR: CLIENT AND SERVER BLOCK SIZES AT INDEX " << blockIndex << " DO NOT MATCH!\n";
-                cout << blockSize << " != " << blocks[blockIndex].size << endl;
-                exit(1);
-            }
+                //cout << "ON INDEX: " << blockIndex << " OF " << numBlocks << endl;
+                int blockSize;
+                initialSyncStream.Read(blockSize);
 
-            initialSyncStream.ReadBits(staleBlocks[blockIndex].data,blockSize*8);
-            memcpy(blocks[blockIndex].data,staleBlocks[blockIndex].data,blockSize);
+                if(blockSize != blocks[blockIndex].size)
+                {
+                    cout << "ERROR: CLIENT AND SERVER BLOCK SIZES AT INDEX " << blockIndex << " DO NOT MATCH!\n";
+                    cout << blockSize << " != " << blocks[blockIndex].size << endl;
+                    exit(1);
+                }
 
-            for(int a=0;a<blockSize;a++)
-            {
-                checksum = checksum ^ blocks[blockIndex].data[a];
+                initialSyncStream.ReadBits(staleBlocks[blockIndex].data,blockSize*8);
+                //memcpy(blocks[blockIndex].data,staleBlocks[blockIndex].data,blockSize);
+
+                for(int a=0; a<blockSize; a++)
+                {
+                    checksum = checksum ^ staleBlocks[blockIndex].data[a];
+                }
             }
         }
     }
@@ -430,7 +410,7 @@ void Client::loadInitialData(unsigned char *data,int size)
     int numConstBlocks;
     initialSyncStream.Read(numConstBlocks);
 
-    for(int blockIndex=0;blockIndex<numConstBlocks;blockIndex++)
+    for(int blockIndex=0; blockIndex<numConstBlocks; blockIndex++)
     {
         int blockSize;
         initialSyncStream.Read(blockSize);
@@ -454,7 +434,7 @@ void Client::loadInitialData(unsigned char *data,int size)
         int numStrings;
         initialSyncStream.Read(numStrings);
         cout << "# strings: " << numStrings << endl;
-        for(int a=0;a<numStrings;a++)
+        for(int a=0; a<numStrings; a++)
         {
             int strlen;
             initialSyncStream.Read(strlen);
@@ -474,7 +454,7 @@ void Client::loadInitialData(unsigned char *data,int size)
             }
             peerInputs[peerID].push_back(string((&buf[0]),strlen));
 
-            for(int b=0;b<strlen;b++)
+            for(int b=0; b<strlen; b++)
             {
                 checksum = checksum ^ buf[b];
             }
@@ -491,7 +471,7 @@ void Client::loadInitialData(unsigned char *data,int size)
 void Client::updateSyncCheck()
 {
 	printf("UPDATING SYNC CHECK\n");
-	for(int blockIndex=0;blockIndex<int(blocks.size());blockIndex++)
+    for(int blockIndex=0; blockIndex<int(blocks.size()); blockIndex++)
 	{
 		memcpy(
 			syncCheckBlocks[blockIndex].data,
@@ -504,7 +484,7 @@ void Client::updateSyncCheck()
 
 bool printWhenCheck=false;
 
-std::pair<bool,bool> Client::syncAndUpdate()
+std::pair<bool,bool> Client::syncAndUpdate(running_machine *machine)
 {
     for(
         map<RakNet::SystemAddress,vector< string > >::iterator it = unknownPeerInputs.begin();
@@ -514,7 +494,7 @@ std::pair<bool,bool> Client::syncAndUpdate()
         if(peerIDs.find(it->first)!=peerIDs.end())
         {
             int ID = peerIDs[it->first];
-            for(int a=0;a<it->second.size();a++)
+            for(int a=0; a<it->second.size(); a++)
             {
                 peerInputs[ID].push_back(it->second[a]);
             }
@@ -534,7 +514,7 @@ std::pair<bool,bool> Client::syncAndUpdate()
 	    printWhenCheck=false;
 	    //printf("Checking for packets\n");
     }
-    for(int packetCount=0;;packetCount++)
+    for(int packetCount=0;; packetCount++)
     {
         RakNet::Packet *p = rakInterface->Receive();
 	if(!p)
@@ -684,7 +664,7 @@ std::pair<bool,bool> Client::syncAndUpdate()
 				printf("GOT COMPLETE RESYNC\n");
 				memcpy(syncPtr,GetPacketData(p),GetPacketSize(p));
 				syncPtr += GetPacketSize(p);
-			        hadToResync = resync(compressedBuffer,int(syncPtr-compressedBuffer));
+			        hadToResync = resync(compressedBuffer,int(syncPtr-compressedBuffer),machine);
 
 	                    //We have to return here because processing two syncs without a frame
            	            //in between can cause crashes
@@ -730,9 +710,10 @@ std::pair<bool,bool> Client::syncAndUpdate()
     return std::pair<bool,bool>(true,false);
 }
 
-extern unsigned char gotAnonymous;
+extern void doPostLoad(running_machine *machine);
+extern void doPreSave(running_machine *machine);
 
-bool Client::resync(unsigned char *data,int size)
+bool Client::resync(unsigned char *data,int size,running_machine *machine)
 {
 	int uncompressedSize,compressedSize;
 	memcpy(&uncompressedSize,data,sizeof(int));
@@ -794,7 +775,7 @@ bool Client::resync(unsigned char *data,int size)
 		      );
         	uncompressedPtr += xorBlock.size;
                 //cout << "BYTES READ: " << (xorBlock.size-strm.avail_out) << endl;
-                for(int a=0;a<block.size;a++)
+        for(int a=0; a<block.size; a++)
                 {
 			totalBlockCount++;
 			if(syncCheckBlock.data[a] != (xorBlock.data[a] ^ staleBlock.data[a]))
@@ -813,26 +794,86 @@ bool Client::resync(unsigned char *data,int size)
 	    if(clientIsClean)
 	    {
 		    printf("CLIENT IS CLEAN\n");
-            for(int a=0;a<int(blocks.size());a++)
+        for(int a=0; a<int(blocks.size()); a++)
        	    {
                 	memcpy(staleBlocks[a].data,syncCheckBlocks[a].data,syncCheckBlocks[a].size);
 		    }
 		    return false;
 	    }
 
-	    if(gotAnonymous)
+        if (timer_count_anonymous(machine) != 0)
 	    {
 	        printf("CLIENT IS DIRTY BUT HAD ANONYMOUS TIMER SO CAN'T FIX!\n");
+        uncompressedPtr = uncompressedBuffer;
+        //unsigned char blockChecksum=0;
+        unsigned char xorChecksum=0;
+        unsigned char staleChecksum=0;
+        while(true)
+        {
+            int blockIndex;
+            memcpy(
+                &blockIndex,
+                uncompressedPtr,
+                sizeof(int)
+            );
+            uncompressedPtr += sizeof(int);
+
+            if(blockIndex==-1)
+            {
+                //cout << "GOT TERMINAL BLOCK INDEX\n";
+                break;
+            }
+
+            if(blockIndex >= int(blocks.size()) || blockIndex<0)
+            {
+                cout << "GOT AN INVALID BLOCK INDEX: " << blockIndex << endl;
+                break;
+            }
+
+            //boost::asio::read(*clientSocket,boost::asio::buffer(&clientSizeOfNextMessage, sizeof(int)));
+
+            MemoryBlock &block = blocks[blockIndex];
+            MemoryBlock &staleBlock = staleBlocks[blockIndex];
+            MemoryBlock &xorBlock = xorBlocks[blockIndex];
+
+            //cout << "CLIENT: GOT MESSAGE FOR INDEX: " << blockIndex << endl;
+
+            //if(clientSizeOfNextMessage!=block.size)
+            //{
+            //cout << "ERROR!: SIZE MISMATCH " << clientSizeOfNextMessage
+            //<< " != " << block.size << endl;
+            //}
+
+            memcpy(
+                xorBlock.data,
+                uncompressedPtr,
+                xorBlock.size
+            );
+            uncompressedPtr += xorBlock.size;
+            //cout << "BYTES READ: " << (xorBlock.size-strm.avail_out) << endl;
+            for(int a=0; a<block.size; a++)
+            {
+                staleBlock.data[a] = xorBlock.data[a] ^ staleBlock.data[a];
+                xorChecksum = xorChecksum ^ xorBlock.data[a];
+                staleChecksum = staleChecksum ^ staleBlock.data[a];
+            }
+
+            //cout << "CLIENT: FINISHED GETTING MESSAGE\n";
+        }
+        printf("XOR CHECKSUM: %d\n",int(xorChecksum));
+        printf("STALE CHECKSUM: %d\n",int(staleChecksum));
 		    return false;
 	    }
 
 	    printf("CLIENT IS DIRTY (%d bad blocks, %f%% of total)\n",badBlockCount,float(badBlockCount)*100.0f/totalBlockCount);
 	    ui_popup_time(3, "You are out of sync with the server, resyncing...");
 
+	    doPreSave(machine);
+
 	//The client is not clean and needs to be resynced
 
             //If the client has predicted anything, erase the prediction
-            for(int a=0;a<int(blocks.size());a++)
+    for(int a=0; a<int(blocks.size()); a++)
             {
                 memcpy(blocks[a].data,staleBlocks[a].data,blocks[a].size);
             }
@@ -885,7 +926,7 @@ bool Client::resync(unsigned char *data,int size)
 		      );
         uncompressedPtr += xorBlock.size;
                 //cout << "BYTES READ: " << (xorBlock.size-strm.avail_out) << endl;
-                for(int a=0;a<block.size;a++)
+        for(int a=0; a<block.size; a++)
                 {
                     block.data[a] = xorBlock.data[a] ^ staleBlock.data[a];
                     blockChecksum = blockChecksum ^ block.data[a];
@@ -900,6 +941,9 @@ bool Client::resync(unsigned char *data,int size)
             printf("XOR CHECKSUM: %d\n",int(xorChecksum));
             printf("STALE CHECKSUM: %d\n",int(staleChecksum));
 #endif
+
+	    doPostLoad(machine);
+
 	    return true;
 }
 
@@ -947,7 +991,7 @@ void Client::checkMatch(Server *server)
         return;
     }
 
-    for(int a=0;a<int(blocks.size());a++)
+    for(int a=0; a<int(blocks.size()); a++)
     {
         if(getMemoryBlock(a).size != server->getMemoryBlock(a).size)
         {

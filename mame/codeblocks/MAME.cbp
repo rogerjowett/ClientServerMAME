@@ -2381,6 +2381,76 @@
 		<Unit filename="..\src\lib\expat\xmltok_ns.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\bsdqueue.h" />
+		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\codelength.h" />
+		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\connecthostport.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\connecthostport.h" />
+		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\declspec.h" />
+		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\igd_desc_parse.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\igd_desc_parse.h" />
+		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\java\JavaBridgeTest.java" />
+		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\minisoap.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\minisoap.h" />
+		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\minissdpc.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\minissdpc.h" />
+		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\miniupnpc.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\miniupnpc.h" />
+		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\miniupnpcmodule.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\miniupnpcstrings.h" />
+		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\miniwget.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\miniwget.h" />
+		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\minixml.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\minixml.h" />
+		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\minixmlvalid.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\msvc\Debug\upnpc-static.exe.embed.manifest.res" />
+		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\testigddescparse.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\testminiwget.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\testminixml.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\testupnpreplyparse.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\upnpc.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\upnpcommands.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\upnpcommands.h" />
+		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\upnperrors.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\upnperrors.h" />
+		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\upnpreplyparse.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\upnpreplyparse.h" />
+		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\wingenminiupnpcstrings.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\lib\softfloat\mamesf.h" />
 		<Unit filename="..\src\lib\softfloat\milieu.h" />
 		<Unit filename="..\src\lib\softfloat\softfloat.c">

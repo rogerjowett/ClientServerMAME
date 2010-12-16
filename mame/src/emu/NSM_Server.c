@@ -285,39 +285,47 @@ MemoryBlock Server::createMemoryBlock(unsigned char *ptr,int size)
 }
 
 extern attotime globalCurtime;
+extern bool waitingForClientCatchup;
 
 void Server::initialSync(const RakNet::SystemAddress &sa)
 {
+    unsigned char checksum = 0;
+
+    waitingForClientCatchup=true;
+
     RakNet::BitStream uncompressedStream;
     //unsigned char *data = uncompressedBuffer;
 
-    while(memoryBlocksLocked)
-    {
-        ;
-    }
-    memoryBlocksLocked=true;
-    cout << "IN CRITICAL SECTION\n";
-    cout << "SERVER: Sending initial snapshot\n";
     uncompressedStream.Write(syncTime);
 
     uncompressedStream.Write(globalCurtime);
 
-    int numBlocks = int(blocks.size());
-    cout << "NUMBLOCKS: " << numBlocks << endl;
-    uncompressedStream.Write(numBlocks);
-
-    // NOTE: The server must send stale data to the client for the first time
-    // So that future syncs will be accurate
-    unsigned char checksum = 0;
-    for(int blockIndex=0; blockIndex<int(staleBlocks.size()); blockIndex++)
+    if(getSecondsBetweenSync())
     {
-        //cout << "BLOCK SIZE FOR INDEX " << blockIndex << ": " << staleBlocks[blockIndex].size << endl;
-        uncompressedStream.Write(staleBlocks[blockIndex].size);
-        uncompressedStream.WriteBits(staleBlocks[blockIndex].data,staleBlocks[blockIndex].size*8);
-
-        for(int a=0; a<staleBlocks[blockIndex].size; a++)
+        while(memoryBlocksLocked)
         {
-            checksum = checksum ^ staleBlocks[blockIndex].data[a];
+            ;
+        }
+        memoryBlocksLocked=true;
+        cout << "IN CRITICAL SECTION\n";
+        cout << "SERVER: Sending initial snapshot\n";
+
+        int numBlocks = int(blocks.size());
+        cout << "NUMBLOCKS: " << numBlocks << endl;
+        uncompressedStream.Write(numBlocks);
+
+        // NOTE: The server must send stale data to the client for the first time
+        // So that future syncs will be accurate
+        for(int blockIndex=0; blockIndex<int(staleBlocks.size()); blockIndex++)
+        {
+            //cout << "BLOCK SIZE FOR INDEX " << blockIndex << ": " << staleBlocks[blockIndex].size << endl;
+            uncompressedStream.Write(staleBlocks[blockIndex].size);
+            uncompressedStream.WriteBits(staleBlocks[blockIndex].data,staleBlocks[blockIndex].size*8);
+
+            for(int a=0; a<staleBlocks[blockIndex].size; a++)
+            {
+                checksum = checksum ^ staleBlocks[blockIndex].data[a];
+            }
         }
     }
 
@@ -716,7 +724,7 @@ void Server::sync()
 
         int SYNC_PACKET_SIZE=1024*1024*64;
         if(syncTransferSeconds)
-            SYNC_PACKET_SIZE = compressedSize/60/syncTransferSeconds;
+            SYNC_PACKET_SIZE = max(1,compressedSize/60/syncTransferSeconds);
 
         int sendMessageSize = 1+sizeof(int)+sizeof(int)+min(SYNC_PACKET_SIZE,compressedSize);
         unsigned char *sendMessage = syncBuffer;

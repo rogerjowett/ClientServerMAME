@@ -404,13 +404,13 @@ static const input_type_desc core_types[] =
 	INPUT_PORT_DIGITAL_TYPE( 0, OTHER,   SERVICE3,            "Service 3",              SEQ_DEF_1(KEYCODE_MINUS) )
 	INPUT_PORT_DIGITAL_TYPE( 0, OTHER,   SERVICE4,            "Service 4",              SEQ_DEF_1(KEYCODE_EQUALS) )
 
-	INPUT_PORT_DIGITAL_TYPE( 0, OTHER,   TILT1,               "Tilt 1",                 SEQ_DEF_1(KEYCODE_T) )
+	INPUT_PORT_DIGITAL_TYPE( 0, OTHER,   TILT1,               "Tilt 1",                 SEQ_DEF_0 )
 	INPUT_PORT_DIGITAL_TYPE( 0, OTHER,   TILT2,               "Tilt 2",                 SEQ_DEF_0 )
 	INPUT_PORT_DIGITAL_TYPE( 0, OTHER,   TILT3,               "Tilt 3",                 SEQ_DEF_0 )
 	INPUT_PORT_DIGITAL_TYPE( 0, OTHER,   TILT4,               "Tilt 4",                 SEQ_DEF_0 )
 
 	INPUT_PORT_DIGITAL_TYPE( 0, OTHER,   SERVICE,             "Service",                SEQ_DEF_1(KEYCODE_F2) )
-	INPUT_PORT_DIGITAL_TYPE( 0, OTHER,   TILT,                "Tilt",                   SEQ_DEF_1(KEYCODE_T) )
+	INPUT_PORT_DIGITAL_TYPE( 0, OTHER,   TILT,                "Tilt",                   SEQ_DEF_0 )
 	INPUT_PORT_DIGITAL_TYPE( 0, OTHER,   INTERLOCK,           "Door Interlock",         SEQ_DEF_0 )
 	INPUT_PORT_DIGITAL_TYPE( 0, OTHER,   VOLUME_DOWN,         "Volume Down",            SEQ_DEF_1(KEYCODE_MINUS) )
 	INPUT_PORT_DIGITAL_TYPE( 0, OTHER,   VOLUME_UP,           "Volume Up",              SEQ_DEF_1(KEYCODE_EQUALS) )

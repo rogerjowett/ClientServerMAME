@@ -111,23 +111,23 @@
 
 extern "C"
 {
-extern void
-RemoveRedirect(struct UPNPUrls * urls,
+    extern void
+    RemoveRedirect(struct UPNPUrls * urls,
                struct IGDdatas * data,
 			   const char * eport,
 			   const char * proto);
 
-extern void SetRedirectAndTest(struct UPNPUrls * urls,
+    extern void SetRedirectAndTest(struct UPNPUrls * urls,
                                struct IGDdatas * data,
 							   const char * iaddr,
 							   const char * iport,
 							   const char * eport,
                                const char * proto);
 
-extern void DisplayInfos(struct UPNPUrls * urls,
+    extern void DisplayInfos(struct UPNPUrls * urls,
                          struct IGDdatas * data);
 
-extern void ListRedirections(struct UPNPUrls * urls,
+    extern void ListRedirections(struct UPNPUrls * urls,
                              struct IGDdatas * data);
 }
 
@@ -414,8 +414,10 @@ attotime mostRecentReport;
 attotime mostRecentSentReport;
 extern list< ChatLog > chatLogs;
 extern void deserializePlayerInputFromBuffer(running_machine *machine,int peerID,const char *buf,int len);
-unsigned char gotAnonymous=false;
-attotime globalCurtime;
+attotime globalCurtime = {0,0};
+
+attotime oldInputTime = {0,0};
+bool waitingForClientCatchup=false;
 
 bool hasFutureInputToProcess(attotime curtime)
 {
@@ -449,7 +451,7 @@ bool hasFutureInputToProcess(attotime curtime)
     if(netServer) peerIDs = netServer->getPeerIDs();
     if(netClient) peerIDs = netClient->getPeerIDs();
 
-    for(int a=0;a<(int)peerIDs.size();a++)
+    for(int a=0; a<(int)peerIDs.size(); a++)
     {
         if(netServer && peerIDs[a]==netServer->getSelfPeerID())
         {
@@ -473,12 +475,13 @@ bool hasFutureInputToProcess(attotime curtime)
                 osd_sleep(0);
                 return false;
             }
-            if(it->first<=curtime)
+            if(it->first<=curtime && (it->second&(1<<peerIDs[a])))
             {
                 if(printDebug)
                 {
                     cout << "Peer " << peerIDs[a] << " has only old input at time: " << it->first.seconds << '.' << it->first.attoseconds << "!\n";
                 }
+                oldInputTime = it->first;
                 osd_sleep(0);
                 //These packets are too old, we need something newer
                 return false;
@@ -508,6 +511,7 @@ bool hasFutureInputToProcess(attotime curtime)
     }
 
     //Every peer is OK, we are good to go!
+    waitingForClientCatchup=false;
     return true;
 }
 
@@ -546,7 +550,6 @@ int running_machine::run(bool firstrun)
             deleteGlobalServer();
             createGlobalServer(options_get_string(mame_options(), "username"),(unsigned short)options_get_int(mame_options(), "port"));
             netServer->setSyncTransferTime(options_get_int(mame_options(), "synctransferseconds"));
-            netServer->setSecondsBetweenSync(options_get_int(mame_options(), "secondsbetweensync"));
         }
 
         //Try to use upnp to forward ports
@@ -556,7 +559,6 @@ int running_machine::run(bool firstrun)
             char lanaddr[64];	/* my ip address on the LAN */
             const char * multicastif = 0;
             const char * minissdpdpath = 0;
-            int retcode = 0;
             int i;
 
             if( (devlist = upnpDiscover(2000, multicastif, minissdpdpath, 0)))
@@ -576,7 +578,8 @@ int running_machine::run(bool firstrun)
                 i = 1;
                 if( (i = UPNP_GetValidIGD(devlist, &urls, &data, lanaddr, sizeof(lanaddr))))
                 {
-                    switch(i) {
+                    switch(i)
+                    {
                     case 1:
                         printf("Found valid IGD : %s\n", urls.controlURL);
                         break;
@@ -593,15 +596,16 @@ int running_machine::run(bool firstrun)
                         printf("Trying to continue anyway\n");
                     }
                     printf("Local LAN ip address : %s\n", lanaddr);
-                    #if 0
+#if 0
                     printf("getting \"%s\"\n", urls.ipcondescURL);
                     descXML = miniwget(urls.ipcondescURL, &descXMLsize);
                     if(descXML)
                     {
                         /*fwrite(descXML, 1, descXMLsize, stdout);*/
-                        free(descXML); descXML = NULL;
+                        free(descXML);
+                        descXML = NULL;
                     }
-                    #endif
+#endif
 
                     int port=5805;
                     if(options_get_bool(mame_options(), "client"))
@@ -646,15 +650,40 @@ int running_machine::run(bool firstrun)
 
         if(netServer)
         {
+            if((m_game.flags & GAME_SUPPORTS_SAVE) == 0)
+            {
+                ui_popup_time(10, "This game does not have complete save state support, desyncs may not be resolved correctly.");
+            }
+            //else //JJG: Even if save state support isn't complete, we should try to sync what we can.
+            {
+                netServer->setSecondsBetweenSync(options_get_int(mame_options(), "secondsbetweensync"));
+            }
+        }
+        if(netClient)
+        {
+            if((m_game.flags & GAME_SUPPORTS_SAVE) == 0)
+            {
+                ui_popup_time(10, "This game does not have complete save state support, desyncs may not be resolved correctly.");
+            }
+            else
+            {
+                //Client gets their secondsBetweenSync from server
+            }
+        }
+
+        if(netServer)
+        {
             if(!netServer->initializeConnection())
             {
                 return MAMERR_NETWORK;
             }
-            doPreSave(this);
-            netServer->sync();
-            cout << "RAND/TIME AT INITIAL SYNC: " << m_rand_seed << ' ' << m_base_time << endl;
-
-            doPostLoad(this);
+            if(netServer->getSecondsBetweenSync())
+            {
+                doPreSave(this);
+                netServer->sync();
+                cout << "RAND/TIME AT INITIAL SYNC: " << m_rand_seed << ' ' << m_base_time << endl;
+                doPostLoad(this);
+            }
         }
 
 
@@ -667,7 +696,8 @@ int running_machine::run(bool firstrun)
             /* specify the filename to save or load */
             //set_saveload_filename(machine, "1");
             //handle_load(machine);
-            doPreSave(this);
+            //if(netClient->getSecondsBetweenSync())
+                //doPreSave(this);
             bool retval = netClient->initializeConnection(
                               (unsigned short)options_get_int(mame_options(), "selfport"),
                               options_get_string(mame_options(), "hostname"),
@@ -681,12 +711,11 @@ int running_machine::run(bool firstrun)
                 error = MAMERR_NETWORK;
                 m_exit_pending = true;
             }
-            cout << "RUNNING POST LOAD\n";
-            doPostLoad(this);
+            //if(netClient->getSecondsBetweenSync())
+                //doPostLoad(this);
         }
 
         // run the CPUs until a reset or exit
-        bool shouldDoPostLoad=false;
         m_hard_reset_pending = false;
         while ((!m_hard_reset_pending && !m_exit_pending) || m_saveload_schedule != SLS_NONE)
         {
@@ -704,14 +733,18 @@ int running_machine::run(bool firstrun)
 
 
             attotime timeNow = timer_get_time(this);
+            static int lastSyncSecond = 0;
 
             {
                 if(
                    netServer &&
+                   lastSyncSecond != timeNow.seconds &&
                    timeNow.attoseconds==0 &&
+                   netServer->getSecondsBetweenSync()>0 &&
                    (timeNow.seconds%netServer->getSecondsBetweenSync())==0
                    )
                 {
+                    lastSyncSecond = timeNow.seconds;
                     printf("SERVER SYNC AT TIME: %d\n",int(time(NULL)));
                     if (timer_count_anonymous(this) != 0)
                     {
@@ -728,18 +761,18 @@ int running_machine::run(bool firstrun)
                 if(
                    netClient &&
                    timeNow.attoseconds==0 &&
+                   lastSyncSecond != timeNow.seconds &&
                    netClient->getSecondsBetweenSync()>0 &&
                    (timeNow.seconds%netClient->getSecondsBetweenSync())==0
                    )
                 {
+                    lastSyncSecond = timeNow.seconds;
                     if (timer_count_anonymous(this) != 0)
                     {
-                        gotAnonymous = true;
                         printf("ANONYMOUS TIMER! THIS COULD BE BAD (BUT HOPEFULLY ISN'T)\n");
                     }
                     else
                     {
-                        gotAnonymous = false;
                         //The client should update sync check just in case the server didn't have an anon timer
                         doPreSave(this);
                         netClient->updateSyncCheck();
@@ -749,7 +782,7 @@ int running_machine::run(bool firstrun)
                 }
 
                 static clock_t lastSyncTime=clock();
-                if(netServer || (netClient && !shouldDoPostLoad) )
+                if(netServer || netClient)
                 {
                     //printf("IN NET LOOP\n");
                     lastSyncTime = clock();
@@ -759,6 +792,9 @@ int running_machine::run(bool firstrun)
 
                         while(hasFutureInputToProcess(timeNow)==false)
                         {
+                            if(waitingForClientCatchup)
+                                video_frame_update(this, false);
+
                             netServer->update();
 
                             for(int a=0; a<netServer->getNumOtherPeers(); a++)
@@ -805,9 +841,12 @@ int running_machine::run(bool firstrun)
                     {
                         while(hasFutureInputToProcess(timeNow)==false)
                         {
+                            if(waitingForClientCatchup)
+                                video_frame_update(this, false);
+
                             //cout << "UPDATING NETCLIENT\n";
                             pair<bool,bool> survivedAndGotSync;
-                            survivedAndGotSync=netClient->syncAndUpdate();
+                            survivedAndGotSync=netClient->syncAndUpdate(this);
                             if(survivedAndGotSync.first==false)
                             {
                                 error = MAMERR_NETWORK;
@@ -822,7 +861,6 @@ int running_machine::run(bool firstrun)
                                 }
                                 cout << "GOT SYNC FROM SERVER\n";
                                 cout << "RAND/TIME AT SYNC: " << m_rand_seed << ' ' << m_base_time << endl;
-                                shouldDoPostLoad = true;
                             }
                             for(int a=0; a<netClient->getNumOtherPeers(); a++)
                             {
@@ -867,16 +905,6 @@ int running_machine::run(bool firstrun)
                 }
             }
 
-            if(shouldDoPostLoad)
-            {
-                cout << "RUNNING POST LOAD\n";
-                if (timer_count_anonymous(this) != 0)
-                {
-                    printf("ANONYMOUS TIMER! THIS COULD BE BAD (BUT HOPEFULLY ISN'T)\n");
-                }
-                doPostLoad(this);
-                shouldDoPostLoad=false;
-            }
             /* if there are anonymous timers, we can't load just yet because the timers might */
             /* overwrite data we have loaded */
             if (timer_count_anonymous(this) == 0)

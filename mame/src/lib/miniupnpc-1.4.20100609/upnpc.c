@@ -77,7 +77,7 @@ void DisplayInfos(struct UPNPUrls * urls,
 		printf("GetExternalIPAddress failed.\n");
 }
 
-static void GetConnectionStatus(struct UPNPUrls * urls,
+void GetConnectionStatus(struct UPNPUrls * urls,
                                struct IGDdatas * data)
 {
 	unsigned int bytessent, bytesreceived, packetsreceived, packetssent;

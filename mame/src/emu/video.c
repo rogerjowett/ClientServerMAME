@@ -440,6 +440,9 @@ extern bool needToSkipAhead;
     operations
 -------------------------------------------------*/
 
+extern attotime oldInputTime;
+extern bool waitingForClientCatchup;
+
 void video_frame_update(running_machine *machine, int debug)
 {
     attotime current_time = timer_get_time(machine);
@@ -448,13 +451,15 @@ void video_frame_update(running_machine *machine, int debug)
     {
         if(needToSkipAhead)
         {
+            oldInputTime = current_time;
+            waitingForClientCatchup=true;
             //cout << "CURRENT TIME: " << current_time.seconds << ',' << current_time.attoseconds << endl;
             //cout << "MOST RECENT REPORT TIME: " << mostRecentReport.seconds << ',' << mostRecentReport.attoseconds << endl;
-            if(mostRecentReport.seconds || mostRecentReport.attoseconds)
+            if(mostRecentReport.seconds>0)
             {
                 if(mostRecentReport<=current_time)
                 {
-                    printf("DONE WITH VIDEO SKIP %d\n",needToSkipAhead);
+                    printf("DONE WITH VIDEO SKIP %d %d\n",mostRecentReport.seconds,current_time.seconds);
                     needToSkipAhead=false;
                 }
             }
