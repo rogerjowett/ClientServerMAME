@@ -49,17 +49,11 @@ ClawGrip, Jul 2006
 #include "sound/2203intf.h"
 #include "sound/3812intf.h"
 #include "sound/okim6295.h"
-
-extern WRITE8_HANDLER( pokechmp_videoram_w );
-extern WRITE8_HANDLER( pokechmp_flipscreen_w );
-
-extern VIDEO_START( pokechmp );
-extern VIDEO_UPDATE( pokechmp );
-
+#include "includes/pokechmp.h"
 
 static WRITE8_HANDLER( pokechmp_bank_w )
 {
-	UINT8 *RAM = memory_region(space->machine, "maincpu");
+	UINT8 *RAM = space->machine->region("maincpu")->base();
 
 	if (data == 0x00)
 	{
@@ -113,7 +107,7 @@ static WRITE8_HANDLER( pokechmp_paletteram_w )
 
 static ADDRESS_MAP_START( pokechmp_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x07ff) AM_RAM
-	AM_RANGE(0x0800, 0x0fff) AM_RAM_WRITE(pokechmp_videoram_w) AM_BASE_GENERIC(videoram)
+	AM_RANGE(0x0800, 0x0fff) AM_RAM_WRITE(pokechmp_videoram_w) AM_BASE_MEMBER(pokechmp_state, videoram)
 	AM_RANGE(0x1000, 0x11ff) AM_RAM AM_BASE_SIZE_GENERIC(spriteram)
 
 	AM_RANGE(0x1800, 0x1800) AM_READ_PORT("P1")
@@ -141,7 +135,7 @@ static ADDRESS_MAP_START( pokechmp_sound_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x1000, 0x1001) AM_DEVWRITE("ym2", ym3812_w)
 	AM_RANGE(0x1800, 0x1800) AM_WRITENOP	/* MSM5205 chip on Pocket Gal, not connected here? */
 //  AM_RANGE(0x2000, 0x2000) AM_WRITE(pokechmp_sound_bank_w)/ * might still be sound bank */
-	AM_RANGE(0x2800, 0x2800) AM_DEVREADWRITE("oki", okim6295_r,okim6295_w) // extra
+	AM_RANGE(0x2800, 0x2800) AM_DEVREADWRITE_MODERN("oki", okim6295_device, read, write) // extra
 	AM_RANGE(0x3000, 0x3000) AM_READ(soundlatch_r)
 //  AM_RANGE(0x3400, 0x3400) AM_READ(pokechmp_adpcm_reset_r)    /* ? not sure */
 	AM_RANGE(0x4000, 0x7fff) AM_ROMBANK("bank3")
@@ -228,48 +222,48 @@ static GFXDECODE_START( pokechmp )
 GFXDECODE_END
 
 
-static MACHINE_DRIVER_START( pokechmp )
+static MACHINE_CONFIG_START( pokechmp, pokechmp_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6502, 4000000)
-	MDRV_CPU_PROGRAM_MAP(pokechmp_map)
-	MDRV_CPU_VBLANK_INT("screen", nmi_line_pulse)
+	MCFG_CPU_ADD("maincpu", M6502, 4000000)
+	MCFG_CPU_PROGRAM_MAP(pokechmp_map)
+	MCFG_CPU_VBLANK_INT("screen", nmi_line_pulse)
 
-	MDRV_CPU_ADD("audiocpu", M6502, 4000000)
-	MDRV_CPU_PROGRAM_MAP(pokechmp_sound_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("audiocpu", M6502, 4000000)
+	MCFG_CPU_PROGRAM_MAP(pokechmp_sound_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(pokechmp)
-	MDRV_PALETTE_LENGTH(0x400)
+	MCFG_GFXDECODE(pokechmp)
+	MCFG_PALETTE_LENGTH(0x400)
 
-	MDRV_VIDEO_START(pokechmp)
-	MDRV_VIDEO_UPDATE(pokechmp)
+	MCFG_VIDEO_START(pokechmp)
+	MCFG_VIDEO_UPDATE(pokechmp)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ym1", YM2203, 1500000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.60)
+	MCFG_SOUND_ADD("ym1", YM2203, 1500000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.60)
 
-	MDRV_SOUND_ADD("ym2", YM3812, 3000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SOUND_ADD("ym2", YM3812, 3000000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-	MDRV_OKIM6295_ADD("oki", 4000000/4, OKIM6295_PIN7_HIGH) // ?? unknown frequency
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)	/* sound fx */
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 4000000/4, OKIM6295_PIN7_HIGH) // ?? unknown frequency
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)	/* sound fx */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 static DRIVER_INIT( pokechmp )
 {
-	memory_configure_bank(machine, "bank3", 0, 2, memory_region(machine, "audiocpu") + 0x10000, 0x4000);
+	memory_configure_bank(machine, "bank3", 0, 2, machine->region("audiocpu")->base() + 0x10000, 0x4000);
 }
 
 

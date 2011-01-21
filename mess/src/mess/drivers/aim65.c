@@ -31,11 +31,11 @@ ToDo:
 /* Note: RAM is mapped dynamically in machine/aim65.c */
 static ADDRESS_MAP_START( aim65_mem, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE( 0x1000, 0x9fff ) AM_NOP /* User available expansions */
-	AM_RANGE( 0xa000, 0xa00f ) AM_MIRROR(0x3f0) AM_DEVREADWRITE("via6522_1", via_r, via_w) /* User VIA */
+	AM_RANGE( 0xa000, 0xa00f ) AM_MIRROR(0x3f0) AM_DEVREADWRITE_MODERN("via6522_1", via6522_device, read, write)/* User VIA */
 	AM_RANGE( 0xa400, 0xa47f ) AM_RAM /* RIOT RAM */
 	AM_RANGE( 0xa480, 0xa497 ) AM_DEVREADWRITE("riot", riot6532_r, riot6532_w)
 	AM_RANGE( 0xa498, 0xa7ff ) AM_NOP /* Not available */
-	AM_RANGE( 0xa800, 0xa80f ) AM_MIRROR(0x3f0) AM_DEVREADWRITE("via6522_0", via_r, via_w)
+	AM_RANGE( 0xa800, 0xa80f ) AM_MIRROR(0x3f0)  AM_DEVREADWRITE_MODERN("via6522_0", via6522_device, read, write)
 	AM_RANGE( 0xac00, 0xac03 ) AM_DEVREADWRITE("pia6821", pia6821_r, pia6821_w)
 	AM_RANGE( 0xac04, 0xac43 ) AM_RAM /* PIA RAM */
 	AM_RANGE( 0xac44, 0xafff ) AM_NOP /* Not available */
@@ -158,12 +158,12 @@ static const via6522_interface aim65_system_via =
 	DEVCB_NULL,
 	DEVCB_NULL,
 	DEVCB_NULL,
-	DEVCB_HANDLER(aim65_printer_data_a),
-	DEVCB_HANDLER(aim65_printer_data_b),
 	DEVCB_NULL,
 	DEVCB_NULL,
 	DEVCB_NULL,
-	DEVCB_HANDLER(aim65_printer_on),
+	DEVCB_NULL,
+	DEVCB_NULL,
+	DEVCB_NULL,
 	DEVCB_CPU_INPUT_LINE("maincpu", M6502_IRQ_LINE)
 };
 
@@ -187,45 +187,45 @@ static const pia6821_interface aim65_pia_config =
     MACHINE DRIVERS
 ***************************************************************************/
 
-static MACHINE_DRIVER_START( aim65 )
+static MACHINE_CONFIG_START( aim65, aim65_state )
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6502, AIM65_CLOCK) /* 1 MHz */
-	MDRV_CPU_PROGRAM_MAP(aim65_mem)
+	MCFG_CPU_ADD("maincpu", M6502, AIM65_CLOCK) /* 1 MHz */
+	MCFG_CPU_PROGRAM_MAP(aim65_mem)
 
-	MDRV_MACHINE_START(aim65)
+	MCFG_MACHINE_START(aim65)
 
-	MDRV_DEFAULT_LAYOUT(layout_aim65)
+	MCFG_DEFAULT_LAYOUT(layout_aim65)
 
 	/* alpha-numeric display */
-	MDRV_DL1416T_ADD("ds1", aim65_update_ds1)
-	MDRV_DL1416T_ADD("ds2", aim65_update_ds2)
-	MDRV_DL1416T_ADD("ds3", aim65_update_ds3)
-	MDRV_DL1416T_ADD("ds4", aim65_update_ds4)
-	MDRV_DL1416T_ADD("ds5", aim65_update_ds5)
+	MCFG_DL1416T_ADD("ds1", aim65_update_ds1)
+	MCFG_DL1416T_ADD("ds2", aim65_update_ds2)
+	MCFG_DL1416T_ADD("ds3", aim65_update_ds3)
+	MCFG_DL1416T_ADD("ds4", aim65_update_ds4)
+	MCFG_DL1416T_ADD("ds5", aim65_update_ds5)
 
-	MDRV_VIDEO_START(aim65)
+	MCFG_VIDEO_START(aim65)
 
 	/* other devices */
-	MDRV_RIOT6532_ADD("riot", AIM65_CLOCK, aim65_riot_interface)
-	MDRV_VIA6522_ADD("via6522_0", 0, aim65_system_via)
-	MDRV_VIA6522_ADD("via6522_1", 0, aim65_user_via)
-	MDRV_PIA6821_ADD("pia6821", aim65_pia_config)
+	MCFG_RIOT6532_ADD("riot", AIM65_CLOCK, aim65_riot_interface)
+	MCFG_VIA6522_ADD("via6522_0", 0, aim65_system_via)
+	MCFG_VIA6522_ADD("via6522_1", 0, aim65_user_via)
+	MCFG_PIA6821_ADD("pia6821", aim65_pia_config)
 
-	MDRV_CARTSLOT_ADD("cart1")
-	MDRV_CARTSLOT_EXTENSION_LIST("z26")
-	MDRV_CARTSLOT_NOT_MANDATORY
-	MDRV_CARTSLOT_ADD("cart2")
-	MDRV_CARTSLOT_EXTENSION_LIST("z25")
-	MDRV_CARTSLOT_NOT_MANDATORY
-	MDRV_CARTSLOT_ADD("cart3")
-	MDRV_CARTSLOT_EXTENSION_LIST("z24")
-	MDRV_CARTSLOT_NOT_MANDATORY
+	MCFG_CARTSLOT_ADD("cart1")
+	MCFG_CARTSLOT_EXTENSION_LIST("z26")
+	MCFG_CARTSLOT_NOT_MANDATORY
+	MCFG_CARTSLOT_ADD("cart2")
+	MCFG_CARTSLOT_EXTENSION_LIST("z25")
+	MCFG_CARTSLOT_NOT_MANDATORY
+	MCFG_CARTSLOT_ADD("cart3")
+	MCFG_CARTSLOT_EXTENSION_LIST("z24")
+	MCFG_CARTSLOT_NOT_MANDATORY
 
 	/* internal ram */
-	MDRV_RAM_ADD("messram")
-	MDRV_RAM_DEFAULT_SIZE("4K")
-	MDRV_RAM_EXTRA_OPTIONS("1K,2K,3K")
-MACHINE_DRIVER_END
+	MCFG_RAM_ADD("messram")
+	MCFG_RAM_DEFAULT_SIZE("4K")
+	MCFG_RAM_EXTRA_OPTIONS("1K,2K,3K")
+MACHINE_CONFIG_END
 
 
 /***************************************************************************

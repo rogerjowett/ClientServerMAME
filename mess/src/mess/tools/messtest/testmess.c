@@ -91,6 +91,7 @@ struct _messtest_command
 		struct
 		{
 			const char *mem_region;
+			const char *cpu_name;
 			offs_t start;
 			offs_t end;
 			const void *verify_data;
@@ -223,16 +224,16 @@ static void dump_screenshot(running_machine *machine, int write_file)
 		if (filerr == FILERR_NONE)
 		{
 			/* choose a screen */
-			screen_device *screen = screen_first(*machine);
-			while((screen != NULL) && !render_is_live_screen(screen))
+			screen_device *screen = machine->first_screen();
+			while((screen != NULL) && !machine->render().is_live(*screen))
 			{
-				screen = screen_next(screen);
+				screen = screen->next_screen();
 			}
 
 			/* did we find a live screen? */
 			if (screen != NULL)
 			{
-				screen_save_snapshot(screen->machine, screen, fp);
+				screen->machine->video().save_snapshot(screen, *fp);
 				report_message(MSG_INFO, "Saved screenshot as %s", buf);
 			}
 			else
@@ -300,7 +301,80 @@ static void messtest_output_error(void *param, const char *format, va_list argpt
 	}
 }
 
+class test_osd_interface : public osd_interface
+{
+public:
+	// construction/destruction
+	test_osd_interface();
+	virtual ~test_osd_interface();
+	
+	// general overridables
+	virtual void init(running_machine &machine);
+	virtual void update(bool skip_redraw);
 
+	// debugger overridables
+//	virtual void init_debugger();
+	virtual void wait_for_debugger(device_t &device, bool firststop);
+	
+	// audio overridables
+	virtual void update_audio_stream(const INT16 *buffer, int samples_this_frame);
+	virtual void set_mastervolume(int attenuation);
+
+	// input overridables
+	virtual void customize_input_type_list(input_type_desc *typelist);
+	
+	// font overridables
+	virtual osd_font font_open(const char *name, int &height);
+	virtual void font_close(osd_font font);
+	virtual bitmap_t *font_get_bitmap(osd_font font, unicode_char chnum, INT32 &width, INT32 &xoffs, INT32 &yoffs);
+};
+	
+test_osd_interface::test_osd_interface()
+{
+}
+
+test_osd_interface::~test_osd_interface()
+{
+}
+
+void test_osd_interface::init(running_machine &machine)
+{
+	// call our parent
+	osd_interface::init(machine);
+}
+
+osd_font test_osd_interface::font_open(const char *_name, int &height)
+{
+	return NULL;
+}
+
+void test_osd_interface::font_close(osd_font font)
+{
+}
+
+bitmap_t *test_osd_interface::font_get_bitmap(osd_font font, unicode_char chnum, INT32 &width, INT32 &xoffs, INT32 &yoffs)
+{
+	return NULL;
+}
+
+void test_osd_interface::update(bool skip_redraw)
+{
+}
+
+void test_osd_interface::wait_for_debugger(device_t &device, bool firststop)
+{
+}
+void test_osd_interface::update_audio_stream(const INT16 *buffer, int samples_this_frame)
+{
+}
+
+void test_osd_interface::set_mastervolume(int attenuation)
+{
+}
+
+void test_osd_interface::customize_input_type_list(input_type_desc *typelist)
+{
+}
 
 static messtest_result_t run_test(int flags, messtest_results *results)
 {
@@ -340,6 +414,10 @@ static messtest_result_t run_test(int flags, messtest_results *results)
 		options_set_string(opts, OPTION_BIOS, current_testcase.bios, OPTION_PRIORITY_CMDLINE);
 	options_set_bool(opts, OPTION_SKIP_GAMEINFO, TRUE, OPTION_PRIORITY_CMDLINE);
 	options_set_bool(opts, OPTION_THROTTLE, FALSE, OPTION_PRIORITY_CMDLINE);
+	options_set_bool(opts, OPTION_DEBUG, FALSE, OPTION_PRIORITY_CMDLINE);
+	options_set_bool(opts, OPTION_DEBUG_INTERNAL, FALSE, OPTION_PRIORITY_CMDLINE);
+	options_set_bool(opts, OPTION_WRITECONFIG, FALSE, OPTION_PRIORITY_CMDLINE);
+	
 	if (current_testcase.ram != 0)
 	{
 		options_set_int(opts, OPTION_RAMSIZE, current_testcase.ram, OPTION_PRIORITY_CMDLINE);
@@ -356,7 +434,7 @@ static messtest_result_t run_test(int flags, messtest_results *results)
 		/* get the path */
 		fullpath = assemble_software_path(astring_alloc(), driver, current_command->u.image_args.filename);
 
-		/* get the option name */		
+		/* get the option name */
 		device_opt = device_config_image_interface::device_typename(current_command->u.image_args.device_ident.type);
 
 		/* set the option */
@@ -378,7 +456,8 @@ static messtest_result_t run_test(int flags, messtest_results *results)
 	mame_set_output_channel(OUTPUT_CHANNEL_INFO, mame_null_output_callback, NULL, NULL, NULL);
 	mame_set_output_channel(OUTPUT_CHANNEL_DEBUG, mame_null_output_callback, NULL, NULL, NULL);
 	mame_set_output_channel(OUTPUT_CHANNEL_LOG, mame_null_output_callback, NULL, NULL, NULL);
-	mame_execute(opts);
+	test_osd_interface osd;
+	mame_execute(osd, opts);
 	real_run_time = ((double) (clock() - begin_time)) / CLOCKS_PER_SEC;
 
 	/* what happened? */
@@ -427,7 +506,7 @@ static void testmess_exit(running_machine &machine)
 {
 	if (target != NULL)
 	{
-		render_target_free(target);
+		machine.render().target_free(target);
 		target = NULL;
 	}
 }
@@ -435,10 +514,10 @@ static void testmess_exit(running_machine &machine)
 
 
 void osd_init(running_machine *machine)
-{	
+{
 	machine->add_notifier(MACHINE_NOTIFY_EXIT, testmess_exit);
-	target = render_target_alloc(machine, NULL, 0);
-	render_target_set_orientation(target, 0);
+	target = machine->render().target_alloc();
+	target->set_orientation(0);
 }
 
 
@@ -642,11 +721,11 @@ static void command_switch(running_machine *machine)
 	/* special hack until we support video targets natively */
 	if (!strcmp(current_command->u.switch_args.name, "Video type"))
 	{
-		render_target *target = render_target_get_indexed(0);
+		render_target *target = machine->render().target_by_index(0);
 		int view_index = 0;
 		const char *view_name;
 
-		while((view_name = render_target_get_view_name(target, view_index)) != NULL)
+		while((view_name = target->view_name(view_index)) != NULL)
 		{
 			if (!strcmp(view_name, current_command->u.switch_args.value))
 				break;
@@ -655,7 +734,7 @@ static void command_switch(running_machine *machine)
 
 		if (view_name)
 		{
-			render_target_set_view(target, view_index);
+			target->set_view(view_index);
 			return;
 		}
 	}
@@ -817,6 +896,7 @@ static void command_verify_memory(running_machine *machine)
 	const UINT8 *target_data = NULL;
 	size_t target_data_size = 0;
 	const char *region;
+	const char *cpu_name;
 
 	offset_start = current_command->u.verify_args.start;
 	offset_end = current_command->u.verify_args.end;
@@ -826,13 +906,15 @@ static void command_verify_memory(running_machine *machine)
 	if (offset_end == 0)
 		offset_end = offset_start + verify_data_size - 1;
 
+	cpu_name = current_command->u.verify_args.cpu_name;
+
 	/* what type of memory are we validating? */
 	region = current_command->u.verify_args.mem_region;
 	if (region)
 	{
 		/* we're validating a conventional memory region */
-		target_data = memory_region(machine, region);
-		target_data_size = memory_region_length(machine, region);
+		target_data = machine->region(region)->base();
+		target_data_size = machine->region(region)->bytes();
 	}
 
 	/* sanity check the ranges */
@@ -848,22 +930,43 @@ static void command_verify_memory(running_machine *machine)
 		report_message(MSG_FAILURE, "Invalid verify offset range (0x%x-0x%x)", offset_start, offset_end);
 		return;
 	}
-	if (offset_end >= target_data_size)
-	{
-		state = STATE_ABORTED;
-		report_message(MSG_FAILURE, "Verify memory range out of bounds");
-		return;
+	
+	if (region) {
+		if (offset_end >= target_data_size)
+		{
+			state = STATE_ABORTED;
+			report_message(MSG_FAILURE, "Verify memory range out of bounds");
+			return;
+		}
+	} else {
+		if (cpu_name==NULL) {
+			state = STATE_ABORTED;
+			report_message(MSG_FAILURE, "If region is not defined then cpu must be");
+			return;
+		}
 	}
 
 	/* loop through the memory, verifying it byte by byte */
 	for (offset = offset_start; offset <= offset_end; offset++)
 	{
-		if (verify_data[i] != target_data[offset])
-		{
-			state = STATE_ABORTED;
-			report_message(MSG_FAILURE, "Failed verification step (region %s; 0x%x-0x%x)",
-				region, offset_start, offset_end);
-			break;
+		if (region) {
+			if (verify_data[i] != target_data[offset])
+			{
+				state = STATE_ABORTED;
+				report_message(MSG_FAILURE, "Failed verification step (region %s; 0x%x-0x%x)",
+					region, offset_start, offset_end);
+				break;
+			}
+		} else {
+			address_space *space = cputag_get_address_space(machine, cpu_name, ADDRESS_SPACE_PROGRAM);
+			
+			if (verify_data[i] != space->read_byte(offset))
+			{
+				state = STATE_ABORTED;
+				report_message(MSG_FAILURE, "Failed verification step (0x%x-0x%x)",
+					offset_start, offset_end);
+				break;
+			}
 		}
 		i = (i + 1) % verify_data_size;
 	}
@@ -1019,7 +1122,7 @@ void osd_update(running_machine *machine, int skip_redraw)
 	attotime time_limit;
 	attotime current_time;
 
-	render_target_get_primitives(target);
+	target->get_primitives();
 
 	/* don't do anything if we are initializing! */
 	switch(machine->phase())
@@ -1347,11 +1450,15 @@ static void node_memverify(xml_data_node *node)
 	if (!s2)
 		s2 = "0";
 
+	memset(&new_command, 0, sizeof(new_command));
+	new_command.command_type = MESSTEST_COMMAND_VERIFY_MEMORY;
+
 	attr_node = xml_get_attribute(node, "region");
 	new_command.u.verify_args.mem_region = attr_node ? attr_node->value : NULL;
 
-	memset(&new_command, 0, sizeof(new_command));
-	new_command.command_type = MESSTEST_COMMAND_VERIFY_MEMORY;
+	attr_node = xml_get_attribute(node, "cpu");
+	new_command.u.verify_args.cpu_name = attr_node ? attr_node->value : NULL;
+
 	new_command.u.verify_args.start = parse_offset(s1);
 	new_command.u.verify_args.end = parse_offset(s2);
 

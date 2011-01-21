@@ -117,7 +117,7 @@ static ADDRESS_MAP_START( bbca_mem, ADDRESS_SPACE_PROGRAM, 8 )
 																					/* W: fe20-fe2f  Video ULA      Video system chip               */
 	AM_RANGE(0xfe30, 0xfe3f) AM_READWRITE(bbc_fe_r  	, bbc_page_selecta_w	)	/* R: fe30-fe3f  NC             Not Connected                   */
 																					/* W: fe30-fe3f  84LS161        Paged ROM selector              */
-	AM_RANGE(0xfe40, 0xfe5f) AM_DEVREADWRITE("via6522_0", via_r, via_w)	/*    fe40-fe5f  6522 VIA       SYSTEM VIA                      */
+	AM_RANGE(0xfe40, 0xfe5f)  AM_DEVREADWRITE_MODERN("via6522_0", via6522_device, read, write)	/*    fe40-fe5f  6522 VIA       SYSTEM VIA                      */
 	AM_RANGE(0xfe60, 0xfe7f) AM_NOP													/*    fe60-fe7f  6522 VIA       1 USER VIA                      */
 	AM_RANGE(0xfe80, 0xfe9f) AM_NOP													/*    fe80-fe9f  8271/1770 FDC  1 Floppy disc controller        */
 	AM_RANGE(0xfea0, 0xfebf) AM_READ     (bbc_fe_r  	                	)	/*    fea0-febf  68B54 ADLC     1 ECONET controller             */
@@ -151,8 +151,8 @@ static ADDRESS_MAP_START( bbcb_mem, ADDRESS_SPACE_PROGRAM, 8 )
 																					/* W: fe20-fe2f  Video ULA      Video system chip               */
 	AM_RANGE(0xfe30, 0xfe3f) AM_READWRITE(bbc_fe_r  	, bbc_page_selectb_w	)	/* R: fe30-fe3f  NC             Not Connected                   */
 																					/* W: fe30-fe3f  84LS161        Paged ROM selector              */
-	AM_RANGE(0xfe40, 0xfe5f) AM_DEVREADWRITE("via6522_0", via_r, via_w)	/*    fe40-fe5f  6522 VIA       SYSTEM VIA                      */
-	AM_RANGE(0xfe60, 0xfe7f) AM_DEVREADWRITE("via6522_1", via_r, via_w)	/*    fe60-fe7f  6522 VIA       USER VIA                        */
+	AM_RANGE(0xfe40, 0xfe5f) AM_DEVREADWRITE_MODERN("via6522_0", via6522_device, read, write)	/*    fe40-fe5f  6522 VIA       SYSTEM VIA                      */
+	AM_RANGE(0xfe60, 0xfe7f) AM_DEVREADWRITE_MODERN("via6522_1", via6522_device, read, write)	/*    fe60-fe7f  6522 VIA       USER VIA                        */
 	AM_RANGE(0xfe80, 0xfe9f) AM_READWRITE(bbc_disc_r		, bbc_disc_w		)	/*    fe80-fe9f  8271 FDC       Floppy disc controller          */
 	AM_RANGE(0xfea0, 0xfebf) AM_READ	 (bbc_fe_r  	                	)	/*    fea0-febf  68B54 ADLC     ECONET controller               */
 	AM_RANGE(0xfec0, 0xfedf) AM_DEVREADWRITE("upd7002",uPD7002_r,uPD7002_w	)	/*    fec0-fedf  uPD7002        Analogue to digital converter   */
@@ -186,8 +186,8 @@ static ADDRESS_MAP_START( bbcbp_mem, ADDRESS_SPACE_PROGRAM, 8 )
 																					/* W: fe20-fe2f  Video ULA      Video system chip               */
 	AM_RANGE(0xfe30, 0xfe3f) AM_READWRITE(bbc_fe_r		, bbc_page_selectbp_w	)	/* R: fe30-fe3f  NC             Not Connected                   */
 																					/* W: fe30-fe3f  84LS161        Paged ROM selector              */
-	AM_RANGE(0xfe40, 0xfe5f) AM_DEVREADWRITE("via6522_0", via_r, via_w)	/*    fe40-fe5f  6522 VIA       SYSTEM VIA                      */
-	AM_RANGE(0xfe60, 0xfe7f) AM_DEVREADWRITE("via6522_1", via_r, via_w)	/*    fe60-fe7f  6522 VIA       USER VIA                        */
+	AM_RANGE(0xfe40, 0xfe5f) AM_DEVREADWRITE_MODERN("via6522_0", via6522_device, read, write)	/*    fe40-fe5f  6522 VIA       SYSTEM VIA                      */
+	AM_RANGE(0xfe60, 0xfe7f) AM_DEVREADWRITE_MODERN("via6522_1", via6522_device, read, write)	/*    fe60-fe7f  6522 VIA       USER VIA                        */
 	AM_RANGE(0xfe80, 0xfe9f) AM_READWRITE(bbc_wd1770_read	, bbc_wd1770_write	)	/*    fe80-fe9f  1770 FDC       Floppy disc controller          */
 	AM_RANGE(0xfea0, 0xfebf) AM_READ     (bbc_fe_r							)	/*    fea0-febf  68B54 ADLC     ECONET controller               */
 	AM_RANGE(0xfec0, 0xfedf) AM_DEVREADWRITE("upd7002", uPD7002_r, uPD7002_w)	/*    fec0-fedf  uPD7002        Analogue to digital converter   */
@@ -223,8 +223,8 @@ static ADDRESS_MAP_START( bbcbp128_mem, ADDRESS_SPACE_PROGRAM, 8 )
 																					/* W: fe20-fe2f  Video ULA      Video system chip               */
 	AM_RANGE(0xfe30, 0xfe3f) AM_READWRITE(bbc_fe_r		, bbc_page_selectbp_w	)	/* R: fe30-fe3f  NC             Not Connected                   */
 																					/* W: fe30-fe3f  84LS161        Paged ROM selector              */
-	AM_RANGE(0xfe40, 0xfe5f) AM_DEVREADWRITE("via6522_0", via_r, via_w)	/*    fe40-fe5f  6522 VIA       SYSTEM VIA                      */
-	AM_RANGE(0xfe60, 0xfe7f) AM_DEVREADWRITE("via6522_1", via_r, via_w)	/*    fe60-fe7f  6522 VIA       USER VIA                        */
+	AM_RANGE(0xfe40, 0xfe5f) AM_DEVREADWRITE_MODERN("via6522_0", via6522_device, read, write)	/*    fe40-fe5f  6522 VIA       SYSTEM VIA                      */
+	AM_RANGE(0xfe60, 0xfe7f) AM_DEVREADWRITE_MODERN("via6522_1", via6522_device, read, write)	/*    fe60-fe7f  6522 VIA       USER VIA                        */
 	AM_RANGE(0xfe80, 0xfe9f) AM_READWRITE(bbc_wd1770_read	, bbc_wd1770_write	)	/*    fe80-fe9f  1770 FDC       Floppy disc controller          */
 	AM_RANGE(0xfea0, 0xfebf) AM_READ     (bbc_fe_r							)	/*    fea0-febf  68B54 ADLC     ECONET controller               */
 	AM_RANGE(0xfec0, 0xfedf) AM_DEVREADWRITE("upd7002",uPD7002_r, uPD7002_w	)	/*    fec0-fedf  uPD7002        Analogue to digital converter   */
@@ -289,8 +289,8 @@ static ADDRESS_MAP_START(bbcm_mem, ADDRESS_SPACE_PROGRAM, 8)
     AM_RANGE(0xfe30, 0xfe33) AM_READWRITE(return8_FE        , bbc_page_selectbp_w   )         fe30-fe33  84LS161        Paged ROM selector
     AM_RANGE(0xfe34, 0xfe37) AM_READWRITE(bbcm_ACCCON_read  , bbcm_ACCCON_write )         fe34-fe37  ACCCON         ACCCON select Latch
     AM_RANGE(0xfe38, 0xfe3f) AM_READ     (return8_FE                            )         fe38-fe3f  NC
-    AM_RANGE(0xfe40, 0xfe5f) AM_DEVREADWRITE("via6522_0", via_r, via_w)          fe40-fe5f  6522 VIA       SYSTEM VIA
-    AM_RANGE(0xfe60, 0xfe7f) AM_DEVREADWRITE("via6522_1", via_r, via_w)          fe60-fe7f  6522 VIA       USER VIA
+    AM_RANGE(0xfe40, 0xfe5f) AM_DEVREADWRITE_MODERN("via6522_0", via6522_device, read, write)          fe40-fe5f  6522 VIA       SYSTEM VIA
+    AM_RANGE(0xfe60, 0xfe7f) AM_DEVREADWRITE_MODERN("via6522_1", via6522_device, read, write)          fe60-fe7f  6522 VIA       USER VIA
     AM_RANGE(0xfe80, 0xfe9f) AM_READ     (return8_FE                            )         fe80-fe9f  NC
     AM_RANGE(0xfea0, 0xfebf) AM_READ     (return8_FE                            )         fea0-febf  68B54 ADLC     ECONET controller
     AM_RANGE(0xfec0, 0xfedf) AM_READ     (return8_FE                            )         fec0-fedf  NC
@@ -710,10 +710,10 @@ ROM_END
 
 static INTERRUPT_GEN( bbcb_vsync )
 {
-	running_device *via_0 = device->machine->device("via6522_0");
-	via_ca1_w(via_0, 1);
-	via_ca1_w(via_0, 0);
-	bbc_frameclock();
+	via6522_device *via_0 = device->machine->device<via6522_device>("via6522_0");
+	via_0->write_ca1(1);
+	via_0->write_ca1(0);
+	bbc_frameclock(device->machine);
 }
 
 
@@ -736,13 +736,14 @@ static const cassette_config bbc_cassette_config =
 
 static WRITE_LINE_DEVICE_HANDLER(bbcb_ack_w)
 {
-	via_ca1_w(device, !state); /* ack seems to be inverted? */
+	via6522_device *via_1 = device->machine->device<via6522_device>("via6522_1");
+	via_1->write_ca1(!state); /* ack seems to be inverted? */
 }
 
 static const centronics_interface bbcb_centronics_config =
 {
 	FALSE,
-	DEVCB_DEVICE_LINE("via6522_1", bbcb_ack_w),
+	DEVCB_DEVICE_LINE("via6522_1",bbcb_ack_w),
 	DEVCB_NULL,
 	DEVCB_NULL
 };
@@ -780,172 +781,169 @@ static const floppy_config bbc_floppy_config =
 	NULL
 };
 
-static MACHINE_DRIVER_START( bbc_cartslot )
-	MDRV_CARTSLOT_ADD("cart1")
-	MDRV_CARTSLOT_EXTENSION_LIST("rom")
-	MDRV_CARTSLOT_NOT_MANDATORY
-	MDRV_CARTSLOT_LOAD(bbcb_cart)
+static MACHINE_CONFIG_FRAGMENT( bbc_cartslot )
+	MCFG_CARTSLOT_ADD("cart1")
+	MCFG_CARTSLOT_EXTENSION_LIST("rom")
+	MCFG_CARTSLOT_NOT_MANDATORY
+	MCFG_CARTSLOT_LOAD(bbcb_cart)
 
-	MDRV_CARTSLOT_ADD("cart2")
-	MDRV_CARTSLOT_EXTENSION_LIST("rom")
-	MDRV_CARTSLOT_NOT_MANDATORY
-	MDRV_CARTSLOT_LOAD(bbcb_cart)
+	MCFG_CARTSLOT_ADD("cart2")
+	MCFG_CARTSLOT_EXTENSION_LIST("rom")
+	MCFG_CARTSLOT_NOT_MANDATORY
+	MCFG_CARTSLOT_LOAD(bbcb_cart)
 
-	MDRV_CARTSLOT_ADD("cart3")
-	MDRV_CARTSLOT_EXTENSION_LIST("rom")
-	MDRV_CARTSLOT_NOT_MANDATORY
-	MDRV_CARTSLOT_LOAD(bbcb_cart)
+	MCFG_CARTSLOT_ADD("cart3")
+	MCFG_CARTSLOT_EXTENSION_LIST("rom")
+	MCFG_CARTSLOT_NOT_MANDATORY
+	MCFG_CARTSLOT_LOAD(bbcb_cart)
 
-	MDRV_CARTSLOT_ADD("cart4")
-	MDRV_CARTSLOT_EXTENSION_LIST("rom")
-	MDRV_CARTSLOT_NOT_MANDATORY
-	MDRV_CARTSLOT_LOAD(bbcb_cart)
-MACHINE_DRIVER_END
+	MCFG_CARTSLOT_ADD("cart4")
+	MCFG_CARTSLOT_EXTENSION_LIST("rom")
+	MCFG_CARTSLOT_NOT_MANDATORY
+	MCFG_CARTSLOT_LOAD(bbcb_cart)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( bbca )
+static MACHINE_CONFIG_START( bbca, bbc_state )
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6502, 2000000)        /* 2.00 MHz */
-	MDRV_CPU_PROGRAM_MAP( bbca_mem)
-	MDRV_CPU_VBLANK_INT("screen", bbcb_vsync)				/* screen refresh interrupts */
-	MDRV_CPU_PERIODIC_INT(bbcb_keyscan, 1000)		/* scan keyboard */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(50)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(128))
-	MDRV_QUANTUM_TIME(HZ(60))
+	MCFG_CPU_ADD("maincpu", M6502, 2000000)        /* 2.00 MHz */
+	MCFG_CPU_PROGRAM_MAP( bbca_mem)
+	MCFG_CPU_VBLANK_INT("screen", bbcb_vsync)				/* screen refresh interrupts */
+	MCFG_CPU_PERIODIC_INT(bbcb_keyscan, 1000)		/* scan keyboard */
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(50)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(128))
+	MCFG_QUANTUM_TIME(HZ(60))
 
-	MDRV_MACHINE_START( bbca )
-	MDRV_MACHINE_RESET( bbca )
+	MCFG_MACHINE_START( bbca )
+	MCFG_MACHINE_RESET( bbca )
 
 	/* video hardware */
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(800,300)
-	MDRV_SCREEN_VISIBLE_AREA(0,800-1,0,300-1)
-	MDRV_PALETTE_LENGTH(16)
-	MDRV_PALETTE_INIT(bbc)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(800,300)
+	MCFG_SCREEN_VISIBLE_AREA(0,800-1,0,300-1)
+	MCFG_PALETTE_LENGTH(16)
+	MCFG_PALETTE_INIT(bbc)
 
-	MDRV_VIDEO_START(bbca)
-	MDRV_VIDEO_UPDATE(bbc)
+	MCFG_VIDEO_START(bbca)
+	MCFG_VIDEO_UPDATE(bbc)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("sn76489", SN76489, 4000000)	/* 4 MHz */
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
-//  MDRV_SOUND_ADD("tms5220", TMS5220, tms5220_interface)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("sn76489", SN76489, 4000000)	/* 4 MHz */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
+//  MCFG_SOUND_ADD("tms5220", TMS5220, tms5220_interface)
 
 	/* cassette */
-	MDRV_CASSETTE_ADD( "cassette", bbc_cassette_config )
+	MCFG_CASSETTE_ADD( "cassette", bbc_cassette_config )
 
 	/* acia */
-	MDRV_ACIA6850_ADD("acia6850", bbc_acia6850_interface)
+	MCFG_ACIA6850_ADD("acia6850", bbc_acia6850_interface)
 
 	/* devices */
-	MDRV_UPD7002_ADD("upd7002", bbc_uPD7002)
-	MDRV_VIA6522_ADD("via6522_0", 1000000, bbcb_system_via)
+	MCFG_UPD7002_ADD("upd7002", bbc_uPD7002)
+	MCFG_VIA6522_ADD("via6522_0", 1000000, bbcb_system_via)
 
-	MDRV_I8271_ADD("i8271", bbc_i8271_interface)
-MACHINE_DRIVER_END
+	MCFG_I8271_ADD("i8271", bbc_i8271_interface)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( bbcb )
-	MDRV_IMPORT_FROM( bbca )
-	MDRV_CPU_MODIFY( "maincpu" )
-	MDRV_CPU_PROGRAM_MAP( bbcb_mem)
-	MDRV_MACHINE_START( bbcb )
-	MDRV_MACHINE_RESET( bbcb )
-	MDRV_VIDEO_START( bbcb )
+static MACHINE_CONFIG_DERIVED( bbcb, bbca )
+	MCFG_CPU_MODIFY( "maincpu" )
+	MCFG_CPU_PROGRAM_MAP( bbcb_mem)
+	MCFG_MACHINE_START( bbcb )
+	MCFG_MACHINE_RESET( bbcb )
+	MCFG_VIDEO_START( bbcb )
 
-	MDRV_VIA6522_ADD("via6522_1", 1000000, bbcb_user_via)
-	MDRV_CENTRONICS_ADD("centronics", bbcb_centronics_config)
+	MCFG_VIA6522_ADD("via6522_1", 1000000, bbcb_user_via)
+	MCFG_CENTRONICS_ADD("centronics", bbcb_centronics_config)
 
-	MDRV_WD177X_ADD("wd177x", bbc_wd17xx_interface )
-	MDRV_FLOPPY_2_DRIVES_ADD(bbc_floppy_config)
-	MDRV_IMPORT_FROM(bbc_cartslot)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( bbcbp )
-	MDRV_IMPORT_FROM( bbca )
-	MDRV_CPU_MODIFY( "maincpu" )
-	MDRV_CPU_PROGRAM_MAP( bbcbp_mem)
-	MDRV_MACHINE_START( bbcbp )
-	MDRV_MACHINE_RESET( bbcbp )
-	MDRV_VIDEO_START( bbcbp )
-
-	MDRV_VIA6522_ADD("via6522_1", 1000000, bbcb_user_via)
-	MDRV_CENTRONICS_ADD("centronics", bbcb_centronics_config)
-	MDRV_WD177X_ADD("wd177x", bbc_wd17xx_interface )
-	MDRV_FLOPPY_2_DRIVES_ADD(bbc_floppy_config)
-	MDRV_IMPORT_FROM(bbc_cartslot)
-MACHINE_DRIVER_END
+	MCFG_WD177X_ADD("wd177x", bbc_wd17xx_interface )
+	MCFG_FLOPPY_2_DRIVES_ADD(bbc_floppy_config)
+	MCFG_FRAGMENT_ADD(bbc_cartslot)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( bbcbp128 )
-	MDRV_IMPORT_FROM( bbca )
-	MDRV_CPU_MODIFY( "maincpu" )
-	MDRV_CPU_PROGRAM_MAP( bbcbp128_mem)
-	MDRV_MACHINE_START( bbcbp )
-	MDRV_MACHINE_RESET( bbcbp )
-	MDRV_VIDEO_START( bbcbp )
+static MACHINE_CONFIG_DERIVED( bbcbp, bbca )
+	MCFG_CPU_MODIFY( "maincpu" )
+	MCFG_CPU_PROGRAM_MAP( bbcbp_mem)
+	MCFG_MACHINE_START( bbcbp )
+	MCFG_MACHINE_RESET( bbcbp )
+	MCFG_VIDEO_START( bbcbp )
 
-	MDRV_VIA6522_ADD("via6522_1", 1000000, bbcb_user_via)
-	MDRV_CENTRONICS_ADD("centronics", bbcb_centronics_config)
+	MCFG_VIA6522_ADD("via6522_1", 1000000, bbcb_user_via)
+	MCFG_CENTRONICS_ADD("centronics", bbcb_centronics_config)
+	MCFG_WD177X_ADD("wd177x", bbc_wd17xx_interface )
+	MCFG_FLOPPY_2_DRIVES_ADD(bbc_floppy_config)
+	MCFG_FRAGMENT_ADD(bbc_cartslot)
+MACHINE_CONFIG_END
 
-	MDRV_WD177X_ADD("wd177x", bbc_wd17xx_interface )
-	MDRV_FLOPPY_2_DRIVES_ADD(bbc_floppy_config)
-	MDRV_IMPORT_FROM(bbc_cartslot)
-MACHINE_DRIVER_END
+
+static MACHINE_CONFIG_DERIVED( bbcbp128, bbca )
+	MCFG_CPU_MODIFY( "maincpu" )
+	MCFG_CPU_PROGRAM_MAP( bbcbp128_mem)
+	MCFG_MACHINE_START( bbcbp )
+	MCFG_MACHINE_RESET( bbcbp )
+	MCFG_VIDEO_START( bbcbp )
+
+	MCFG_VIA6522_ADD("via6522_1", 1000000, bbcb_user_via)
+	MCFG_CENTRONICS_ADD("centronics", bbcb_centronics_config)
+
+	MCFG_WD177X_ADD("wd177x", bbc_wd17xx_interface )
+	MCFG_FLOPPY_2_DRIVES_ADD(bbc_floppy_config)
+	MCFG_FRAGMENT_ADD(bbc_cartslot)
+MACHINE_CONFIG_END
 
 
 /****BBC MASTER */
-static MACHINE_DRIVER_START( bbcm )
+static MACHINE_CONFIG_START( bbcm, bbc_state )
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M65SC02, 2000000)        /* 2.00 MHz */
-	MDRV_CPU_PROGRAM_MAP( bbcm_mem)
-	MDRV_CPU_VBLANK_INT("screen", bbcb_vsync)				/* screen refresh interrupts */
-	MDRV_CPU_PERIODIC_INT(bbcm_keyscan, 1000)		/* scan keyboard */
-	MDRV_QUANTUM_TIME(HZ(60))
+	MCFG_CPU_ADD("maincpu", M65SC02, 2000000)        /* 2.00 MHz */
+	MCFG_CPU_PROGRAM_MAP( bbcm_mem)
+	MCFG_CPU_VBLANK_INT("screen", bbcb_vsync)				/* screen refresh interrupts */
+	MCFG_CPU_PERIODIC_INT(bbcm_keyscan, 1000)		/* scan keyboard */
+	MCFG_QUANTUM_TIME(HZ(60))
 
-	MDRV_MACHINE_START( bbcm )
-	MDRV_MACHINE_RESET( bbcm )
+	MCFG_MACHINE_START( bbcm )
+	MCFG_MACHINE_RESET( bbcm )
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(50)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(128))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(800,300)
-	MDRV_SCREEN_VISIBLE_AREA(0,800-1,0,300-1)
-	MDRV_PALETTE_LENGTH(16)
-	MDRV_PALETTE_INIT(bbc)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(50)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(128))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(800,300)
+	MCFG_SCREEN_VISIBLE_AREA(0,800-1,0,300-1)
+	MCFG_PALETTE_LENGTH(16)
+	MCFG_PALETTE_INIT(bbc)
 
-	MDRV_VIDEO_START(bbcm)
-	MDRV_VIDEO_UPDATE(bbc)
+	MCFG_VIDEO_START(bbcm)
+	MCFG_VIDEO_UPDATE(bbc)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("sn76489", SN76489, 4000000)	/* 4 MHz */
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("sn76489", SN76489, 4000000)	/* 4 MHz */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
 
-	MDRV_NVRAM_HANDLER( mc146818 )
+	MCFG_MC146818_ADD( "rtc", MC146818_STANDARD )
 
 	/* printer */
-	MDRV_CENTRONICS_ADD("centronics", bbcb_centronics_config)
+	MCFG_CENTRONICS_ADD("centronics", bbcb_centronics_config)
 
 	/* cassette */
-	MDRV_CASSETTE_ADD( "cassette", bbc_cassette_config )
+	MCFG_CASSETTE_ADD( "cassette", bbc_cassette_config )
 
 	/* acia */
-	MDRV_ACIA6850_ADD("acia6850", bbc_acia6850_interface)
+	MCFG_ACIA6850_ADD("acia6850", bbc_acia6850_interface)
 
 	/* devices */
-	MDRV_UPD7002_ADD("upd7002", bbc_uPD7002)
-	MDRV_VIA6522_ADD("via6522_0", 1000000, bbcb_system_via)
-	MDRV_VIA6522_ADD("via6522_1", 1000000, bbcb_user_via)
+	MCFG_UPD7002_ADD("upd7002", bbc_uPD7002)
+	MCFG_VIA6522_ADD("via6522_0", 1000000, bbcb_system_via)
+	MCFG_VIA6522_ADD("via6522_1", 1000000, bbcb_user_via)
 
-	MDRV_WD177X_ADD("wd177x", bbc_wd17xx_interface )
-	MDRV_FLOPPY_2_DRIVES_ADD(bbc_floppy_config)
+	MCFG_WD177X_ADD("wd177x", bbc_wd17xx_interface )
+	MCFG_FLOPPY_2_DRIVES_ADD(bbc_floppy_config)
 
-	MDRV_IMPORT_FROM(bbc_cartslot)
-MACHINE_DRIVER_END
+	MCFG_FRAGMENT_ADD(bbc_cartslot)
+MACHINE_CONFIG_END
 
 /*     YEAR  NAME      PARENT    COMPAT MACHINE   INPUT  INIT      COMPANY  FULLNAME */
 COMP ( 1981, bbca,	   0,		 0,		bbca,     bbca,   bbc,     "Acorn","BBC Micro Model A" , 0)

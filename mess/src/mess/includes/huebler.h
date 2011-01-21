@@ -9,24 +9,39 @@
 #define Z80PIO2_TAG		"z80pio2"
 #define CASSETTE_TAG	"cassette"
 
-class amu880_state
+class amu880_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, amu880_state(machine)); }
+	amu880_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config),
+		  m_cassette(*this, CASSETTE_TAG),
+		  m_key_d6(0),
+		  m_key_d7(0),
+		  m_key_a8(1)
+	{ }
 
-	amu880_state(running_machine &machine) { }
+	required_device<device_t> m_cassette;
 
-	/* keyboard state */
-	int key_y;
-	int keylatch;
-	const UINT8 *keyboard_rom;
+	virtual void machine_start();
 
-	/* video state */
-	UINT8 *video_ram;
-	const UINT8 *char_rom;
+	virtual void video_start();
+	virtual bool video_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect);
 
-	/* devices */
-	running_device *cassette;
+	DECLARE_READ8_MEMBER( keyboard_r );
+
+	void scan_keyboard();
+
+	// keyboard state
+	const UINT8 *m_kb_rom;
+	int m_key_d6;
+	int m_key_d7;
+	int m_key_a4;
+	int m_key_a5;
+	int m_key_a8;
+
+	// video state
+	UINT8 *m_video_ram;
+	const UINT8 *m_char_rom;
 };
 
 #endif

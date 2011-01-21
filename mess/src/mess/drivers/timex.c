@@ -171,14 +171,14 @@ static const ay8910_interface spectrum_ay_interface =
 
 static  READ8_HANDLER(ts2068_port_f4_r)
 {
-	spectrum_state *state = (spectrum_state *)space->machine->driver_data;
+	spectrum_state *state = space->machine->driver_data<spectrum_state>();
 
 	return state->port_f4_data;
 }
 
 static WRITE8_HANDLER(ts2068_port_f4_w)
 {
-	spectrum_state *state = (spectrum_state *)space->machine->driver_data;
+	spectrum_state *state = space->machine->driver_data<spectrum_state>();
 
 	state->port_f4_data = data;
 	ts2068_update_memory(space->machine);
@@ -186,7 +186,7 @@ static WRITE8_HANDLER(ts2068_port_f4_w)
 
 static  READ8_HANDLER(ts2068_port_ff_r)
 {
-	spectrum_state *state = (spectrum_state *)space->machine->driver_data;
+	spectrum_state *state = space->machine->driver_data<spectrum_state>();
 
 	return state->port_ff_data;
 }
@@ -199,7 +199,7 @@ static WRITE8_HANDLER(ts2068_port_ff_w)
            Bit  6   17ms Interrupt Inhibit
            Bit  7   Cartridge (0) / EXROM (1) select
         */
-	spectrum_state *state = (spectrum_state *)space->machine->driver_data;
+	spectrum_state *state = space->machine->driver_data<spectrum_state>();
 
 	state->port_ff_data = data;
 	ts2068_update_memory(space->machine);
@@ -226,14 +226,14 @@ static WRITE8_HANDLER(ts2068_port_ff_w)
  *******************************************************************/
 void ts2068_update_memory(running_machine *machine)
 {
-	spectrum_state *state = (spectrum_state *)machine->driver_data;
+	spectrum_state *state = machine->driver_data<spectrum_state>();
 	UINT8 *messram = messram_get_ptr(machine->device("messram"));
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 	unsigned char *ChosenROM, *ExROM, *DOCK;
 
 	DOCK = timex_cart_data;
 
-	ExROM = memory_region(machine, "maincpu") + 0x014000;
+	ExROM = machine->region("maincpu")->base() + 0x014000;
 
 	if (state->port_f4_data & 0x01)
 	{
@@ -267,7 +267,7 @@ void ts2068_update_memory(running_machine *machine)
 	}
 	else
 	{
-		ChosenROM = memory_region(machine, "maincpu") + 0x010000;
+		ChosenROM = machine->region("maincpu")->base() + 0x010000;
 		memory_set_bankptr(machine, "bank1", ChosenROM);
 		memory_install_read_bank(space, 0x0000, 0x1fff, 0, 0, "bank1");
 		memory_unmap_write(space, 0x0000, 0x1fff, 0, 0);
@@ -305,7 +305,7 @@ void ts2068_update_memory(running_machine *machine)
 	}
 	else
 	{
-		ChosenROM = memory_region(machine, "maincpu") + 0x012000;
+		ChosenROM = machine->region("maincpu")->base() + 0x012000;
 		memory_set_bankptr(machine, "bank2", ChosenROM);
 		memory_install_read_bank(space, 0x2000, 0x3fff, 0, 0, "bank2");
 		memory_unmap_write(space, 0x2000, 0x3fff, 0, 0);
@@ -561,7 +561,7 @@ ADDRESS_MAP_END
 
 static MACHINE_RESET( ts2068 )
 {
-	spectrum_state *state = (spectrum_state *)machine->driver_data;
+	spectrum_state *state = machine->driver_data<spectrum_state>();
 
 	state->port_ff_data = 0;
 	state->port_f4_data = 0;
@@ -577,7 +577,7 @@ static MACHINE_RESET( ts2068 )
 
 static WRITE8_HANDLER( tc2048_port_ff_w )
 {
-	spectrum_state *state = (spectrum_state *)space->machine->driver_data;
+	spectrum_state *state = space->machine->driver_data<spectrum_state>();
 
 	state->port_ff_data = data;
 	logerror("Port %04x write %02x\n", offset, data);
@@ -598,7 +598,7 @@ ADDRESS_MAP_END
 
 static MACHINE_RESET( tc2048 )
 {
-	spectrum_state *state = (spectrum_state *)machine->driver_data;
+	spectrum_state *state = machine->driver_data<spectrum_state>();
 	UINT8 *messram = messram_get_ptr(machine->device("messram"));
 
 	memory_set_bankptr(machine, "bank1", messram);
@@ -627,73 +627,70 @@ static GFXDECODE_START( ts2068 )
 	GFXDECODE_ENTRY( "maincpu", 0x13d00, ts2068_charlayout, 0, 8 )
 GFXDECODE_END
 
-static MACHINE_DRIVER_START( ts2068 )
-	MDRV_IMPORT_FROM( spectrum_128 )
-	MDRV_CPU_REPLACE("maincpu", Z80, XTAL_14_112MHz/4)        /* From Schematic; 3.528 MHz */
-	MDRV_CPU_PROGRAM_MAP(ts2068_mem)
-	MDRV_CPU_IO_MAP(ts2068_io)
+static MACHINE_CONFIG_DERIVED( ts2068, spectrum_128 )
+	MCFG_CPU_REPLACE("maincpu", Z80, XTAL_14_112MHz/4)        /* From Schematic; 3.528 MHz */
+	MCFG_CPU_PROGRAM_MAP(ts2068_mem)
+	MCFG_CPU_IO_MAP(ts2068_io)
 
-	MDRV_MACHINE_RESET( ts2068 )
+	MCFG_MACHINE_RESET( ts2068 )
 
 	/* video hardware */
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(TS2068_SCREEN_WIDTH, TS2068_SCREEN_HEIGHT)
-	MDRV_SCREEN_VISIBLE_AREA(0, TS2068_SCREEN_WIDTH-1, 0, TS2068_SCREEN_HEIGHT-1)
-	MDRV_GFXDECODE(ts2068)
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(TS2068_SCREEN_WIDTH, TS2068_SCREEN_HEIGHT)
+	MCFG_SCREEN_VISIBLE_AREA(0, TS2068_SCREEN_WIDTH-1, 0, TS2068_SCREEN_HEIGHT-1)
+	MCFG_GFXDECODE(ts2068)
 
-	MDRV_VIDEO_UPDATE( ts2068 )
-	MDRV_VIDEO_EOF( ts2068 )
+	MCFG_VIDEO_START( ts2068 )
+	MCFG_VIDEO_UPDATE( ts2068 )
 
 	/* sound */
-	MDRV_SOUND_REPLACE("ay8912", AY8912, XTAL_14_112MHz/8)        /* From Schematic; 1.764 MHz */
-	MDRV_SOUND_CONFIG(spectrum_ay_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+	MCFG_SOUND_REPLACE("ay8912", AY8912, XTAL_14_112MHz/8)        /* From Schematic; 1.764 MHz */
+	MCFG_SOUND_CONFIG(spectrum_ay_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
 	/* cartridge */
-	MDRV_CARTSLOT_MODIFY("cart")
-	MDRV_CARTSLOT_EXTENSION_LIST("dck")
-	MDRV_CARTSLOT_NOT_MANDATORY
-	MDRV_CARTSLOT_LOAD(timex_cart)
-	MDRV_CARTSLOT_UNLOAD(timex_cart)
+	MCFG_CARTSLOT_MODIFY("cart")
+	MCFG_CARTSLOT_EXTENSION_LIST("dck")
+	MCFG_CARTSLOT_NOT_MANDATORY
+	MCFG_CARTSLOT_LOAD(timex_cart)
+	MCFG_CARTSLOT_UNLOAD(timex_cart)
 
 	/* internal ram */
-	MDRV_RAM_MODIFY("messram")
-	MDRV_RAM_DEFAULT_SIZE("48K")
-MACHINE_DRIVER_END
+	MCFG_RAM_MODIFY("messram")
+	MCFG_RAM_DEFAULT_SIZE("48K")
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( uk2086 )
-	MDRV_IMPORT_FROM( ts2068 )
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_REFRESH_RATE(50)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( uk2086, ts2068 )
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_REFRESH_RATE(50)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( tc2048 )
-	MDRV_IMPORT_FROM( spectrum )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(tc2048_mem)
-	MDRV_CPU_IO_MAP(tc2048_io)
+static MACHINE_CONFIG_DERIVED( tc2048, spectrum )
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(tc2048_mem)
+	MCFG_CPU_IO_MAP(tc2048_io)
 
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_REFRESH_RATE(50)
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_REFRESH_RATE(50)
 
-	MDRV_MACHINE_RESET( tc2048 )
+	MCFG_MACHINE_RESET( tc2048 )
 
 	/* video hardware */
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(TS2068_SCREEN_WIDTH, SPEC_SCREEN_HEIGHT)
-	MDRV_SCREEN_VISIBLE_AREA(0, TS2068_SCREEN_WIDTH-1, 0, SPEC_SCREEN_HEIGHT-1)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(TS2068_SCREEN_WIDTH, SPEC_SCREEN_HEIGHT)
+	MCFG_SCREEN_VISIBLE_AREA(0, TS2068_SCREEN_WIDTH-1, 0, SPEC_SCREEN_HEIGHT-1)
 
-	MDRV_VIDEO_START( spectrum_128 )
-	MDRV_VIDEO_UPDATE( tc2048 )
+	MCFG_VIDEO_START( spectrum_128 )
+	MCFG_VIDEO_UPDATE( tc2048 )
 
 	/* internal ram */
-	MDRV_RAM_MODIFY("messram")
-	MDRV_RAM_DEFAULT_SIZE("48K")
-MACHINE_DRIVER_END
+	MCFG_RAM_MODIFY("messram")
+	MCFG_RAM_DEFAULT_SIZE("48K")
+MACHINE_CONFIG_END
 
 
 

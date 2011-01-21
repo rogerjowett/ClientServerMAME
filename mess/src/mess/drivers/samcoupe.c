@@ -61,7 +61,7 @@
 
 static READ8_HANDLER( samcoupe_disk_r )
 {
-	running_device *fdc = space->machine->device("wd1772");
+	device_t *fdc = space->machine->device("wd1772");
 
 	/* drive and side is encoded into bit 5 and 3 */
 	wd17xx_set_drive(fdc, (offset >> 4) & 1);
@@ -81,7 +81,7 @@ static READ8_HANDLER( samcoupe_disk_r )
 
 static WRITE8_HANDLER( samcoupe_disk_w )
 {
-	running_device *fdc = space->machine->device("wd1772");
+	device_t *fdc = space->machine->device("wd1772");
 
 	/* drive and side is encoded into bit 5 and 3 */
 	wd17xx_set_drive(fdc, (offset >> 4) & 1);
@@ -123,13 +123,13 @@ static READ8_HANDLER( samcoupe_pen_r )
 
 static WRITE8_HANDLER( samcoupe_clut_w )
 {
-	coupe_asic *asic = (coupe_asic *)space->machine->driver_data;
-	asic->clut[(offset >> 8) & 0x0f] = data & 0x7f;
+	samcoupe_state *state = space->machine->driver_data<samcoupe_state>();
+	state->clut[(offset >> 8) & 0x0f] = data & 0x7f;
 }
 
 static READ8_HANDLER( samcoupe_status_r )
 {
-	coupe_asic *asic = (coupe_asic *)space->machine->driver_data;
+	samcoupe_state *state = space->machine->driver_data<samcoupe_state>();
 	UINT8 data = 0xe0;
 
 	/* bit 5-7, keyboard input */
@@ -143,59 +143,59 @@ static READ8_HANDLER( samcoupe_status_r )
 	if (!BIT(offset, 15)) data &= input_port_read(space->machine, "keyboard_row_7f") & 0xe0;
 
 	/* bit 0-4, interrupt source */
-	data |= asic->status;
+	data |= state->status;
 
 	return data;
 }
 
 static WRITE8_HANDLER( samcoupe_line_int_w )
 {
-	coupe_asic *asic = (coupe_asic *)space->machine->driver_data;
-	asic->line_int = data;
+	samcoupe_state *state = space->machine->driver_data<samcoupe_state>();
+	state->line_int = data;
 }
 
 static READ8_HANDLER( samcoupe_lmpr_r )
 {
-	coupe_asic *asic = (coupe_asic *)space->machine->driver_data;
-	return asic->lmpr;
+	samcoupe_state *state = space->machine->driver_data<samcoupe_state>();
+	return state->lmpr;
 }
 
 static WRITE8_HANDLER( samcoupe_lmpr_w )
 {
-	const address_space *space_program = cputag_get_address_space(space->machine, "maincpu", ADDRESS_SPACE_PROGRAM);
-	coupe_asic *asic = (coupe_asic *)space->machine->driver_data;
+	address_space *space_program = cputag_get_address_space(space->machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	samcoupe_state *state = space->machine->driver_data<samcoupe_state>();
 
-	asic->lmpr = data;
+	state->lmpr = data;
 	samcoupe_update_memory(space_program);
 }
 
 static READ8_HANDLER( samcoupe_hmpr_r )
 {
-	coupe_asic *asic = (coupe_asic *)space->machine->driver_data;
-	return asic->hmpr;
+	samcoupe_state *state = space->machine->driver_data<samcoupe_state>();
+	return state->hmpr;
 }
 
 static WRITE8_HANDLER( samcoupe_hmpr_w )
 {
-	const address_space *space_program = cputag_get_address_space(space->machine, "maincpu", ADDRESS_SPACE_PROGRAM);
-	coupe_asic *asic = (coupe_asic *)space->machine->driver_data;
+	address_space *space_program = cputag_get_address_space(space->machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	samcoupe_state *state = space->machine->driver_data<samcoupe_state>();
 
-	asic->hmpr = data;
+	state->hmpr = data;
 	samcoupe_update_memory(space_program);
 }
 
 static READ8_HANDLER( samcoupe_vmpr_r )
 {
-	coupe_asic *asic = (coupe_asic *)space->machine->driver_data;
-	return asic->vmpr;
+	samcoupe_state *state = space->machine->driver_data<samcoupe_state>();
+	return state->vmpr;
 }
 
 static WRITE8_HANDLER( samcoupe_vmpr_w )
 {
-	const address_space *space_program = cputag_get_address_space(space->machine, "maincpu", ADDRESS_SPACE_PROGRAM);
-	coupe_asic *asic = (coupe_asic *)space->machine->driver_data;
+	address_space *space_program = cputag_get_address_space(space->machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	samcoupe_state *state = space->machine->driver_data<samcoupe_state>();
 
-	asic->vmpr = data;
+	state->vmpr = data;
 	samcoupe_update_memory(space_program);
 }
 
@@ -212,7 +212,7 @@ static WRITE8_HANDLER( samcoupe_midi_w )
 
 static READ8_HANDLER( samcoupe_keyboard_r )
 {
-	running_device *cassette = space->machine->device("cassette");
+	device_t *cassette = space->machine->device("cassette");
 	UINT8 data = 0x1f;
 
 	/* bit 0-4, keyboard input */
@@ -248,11 +248,11 @@ static READ8_HANDLER( samcoupe_keyboard_r )
 
 static WRITE8_HANDLER( samcoupe_border_w )
 {
-	running_device *cassette = space->machine->device("cassette");
-	running_device *speaker = space->machine->device("speaker");
-	coupe_asic *asic = (coupe_asic *)space->machine->driver_data;
+	device_t *cassette = space->machine->device("cassette");
+	device_t *speaker = space->machine->device("speaker");
+	samcoupe_state *state = space->machine->driver_data<samcoupe_state>();
 
-	asic->border = data;
+	state->border = data;
 
 	/* bit 3, cassette output */
 	cassette_output(cassette, BIT(data, 3) ? -1.0 : +1.0);
@@ -263,8 +263,8 @@ static WRITE8_HANDLER( samcoupe_border_w )
 
 static READ8_HANDLER( samcoupe_attributes_r )
 {
-	coupe_asic *asic = (coupe_asic *)space->machine->driver_data;
-	return asic->attribute;
+	samcoupe_state *state = space->machine->driver_data<samcoupe_state>();
+	return state->attribute;
 }
 
 static READ8_DEVICE_HANDLER( samcoupe_lpt1_busy_r )
@@ -325,27 +325,26 @@ ADDRESS_MAP_END
 
 static TIMER_CALLBACK( irq_off )
 {
-	coupe_asic *asic = (coupe_asic *)machine->driver_data;
-
+	samcoupe_state *state = machine->driver_data<samcoupe_state>();
 	/* adjust STATUS register */
-	asic->status |= param;
+	state->status |= param;
 
 	/* clear interrupt */
-	if ((asic->status & 0x1f) == 0x1f)
+	if ((state->status & 0x1f) == 0x1f)
 		cputag_set_input_line(machine, "maincpu", 0, CLEAR_LINE);
 
 }
 
-void samcoupe_irq(running_device *device, UINT8 src)
+void samcoupe_irq(device_t *device, UINT8 src)
 {
-	coupe_asic *asic = (coupe_asic *)device->machine->driver_data;
+	samcoupe_state *state = device->machine->driver_data<samcoupe_state>();
 
 	/* assert irq and a timer to set it off again */
 	cpu_set_input_line(device, 0, ASSERT_LINE);
 	timer_set(device->machine, ATTOTIME_IN_USEC(20), NULL, src, irq_off);
 
 	/* adjust STATUS register */
-	asic->status &= ~src;
+	state->status &= ~src;
 }
 
 static INTERRUPT_GEN( samcoupe_frame_interrupt )
@@ -555,48 +554,47 @@ static const wd17xx_interface samcoupe_wd17xx_intf =
 	{ FLOPPY_0, FLOPPY_1, NULL, NULL }
 };
 
-static MACHINE_DRIVER_START( samcoupe )
+static MACHINE_CONFIG_START( samcoupe, samcoupe_state )
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, SAMCOUPE_XTAL_X1 / 4) /* 6 MHz */
-	MDRV_CPU_PROGRAM_MAP(samcoupe_mem)
-	MDRV_CPU_IO_MAP(samcoupe_io)
-	MDRV_CPU_VBLANK_INT("screen", samcoupe_frame_interrupt)
+	MCFG_CPU_ADD("maincpu", Z80, SAMCOUPE_XTAL_X1 / 4) /* 6 MHz */
+	MCFG_CPU_PROGRAM_MAP(samcoupe_mem)
+	MCFG_CPU_IO_MAP(samcoupe_io)
+	MCFG_CPU_VBLANK_INT("screen", samcoupe_frame_interrupt)
 
-	MDRV_MACHINE_START(samcoupe)
-	MDRV_MACHINE_RESET(samcoupe)
-	MDRV_DRIVER_DATA(coupe_asic)
+	MCFG_MACHINE_START(samcoupe)
+	MCFG_MACHINE_RESET(samcoupe)
 
     /* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_RAW_PARAMS(SAMCOUPE_XTAL_X1/2, SAM_TOTAL_WIDTH, 0, SAM_BORDER_LEFT + SAM_SCREEN_WIDTH + SAM_BORDER_RIGHT, SAM_TOTAL_HEIGHT, 0, SAM_BORDER_TOP + SAM_SCREEN_HEIGHT + SAM_BORDER_BOTTOM)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_PALETTE_LENGTH(128)
-	MDRV_PALETTE_INIT(samcoupe)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_RAW_PARAMS(SAMCOUPE_XTAL_X1/2, SAM_TOTAL_WIDTH, 0, SAM_BORDER_LEFT + SAM_SCREEN_WIDTH + SAM_BORDER_RIGHT, SAM_TOTAL_HEIGHT, 0, SAM_BORDER_TOP + SAM_SCREEN_HEIGHT + SAM_BORDER_BOTTOM)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_PALETTE_LENGTH(128)
+	MCFG_PALETTE_INIT(samcoupe)
 
-	MDRV_VIDEO_START(generic_bitmapped)
-	MDRV_VIDEO_UPDATE(generic_bitmapped)
+	MCFG_VIDEO_START(generic_bitmapped)
+	MCFG_VIDEO_UPDATE(generic_bitmapped)
 
 	/* devices */
-	MDRV_CENTRONICS_ADD("lpt1", standard_centronics)
-	MDRV_CENTRONICS_ADD("lpt2", standard_centronics)
-	MDRV_MSM6242_ADD("sambus_clock")
-	MDRV_WD1772_ADD("wd1772", samcoupe_wd17xx_intf)
-	MDRV_CASSETTE_ADD("cassette", samcoupe_cassette_config)
+	MCFG_CENTRONICS_ADD("lpt1", standard_centronics)
+	MCFG_CENTRONICS_ADD("lpt2", standard_centronics)
+	MCFG_MSM6242_ADD("sambus_clock")
+	MCFG_WD1772_ADD("wd1772", samcoupe_wd17xx_intf)
+	MCFG_CASSETTE_ADD("cassette", samcoupe_cassette_config)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("speaker", SPEAKER, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-	MDRV_SOUND_ADD("saa1099", SAA1099, SAMCOUPE_XTAL_X1/3) /* 8 MHz */
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("speaker", SPEAKER_SOUND, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_SOUND_ADD("saa1099", SAA1099, SAMCOUPE_XTAL_X1/3) /* 8 MHz */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MDRV_FLOPPY_2_DRIVES_ADD(samcoupe_floppy_config)
+	MCFG_FLOPPY_2_DRIVES_ADD(samcoupe_floppy_config)
 
 	/* internal ram */
-	MDRV_RAM_ADD("messram")
-	MDRV_RAM_DEFAULT_SIZE("512K")
-	MDRV_RAM_EXTRA_OPTIONS("256K,1280K,1536K,2304K,2560K,3328K,3584K,4352K,4608K")
-MACHINE_DRIVER_END
+	MCFG_RAM_ADD("messram")
+	MCFG_RAM_DEFAULT_SIZE("512K")
+	MCFG_RAM_EXTRA_OPTIONS("256K,1280K,1536K,2304K,2560K,3328K,3584K,4352K,4608K")
+MACHINE_CONFIG_END
 
 
 /***************************************************************************

@@ -203,7 +203,7 @@ static CUSTOM_INPUT( system_port_r )
 
 static CUSTOM_INPUT( mahjong_ctrl_r ) /* used by hotgmck/hgkairak */
 {
-	psikyo4_state *state = (psikyo4_state *)field->port->machine->driver_data;
+	psikyo4_state *state = field->port->machine->driver_data<psikyo4_state>();
 	int player = (FPTR)param;
 	int sel = (state->io_select[0] & 0x0000ff00) >> 8;
 	int ret = 0xff;
@@ -218,7 +218,7 @@ static CUSTOM_INPUT( mahjong_ctrl_r ) /* used by hotgmck/hgkairak */
 
 static WRITE32_HANDLER( ps4_paletteram32_RRRRRRRRGGGGGGGGBBBBBBBBxxxxxxxx_dword_w )
 {
-	psikyo4_state *state = (psikyo4_state *)space->machine->driver_data;
+	psikyo4_state *state = space->machine->driver_data<psikyo4_state>();
 	int r, g, b;
 	COMBINE_DATA(&state->paletteram[offset]);
 
@@ -232,7 +232,7 @@ static WRITE32_HANDLER( ps4_paletteram32_RRRRRRRRGGGGGGGGBBBBBBBBxxxxxxxx_dword_
 
 static WRITE32_HANDLER( ps4_bgpen_1_dword_w )
 {
-	psikyo4_state *state = (psikyo4_state *)space->machine->driver_data;
+	psikyo4_state *state = space->machine->driver_data<psikyo4_state>();
 	int r, g, b;
 	COMBINE_DATA(&state->bgpen_1[0]);
 
@@ -245,7 +245,7 @@ static WRITE32_HANDLER( ps4_bgpen_1_dword_w )
 
 static WRITE32_HANDLER( ps4_bgpen_2_dword_w )
 {
-	psikyo4_state *state = (psikyo4_state *)space->machine->driver_data;
+	psikyo4_state *state = space->machine->driver_data<psikyo4_state>();
 	int r, g, b;
 	COMBINE_DATA(&state->bgpen_2[0]);
 
@@ -258,7 +258,7 @@ static WRITE32_HANDLER( ps4_bgpen_2_dword_w )
 
 static WRITE32_HANDLER( ps4_screen1_brt_w )
 {
-	psikyo4_state *state = (psikyo4_state *)space->machine->driver_data;
+	psikyo4_state *state = space->machine->driver_data<psikyo4_state>();
 
 	if (ACCESSING_BITS_0_7)
 	{
@@ -289,7 +289,7 @@ static WRITE32_HANDLER( ps4_screen1_brt_w )
 
 static WRITE32_HANDLER( ps4_screen2_brt_w )
 {
-	psikyo4_state *state = (psikyo4_state *)space->machine->driver_data;
+	psikyo4_state *state = space->machine->driver_data<psikyo4_state>();
 
 	if (ACCESSING_BITS_0_7)
 	{
@@ -321,7 +321,7 @@ static WRITE32_HANDLER( ps4_screen2_brt_w )
 
 static WRITE32_HANDLER( ps4_vidregs_w )
 {
-	psikyo4_state *state = (psikyo4_state *)space->machine->driver_data;
+	psikyo4_state *state = space->machine->driver_data<psikyo4_state>();
 	COMBINE_DATA(&state->vidregs[offset]);
 
 #if ROMTEST
@@ -330,7 +330,7 @@ static WRITE32_HANDLER( ps4_vidregs_w )
 		if (ACCESSING_BITS_0_15)	// Bank
 		{
 //          memory_set_bank(space->machine, "bank2", state->vidregs[offset] & 0x1fff);  /* Bank comes from vidregs */
-			memory_set_bankptr(space->machine, "bank2", memory_region(space->machine, "gfx1") + 0x2000 * (state->vidregs[offset] & 0x1fff)); /* Bank comes from vidregs */		}
+			memory_set_bankptr(space->machine, "bank2", space->machine->region("gfx1")->base() + 0x2000 * (state->vidregs[offset] & 0x1fff)); /* Bank comes from vidregs */		}
 	}
 #endif
 }
@@ -338,8 +338,8 @@ static WRITE32_HANDLER( ps4_vidregs_w )
 #if ROMTEST
 static READ32_HANDLER( ps4_sample_r ) /* Send sample data for test */
 {
-	psikyo4_state *state = (psikyo4_state *)space->machine->driver_data;
-	UINT8 *ROM = memory_region(space->machine, "ymf");
+	psikyo4_state *state = space->machine->driver_data<psikyo4_state>();
+	UINT8 *ROM = space->machine->region("ymf")->base();
 	return ROM[state->sample_offs++] << 16;
 }
 #endif
@@ -348,16 +348,16 @@ static READ32_HANDLER( ps4_sample_r ) /* Send sample data for test */
 
 static void set_hotgmck_pcm_bank( running_machine *machine, int n )
 {
-	psikyo4_state *state = (psikyo4_state *)machine->driver_data;
-	UINT8 *ymf_pcmbank = memory_region(machine, "ymf") + 0x200000;
-	UINT8 *pcm_rom = memory_region(machine, "ymfsource");
+	psikyo4_state *state = machine->driver_data<psikyo4_state>();
+	UINT8 *ymf_pcmbank = machine->region("ymf")->base() + 0x200000;
+	UINT8 *pcm_rom = machine->region("ymfsource")->base();
 
 	memcpy(ymf_pcmbank + n * 0x100000, pcm_rom + PCM_BANK_NO(n) * 0x100000, 0x100000);
 }
 
 static WRITE32_HANDLER( hotgmck_pcm_bank_w )
 {
-	psikyo4_state *state = (psikyo4_state *)space->machine->driver_data;
+	psikyo4_state *state = space->machine->driver_data<psikyo4_state>();
 	int old_bank0 = PCM_BANK_NO(0);
 	int old_bank1 = PCM_BANK_NO(1);
 	int new_bank0, new_bank1;
@@ -685,9 +685,9 @@ static INPUT_PORTS_START( hotdebut )
 INPUT_PORTS_END
 
 
-static void irqhandler( running_device *device, int linestate )
+static void irqhandler( device_t *device, int linestate )
 {
-	psikyo4_state *state = (psikyo4_state *)device->machine->driver_data;
+	psikyo4_state *state = device->machine->driver_data<psikyo4_state>();
 	cpu_set_input_line(state->maincpu, 12, linestate ? ASSERT_LINE : CLEAR_LINE);
 }
 
@@ -699,13 +699,13 @@ static const ymf278b_interface ymf278b_config =
 
 static MACHINE_START( psikyo4 )
 {
-	psikyo4_state *state = (psikyo4_state *)machine->driver_data;
+	psikyo4_state *state = machine->driver_data<psikyo4_state>();
 
 	state->maincpu = machine->device("maincpu");
 
 #if ROMTEST
 //  FIXME: Too many banks! it cannot be handled in this way, currently
-//  memory_configure_bank(machine, "bank2", 0, 0x2000, memory_region(machine, "gfx1"), 0x2000);
+//  memory_configure_bank(machine, "bank2", 0, 0x2000, machine->region("gfx1")->base(), 0x2000);
 
 	state->sample_offs = 0;
 	state_save_register_global(machine, state->sample_offs);
@@ -717,69 +717,66 @@ static MACHINE_START( psikyo4 )
 
 static MACHINE_RESET( psikyo4 )
 {
-	psikyo4_state *state = (psikyo4_state *)machine->driver_data;
+	psikyo4_state *state = machine->driver_data<psikyo4_state>();
 
 	state->oldbrt1 = -1;
 	state->oldbrt2 = -1;
 }
 
-static MACHINE_DRIVER_START( ps4big )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(psikyo4_state)
+static MACHINE_CONFIG_START( ps4big, psikyo4_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", SH2, MASTER_CLOCK/2)
-	MDRV_CPU_PROGRAM_MAP(ps4_map)
-	MDRV_CPU_VBLANK_INT("lscreen", psikyosh_interrupt)
+	MCFG_CPU_ADD("maincpu", SH2, MASTER_CLOCK/2)
+	MCFG_CPU_PROGRAM_MAP(ps4_map)
+	MCFG_CPU_VBLANK_INT("lscreen", psikyosh_interrupt)
 
-	MDRV_MACHINE_START(psikyo4)
-	MDRV_MACHINE_RESET(psikyo4)
+	MCFG_MACHINE_START(psikyo4)
+	MCFG_MACHINE_RESET(psikyo4)
 
-	MDRV_EEPROM_ADD("eeprom", eeprom_interface_93C56)
-	MDRV_EEPROM_DEFAULT_VALUE(0)
+	MCFG_EEPROM_ADD("eeprom", eeprom_interface_93C56)
+	MCFG_EEPROM_DEFAULT_VALUE(0)
 
 	/* video hardware */
-	MDRV_GFXDECODE(ps4)
-	MDRV_PALETTE_LENGTH((0x2000/4)*2 + 2) /* 0x2000/4 for each screen. 1 for each screen clear colour */
-	MDRV_DEFAULT_LAYOUT(layout_dualhsxs)
+	MCFG_GFXDECODE(ps4)
+	MCFG_PALETTE_LENGTH((0x2000/4)*2 + 2) /* 0x2000/4 for each screen. 1 for each screen clear colour */
+	MCFG_DEFAULT_LAYOUT(layout_dualhsxs)
 
-	MDRV_SCREEN_ADD("lscreen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_SIZE(40*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 0*8, 28*8-1)
+	MCFG_SCREEN_ADD("lscreen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_SIZE(40*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 0*8, 28*8-1)
 
-	MDRV_SCREEN_ADD("rscreen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_SIZE(40*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 0*8, 28*8-1)
+	MCFG_SCREEN_ADD("rscreen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_SIZE(40*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 0*8, 28*8-1)
 
-	MDRV_VIDEO_START(psikyo4)
-	MDRV_VIDEO_UPDATE(psikyo4)
+	MCFG_VIDEO_START(psikyo4)
+	MCFG_VIDEO_UPDATE(psikyo4)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymf", YMF278B, MASTER_CLOCK/2)
-	MDRV_SOUND_CONFIG(ymf278b_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymf", YMF278B, MASTER_CLOCK/2)
+	MCFG_SOUND_CONFIG(ymf278b_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( ps4small )
+static MACHINE_CONFIG_DERIVED( ps4small, ps4big )
+
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(ps4big)
 
-	MDRV_SCREEN_MODIFY("lscreen")
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 0*8, 30*8-1)
+	MCFG_SCREEN_MODIFY("lscreen")
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 0*8, 30*8-1)
 
-	MDRV_SCREEN_MODIFY("rscreen")
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 0*8, 30*8-1)
-MACHINE_DRIVER_END
+	MCFG_SCREEN_MODIFY("rscreen")
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 0*8, 30*8-1)
+MACHINE_CONFIG_END
 
 
 
@@ -1011,7 +1008,7 @@ PC  :00001B44: MOV.L   @R1,R2
 PC  :00001B46: TST     R2,R2
 PC  :00001B48: BT      $00001B3C
 */
-	psikyo4_state *state = (psikyo4_state *)space->machine->driver_data;
+	psikyo4_state *state = space->machine->driver_data<psikyo4_state>();
 
 	if (cpu_get_pc(space->cpu) == 0x00001b3e)
 		cpu_spinuntil_int(space->cpu);
@@ -1030,7 +1027,7 @@ PC  :00001B50: MOV.L   @R1,R2
 PC  :00001B52: TST     R2,R2
 PC  :00001B54: BT      $00001B48
 */
-	psikyo4_state *state = (psikyo4_state *)space->machine->driver_data;
+	psikyo4_state *state = space->machine->driver_data<psikyo4_state>();
 
 	if (cpu_get_pc(space->cpu) == 0x00001b4a)
 		cpu_spinuntil_int(space->cpu);
@@ -1049,7 +1046,7 @@ PC  :000029F4: MOV.L   @R1,R3
 PC  :000029F6: TST     R3,R3
 PC  :000029F8: BT      $000029EC
 */
-	psikyo4_state *state = (psikyo4_state *)space->machine->driver_data;
+	psikyo4_state *state = space->machine->driver_data<psikyo4_state>();
 
 	if (cpu_get_pc(space->cpu) == 0x000029ee)
 		cpu_spinuntil_int(space->cpu);
@@ -1064,9 +1061,9 @@ static STATE_POSTLOAD( hotgmck_pcm_bank_postload )
 
 static void install_hotgmck_pcm_bank(running_machine *machine)
 {
-	psikyo4_state *state = (psikyo4_state *)machine->driver_data;
-	UINT8 *ymf_pcm = memory_region(machine, "ymf");
-	UINT8 *pcm_rom = memory_region(machine, "ymfsource");
+	psikyo4_state *state = machine->driver_data<psikyo4_state>();
+	UINT8 *ymf_pcm = machine->region("ymf")->base();
+	UINT8 *pcm_rom = machine->region("ymfsource")->base();
 
 	memcpy(ymf_pcm, pcm_rom, 0x200000);
 
@@ -1081,7 +1078,7 @@ static void install_hotgmck_pcm_bank(running_machine *machine)
 
 static DRIVER_INIT( hotgmck )
 {
-	UINT8 *RAM = memory_region(machine, "maincpu");
+	UINT8 *RAM = machine->region("maincpu")->base();
 	memory_set_bankptr(machine, "bank1", &RAM[0x100000]);
 	install_hotgmck_pcm_bank(machine);	// Banked PCM ROM
 }

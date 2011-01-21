@@ -139,6 +139,8 @@ Adder hardware:
 #include "emu.h"
 #include "cpu/m6809/m6809.h"
 
+#include "machine/nvram.h"
+
 #include "video/bfm_adr2.h"
 
 #include "sound/2413intf.h"
@@ -188,7 +190,6 @@ static int sc2gui_update_mmtr;	// bit pattern which mechanical meter needs updat
 // local vars /////////////////////////////////////////////////////////////
 
 static UINT8 *nvram;		// pointer to NVRAM
-static size_t nvram_size;	// size of NVRAM
 static UINT8 key[16];		// security device on gamecard (video games only)
 
 static UINT8 e2ram[1024];	// x24C08 e2ram
@@ -367,7 +368,7 @@ send data to them, although obviously there's no response. */
 	// init rom bank ////////////////////////////////////////////////////////
 
 	{
-		UINT8 *rom = memory_region(machine, "maincpu");
+		UINT8 *rom = machine->region("maincpu")->base();
 
 		memory_configure_bank(machine, "bank1", 0, 1, &rom[0x10000], 0);
 		memory_configure_bank(machine, "bank1", 1, 3, &rom[0x02000], 0x02000);
@@ -443,19 +444,16 @@ static NVRAM_HANDLER( bfm_sc2 )
 	static const UINT8 init_e2ram[10] = { 1, 4, 10, 20, 0, 1, 1, 4, 10, 20 };
 	if ( read_or_write )
 	{	// writing
-		mame_fwrite(file,nvram,nvram_size);
 		mame_fwrite(file,e2ram,sizeof(e2ram));
 	}
 	else
 	{ // reading
 		if ( file )
 		{
-			mame_fread(file,nvram,nvram_size);
 			mame_fread(file,e2ram,sizeof(e2ram));
 		}
 		else
 		{
-			memset(nvram,0x00,nvram_size);
 			memset(e2ram,0x00,sizeof(e2ram));
 			memcpy(e2ram,init_e2ram,sizeof(init_e2ram));
 		}
@@ -698,8 +696,8 @@ static WRITE8_HANDLER( volume_override_w )
 
 	if ( old != volume_override )
 	{
-		running_device *ym = space->machine->device("ymsnd");
-		running_device *upd = space->machine->device("upd");
+		device_t *ym = space->machine->device("ymsnd");
+		device_t *upd = space->machine->device("upd");
 		float percent = volume_override? 1.0f : (32-global_volume)/32.0f;
 
 		sound_set_output_gain(ym, 0, percent);
@@ -812,8 +810,8 @@ static WRITE8_HANDLER( expansion_latch_w )
 			}
 
 			{
-				running_device *ym = space->machine->device("ymsnd");
-				running_device *upd = space->machine->device("upd");
+				device_t *ym = space->machine->device("ymsnd");
+				device_t *upd = space->machine->device("upd");
 				float percent = volume_override ? 1.0f : (32-global_volume)/32.0f;
 
 				sound_set_output_gain(ym, 0, percent);
@@ -1432,7 +1430,7 @@ static void decode_mainrom(running_machine *machine, const char *rom_region)
 {
 	UINT8 *tmp, *rom;
 
-	rom = memory_region(machine, rom_region);
+	rom = machine->region(rom_region)->base();
 
 	tmp = auto_alloc_array(machine, UINT8, 0x10000);
 	{
@@ -1508,7 +1506,7 @@ static VIDEO_UPDATE( addersc2 )
 
 static ADDRESS_MAP_START( memmap_vid, ADDRESS_SPACE_PROGRAM, 8 )
 
-	AM_RANGE(0x0000, 0x1fff) AM_READWRITE(ram_r, ram_w) AM_BASE(&nvram) AM_SIZE(&nvram_size)// 8k RAM
+	AM_RANGE(0x0000, 0x1fff) AM_READWRITE(ram_r, ram_w) AM_BASE(&nvram) AM_SHARE("nvram") // 8k RAM
 	AM_RANGE(0x2000, 0x2000) AM_READ(vfd_status_hop_r)		// vfd status register
 	AM_RANGE(0x2000, 0x20FF) AM_WRITE(reel12_vid_w)
 	AM_RANGE(0x2100, 0x21FF) AM_WRITE(reel34_w)
@@ -2216,41 +2214,42 @@ INPUT_PORTS_END
 // machine driver for scorpion2 board + adder2 expansion //////////////////
 ///////////////////////////////////////////////////////////////////////////
 
-static MACHINE_DRIVER_START( scorpion2_vid )
-	MDRV_MACHINE_RESET( init )							// main scorpion2 board initialisation
-	MDRV_QUANTUM_TIME(HZ(960))									// needed for serial communication !!
-	MDRV_CPU_ADD("maincpu", M6809, MASTER_CLOCK/4 )	// 6809 CPU at 2 Mhz
-	MDRV_CPU_PROGRAM_MAP(memmap_vid)					// setup scorpion2 board memorymap
-	MDRV_CPU_PERIODIC_INT(timer_irq, 1000)				// generate 1000 IRQ's per second
+static MACHINE_CONFIG_START( scorpion2_vid, driver_device )
+	MCFG_MACHINE_RESET( init )							// main scorpion2 board initialisation
+	MCFG_QUANTUM_TIME(HZ(960))									// needed for serial communication !!
+	MCFG_CPU_ADD("maincpu", M6809, MASTER_CLOCK/4 )	// 6809 CPU at 2 Mhz
+	MCFG_CPU_PROGRAM_MAP(memmap_vid)					// setup scorpion2 board memorymap
+	MCFG_CPU_PERIODIC_INT(timer_irq, 1000)				// generate 1000 IRQ's per second
 
-	MDRV_NVRAM_HANDLER(bfm_sc2)
-	MDRV_DEFAULT_LAYOUT(layout_bfm_sc2)
+	MCFG_NVRAM_ADD_0FILL("nvram")
+	MCFG_NVRAM_HANDLER(bfm_sc2)
+	MCFG_DEFAULT_LAYOUT(layout_bfm_sc2)
 
-	MDRV_SCREEN_ADD("adder", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE( 400, 280)
-	MDRV_SCREEN_VISIBLE_AREA(  0, 400-1, 0, 280-1)
-	MDRV_SCREEN_REFRESH_RATE(50)
+	MCFG_SCREEN_ADD("adder", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE( 400, 280)
+	MCFG_SCREEN_VISIBLE_AREA(  0, 400-1, 0, 280-1)
+	MCFG_SCREEN_REFRESH_RATE(50)
 
-	MDRV_VIDEO_START( adder2)
-	MDRV_VIDEO_RESET( adder2)
-	MDRV_VIDEO_UPDATE(addersc2)
+	MCFG_VIDEO_START( adder2)
+	MCFG_VIDEO_RESET( adder2)
+	MCFG_VIDEO_UPDATE(addersc2)
 
-	MDRV_PALETTE_LENGTH(16)
-	MDRV_PALETTE_INIT(adder2)
-	MDRV_GFXDECODE(adder2)
+	MCFG_PALETTE_LENGTH(16)
+	MCFG_PALETTE_INIT(adder2)
+	MCFG_GFXDECODE(adder2)
 
-	MDRV_CPU_ADD("adder2", M6809, MASTER_CLOCK/4 )	// adder2 board 6809 CPU at 2 Mhz
-	MDRV_CPU_PROGRAM_MAP(adder2_memmap)				// setup adder2 board memorymap
-	MDRV_CPU_VBLANK_INT("adder", adder2_vbl)			// board has a VBL IRQ
+	MCFG_CPU_ADD("adder2", M6809, MASTER_CLOCK/4 )	// adder2 board 6809 CPU at 2 Mhz
+	MCFG_CPU_PROGRAM_MAP(adder2_memmap)				// setup adder2 board memorymap
+	MCFG_CPU_VBLANK_INT("adder", adder2_vbl)			// board has a VBL IRQ
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("upd", UPD7759, UPD7759_STANDARD_CLOCK)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("upd", UPD7759, UPD7759_STANDARD_CLOCK)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MDRV_SOUND_ADD("ymsnd", YM2413, XTAL_3_579545MHz)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2413, XTAL_3_579545MHz)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 static void sc2_common_init(running_machine *machine, int decrypt)
 {
@@ -2258,7 +2257,7 @@ static void sc2_common_init(running_machine *machine, int decrypt)
 
 	if (decrypt) decode_mainrom(machine, "maincpu");		  // decode main rom
 
-	rom = memory_region(machine, "maincpu");
+	rom = machine->region("maincpu")->base();
 	if ( rom )
 	{
 		memcpy(&rom[0x10000], &rom[0x00000], 0x2000);
@@ -2271,7 +2270,7 @@ static void adder2_common_init(running_machine *machine)
 {
 	UINT8 *pal;
 
-	pal = memory_region(machine, "proms");
+	pal = machine->region("proms")->base();
 	if ( pal )
 	{
 		memcpy(key, pal, 8);
@@ -2748,7 +2747,7 @@ static MACHINE_RESET( dm01_init )
 
 
 static ADDRESS_MAP_START( sc2_memmap, ADDRESS_SPACE_PROGRAM, 8 )
-	AM_RANGE(0x0000, 0x1FFF) AM_READWRITE(ram_r, ram_w) AM_BASE(&nvram) AM_SIZE(&nvram_size)
+	AM_RANGE(0x0000, 0x1FFF) AM_READWRITE(ram_r, ram_w) AM_BASE(&nvram) AM_SHARE("nvram")
 	AM_RANGE(0x2000, 0x2000) AM_READ(vfd_status_r)
 	AM_RANGE(0x2000, 0x20FF) AM_WRITE(reel12_w)
 	AM_RANGE(0x2100, 0x21FF) AM_WRITE(reel34_w)
@@ -2797,7 +2796,7 @@ ADDRESS_MAP_END
 
 /* memory map for scorpion3 board */
 static ADDRESS_MAP_START( sc3_memmap, ADDRESS_SPACE_PROGRAM, 8 )
-	AM_RANGE(0x0000, 0x1FFF) AM_READWRITE(ram_r, ram_w) AM_BASE(&nvram) AM_SIZE(&nvram_size)
+	AM_RANGE(0x0000, 0x1FFF) AM_READWRITE(ram_r, ram_w) AM_BASE(&nvram) AM_SHARE("nvram")
 	AM_RANGE(0x2000, 0x2000) AM_READ(vfd_status_r)
 	AM_RANGE(0x2000, 0x20FF) AM_WRITE(reel12_w)
 	AM_RANGE(0x2100, 0x21FF) AM_WRITE(reel34_w)
@@ -2846,7 +2845,7 @@ ADDRESS_MAP_END
 
 /* memory map for scorpion2 board + dm01 dot matrix board */
 static ADDRESS_MAP_START( memmap_sc2_dm01, ADDRESS_SPACE_PROGRAM, 8 )
-	AM_RANGE(0x0000, 0x1FFF) AM_READWRITE(ram_r, ram_w) AM_BASE(&nvram) AM_SIZE(&nvram_size)
+	AM_RANGE(0x0000, 0x1FFF) AM_READWRITE(ram_r, ram_w) AM_BASE(&nvram) AM_SHARE("nvram")
 	AM_RANGE(0x2000, 0x2000) AM_READ(vfd_status_dm01_r)
 	AM_RANGE(0x2000, 0x20FF) AM_WRITE(reel12_w)
 	AM_RANGE(0x2100, 0x21FF) AM_WRITE(reel34_w)
@@ -3363,7 +3362,7 @@ static INPUT_PORTS_START( cpeno1 )
 
 	PORT_START("STROBE1")
 	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_BUTTON1) PORT_NAME("Hold 1")
-	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_BUTTON2) PORT_NAME("Hold 1")
+	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_BUTTON2) PORT_NAME("Hold 1?")
 	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_BUTTON3) PORT_NAME("Hold 2/Hi")
 	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_BUTTON4) PORT_NAME("Hold 3/Lo")
 	PORT_BIT( 0x10, IP_ACTIVE_HIGH, IPT_BUTTON5) PORT_NAME("Cancel/Collect")
@@ -3449,7 +3448,7 @@ static INPUT_PORTS_START( cpeno1 )
 
 	PORT_START("STROBE9")
 	PORT_SERVICE_NO_TOGGLE(0x01,IP_ACTIVE_HIGH)
-	PORT_DIPNAME( 0x02, 0x00, "DIL05" ) PORT_DIPLOCATION("DIL:02")
+	PORT_DIPNAME( 0x02, 0x00, "DIL02" ) PORT_DIPLOCATION("DIL:02")
 	PORT_DIPSETTING(    0x00, DEF_STR( Off ) )
 	PORT_DIPSETTING(    0x02, DEF_STR( On  ) )
 	PORT_DIPNAME( 0x04, 0x00, "Attract Hi/Lo reel" ) PORT_DIPLOCATION("DIL:03")
@@ -3832,7 +3831,7 @@ static INPUT_PORTS_START( scorpion3 )
 
 	PORT_START("STROBE1")
 	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_BUTTON1) PORT_NAME("Hold 1")
-	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_BUTTON2) PORT_NAME("Hold 1")
+	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_BUTTON2) PORT_NAME("Hold 1?")
 	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_BUTTON3) PORT_NAME("Hold 2/Hi")
 	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_BUTTON4) PORT_NAME("Hold 3/Lo")
 	PORT_BIT( 0x10, IP_ACTIVE_HIGH, IPT_BUTTON5) PORT_NAME("Cancel/Collect")
@@ -3918,7 +3917,7 @@ static INPUT_PORTS_START( scorpion3 )
 
 	PORT_START("STROBE9")
 	PORT_SERVICE_NO_TOGGLE(0x01,IP_ACTIVE_HIGH)
-	PORT_DIPNAME( 0x02, 0x00, "DIL05" ) PORT_DIPLOCATION("DIL:02")
+	PORT_DIPNAME( 0x02, 0x00, "DIL02" ) PORT_DIPLOCATION("DIL:02")
 	PORT_DIPSETTING(    0x00, DEF_STR( Off ) )
 	PORT_DIPSETTING(    0x02, DEF_STR( On  ) )
 	PORT_DIPNAME( 0x04, 0x00, "Attract Hi/Lo reel" ) PORT_DIPLOCATION("DIL:03")
@@ -3967,68 +3966,58 @@ INPUT_PORTS_END
 
 /* machine driver for scorpion2 board */
 
-static MACHINE_DRIVER_START( scorpion2 )
-	MDRV_MACHINE_RESET(awp_init)
-	MDRV_CPU_ADD("maincpu", M6809, MASTER_CLOCK/4 )
-	MDRV_CPU_PROGRAM_MAP(sc2_memmap)
-	MDRV_CPU_PERIODIC_INT(timer_irq, 1000 )
+static MACHINE_CONFIG_START( scorpion2, driver_device )
+	MCFG_MACHINE_RESET(awp_init)
+	MCFG_CPU_ADD("maincpu", M6809, MASTER_CLOCK/4 )
+	MCFG_CPU_PROGRAM_MAP(sc2_memmap)
+	MCFG_CPU_PERIODIC_INT(timer_irq, 1000 )
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("upd",UPD7759, UPD7759_STANDARD_CLOCK)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("upd",UPD7759, UPD7759_STANDARD_CLOCK)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MDRV_SOUND_ADD("ymsnd",YM2413, XTAL_3_579545MHz)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SOUND_ADD("ymsnd",YM2413, XTAL_3_579545MHz)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-	MDRV_NVRAM_HANDLER(bfm_sc2)
+	MCFG_NVRAM_ADD_0FILL("nvram")
+	MCFG_NVRAM_HANDLER(bfm_sc2)
 
 	/* video hardware */
-	MDRV_DEFAULT_LAYOUT(layout_awpvid14)
-MACHINE_DRIVER_END
+	MCFG_DEFAULT_LAYOUT(layout_awpvid14)
+MACHINE_CONFIG_END
 
 
 /* machine driver for scorpion3 board */
-static MACHINE_DRIVER_START( scorpion3 )
-	MDRV_IMPORT_FROM( scorpion2 )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(sc3_memmap)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( scorpion3, scorpion2 )
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(sc3_memmap)
+MACHINE_CONFIG_END
 
 
 /* machine driver for scorpion2 board + matrix board */
-static MACHINE_DRIVER_START( scorpion2_dm01 )
-	MDRV_MACHINE_RESET(dm01_init)
-	MDRV_QUANTUM_TIME(HZ(960))									// needed for serial communication !!
-	MDRV_CPU_ADD("maincpu", M6809, MASTER_CLOCK/4 )
-	MDRV_CPU_PROGRAM_MAP(memmap_sc2_dm01)
-	MDRV_CPU_PERIODIC_INT(timer_irq, 1000 )
+static MACHINE_CONFIG_START( scorpion2_dm01, driver_device )
+	MCFG_MACHINE_RESET(dm01_init)
+	MCFG_QUANTUM_TIME(HZ(960))									// needed for serial communication !!
+	MCFG_CPU_ADD("maincpu", M6809, MASTER_CLOCK/4 )
+	MCFG_CPU_PROGRAM_MAP(memmap_sc2_dm01)
+	MCFG_CPU_PERIODIC_INT(timer_irq, 1000 )
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("ymsnd",YM2413, XTAL_3_579545MHz)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("ymsnd",YM2413, XTAL_3_579545MHz)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-	MDRV_SOUND_ADD("upd",UPD7759, UPD7759_STANDARD_CLOCK)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_SOUND_ADD("upd",UPD7759, UPD7759_STANDARD_CLOCK)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MDRV_NVRAM_HANDLER(bfm_sc2)
+	MCFG_NVRAM_ADD_0FILL("nvram")
+	MCFG_NVRAM_HANDLER(bfm_sc2)
 
 	/* video hardware */
-	MDRV_DEFAULT_LAYOUT(layout_awpdmd)
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE( 9*8, 21)
-	MDRV_SCREEN_VISIBLE_AREA(  0, 9*8-1, 0, 21-1)
-	MDRV_SCREEN_REFRESH_RATE(50)
-	MDRV_VIDEO_START( bfm_dm01)
-	MDRV_VIDEO_UPDATE(bfm_dm01)
-
-	MDRV_PALETTE_LENGTH(2)
-	MDRV_PALETTE_INIT(bfm_dm01)
-
-	MDRV_CPU_ADD("matrix", M6809, 2000000 )				/* matrix board 6809 CPU at 2 Mhz ?? I don't know the exact freq.*/
-	MDRV_CPU_PROGRAM_MAP(bfm_dm01_memmap)
-	MDRV_CPU_PERIODIC_INT(bfm_dm01_vbl, 1500 )			/* generate 1500 NMI's per second ?? what is the exact freq?? */
-MACHINE_DRIVER_END
+	MCFG_DEFAULT_LAYOUT(layout_awpdmd)
+	MCFG_CPU_ADD("matrix", M6809, 2000000 )				/* matrix board 6809 CPU at 2 Mhz ?? I don't know the exact freq.*/
+	MCFG_CPU_PROGRAM_MAP(bfm_dm01_memmap)
+	MCFG_CPU_PERIODIC_INT(bfm_dm01_vbl, 1500 )			/* generate 1500 NMI's per second ?? what is the exact freq?? */
+MACHINE_CONFIG_END
 
 static void sc2awp_common_init(running_machine *machine,int reels, int decrypt)
 {

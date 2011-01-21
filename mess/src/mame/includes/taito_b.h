@@ -1,10 +1,9 @@
 
-class taitob_state
+class taitob_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, taitob_state(machine)); }
-
-	taitob_state(running_machine &machine) { }
+	taitob_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT16 *      spriteram;
@@ -25,13 +24,13 @@ public:
 	UINT16        coin_word;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *audiocpu;
-	running_device *mb87078;
-	running_device *ym;
-	running_device *tc0180vcu;
-	running_device *tc0640fio;
-	running_device *tc0220ioc;
+	device_t *maincpu;
+	device_t *audiocpu;
+	device_t *mb87078;
+	device_t *ym;
+	device_t *tc0180vcu;
+	device_t *tc0640fio;
+	device_t *tc0220ioc;
 };
 
 

@@ -12,6 +12,7 @@
 #include "includes/amiga.h"
 #include "sound/es5503.h"
 #include "machine/6526cia.h"
+#include "machine/nvram.h"
 
 
 
@@ -94,7 +95,7 @@ static WRITE8_DEVICE_HANDLER( mquake_es5503_w )
 			// if not writing a "halt", set the bank
 			if (!(data & 1))
 			{
-				es5503_set_base(device, memory_region(device->machine, "ensoniq") + ((data>>4)*0x10000));
+				es5503_set_base(device, device->machine->region("ensoniq")->base() + ((data>>4)*0x10000));
 			}
 		}
 	}
@@ -139,13 +140,13 @@ static WRITE16_HANDLER( coin_chip_w )
 
 static ADDRESS_MAP_START( main_map, ADDRESS_SPACE_PROGRAM, 16 )
 	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x000000, 0x07ffff) AM_RAMBANK("bank1") AM_BASE(&amiga_chip_ram)	AM_SIZE(&amiga_chip_ram_size)
+	AM_RANGE(0x000000, 0x07ffff) AM_RAMBANK("bank1") AM_BASE_SIZE_MEMBER(amiga_state, chip_ram, chip_ram_size)
 	AM_RANGE(0xbfd000, 0xbfefff) AM_READWRITE(amiga_cia_r, amiga_cia_w)
-	AM_RANGE(0xc00000, 0xdfffff) AM_READWRITE(amiga_custom_r, amiga_custom_w) AM_BASE(&amiga_custom_regs)
+	AM_RANGE(0xc00000, 0xdfffff) AM_READWRITE(amiga_custom_r, amiga_custom_w)  AM_BASE_MEMBER(amiga_state, custom_regs)
 	AM_RANGE(0xe80000, 0xe8ffff) AM_READWRITE(amiga_autoconfig_r, amiga_autoconfig_w)
 	AM_RANGE(0xfc0000, 0xffffff) AM_ROM AM_REGION("user1", 0)			/* System ROM */
 
-	AM_RANGE(0x200000, 0x203fff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0x200000, 0x203fff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0x204000, 0x2041ff) AM_DEVREADWRITE8("ensoniq", es5503_r, mquake_es5503_w, 0x00ff)
 	AM_RANGE(0x282000, 0x282001) AM_READ_PORT("SW.LO")
 	AM_RANGE(0x282002, 0x282003) AM_READ_PORT("SW.HI")
@@ -319,7 +320,7 @@ static const es5503_interface es5503_intf =
 static MACHINE_RESET(mquake)
 {
 	/* set ES5503 wave memory (this is banked in 64k increments) */
-	es5503_set_base(machine->device("ensoniq"), memory_region(machine, "ensoniq"));
+	es5503_set_base(machine->device("ensoniq"), machine->region("ensoniq")->base());
 
 	MACHINE_RESET_CALL(amiga);
 }
@@ -356,51 +357,51 @@ static const mos6526_interface cia_1_intf =
 	DEVCB_NULL
 };
 
-static MACHINE_DRIVER_START( mquake )
+static MACHINE_CONFIG_START( mquake, amiga_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, AMIGA_68000_NTSC_CLOCK)
-	MDRV_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_ADD("maincpu", M68000, AMIGA_68000_NTSC_CLOCK)
+	MCFG_CPU_PROGRAM_MAP(main_map)
 
-	MDRV_MACHINE_RESET(mquake)
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_MACHINE_RESET(mquake)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
-    /* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
+	/* video hardware */
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(59.997)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(512*2, 262)
-	MDRV_SCREEN_VISIBLE_AREA((129-8)*2, (449+8-1)*2, 44-8, 244+8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(59.997)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(512*2, 262)
+	MCFG_SCREEN_VISIBLE_AREA((129-8)*2, (449+8-1)*2, 44-8, 244+8-1)
 
-	MDRV_PALETTE_LENGTH(4096)
-	MDRV_PALETTE_INIT(amiga)
+	MCFG_PALETTE_LENGTH(4096)
+	MCFG_PALETTE_INIT(amiga)
 
-	MDRV_VIDEO_START(amiga)
-	MDRV_VIDEO_UPDATE(amiga)
+	MCFG_VIDEO_START(amiga)
+	MCFG_VIDEO_UPDATE(amiga)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("amiga", AMIGA, 3579545)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.50)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.50)
-	MDRV_SOUND_ROUTE(2, "rspeaker", 0.50)
-	MDRV_SOUND_ROUTE(3, "lspeaker", 0.50)
+	MCFG_SOUND_ADD("amiga", AMIGA, 3579545)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.50)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.50)
+	MCFG_SOUND_ROUTE(2, "rspeaker", 0.50)
+	MCFG_SOUND_ROUTE(3, "lspeaker", 0.50)
 
-	MDRV_SOUND_ADD("ensoniq", ES5503, 7159090)		/* ES5503 is likely mono due to channel strobe used as bank select */
-	MDRV_SOUND_CONFIG(es5503_intf)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.50)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.50)
-	MDRV_SOUND_ROUTE(1, "lspeaker", 0.50)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.50)
+	MCFG_SOUND_ADD("ensoniq", ES5503, 7159090)		/* ES5503 is likely mono due to channel strobe used as bank select */
+	MCFG_SOUND_CONFIG(es5503_intf)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.50)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.50)
+	MCFG_SOUND_ROUTE(1, "lspeaker", 0.50)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.50)
 
 	/* cia */
-	MDRV_MOS8520_ADD("cia_0", AMIGA_68000_NTSC_CLOCK / 10, cia_0_intf)
-	MDRV_MOS8520_ADD("cia_1", AMIGA_68000_NTSC_CLOCK / 10, cia_1_intf)
-MACHINE_DRIVER_END
+	MCFG_MOS8520_ADD("cia_0", AMIGA_68000_NTSC_CLOCK / 10, cia_0_intf)
+	MCFG_MOS8520_ADD("cia_1", AMIGA_68000_NTSC_CLOCK / 10, cia_1_intf)
+MACHINE_CONFIG_END
 
 
 
@@ -446,6 +447,7 @@ ROM_END
 
 static DRIVER_INIT(mquake)
 {
+	amiga_state *state = machine->driver_data<amiga_state>();
 	static const amiga_machine_interface mquake_intf =
 	{
 		ANGUS_CHIP_RAM_MASK,
@@ -458,8 +460,8 @@ static DRIVER_INIT(mquake)
 	amiga_machine_config(machine, &mquake_intf);
 
 	/* set up memory */
-	memory_configure_bank(machine, "bank1", 0, 1, amiga_chip_ram, 0);
-	memory_configure_bank(machine, "bank1", 1, 1, memory_region(machine, "user1"), 0);
+	memory_configure_bank(machine, "bank1", 0, 1, state->chip_ram, 0);
+	memory_configure_bank(machine, "bank1", 1, 1, machine->region("user1")->base(), 0);
 }
 
 

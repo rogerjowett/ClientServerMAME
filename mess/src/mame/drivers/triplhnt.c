@@ -12,6 +12,7 @@ To Do:
 
 #include "emu.h"
 #include "cpu/m6800/m6800.h"
+#include "machine/nvram.h"
 #include "includes/triplhnt.h"
 
 static UINT8 triplhnt_cmos[16];
@@ -23,8 +24,7 @@ static UINT8 triplhnt_hit_code;
 
 static DRIVER_INIT( triplhnt )
 {
-	machine->generic.nvram.u8 = triplhnt_cmos;
-	machine->generic.nvram_size = sizeof triplhnt_cmos;
+	machine->device<nvram_device>("nvram")->set_base(triplhnt_cmos, sizeof(triplhnt_cmos));
 }
 
 
@@ -38,8 +38,8 @@ void triplhnt_set_collision(running_machine *machine, int code)
 
 static void triplhnt_update_misc(running_machine *machine, int offset)
 {
-	running_device *samples = machine->device("samples");
-	running_device *discrete = machine->device("discrete");
+	device_t *samples = machine->device("samples");
+	device_t *discrete = machine->device("discrete");
 	UINT8 is_witch_hunt;
 	UINT8 bit = offset >> 1;
 
@@ -148,7 +148,7 @@ static ADDRESS_MAP_START( triplhnt_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0c0a, 0x0c0a) AM_READ_PORT("0C0A")
 	AM_RANGE(0x0c0b, 0x0c0b) AM_READ(triplhnt_input_port_4_r)
 	AM_RANGE(0x0c10, 0x0c1f) AM_READ(triplhnt_da_latch_r)
-	AM_RANGE(0x0c20, 0x0c2f) AM_READ(triplhnt_cmos_r)
+	AM_RANGE(0x0c20, 0x0c2f) AM_READ(triplhnt_cmos_r) AM_SHARE("nvram")
 	AM_RANGE(0x0c30, 0x0c3f) AM_READWRITE(triplhnt_misc_r, triplhnt_misc_w)
 	AM_RANGE(0x0c40, 0x0c40) AM_READ_PORT("0C40")
 	AM_RANGE(0x0c48, 0x0c48) AM_READ_PORT("0C48")
@@ -309,39 +309,39 @@ static PALETTE_INIT( triplhnt )
 }
 
 
-static MACHINE_DRIVER_START( triplhnt )
+static MACHINE_CONFIG_START( triplhnt, driver_device )
 
 /* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6800, 800000)
-	MDRV_CPU_PROGRAM_MAP(triplhnt_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", M6800, 800000)
+	MCFG_CPU_PROGRAM_MAP(triplhnt_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(256, 262)
-	MDRV_SCREEN_VISIBLE_AREA(0, 255, 0, 239)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(256, 262)
+	MCFG_SCREEN_VISIBLE_AREA(0, 255, 0, 239)
 
-	MDRV_GFXDECODE(triplhnt)
-	MDRV_PALETTE_LENGTH(8)
-	MDRV_PALETTE_INIT(triplhnt)
-	MDRV_VIDEO_START(triplhnt)
-	MDRV_VIDEO_UPDATE(triplhnt)
+	MCFG_GFXDECODE(triplhnt)
+	MCFG_PALETTE_LENGTH(8)
+	MCFG_PALETTE_INIT(triplhnt)
+	MCFG_VIDEO_START(triplhnt)
+	MCFG_VIDEO_UPDATE(triplhnt)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("samples", SAMPLES, 0)
-	MDRV_SOUND_CONFIG(triplhnt_samples_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.20)
+	MCFG_SOUND_ADD("samples", SAMPLES, 0)
+	MCFG_SOUND_CONFIG(triplhnt_samples_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.20)
 
-	MDRV_SOUND_ADD("discrete", DISCRETE, 0)
-	MDRV_SOUND_CONFIG_DISCRETE(triplhnt)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.90)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("discrete", DISCRETE, 0)
+	MCFG_SOUND_CONFIG_DISCRETE(triplhnt)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.90)
+MACHINE_CONFIG_END
 
 
 ROM_START( triplhnt )

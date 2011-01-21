@@ -20,12 +20,11 @@
 #include "cpu/z80/z80.h"
 #include "deprecat.h"
 
-class laserbas_state
+class laserbas_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, laserbas_state(machine)); }
-
-	laserbas_state(running_machine &machine) { }
+	laserbas_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* video-related */
 	UINT8    *vram1;
@@ -39,7 +38,7 @@ public:
 
 static VIDEO_START(laserbas)
 {
-	laserbas_state *state = (laserbas_state *)machine->driver_data;
+	laserbas_state *state = machine->driver_data<laserbas_state>();
 
 	state->vram1 = auto_alloc_array(machine, UINT8, 0x8000);
 	state->vram2 = auto_alloc_array(machine, UINT8, 0x8000);
@@ -50,7 +49,7 @@ static VIDEO_START(laserbas)
 
 static VIDEO_UPDATE(laserbas)
 {
-	laserbas_state *state = (laserbas_state *)screen->machine->driver_data;
+	laserbas_state *state = screen->machine->driver_data<laserbas_state>();
 	int x, y;
 
 	for (y = 0; y < 256; y++)
@@ -71,7 +70,7 @@ static VIDEO_UPDATE(laserbas)
 
 static READ8_HANDLER(vram_r)
 {
-	laserbas_state *state = (laserbas_state *)space->machine->driver_data;
+	laserbas_state *state = space->machine->driver_data<laserbas_state>();
 
 	if(!state->vrambank)
 		return state->vram1[offset];
@@ -81,7 +80,7 @@ static READ8_HANDLER(vram_r)
 
 static WRITE8_HANDLER(vram_w)
 {
-	laserbas_state *state = (laserbas_state *)space->machine->driver_data;
+	laserbas_state *state = space->machine->driver_data<laserbas_state>();
 
 	if(!state->vrambank)
 		state->vram1[offset] = data;
@@ -91,7 +90,7 @@ static WRITE8_HANDLER(vram_w)
 
 static READ8_HANDLER( read_unk )
 {
-	laserbas_state *state = (laserbas_state *)space->machine->driver_data;
+	laserbas_state *state = space->machine->driver_data<laserbas_state>();
 
 	state->count ^= 0x80;
 	return state->count | 0x7f;
@@ -104,7 +103,7 @@ static WRITE8_HANDLER(palette_w)
 
 static WRITE8_HANDLER(vrambank_w)
 {
-	laserbas_state *state = (laserbas_state *)space->machine->driver_data;
+	laserbas_state *state = space->machine->driver_data<laserbas_state>();
 
 	if ((offset & 0xf1) == 0x10)
 		state->vrambank = data & 0x40;
@@ -158,7 +157,7 @@ static INTERRUPT_GEN( laserbas_interrupt )
 
 static MACHINE_START( laserbas )
 {
-	laserbas_state *state = (laserbas_state *)machine->driver_data;
+	laserbas_state *state = machine->driver_data<laserbas_state>();
 
 	state_save_register_global(machine, state->vrambank);
 	state_save_register_global(machine, state->count);
@@ -166,34 +165,33 @@ static MACHINE_START( laserbas )
 
 static MACHINE_RESET( laserbas )
 {
-	laserbas_state *state = (laserbas_state *)machine->driver_data;
+	laserbas_state *state = machine->driver_data<laserbas_state>();
 
 	state->vrambank = 0;
 	state->count = 0;
 }
 
-static MACHINE_DRIVER_START( laserbas )
-	MDRV_DRIVER_DATA(laserbas_state)
+static MACHINE_CONFIG_START( laserbas, laserbas_state )
 
-	MDRV_CPU_ADD("maincpu", Z80, 4000000)
-	MDRV_CPU_PROGRAM_MAP(laserbas_memory)
-	MDRV_CPU_IO_MAP(laserbas_io)
-	MDRV_CPU_VBLANK_INT_HACK(laserbas_interrupt,2)
+	MCFG_CPU_ADD("maincpu", Z80, 4000000)
+	MCFG_CPU_PROGRAM_MAP(laserbas_memory)
+	MCFG_CPU_IO_MAP(laserbas_io)
+	MCFG_CPU_VBLANK_INT_HACK(laserbas_interrupt,2)
 
-	MDRV_MACHINE_START(laserbas)
-	MDRV_MACHINE_RESET(laserbas)
+	MCFG_MACHINE_START(laserbas)
+	MCFG_MACHINE_RESET(laserbas)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 0*8, 32*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 0*8, 32*8-1)
 
-	MDRV_PALETTE_LENGTH(32)
-	MDRV_VIDEO_START(laserbas)
-	MDRV_VIDEO_UPDATE(laserbas)
-MACHINE_DRIVER_END
+	MCFG_PALETTE_LENGTH(32)
+	MCFG_VIDEO_START(laserbas)
+	MCFG_VIDEO_UPDATE(laserbas)
+MACHINE_CONFIG_END
 
 /*
 Amstar LaserBase 1981 (Hoei)

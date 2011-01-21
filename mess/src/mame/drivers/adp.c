@@ -152,21 +152,20 @@ Video board has additional chips:
 #include "machine/microtch.h"
 #include "machine/68681.h"
 
-class adp_state
+class adp_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, adp_state(machine)); }
-
-	adp_state(running_machine &machine) { }
+	adp_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* misc */
 	UINT8 mux_data;
 	UINT8 register_active;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *duart;
-	running_device *hd63484;
+	device_t *maincpu;
+	device_t *duart;
+	device_t *hd63484;
 };
 
 
@@ -176,13 +175,13 @@ public:
 
 ***************************************************************************/
 
-static void duart_irq_handler( running_device *device, UINT8 vector )
+static void duart_irq_handler( device_t *device, UINT8 vector )
 {
-	adp_state *state = (adp_state *)device->machine->driver_data;
+	adp_state *state = device->machine->driver_data<adp_state>();
 	cpu_set_input_line_and_vector(state->maincpu, 4, HOLD_LINE, vector);
 };
 
-static void duart_tx( running_device *device, int channel, UINT8 data )
+static void duart_tx( device_t *device, int channel, UINT8 data )
 {
 	if (channel == 0)
 	{
@@ -192,18 +191,18 @@ static void duart_tx( running_device *device, int channel, UINT8 data )
 
 static void microtouch_tx( running_machine *machine, UINT8 data )
 {
-	adp_state *state = (adp_state *)machine->driver_data;
+	adp_state *state = machine->driver_data<adp_state>();
 	duart68681_rx_data(state->duart, 0, data);
 }
 
-static UINT8 duart_input( running_device *device )
+static UINT8 duart_input( device_t *device )
 {
 	return input_port_read(device->machine, "DSW1");
 }
 
 static MACHINE_START( skattv )
 {
-	adp_state *state = (adp_state *)machine->driver_data;
+	adp_state *state = machine->driver_data<adp_state>();
 	microtouch_init(machine, microtouch_tx, 0);
 
 	state->maincpu = machine->device("maincpu");
@@ -224,10 +223,10 @@ static MACHINE_START( skattv )
 
 	// hack to handle acrt rom
 	{
-		UINT16 *rom = (UINT16*)memory_region(machine, "gfx1");
+		UINT16 *rom = (UINT16*)machine->region("gfx1")->base();
 		int i;
 
-		running_device *hd63484 = machine->device("hd63484");
+		device_t *hd63484 = machine->device("hd63484");
 
 		for(i = 0; i < 0x40000/2; ++i)
 		{
@@ -241,7 +240,7 @@ static MACHINE_START( skattv )
 
 static MACHINE_RESET( skattv )
 {
-	adp_state *state = (adp_state *)machine->driver_data;
+	adp_state *state = machine->driver_data<adp_state>();
 
 	state->mux_data = 0;
 	state->register_active = 0;
@@ -291,7 +290,7 @@ static VIDEO_START(adp)
 
 static VIDEO_UPDATE( adp )
 {
-	adp_state *state = (adp_state *)screen->machine->driver_data;
+	adp_state *state = screen->machine->driver_data<adp_state>();
 	int x, y, b, src;
 
 	b = ((hd63484_regs_r(state->hd63484, 0xcc/2, 0xffff) & 0x000f) << 16) + hd63484_regs_r(state->hd63484, 0xce/2, 0xffff);
@@ -368,7 +367,7 @@ if (!input_code_pressed(screen->machine, KEYCODE_O)) // debug: toggle window
 
 static READ16_HANDLER( test_r )
 {
-	adp_state *state = (adp_state *)space->machine->driver_data;
+	adp_state *state = space->machine->driver_data<adp_state>();
 	int value = 0xffff;
 
 	switch (state->mux_data)
@@ -394,23 +393,23 @@ static READ16_HANDLER( test_r )
 	state->mux_data++;
 	state->mux_data &= 0xf;
 /*
-    switch (mame_rand(space->machine) & 3)
+    switch (space->machine->rand() & 3)
     {
         case 0:
             return 0;
         case 1:
             return 0xffff;
         default:
-            return mame_rand(space->machine) & 0xffff;
+            return space->machine->rand() & 0xffff;
     }
 */
-	return value | (mame_rand(space->machine) & 0x0000);
+	return value | (space->machine->rand() & 0x0000);
 }
 
 /*???*/
 static WRITE16_HANDLER(wh2_w)
 {
-	adp_state *state = (adp_state *)space->machine->driver_data;
+	adp_state *state = space->machine->driver_data<adp_state>();
 	state->register_active = data;
 }
 
@@ -631,131 +630,119 @@ static const ay8910_interface ay8910_config =
 static const hd63484_interface adp_hd63484_intf = { 0 };
 static const hd63484_interface skattva_hd63484_intf = { 1 };	// skattva hd63484 hack. to be removed once the video controller emulation is complete!
 
-static MACHINE_DRIVER_START( quickjac )
+static MACHINE_CONFIG_START( quickjac, adp_state )
 
-	/* driver data */
-	MDRV_DRIVER_DATA(adp_state)
+	MCFG_CPU_ADD("maincpu", M68000, 8000000)
+	MCFG_CPU_PROGRAM_MAP(quickjac_mem)
+//  MCFG_CPU_VBLANK_INT("screen", adp_int)
 
-	MDRV_CPU_ADD("maincpu", M68000, 8000000)
-	MDRV_CPU_PROGRAM_MAP(quickjac_mem)
-//  MDRV_CPU_VBLANK_INT("screen", adp_int)
+	MCFG_MACHINE_START(skattv)
+	MCFG_MACHINE_RESET(skattv)
 
-	MDRV_MACHINE_START(skattv)
-	MDRV_MACHINE_RESET(skattv)
+	MCFG_DUART68681_ADD( "duart68681", XTAL_8_664MHz / 2, skattv_duart68681_config )
 
-	MDRV_DUART68681_ADD( "duart68681", XTAL_8_664MHz / 2, skattv_duart68681_config )
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(384, 280)
+	MCFG_SCREEN_VISIBLE_AREA(0, 384-1, 0, 280-1)
+	MCFG_PALETTE_LENGTH(0x10)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(384, 280)
-	MDRV_SCREEN_VISIBLE_AREA(0, 384-1, 0, 280-1)
-	MDRV_PALETTE_LENGTH(0x10)
+	MCFG_PALETTE_INIT(adp)
+	MCFG_VIDEO_START(adp)
+	MCFG_VIDEO_UPDATE(adp)
 
-	MDRV_PALETTE_INIT(adp)
-	MDRV_VIDEO_START(adp)
-	MDRV_VIDEO_UPDATE(adp)
+	MCFG_HD63484_ADD("hd63484", adp_hd63484_intf)
 
-	MDRV_HD63484_ADD("hd63484", adp_hd63484_intf)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("aysnd", AY8910, 3686400/2)
+	MCFG_SOUND_CONFIG(ay8910_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.10)
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("aysnd", AY8910, 3686400/2)
-	MDRV_SOUND_CONFIG(ay8910_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.10)
+MACHINE_CONFIG_END
 
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_START( skattv, adp_state )
 
-static MACHINE_DRIVER_START( skattv )
+	MCFG_CPU_ADD("maincpu", M68000, 8000000)
+	MCFG_CPU_PROGRAM_MAP(skattv_mem)
+//  MCFG_CPU_VBLANK_INT("screen", adp_int)
 
-	/* driver data */
-	MDRV_DRIVER_DATA(adp_state)
+	MCFG_MACHINE_START(skattv)
+	MCFG_MACHINE_RESET(skattv)
 
-	MDRV_CPU_ADD("maincpu", M68000, 8000000)
-	MDRV_CPU_PROGRAM_MAP(skattv_mem)
-//  MDRV_CPU_VBLANK_INT("screen", adp_int)
+	MCFG_DUART68681_ADD( "duart68681", XTAL_8_664MHz / 2, skattv_duart68681_config )
 
-	MDRV_MACHINE_START(skattv)
-	MDRV_MACHINE_RESET(skattv)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(384, 280)
+	MCFG_SCREEN_VISIBLE_AREA(0, 384-1, 0, 280-1)
+	MCFG_PALETTE_LENGTH(0x10)
 
-	MDRV_DUART68681_ADD( "duart68681", XTAL_8_664MHz / 2, skattv_duart68681_config )
+	MCFG_PALETTE_INIT(adp)
+	MCFG_VIDEO_START(adp)
+	MCFG_VIDEO_UPDATE(adp)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(384, 280)
-	MDRV_SCREEN_VISIBLE_AREA(0, 384-1, 0, 280-1)
-	MDRV_PALETTE_LENGTH(0x10)
+	MCFG_HD63484_ADD("hd63484", adp_hd63484_intf)
 
-	MDRV_PALETTE_INIT(adp)
-	MDRV_VIDEO_START(adp)
-	MDRV_VIDEO_UPDATE(adp)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("aysnd", AY8910, 3686400/2)
+	MCFG_SOUND_CONFIG(ay8910_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.10)
 
-	MDRV_HD63484_ADD("hd63484", adp_hd63484_intf)
+MACHINE_CONFIG_END
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("aysnd", AY8910, 3686400/2)
-	MDRV_SOUND_CONFIG(ay8910_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.10)
+static MACHINE_CONFIG_DERIVED( skattva, skattv )
 
-MACHINE_DRIVER_END
+	MCFG_DEVICE_REMOVE("hd63484")
+	MCFG_HD63484_ADD("hd63484", skattva_hd63484_intf)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( skattva )
-	MDRV_IMPORT_FROM( skattv )
+static MACHINE_CONFIG_START( backgamn, adp_state )
 
-	MDRV_DEVICE_REMOVE("hd63484")
-	MDRV_HD63484_ADD("hd63484", skattva_hd63484_intf)
-MACHINE_DRIVER_END
+	MCFG_CPU_ADD("maincpu", M68000, 8000000)
+	MCFG_CPU_PROGRAM_MAP(backgamn_mem)
 
-static MACHINE_DRIVER_START( backgamn )
+	MCFG_DUART68681_ADD( "duart68681", XTAL_8_664MHz / 2, skattv_duart68681_config )
 
-	/* driver data */
-	MDRV_DRIVER_DATA(adp_state)
+	MCFG_MACHINE_START(skattv)
+	MCFG_MACHINE_RESET(skattv)
 
-	MDRV_CPU_ADD("maincpu", M68000, 8000000)
-	MDRV_CPU_PROGRAM_MAP(backgamn_mem)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(640, 480)
+	MCFG_SCREEN_VISIBLE_AREA(0, 640-1, 0, 480-1)
+	MCFG_PALETTE_LENGTH(0x10)
 
-	MDRV_DUART68681_ADD( "duart68681", XTAL_8_664MHz / 2, skattv_duart68681_config )
+//  MCFG_PALETTE_INIT(adp)
+	MCFG_VIDEO_START(adp)
+	MCFG_VIDEO_UPDATE(adp)
 
-	MDRV_MACHINE_START(skattv)
-	MDRV_MACHINE_RESET(skattv)
+	MCFG_HD63484_ADD("hd63484", adp_hd63484_intf)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(640, 480)
-	MDRV_SCREEN_VISIBLE_AREA(0, 640-1, 0, 480-1)
-	MDRV_PALETTE_LENGTH(0x10)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("aysnd", AY8910, 3686400/2)
+	MCFG_SOUND_CONFIG(ay8910_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.10)
 
-//  MDRV_PALETTE_INIT(adp)
-	MDRV_VIDEO_START(adp)
-	MDRV_VIDEO_UPDATE(adp)
+MACHINE_CONFIG_END
 
-	MDRV_HD63484_ADD("hd63484", adp_hd63484_intf)
+static MACHINE_CONFIG_DERIVED( funland, skattv )
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(funland_mem)
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("aysnd", AY8910, 3686400/2)
-	MDRV_SOUND_CONFIG(ay8910_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.10)
+	MCFG_PALETTE_LENGTH(0x100)
+	MCFG_PALETTE_INIT(all_black)
+MACHINE_CONFIG_END
 
-MACHINE_DRIVER_END
-
-static MACHINE_DRIVER_START( funland )
-	MDRV_IMPORT_FROM( skattv )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(funland_mem)
-
-	MDRV_PALETTE_LENGTH(0x100)
-	MDRV_PALETTE_INIT(all_black)
-MACHINE_DRIVER_END
-
-static MACHINE_DRIVER_START( fstation )
-	MDRV_IMPORT_FROM( skattv )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(fstation_mem)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( fstation, skattv )
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(fstation_mem)
+MACHINE_CONFIG_END
 
 
 ROM_START( quickjac )

@@ -59,18 +59,10 @@ Known issues:
 #include "emu.h"
 #include "cpu/m6502/m6502.h"
 #include "sound/samples.h"
-
-extern UINT8 *tankbatt_bulletsram;
-extern size_t tankbatt_bulletsram_size;
+#include "includes/tankbatt.h"
 
 static int tankbatt_nmi_enable; /* No need to init this - the game will set it on reset */
 static int tankbatt_sound_enable;
-
-extern WRITE8_HANDLER( tankbatt_videoram_w );
-
-extern PALETTE_INIT( tankbatt );
-extern VIDEO_START( tankbatt );
-extern VIDEO_UPDATE( tankbatt );
 
 static WRITE8_HANDLER( tankbatt_led_w )
 {
@@ -121,14 +113,14 @@ static WRITE8_HANDLER( tankbatt_sh_expl_w )
 {
 	if (tankbatt_sound_enable)
 	{
-		running_device *samples = space->machine->device("samples");
+		device_t *samples = space->machine->device("samples");
 		sample_start (samples, 1, 3, 0);
 	}
 }
 
 static WRITE8_HANDLER( tankbatt_sh_engine_w )
 {
-	running_device *samples = space->machine->device("samples");
+	device_t *samples = space->machine->device("samples");
 	if (tankbatt_sound_enable)
 	{
 		if (data)
@@ -143,7 +135,7 @@ static WRITE8_HANDLER( tankbatt_sh_fire_w )
 {
 	if (tankbatt_sound_enable)
 	{
-		running_device *samples = space->machine->device("samples");
+		device_t *samples = space->machine->device("samples");
 		sample_start (samples, 0, 0, 0);
 	}
 }
@@ -170,7 +162,7 @@ static ADDRESS_MAP_START( main_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x000f) AM_RAM AM_BASE(&tankbatt_bulletsram) AM_SIZE(&tankbatt_bulletsram_size)
 	AM_RANGE(0x0010, 0x01ff) AM_RAM
 	AM_RANGE(0x0200, 0x07ff) AM_RAM
-	AM_RANGE(0x0800, 0x0bff) AM_RAM_WRITE(tankbatt_videoram_w) AM_BASE_GENERIC(videoram)
+	AM_RANGE(0x0800, 0x0bff) AM_RAM_WRITE(tankbatt_videoram_w) AM_BASE_MEMBER(tankbatt_state, videoram)
 	AM_RANGE(0x0c00, 0x0c07) AM_READ(tankbatt_in0_r)
 	AM_RANGE(0x0c00, 0x0c01) AM_WRITE(tankbatt_led_w)
 	AM_RANGE(0x0c02, 0x0c02) AM_WRITE(tankbatt_coin_counter_w)
@@ -297,35 +289,35 @@ static const samples_interface tankbatt_samples_interface =
 
 
 
-static MACHINE_DRIVER_START( tankbatt )
+static MACHINE_CONFIG_START( tankbatt, tankbatt_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6502, 1000000)	/* 1 MHz ???? */
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_VBLANK_INT("screen", tankbatt_interrupt)
+	MCFG_CPU_ADD("maincpu", M6502, 1000000)	/* 1 MHz ???? */
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_VBLANK_INT("screen", tankbatt_interrupt)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(tankbatt)
-	MDRV_PALETTE_LENGTH(256*2)
+	MCFG_GFXDECODE(tankbatt)
+	MCFG_PALETTE_LENGTH(256*2)
 
-	MDRV_PALETTE_INIT(tankbatt)
-	MDRV_VIDEO_START(tankbatt)
-	MDRV_VIDEO_UPDATE(tankbatt)
+	MCFG_PALETTE_INIT(tankbatt)
+	MCFG_VIDEO_START(tankbatt)
+	MCFG_VIDEO_UPDATE(tankbatt)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("samples", SAMPLES, 0)
-	MDRV_SOUND_CONFIG(tankbatt_samples_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("samples", SAMPLES, 0)
+	MCFG_SOUND_CONFIG(tankbatt_samples_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+MACHINE_CONFIG_END
 
 
 

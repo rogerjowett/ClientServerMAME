@@ -70,6 +70,7 @@ sg1_b.e1       4096     0x92ef3c13      D2732D
 #include "sound/ay8910.h"
 #include "sound/okim6295.h"
 #include "sound/2203intf.h"
+#include "machine/nvram.h"
 
 #define CLK_1	XTAL_20MHz
 #define CLK_2	XTAL_3_579545MHz
@@ -357,7 +358,7 @@ ADDRESS_MAP_END
 static ADDRESS_MAP_START( slave_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x2fff) AM_ROM
 	AM_RANGE(0x3000, 0x3fff) AM_ROM //sound rom tested for the post check
-	AM_RANGE(0x4000, 0x43ff) AM_RAM AM_BASE_SIZE_GENERIC(nvram) //backup ram
+	AM_RANGE(0x4000, 0x43ff) AM_RAM AM_SHARE("nvram") //backup ram
 	AM_RANGE(0x5000, 0x5003) AM_DEVREADWRITE("ppi8255_0", ppi8255_r, ppi8255_w)	/* I/O Ports */
 	AM_RANGE(0x6000, 0x6003) AM_DEVREADWRITE("ppi8255_1", ppi8255_r, ppi8255_w)	/* I/O Ports */
 	AM_RANGE(0x7000, 0x73ff) AM_RAM AM_SHARE("share1")
@@ -377,7 +378,7 @@ static WRITE8_HANDLER( kingdrbb_lamps_w )
 static ADDRESS_MAP_START( slave_1986_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x2fff) AM_ROM
 	AM_RANGE(0x3000, 0x3fff) AM_ROM //sound rom tested for the post check
-	AM_RANGE(0x4000, 0x47ff) AM_RAM AM_BASE_SIZE_GENERIC(nvram) //backup ram
+	AM_RANGE(0x4000, 0x47ff) AM_RAM AM_SHARE("nvram") //backup ram
 	AM_RANGE(0x5000, 0x5003) AM_DEVREADWRITE("ppi8255_0", ppi8255_r, ppi8255_w)	/* I/O Ports */
 //  AM_RANGE(0x6000, 0x6003) AM_DEVREADWRITE("ppi8255_1", ppi8255_r, ppi8255_w) /* I/O Ports */
 	AM_RANGE(0x7000, 0x73ff) AM_RAM AM_SHARE("share1")
@@ -901,9 +902,9 @@ static const ym2203_interface cowrace_ym2203_interface =
 		AY8910_LEGACY_OUTPUT,
 		AY8910_DEFAULT_LOADS,
 		DEVCB_HANDLER(sound_cmd_r),									// read A
-		DEVCB_DEVICE_HANDLER("oki", okim6295_r),					// read B
+		DEVCB_DEVICE_MEMBER("oki", okim6295_device, read),			// read B
 		DEVCB_NULL,													// write A
-		DEVCB_DEVICE_HANDLER("oki", okim6295_w)						// write B
+		DEVCB_DEVICE_MEMBER("oki", okim6295_device, write)			// write B
 	},
 	NULL
 };
@@ -935,8 +936,8 @@ static PALETTE_INIT(kingdrby)
 
 static PALETTE_INIT(kingdrbb)
 {
-	UINT8 *raw_prom = memory_region(machine, "raw_prom");
-	UINT8 *prom = memory_region(machine, "proms");
+	UINT8 *raw_prom = machine->region("raw_prom")->base();
+	UINT8 *prom = machine->region("proms")->base();
 	int	bit0, bit1, bit2 , r, g, b;
 	int	i;
 
@@ -965,81 +966,79 @@ static PALETTE_INIT(kingdrbb)
 	}
 }
 
-static MACHINE_DRIVER_START( kingdrby )
-	MDRV_CPU_ADD("master", Z80, CLK_2)
-	MDRV_CPU_PROGRAM_MAP(master_map)
-	MDRV_CPU_IO_MAP(master_io_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+static MACHINE_CONFIG_START( kingdrby, driver_device )
+	MCFG_CPU_ADD("master", Z80, CLK_2)
+	MCFG_CPU_PROGRAM_MAP(master_map)
+	MCFG_CPU_IO_MAP(master_io_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("slave", Z80, CLK_2)
-	MDRV_CPU_PROGRAM_MAP(slave_map)
-	MDRV_CPU_IO_MAP(slave_io_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("slave", Z80, CLK_2)
+	MCFG_CPU_PROGRAM_MAP(slave_map)
+	MCFG_CPU_IO_MAP(slave_io_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("soundcpu", Z80, CLK_2)
-	MDRV_CPU_PROGRAM_MAP(sound_map)
-	MDRV_CPU_IO_MAP(sound_io_map)
-	MDRV_CPU_PERIODIC_INT(irq0_line_hold,1000) /* guess, controls ay8910 tempo.*/
+	MCFG_CPU_ADD("soundcpu", Z80, CLK_2)
+	MCFG_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_IO_MAP(sound_io_map)
+	MCFG_CPU_PERIODIC_INT(irq0_line_hold,1000) /* guess, controls ay8910 tempo.*/
 
-	MDRV_QUANTUM_PERFECT_CPU("master")
+	MCFG_QUANTUM_PERFECT_CPU("master")
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
-	MDRV_PPI8255_ADD( "ppi8255_0", ppi8255_intf[0] )
-	MDRV_PPI8255_ADD( "ppi8255_1", ppi8255_intf[1] )
+	MCFG_PPI8255_ADD( "ppi8255_0", ppi8255_intf[0] )
+	MCFG_PPI8255_ADD( "ppi8255_1", ppi8255_intf[1] )
 
-	MDRV_GFXDECODE(kingdrby)
-	MDRV_PALETTE_LENGTH(0x200)
-	MDRV_PALETTE_INIT(kingdrby)
+	MCFG_GFXDECODE(kingdrby)
+	MCFG_PALETTE_LENGTH(0x200)
+	MCFG_PALETTE_INIT(kingdrby)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(256, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 256-1, 0, 224-1)	/* controlled by CRTC */
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(256, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 256-1, 0, 224-1)	/* controlled by CRTC */
 
-	MDRV_VIDEO_START(kingdrby)
-	MDRV_VIDEO_UPDATE(kingdrby)
+	MCFG_VIDEO_START(kingdrby)
+	MCFG_VIDEO_UPDATE(kingdrby)
 
-	MDRV_MC6845_ADD("crtc", MC6845, CLK_1/32, mc6845_intf)	/* 53.333 Hz. guess */
+	MCFG_MC6845_ADD("crtc", MC6845, CLK_1/32, mc6845_intf)	/* 53.333 Hz. guess */
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("aysnd", AY8910, CLK_1/8)	/* guess */
-	MDRV_SOUND_CONFIG(ay8910_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("aysnd", AY8910, CLK_1/8)	/* guess */
+	MCFG_SOUND_CONFIG(ay8910_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( kingdrbb )
-	MDRV_IMPORT_FROM( kingdrby )
+static MACHINE_CONFIG_DERIVED( kingdrbb, kingdrby )
 
-	MDRV_CPU_MODIFY("slave")
-	MDRV_CPU_PROGRAM_MAP(slave_1986_map)
+	MCFG_CPU_MODIFY("slave")
+	MCFG_CPU_PROGRAM_MAP(slave_1986_map)
 
-	MDRV_PALETTE_INIT(kingdrbb)
+	MCFG_PALETTE_INIT(kingdrbb)
 
-	MDRV_PPI8255_RECONFIG( "ppi8255_0", ppi8255_1986_intf[0] )
-	MDRV_PPI8255_RECONFIG( "ppi8255_1", ppi8255_1986_intf[1] )
-MACHINE_DRIVER_END
+	MCFG_PPI8255_RECONFIG( "ppi8255_0", ppi8255_1986_intf[0] )
+	MCFG_PPI8255_RECONFIG( "ppi8255_1", ppi8255_1986_intf[1] )
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( cowrace )
-	MDRV_IMPORT_FROM( kingdrbb )
+static MACHINE_CONFIG_DERIVED( cowrace, kingdrbb )
 
-	MDRV_CPU_MODIFY("soundcpu")
-	MDRV_CPU_PROGRAM_MAP(cowrace_sound_map)
-	MDRV_CPU_IO_MAP(cowrace_sound_io)
+	MCFG_CPU_MODIFY("soundcpu")
+	MCFG_CPU_PROGRAM_MAP(cowrace_sound_map)
+	MCFG_CPU_IO_MAP(cowrace_sound_io)
 
-	MDRV_GFXDECODE(cowrace)
-	MDRV_PALETTE_INIT(kingdrby)
+	MCFG_GFXDECODE(cowrace)
+	MCFG_PALETTE_INIT(kingdrby)
 
-	MDRV_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
+	MCFG_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
 
-	MDRV_SOUND_REPLACE("aysnd", YM2203, 3000000)
-	MDRV_SOUND_CONFIG(cowrace_ym2203_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
-MACHINE_DRIVER_END
+	MCFG_SOUND_REPLACE("aysnd", YM2203, 3000000)
+	MCFG_SOUND_CONFIG(cowrace_ym2203_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
+MACHINE_CONFIG_END
 
 ROM_START( kingdrby )
 	ROM_REGION( 0x3000, "master", 0 )

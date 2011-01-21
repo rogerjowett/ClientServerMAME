@@ -13,12 +13,11 @@
 #include "machine/msm8251.h"
 #include "devices/messram.h"
 
-class fk1_state
+class fk1_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, fk1_state(machine)); }
-
-	fk1_state(running_machine &machine) { }
+	fk1_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	UINT8 video_rol;
 	UINT8 int_vector;
@@ -165,7 +164,7 @@ static WRITE8_DEVICE_HANDLER (fk1_ppi_3_a_w )
 }
 static WRITE8_DEVICE_HANDLER (fk1_ppi_3_b_w )
 {
-	fk1_state *state = (fk1_state *)device->machine->driver_data;
+	fk1_state *state = device->machine->driver_data<fk1_state>();
 
 	state->video_rol = data;
 }
@@ -181,7 +180,7 @@ static READ8_DEVICE_HANDLER (fk1_ppi_3_a_r )
 }
 static READ8_DEVICE_HANDLER (fk1_ppi_3_b_r )
 {
-	fk1_state *state = (fk1_state *)device->machine->driver_data;
+	fk1_state *state = device->machine->driver_data<fk1_state>();
 
 	return state->video_rol;
 }
@@ -254,7 +253,7 @@ static WRITE8_HANDLER( fk1_intr_w )
 
 static READ8_HANDLER( fk1_bank_ram_r )
 {
-	const address_space *space_mem = cputag_get_address_space(space->machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space_mem = cputag_get_address_space(space->machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 	memory_install_write_bank(space_mem, 0x0000, 0x3fff, 0, 0, "bank1");
 	memory_set_bankptr(space->machine, "bank1", messram_get_ptr(space->machine->device("messram")));
 	memory_set_bankptr(space->machine, "bank2", messram_get_ptr(space->machine->device("messram")) + 0x4000);
@@ -263,9 +262,9 @@ static READ8_HANDLER( fk1_bank_ram_r )
 
 static READ8_HANDLER( fk1_bank_rom_r )
 {
-	const address_space *space_mem = cputag_get_address_space(space->machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space_mem = cputag_get_address_space(space->machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 	memory_unmap_write(space_mem, 0x0000, 0x3fff, 0, 0);
-	memory_set_bankptr(space->machine, "bank1", memory_region(space->machine, "maincpu"));
+	memory_set_bankptr(space->machine, "bank1", space->machine->region("maincpu")->base());
 	memory_set_bankptr(space->machine, "bank2", messram_get_ptr(space->machine->device("messram")) + 0x10000);
 	return 0;
 }
@@ -341,7 +340,7 @@ INPUT_PORTS_END
 
 static TIMER_CALLBACK(keyboard_callback)
 {
-	fk1_state *state = (fk1_state *)machine->driver_data;
+	fk1_state *state = machine->driver_data<fk1_state>();
 
 	if (input_port_read(machine, "LINE0")) {
 		state->int_vector = 6;
@@ -362,7 +361,7 @@ static TIMER_CALLBACK(keyboard_callback)
 
 static IRQ_CALLBACK (fk1_irq_callback)
 {
-	fk1_state *state = (fk1_state *)device->machine->driver_data;
+	fk1_state *state = device->machine->driver_data<fk1_state>();
 
 	logerror("IRQ %02x\n", state->int_vector*2);
 	return state->int_vector * 2;
@@ -370,7 +369,7 @@ static IRQ_CALLBACK (fk1_irq_callback)
 
 static TIMER_CALLBACK( vsync_callback )
 {
-	fk1_state *state = (fk1_state *)machine->driver_data;
+	fk1_state *state = machine->driver_data<fk1_state>();
 
 	state->int_vector = 3;
 	cputag_set_input_line(machine, "maincpu", 0, HOLD_LINE);
@@ -379,9 +378,9 @@ static TIMER_CALLBACK( vsync_callback )
 
 static MACHINE_RESET(fk1)
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 	memory_unmap_write(space, 0x0000, 0x3fff, 0, 0);
-	memory_set_bankptr(machine, "bank1", memory_region(machine, "maincpu")); // ROM
+	memory_set_bankptr(machine, "bank1", machine->region("maincpu")->base()); // ROM
 	memory_set_bankptr(machine, "bank2", messram_get_ptr(machine->device("messram")) + 0x10000); // VRAM
 	memory_set_bankptr(machine, "bank3", messram_get_ptr(machine->device("messram")) + 0x8000);
 	memory_set_bankptr(machine, "bank4", messram_get_ptr(machine->device("messram")) + 0xc000);
@@ -397,7 +396,7 @@ static MACHINE_START( fk1 )
 
 static VIDEO_UPDATE( fk1 )
 {
-	fk1_state *state = (fk1_state *)screen->machine->driver_data;
+	fk1_state *state = screen->machine->driver_data<fk1_state>();
 	UINT8 code;
 	int y, x, b;
 	UINT8 *ram = messram_get_ptr(screen->machine->device("messram"));
@@ -416,41 +415,39 @@ static VIDEO_UPDATE( fk1 )
 	return 0;
 }
 
-static MACHINE_DRIVER_START( fk1 )
-
-	MDRV_DRIVER_DATA( fk1_state )
+static MACHINE_CONFIG_START( fk1, fk1_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu",Z80, XTAL_8MHz / 2)
-	MDRV_CPU_PROGRAM_MAP(fk1_mem)
-	MDRV_CPU_IO_MAP(fk1_io)
+	MCFG_CPU_ADD("maincpu",Z80, XTAL_8MHz / 2)
+	MCFG_CPU_PROGRAM_MAP(fk1_mem)
+	MCFG_CPU_IO_MAP(fk1_io)
 
-	MDRV_MACHINE_START(fk1)
-	MDRV_MACHINE_RESET(fk1)
+	MCFG_MACHINE_START(fk1)
+	MCFG_MACHINE_RESET(fk1)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(50)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(512, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 512-1, 0, 256-1)
-	MDRV_PALETTE_LENGTH(2)
-	MDRV_PALETTE_INIT(black_and_white)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(50)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(512, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 512-1, 0, 256-1)
+	MCFG_PALETTE_LENGTH(2)
+	MCFG_PALETTE_INIT(black_and_white)
 
-	MDRV_VIDEO_UPDATE(fk1)
+	MCFG_VIDEO_UPDATE(fk1)
 
-	MDRV_PIT8253_ADD( "pit8253", fk1_pit8253_intf )
-	MDRV_I8255A_ADD( "ppi8255_1", fk1_ppi8255_interface_1 )
-	MDRV_I8255A_ADD( "ppi8255_2", fk1_ppi8255_interface_2 )
-	MDRV_I8255A_ADD( "ppi8255_3", fk1_ppi8255_interface_3 )
+	MCFG_PIT8253_ADD( "pit8253", fk1_pit8253_intf )
+	MCFG_I8255A_ADD( "ppi8255_1", fk1_ppi8255_interface_1 )
+	MCFG_I8255A_ADD( "ppi8255_2", fk1_ppi8255_interface_2 )
+	MCFG_I8255A_ADD( "ppi8255_3", fk1_ppi8255_interface_3 )
 	/* uart */
-	MDRV_MSM8251_ADD("uart", default_msm8251_interface)
+	MCFG_MSM8251_ADD("uart", default_msm8251_interface)
 
 	/* internal ram */
-	MDRV_RAM_ADD("messram")
-	MDRV_RAM_DEFAULT_SIZE("80K") // 64 + 16
-MACHINE_DRIVER_END
+	MCFG_RAM_ADD("messram")
+	MCFG_RAM_DEFAULT_SIZE("80K") // 64 + 16
+MACHINE_CONFIG_END
 
 /* ROM definition */
 ROM_START( fk1 )

@@ -24,10 +24,10 @@ struct _ym2151_state
 };
 
 
-INLINE ym2151_state *get_safe_token(running_device *device)
+INLINE ym2151_state *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
-	assert(device->type() == SOUND_YM2151);
+	assert(device->type() == YM2151);
 	return (ym2151_state *)downcast<legacy_device_base *>(device)->token();
 }
 

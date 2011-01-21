@@ -91,7 +91,7 @@ static const eeprom_interface eeprom_intf =
 /* A1, A5 and A6 don't go to the 053247. */
 static READ16_HANDLER( K053247_scattered_word_r )
 {
-	xexex_state *state = (xexex_state *)space->machine->driver_data;
+	xexex_state *state = space->machine->driver_data<xexex_state>();
 
 	if (offset & 0x0031)
 		return state->spriteram[offset];
@@ -104,7 +104,7 @@ static READ16_HANDLER( K053247_scattered_word_r )
 
 static WRITE16_HANDLER( K053247_scattered_word_w )
 {
-	xexex_state *state = (xexex_state *)space->machine->driver_data;
+	xexex_state *state = space->machine->driver_data<xexex_state>();
 
 	if (offset & 0x0031)
 		COMBINE_DATA(state->spriteram + offset);
@@ -120,7 +120,7 @@ static WRITE16_HANDLER( K053247_scattered_word_w )
 
 static void xexex_objdma( running_machine *machine, int limiter )
 {
-	xexex_state *state = (xexex_state *)machine->driver_data;
+	xexex_state *state = machine->driver_data<xexex_state>();
 	int counter, num_inactive;
 	UINT16 *src, *dst;
 
@@ -154,19 +154,19 @@ static void xexex_objdma( running_machine *machine, int limiter )
 
 static READ16_HANDLER( spriteram_mirror_r )
 {
-	xexex_state *state = (xexex_state *)space->machine->driver_data;
+	xexex_state *state = space->machine->driver_data<xexex_state>();
 	return state->spriteram[offset];
 }
 
 static WRITE16_HANDLER( spriteram_mirror_w )
 {
-	xexex_state *state = (xexex_state *)space->machine->driver_data;
+	xexex_state *state = space->machine->driver_data<xexex_state>();
 	COMBINE_DATA(state->spriteram + offset);
 }
 
 static READ16_HANDLER( xexex_waitskip_r )
 {
-	xexex_state *state = (xexex_state *)space->machine->driver_data;
+	xexex_state *state = space->machine->driver_data<xexex_state>();
 
 	if (cpu_get_pc(space->cpu) == 0x1158)
 	{
@@ -180,7 +180,7 @@ static READ16_HANDLER( xexex_waitskip_r )
 
 static void parse_control2( running_machine *machine )
 {
-	xexex_state *state = (xexex_state *)machine->driver_data;
+	xexex_state *state = machine->driver_data<xexex_state>();
 
 	/* bit 0  is data */
 	/* bit 1  is cs (active low) */
@@ -199,13 +199,13 @@ static void parse_control2( running_machine *machine )
 
 static READ16_HANDLER( control2_r )
 {
-	xexex_state *state = (xexex_state *)space->machine->driver_data;
+	xexex_state *state = space->machine->driver_data<xexex_state>();
 	return state->cur_control2;
 }
 
 static WRITE16_HANDLER( control2_w )
 {
-	xexex_state *state = (xexex_state *)space->machine->driver_data;
+	xexex_state *state = space->machine->driver_data<xexex_state>();
 	COMBINE_DATA(&state->cur_control2);
 	parse_control2(space->machine);
 }
@@ -213,7 +213,7 @@ static WRITE16_HANDLER( control2_w )
 
 static WRITE16_HANDLER( sound_cmd1_w )
 {
-	xexex_state *state = (xexex_state *)space->machine->driver_data;
+	xexex_state *state = space->machine->driver_data<xexex_state>();
 
 	if(ACCESSING_BITS_0_7)
 	{
@@ -234,7 +234,7 @@ static WRITE16_HANDLER( sound_cmd2_w )
 
 static WRITE16_HANDLER( sound_irq_w )
 {
-	xexex_state *state = (xexex_state *)space->machine->driver_data;
+	xexex_state *state = space->machine->driver_data<xexex_state>();
 	cpu_set_input_line(state->audiocpu, 0, HOLD_LINE);
 }
 
@@ -245,20 +245,20 @@ static READ16_HANDLER( sound_status_r )
 
 static void reset_sound_region(running_machine *machine)
 {
-	xexex_state *state = (xexex_state *)machine->driver_data;
+	xexex_state *state = machine->driver_data<xexex_state>();
 	memory_set_bank(machine, "bank2", state->cur_sound_region & 0x07);
 }
 
 static WRITE8_HANDLER( sound_bankswitch_w )
 {
-	xexex_state *state = (xexex_state *)space->machine->driver_data;
+	xexex_state *state = space->machine->driver_data<xexex_state>();
 	state->cur_sound_region = data & 7;
 	reset_sound_region(space->machine);
 }
 
-static void ym_set_mixing(running_device *device, double left, double right)
+static void ym_set_mixing(device_t *device, double left, double right)
 {
-	xexex_state *state = (xexex_state *)device->machine->driver_data;
+	xexex_state *state = device->machine->driver_data<xexex_state>();
 	flt_volume_set_volume(state->filter1l, (71.0 * left) / 55.0);
 	flt_volume_set_volume(state->filter1r, (71.0 * right) / 55.0);
 	flt_volume_set_volume(state->filter2l, (71.0 * left) / 55.0);
@@ -267,7 +267,7 @@ static void ym_set_mixing(running_device *device, double left, double right)
 
 static TIMER_CALLBACK( dmaend_callback )
 {
-	xexex_state *state = (xexex_state *)machine->driver_data;
+	xexex_state *state = machine->driver_data<xexex_state>();
 
 	if (state->cur_control2 & 0x0040)
 	{
@@ -286,7 +286,7 @@ static TIMER_CALLBACK( dmaend_callback )
 
 static INTERRUPT_GEN( xexex_interrupt )
 {
-	xexex_state *state = (xexex_state *)device->machine->driver_data;
+	xexex_state *state = device->machine->driver_data<xexex_state>();
 
 	if (state->suspension_active)
 	{
@@ -463,8 +463,8 @@ static STATE_POSTLOAD( xexex_postload )
 
 static MACHINE_START( xexex )
 {
-	xexex_state *state = (xexex_state *)machine->driver_data;
-	UINT8 *ROM = memory_region(machine, "audiocpu");
+	xexex_state *state = machine->driver_data<xexex_state>();
+	UINT8 *ROM = machine->region("audiocpu")->base();
 
 	memory_configure_bank(machine, "bank2", 0, 8, &ROM[0x10000], 0x4000);
 	memory_set_bank(machine, "bank2", 0);
@@ -500,7 +500,7 @@ static MACHINE_START( xexex )
 
 static MACHINE_RESET( xexex )
 {
-	xexex_state *state = (xexex_state *)machine->driver_data;
+	xexex_state *state = machine->driver_data<xexex_state>();
 	int i;
 
 	for (i = 0; i < 4; i++)
@@ -519,76 +519,73 @@ static MACHINE_RESET( xexex )
 	k054539_init_flags(machine->device("k054539"), K054539_REVERSE_STEREO);
 }
 
-static MACHINE_DRIVER_START( xexex )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(xexex_state)
+static MACHINE_CONFIG_START( xexex, xexex_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 16000000)	// 16MHz (32MHz xtal)
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_VBLANK_INT_HACK(xexex_interrupt,2)
+	MCFG_CPU_ADD("maincpu", M68000, 16000000)	// 16MHz (32MHz xtal)
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_VBLANK_INT_HACK(xexex_interrupt,2)
 
 	// 8MHz (PCB shows one 32MHz/18.432MHz xtal, reference: www.system16.com)
 	// more likely 32MHz since 18.432MHz yields 4.608MHz(too slow) or 9.216MHz(too fast) with integer divisors
-	MDRV_CPU_ADD("audiocpu", Z80, 8000000)
-	MDRV_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 8000000)
+	MCFG_CPU_PROGRAM_MAP(sound_map)
 
-	MDRV_QUANTUM_TIME(HZ(1920))
+	MCFG_QUANTUM_TIME(HZ(1920))
 
-	MDRV_MACHINE_START(xexex)
-	MDRV_MACHINE_RESET(xexex)
+	MCFG_MACHINE_START(xexex)
+	MCFG_MACHINE_RESET(xexex)
 
-	MDRV_EEPROM_ADD("eeprom", eeprom_intf)
+	MCFG_EEPROM_ADD("eeprom", eeprom_intf)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_HAS_HIGHLIGHTS | VIDEO_UPDATE_BEFORE_VBLANK)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_HAS_HIGHLIGHTS | VIDEO_UPDATE_BEFORE_VBLANK)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-//  MDRV_SCREEN_REFRESH_RATE(8000000/512/288)
-	MDRV_SCREEN_RAW_PARAMS(8000000, 384+33+40+55, 0, 383, 256+12+6+14, 0, 255)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(40, 40+384-1, 0, 0+256-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+//  MCFG_SCREEN_REFRESH_RATE(8000000/512/288)
+	MCFG_SCREEN_RAW_PARAMS(8000000, 384+33+40+55, 0, 383, 256+12+6+14, 0, 255)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(40, 40+384-1, 0, 0+256-1)
 
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(xexex)
-	MDRV_VIDEO_UPDATE(xexex)
+	MCFG_VIDEO_START(xexex)
+	MCFG_VIDEO_UPDATE(xexex)
 
-	MDRV_K056832_ADD("k056832", xexex_k056832_intf)
-	MDRV_K053246_ADD("k053246", xexex_k053246_intf)
-	MDRV_K053250_ADD("k053250", xexex_k053250_intf)
-	MDRV_K053251_ADD("k053251")
-	MDRV_K053252_ADD("k053252")
-	MDRV_K054338_ADD("k054338", xexex_k054338_intf)
+	MCFG_K056832_ADD("k056832", xexex_k056832_intf)
+	MCFG_K053246_ADD("k053246", xexex_k053246_intf)
+	MCFG_K053250_ADD("k053250", xexex_k053250_intf)
+	MCFG_K053251_ADD("k053251")
+	MCFG_K053252_ADD("k053252")
+	MCFG_K054338_ADD("k054338", xexex_k054338_intf)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, 4000000)
-	MDRV_SOUND_ROUTE(0, "filter1l", 0.50)
-	MDRV_SOUND_ROUTE(0, "filter1r", 0.50)
-	MDRV_SOUND_ROUTE(1, "filter2l", 0.50)
-	MDRV_SOUND_ROUTE(1, "filter2r", 0.50)
+	MCFG_SOUND_ADD("ymsnd", YM2151, 4000000)
+	MCFG_SOUND_ROUTE(0, "filter1l", 0.50)
+	MCFG_SOUND_ROUTE(0, "filter1r", 0.50)
+	MCFG_SOUND_ROUTE(1, "filter2l", 0.50)
+	MCFG_SOUND_ROUTE(1, "filter2r", 0.50)
 
-	MDRV_SOUND_ADD("k054539", K054539, 48000)
-	MDRV_SOUND_CONFIG(k054539_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("k054539", K054539, 48000)
+	MCFG_SOUND_CONFIG(k054539_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
 
-	MDRV_SOUND_ADD("filter1l", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ADD("filter1r", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
-	MDRV_SOUND_ADD("filter2l", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ADD("filter2r", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("filter1l", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ADD("filter1r", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("filter2l", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ADD("filter2r", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 
 ROM_START( xexex ) /* Europe, Version AA */
@@ -690,15 +687,15 @@ ROM_END
 
 static DRIVER_INIT( xexex )
 {
-	xexex_state *state = (xexex_state *)machine->driver_data;
+	xexex_state *state = machine->driver_data<xexex_state>();
 
 	state->strip_0x1a = 0;
 
 	if (!strcmp(machine->gamedrv->name, "xexex"))
 	{
 		// Invulnerability
-//      *(UINT16 *)(memory_region(machine, "maincpu") + 0x648d4) = 0x4a79;
-//      *(UINT16 *)(memory_region(machine, "maincpu") + 0x00008) = 0x5500;
+//      *(UINT16 *)(machine->region("maincpu")->base() + 0x648d4) = 0x4a79;
+//      *(UINT16 *)(machine->region("maincpu")->base() + 0x00008) = 0x5500;
 		state->strip_0x1a = 1;
 	}
 }

@@ -53,7 +53,7 @@ static READ8_HANDLER( adc_r );
 
 static WRITE16_HANDLER( adrst_w )
 {
-	lockon_state *state = (lockon_state *)space->machine->driver_data;
+	lockon_state *state = space->machine->driver_data<lockon_state>();
 	state->ctrl_reg = data & 0xff;
 
 	/* Bus mastering for shared access */
@@ -64,84 +64,84 @@ static WRITE16_HANDLER( adrst_w )
 
 static READ16_HANDLER( main_gnd_r )
 {
-	lockon_state *state = (lockon_state *)space->machine->driver_data;
-	const address_space *gndspace = cpu_get_address_space(state->ground, ADDRESS_SPACE_PROGRAM);
-	return memory_read_word(gndspace, V30_GND_ADDR | offset * 2);
+	lockon_state *state = space->machine->driver_data<lockon_state>();
+	address_space *gndspace = cpu_get_address_space(state->ground, ADDRESS_SPACE_PROGRAM);
+	return gndspace->read_word(V30_GND_ADDR | offset * 2);
 }
 
 static WRITE16_HANDLER( main_gnd_w )
 {
-	lockon_state *state = (lockon_state *)space->machine->driver_data;
-	const address_space *gndspace = cpu_get_address_space(state->ground, ADDRESS_SPACE_PROGRAM);
+	lockon_state *state = space->machine->driver_data<lockon_state>();
+	address_space *gndspace = cpu_get_address_space(state->ground, ADDRESS_SPACE_PROGRAM);
 
 	if (ACCESSING_BITS_0_7)
-		memory_write_byte(gndspace, V30_GND_ADDR | (offset * 2 + 0), data);
+		gndspace->write_byte(V30_GND_ADDR | (offset * 2 + 0), data);
 	if (ACCESSING_BITS_8_15)
-		memory_write_byte(gndspace, V30_GND_ADDR | (offset * 2 + 1), data >> 8);
+		gndspace->write_byte(V30_GND_ADDR | (offset * 2 + 1), data >> 8);
 }
 
 static READ16_HANDLER( main_obj_r )
 {
-	lockon_state *state = (lockon_state *)space->machine->driver_data;
-	const address_space *objspace = cpu_get_address_space(state->object, ADDRESS_SPACE_PROGRAM);
-	return memory_read_word(objspace, V30_OBJ_ADDR | offset * 2);
+	lockon_state *state = space->machine->driver_data<lockon_state>();
+	address_space *objspace = cpu_get_address_space(state->object, ADDRESS_SPACE_PROGRAM);
+	return objspace->read_word(V30_OBJ_ADDR | offset * 2);
 }
 
 static WRITE16_HANDLER( main_obj_w )
 {
-	lockon_state *state = (lockon_state *)space->machine->driver_data;
-	const address_space *objspace = cpu_get_address_space(state->object, ADDRESS_SPACE_PROGRAM);
+	lockon_state *state = space->machine->driver_data<lockon_state>();
+	address_space *objspace = cpu_get_address_space(state->object, ADDRESS_SPACE_PROGRAM);
 
 	if (ACCESSING_BITS_0_7)
-		memory_write_byte(objspace, V30_OBJ_ADDR | (offset * 2 + 0), data);
+		objspace->write_byte(V30_OBJ_ADDR | (offset * 2 + 0), data);
 	if (ACCESSING_BITS_8_15)
-		memory_write_byte(objspace, V30_OBJ_ADDR | (offset * 2 + 1), data >> 8);
+		objspace->write_byte(V30_OBJ_ADDR | (offset * 2 + 1), data >> 8);
 }
 
 static WRITE16_HANDLER( tst_w )
 {
-	lockon_state *state = (lockon_state *)space->machine->driver_data;
+	lockon_state *state = space->machine->driver_data<lockon_state>();
 
 	if (offset < 0x800)
 	{
-		const address_space *gndspace = cpu_get_address_space(state->ground, ADDRESS_SPACE_PROGRAM);
-		const address_space *objspace = cpu_get_address_space(state->object, ADDRESS_SPACE_PROGRAM);
+		address_space *gndspace = cpu_get_address_space(state->ground, ADDRESS_SPACE_PROGRAM);
+		address_space *objspace = cpu_get_address_space(state->object, ADDRESS_SPACE_PROGRAM);
 
 		if (ACCESSING_BITS_0_7)
-			memory_write_byte(gndspace, V30_GND_ADDR | (offset * 2 + 0), data);
+			gndspace->write_byte(V30_GND_ADDR | (offset * 2 + 0), data);
 		if (ACCESSING_BITS_8_15)
-			memory_write_byte(gndspace, V30_GND_ADDR | (offset * 2 + 1), data >> 8);
+			gndspace->write_byte(V30_GND_ADDR | (offset * 2 + 1), data >> 8);
 
 		if (ACCESSING_BITS_0_7)
-			memory_write_byte(objspace, V30_OBJ_ADDR | (offset * 2 + 0), data);
+			objspace->write_byte(V30_OBJ_ADDR | (offset * 2 + 0), data);
 		if (ACCESSING_BITS_8_15)
-			memory_write_byte(objspace, V30_OBJ_ADDR | (offset * 2 + 1), data >> 8);
+			objspace->write_byte(V30_OBJ_ADDR | (offset * 2 + 1), data >> 8);
 	}
 }
 
 static READ16_HANDLER( main_z80_r )
 {
-	lockon_state *state = (lockon_state *)space->machine->driver_data;
-	const address_space *sndspace = cpu_get_address_space(state->audiocpu, ADDRESS_SPACE_PROGRAM);
-	return 0xff00 | memory_read_byte(sndspace, offset);
+	lockon_state *state = space->machine->driver_data<lockon_state>();
+	address_space *sndspace = cpu_get_address_space(state->audiocpu, ADDRESS_SPACE_PROGRAM);
+	return 0xff00 | sndspace->read_byte(offset);
 }
 
 static WRITE16_HANDLER( main_z80_w )
 {
-	lockon_state *state = (lockon_state *)space->machine->driver_data;
-	const address_space *sndspace = cpu_get_address_space(state->audiocpu, ADDRESS_SPACE_PROGRAM);
-	memory_write_byte(sndspace, offset, data);
+	lockon_state *state = space->machine->driver_data<lockon_state>();
+	address_space *sndspace = cpu_get_address_space(state->audiocpu, ADDRESS_SPACE_PROGRAM);
+	sndspace->write_byte(offset, data);
 }
 
 static WRITE16_HANDLER( inten_w )
 {
-	lockon_state *state = (lockon_state *)space->machine->driver_data;
+	lockon_state *state = space->machine->driver_data<lockon_state>();
 	state->main_inten = 1;
 }
 
 static WRITE16_HANDLER( emres_w )
 {
-	lockon_state *state = (lockon_state *)space->machine->driver_data;
+	lockon_state *state = space->machine->driver_data<lockon_state>();
 	watchdog_reset(space->machine);
 	state->main_inten = 0;
 }
@@ -392,7 +392,7 @@ static WRITE8_HANDLER( sound_vol )
 #define LO_RI		100000.0
 #define LO_RP		100000.0
 
-	lockon_state *state = (lockon_state *)space->machine->driver_data;
+	lockon_state *state = space->machine->driver_data<lockon_state>();
 
 	static const double gains[16] =
 	{
@@ -426,9 +426,9 @@ static WRITE8_HANDLER( sound_vol )
 	flt_volume_set_volume(state->f2203_3r, rgain);
 }
 
-static void ym2203_irq(running_device *device, int irq)
+static void ym2203_irq(device_t *device, int irq)
 {
-	lockon_state *state = (lockon_state *)device->machine->driver_data;
+	lockon_state *state = device->machine->driver_data<lockon_state>();
 	cpu_set_input_line(state->audiocpu, 0, irq ? ASSERT_LINE : CLEAR_LINE );
 }
 
@@ -464,7 +464,7 @@ static const ym2203_interface ym2203_config =
 
 static MACHINE_START( lockon )
 {
-	lockon_state *state = (lockon_state *)machine->driver_data;
+	lockon_state *state = machine->driver_data<lockon_state>();
 
 	state->maincpu = machine->device("maincpu");
 	state->audiocpu = machine->device("audiocpu");
@@ -497,7 +497,7 @@ static MACHINE_START( lockon )
 
 static MACHINE_RESET( lockon )
 {
-	lockon_state *state = (lockon_state *)machine->driver_data;
+	lockon_state *state = machine->driver_data<lockon_state>();
 
 	state->ground_ctrl = 0;
 	state->scroll_h = 0;
@@ -517,70 +517,67 @@ static MACHINE_RESET( lockon )
 	state->main_inten = 0;
 }
 
-static MACHINE_DRIVER_START( lockon )
+static MACHINE_CONFIG_START( lockon, lockon_state )
 
-	/* driver data */
-	MDRV_DRIVER_DATA(lockon_state)
+	MCFG_CPU_ADD("maincpu", V30, XTAL_16MHz / 2)
+	MCFG_CPU_PROGRAM_MAP(main_v30)
 
-	MDRV_CPU_ADD("maincpu", V30, XTAL_16MHz / 2)
-	MDRV_CPU_PROGRAM_MAP(main_v30)
+	MCFG_CPU_ADD("ground", V30, XTAL_16MHz / 2)
+	MCFG_CPU_PROGRAM_MAP(ground_v30)
 
-	MDRV_CPU_ADD("ground", V30, XTAL_16MHz / 2)
-	MDRV_CPU_PROGRAM_MAP(ground_v30)
+	MCFG_CPU_ADD("object", V30, XTAL_16MHz / 2)
+	MCFG_CPU_PROGRAM_MAP(object_v30)
 
-	MDRV_CPU_ADD("object", V30, XTAL_16MHz / 2)
-	MDRV_CPU_PROGRAM_MAP(object_v30)
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL_16MHz / 4)
+	MCFG_CPU_PROGRAM_MAP(sound_prg)
+	MCFG_CPU_IO_MAP(sound_io)
 
-	MDRV_CPU_ADD("audiocpu", Z80, XTAL_16MHz / 4)
-	MDRV_CPU_PROGRAM_MAP(sound_prg)
-	MDRV_CPU_IO_MAP(sound_io)
+	MCFG_WATCHDOG_TIME_INIT(NSEC(PERIOD_OF_555_ASTABLE_NSEC(10000, 4700, 10000e-12) * 4096))
+	MCFG_QUANTUM_TIME(HZ(600))
 
-	MDRV_WATCHDOG_TIME_INIT(NSEC(PERIOD_OF_555_ASTABLE_NSEC(10000, 4700, 10000e-12) * 4096))
-	MDRV_QUANTUM_TIME(HZ(600))
+	MCFG_MACHINE_START(lockon)
+	MCFG_MACHINE_RESET(lockon)
 
-	MDRV_MACHINE_START(lockon)
-	MDRV_MACHINE_RESET(lockon)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_AFTER_VBLANK)
 
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_UPDATE_AFTER_VBLANK)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_RAW_PARAMS(PIXEL_CLOCK, HTOTAL, HBEND, HBSTART, VTOTAL, VBEND, VBSTART)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_RAW_PARAMS(PIXEL_CLOCK, HTOTAL, HBEND, HBSTART, VTOTAL, VBEND, VBSTART)
+	MCFG_GFXDECODE(lockon)
+	MCFG_PALETTE_INIT(lockon)
+	MCFG_PALETTE_LENGTH(1024 + 2048)
 
-	MDRV_GFXDECODE(lockon)
-	MDRV_PALETTE_INIT(lockon)
-	MDRV_PALETTE_LENGTH(1024 + 2048)
+	MCFG_VIDEO_START(lockon)
+	MCFG_VIDEO_UPDATE(lockon)
+	MCFG_VIDEO_EOF(lockon)
 
-	MDRV_VIDEO_START(lockon)
-	MDRV_VIDEO_UPDATE(lockon)
-	MDRV_VIDEO_EOF(lockon)
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SOUND_ADD("ymsnd", YM2203, XTAL_16MHz / 4)
+	MCFG_SOUND_CONFIG(ym2203_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.40)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.40)
+	MCFG_SOUND_ROUTE(1, "f2203.1l", 1.0)
+	MCFG_SOUND_ROUTE(1, "f2203.1r", 1.0)
+	MCFG_SOUND_ROUTE(2, "f2203.2l", 1.0)
+	MCFG_SOUND_ROUTE(2, "f2203.2r", 1.0)
+	MCFG_SOUND_ROUTE(3, "f2203.3l", 1.0)
+	MCFG_SOUND_ROUTE(3, "f2203.3r", 1.0)
 
-	MDRV_SOUND_ADD("ymsnd", YM2203, XTAL_16MHz / 4)
-	MDRV_SOUND_CONFIG(ym2203_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.40)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.40)
-	MDRV_SOUND_ROUTE(1, "f2203.1l", 1.0)
-	MDRV_SOUND_ROUTE(1, "f2203.1r", 1.0)
-	MDRV_SOUND_ROUTE(2, "f2203.2l", 1.0)
-	MDRV_SOUND_ROUTE(2, "f2203.2r", 1.0)
-	MDRV_SOUND_ROUTE(3, "f2203.3l", 1.0)
-	MDRV_SOUND_ROUTE(3, "f2203.3r", 1.0)
-
-	MDRV_SOUND_ADD("f2203.1l", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ADD("f2203.1r", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
-	MDRV_SOUND_ADD("f2203.2l", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ADD("f2203.2r", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
-	MDRV_SOUND_ADD("f2203.3l", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ADD("f2203.3r", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("f2203.1l", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ADD("f2203.1r", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("f2203.2l", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ADD("f2203.2r", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("f2203.3l", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ADD("f2203.3r", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 
 /*************************************

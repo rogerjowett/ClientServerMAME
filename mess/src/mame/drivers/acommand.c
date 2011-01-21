@@ -57,7 +57,6 @@ JALCF1   BIN     1,048,576  02-07-99  1:11a JALCF1.BIN
 
 #include "emu.h"
 #include "cpu/m68000/m68000.h"
-#include "deprecat.h"
 #include "sound/okim6295.h"
 
 static tilemap_t *tx_tilemap,*bg_tilemap;
@@ -293,10 +292,10 @@ static READ16_HANDLER(ac_devices_r)
 			return input_port_read(space->machine, "IN0");
 		case 0x0014/2:
 		case 0x0016/2:
-			return okim6295_r(space->machine->device("oki1"),0);
+			return space->machine->device<okim6295_device>("oki1")->read(*space,0);
 		case 0x0018/2:
 		case 0x001a/2:
-			return okim6295_r(space->machine->device("oki2"),0);
+			return space->machine->device<okim6295_device>("oki2")->read(*space,0);
 		case 0x0040/2:
 			/*
                 "Upper switch / Under Switch"
@@ -385,12 +384,18 @@ static WRITE16_HANDLER(ac_devices_w)
 		case 0x14/2:
 		case 0x16/2:
 			if(ACCESSING_BITS_0_7)
-				okim6295_w(space->machine->device("oki1"),0,data);
+			{
+				okim6295_device *oki1 = space->machine->device<okim6295_device>("oki1");
+				oki1->write(*space,0,data);
+			}
 			break;
 		case 0x18/2:
 		case 0x1a/2:
 			if(ACCESSING_BITS_0_7)
-				okim6295_w(space->machine->device("oki2"),0,data);
+			{
+				okim6295_device *oki2 = space->machine->device<okim6295_device>("oki2");
+				oki2->write(*space,0,data);
+			}
 			break;
 		case 0x1c/2:
 			/*IRQ mask?*/
@@ -549,46 +554,48 @@ static GFXDECODE_START( acommand )
 	GFXDECODE_ENTRY( "gfx3", 0, tilelayout, 0x1800, 256 )
 GFXDECODE_END
 
-static INTERRUPT_GEN( acommand_irq )
+static TIMER_DEVICE_CALLBACK( acommand_scanline )
 {
-	switch ( cpu_getiloops(device) )
-	{
-		case 0:		cpu_set_input_line(device, 3, HOLD_LINE);
-		case 1:		cpu_set_input_line(device, 2, HOLD_LINE);
-	}
+	int scanline = param;
+
+	if(scanline == 240) // vblank-out irq
+		cputag_set_input_line(timer.machine, "maincpu", 2, HOLD_LINE);
+
+	if(scanline == 0) // vblank-in irq? (update palette and layers)
+		cputag_set_input_line(timer.machine, "maincpu", 3, HOLD_LINE);
 }
 
-static MACHINE_DRIVER_START( acommand )
+static MACHINE_CONFIG_START( acommand, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu",M68000,12000000)
-	MDRV_CPU_PROGRAM_MAP(acommand_map)
-	MDRV_CPU_VBLANK_INT_HACK(acommand_irq,2)
+	MCFG_CPU_ADD("maincpu",M68000,12000000)
+	MCFG_CPU_PROGRAM_MAP(acommand_map)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", acommand_scanline, "screen", 0, 1)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
-	MDRV_GFXDECODE(acommand)
-	MDRV_PALETTE_LENGTH(0x4000)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_GFXDECODE(acommand)
+	MCFG_PALETTE_LENGTH(0x4000)
 
-	MDRV_VIDEO_START(acommand)
-	MDRV_VIDEO_UPDATE(acommand)
+	MCFG_VIDEO_START(acommand)
+	MCFG_VIDEO_UPDATE(acommand)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_OKIM6295_ADD("oki1", 2112000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+	MCFG_OKIM6295_ADD("oki1", 2112000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
 
-	MDRV_OKIM6295_ADD("oki2", 2112000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki2", 2112000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 /***************************************************************************
 

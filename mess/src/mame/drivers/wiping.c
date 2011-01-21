@@ -101,7 +101,7 @@ ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( sound_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x1fff) AM_ROM
-	AM_RANGE(0x4000, 0x7fff) AM_WRITE(wiping_sound_w) AM_BASE(&wiping_soundregs)
+	AM_RANGE(0x4000, 0x7fff) AM_DEVWRITE("wiping", wiping_sound_w)
 	AM_RANGE(0x9000, 0x93ff) AM_READWRITE(shared1_r,shared1_w)
 	AM_RANGE(0x9800, 0x9bff) AM_READWRITE(shared2_r,shared2_w)
 	AM_RANGE(0xa001, 0xa001) AM_WRITE(interrupt_enable_w)
@@ -278,37 +278,37 @@ GFXDECODE_END
 
 
 
-static MACHINE_DRIVER_START( wiping )
+static MACHINE_CONFIG_START( wiping, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80,18432000/6)	/* 3.072 MHz */
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80,18432000/6)	/* 3.072 MHz */
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80,18432000/6)	/* 3.072 MHz */
-	MDRV_CPU_PROGRAM_MAP(sound_map)
-	MDRV_CPU_PERIODIC_INT(irq0_line_hold,120)	/* periodic interrupt, don't know about the frequency */
+	MCFG_CPU_ADD("audiocpu", Z80,18432000/6)	/* 3.072 MHz */
+	MCFG_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_PERIODIC_INT(irq0_line_hold,120)	/* periodic interrupt, don't know about the frequency */
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(36*8, 28*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 36*8-1, 0*8, 28*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(36*8, 28*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 36*8-1, 0*8, 28*8-1)
 
-	MDRV_GFXDECODE(wiping)
-	MDRV_PALETTE_LENGTH(64*4+64*4)
+	MCFG_GFXDECODE(wiping)
+	MCFG_PALETTE_LENGTH(64*4+64*4)
 
-	MDRV_PALETTE_INIT(wiping)
-	MDRV_VIDEO_UPDATE(wiping)
+	MCFG_PALETTE_INIT(wiping)
+	MCFG_VIDEO_UPDATE(wiping)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("wiping", WIPING, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("wiping", WIPING, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 

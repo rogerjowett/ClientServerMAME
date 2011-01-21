@@ -68,7 +68,7 @@
 
 static void update_interrupts(running_machine *machine)
 {
-	e01_state *state = (e01_state *)machine->driver_data;
+	e01_state *state = machine->driver_data<e01_state>();
 
 	cputag_set_input_line(machine, R65C102_TAG, INPUT_LINE_IRQ0, (state->via_irq || (state->hdc_ie & state->hdc_irq) || state->rtc_irq) ? ASSERT_LINE : CLEAR_LINE);
 	cputag_set_input_line(machine, R65C102_TAG, INPUT_LINE_NMI, (state->fdc_drq || (state->adlc_ie & state->adlc_irq)) ? ASSERT_LINE : CLEAR_LINE);
@@ -80,7 +80,7 @@ static void update_interrupts(running_machine *machine)
 
 static void network_irq_enable(running_machine *machine, int enabled)
 {
-	e01_state *state = (e01_state *)machine->driver_data;
+	e01_state *state = machine->driver_data<e01_state>();
 
 	state->adlc_ie = enabled;
 
@@ -93,7 +93,7 @@ static void network_irq_enable(running_machine *machine, int enabled)
 
 static void hdc_irq_enable(running_machine *machine, int enabled)
 {
-	e01_state *state = (e01_state *)machine->driver_data;
+	e01_state *state = machine->driver_data<e01_state>();
 
 	state->hdc_ie = enabled;
 
@@ -138,16 +138,10 @@ static WRITE8_DEVICE_HANDLER( floppy_w )
     */
 
 	/* floppy 1 select */
-	if (!BIT(data, 0))
-	{
-		wd17xx_set_drive(device, 0);
-	}
+	if (!BIT(data, 0)) wd17xx_set_drive(device, 0);
 
 	/* floppy 2 select */
-	if (!BIT(data, 1))
-	{
-		wd17xx_set_drive(device, 1);
-	}
+	if (!BIT(data, 1)) wd17xx_set_drive(device, 1);
 
 	/* floppy side select */
 	wd17xx_set_side(device, BIT(data, 2));
@@ -199,22 +193,26 @@ static WRITE8_HANDLER( hdc_irq_enable_w )
 
 static READ8_HANDLER( rtc_address_r )
 {
-	return mc146818_port_r(space, 0);
+	mc146818_device *rtc = space->machine->device<mc146818_device>(HD146818_TAG);
+	return rtc->read(*space, 0);
 }
 
 static WRITE8_HANDLER( rtc_address_w )
 {
-	mc146818_port_w(space, 0, data);
+	mc146818_device *rtc = space->machine->device<mc146818_device>(HD146818_TAG);
+	rtc->write(*space, 0, data);
 }
 
 static READ8_HANDLER( rtc_data_r )
 {
-	return mc146818_port_r(space, 1);
+	mc146818_device *rtc = space->machine->device<mc146818_device>(HD146818_TAG);
+	return rtc->read(*space, 1);
 }
 
 static WRITE8_HANDLER( rtc_data_w )
 {
-	mc146818_port_w(space, 1, data);
+	mc146818_device *rtc = space->machine->device<mc146818_device>(HD146818_TAG);
+	rtc->write(*space, 1, data);
 }
 
 /***************************************************************************
@@ -231,7 +229,7 @@ static ADDRESS_MAP_START( e01_mem, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0xfc04, 0xfc04) AM_MIRROR(0x00c3) AM_READWRITE(rtc_data_r, rtc_data_w)
 	AM_RANGE(0xfc08, 0xfc08) AM_MIRROR(0x00c0) AM_READ(ram_select_r) AM_DEVWRITE(WD2793_TAG, floppy_w)
 	AM_RANGE(0xfc0c, 0xfc0f) AM_MIRROR(0x00c0) AM_DEVREADWRITE(WD2793_TAG, wd17xx_r, wd17xx_w)
-	AM_RANGE(0xfc10, 0xfc1f) AM_MIRROR(0x00c0) AM_DEVREADWRITE(R6522_TAG, via_r, via_w)
+	AM_RANGE(0xfc10, 0xfc1f) AM_MIRROR(0x00c0) AM_DEVREADWRITE_MODERN(R6522_TAG, via6522_device, read, write)
 	AM_RANGE(0xfc20, 0xfc23) AM_MIRROR(0x00c0) AM_DEVREADWRITE(MC6854_TAG, mc6854_r, mc6854_w)
 	AM_RANGE(0xfc24, 0xfc24) AM_MIRROR(0x00c3) AM_READWRITE(network_irq_disable_r, network_irq_disable_w)
 	AM_RANGE(0xfc28, 0xfc28) AM_MIRROR(0x00c3) AM_READWRITE(network_irq_enable_r, network_irq_enable_w)
@@ -272,7 +270,7 @@ INPUT_PORTS_END
 /*
 static WRITE_LINE_DEVICE_HANDLER( rtc_irq_w )
 {
-    e01_state *driver_state = (e01_state *)device->machine->driver_data;
+    e01_state *driver_state = device->machine->driver_data<e01_state>();
 
     driver_state->rtc_irq = state;
 
@@ -281,7 +279,7 @@ static WRITE_LINE_DEVICE_HANDLER( rtc_irq_w )
 */
 static TIMER_DEVICE_CALLBACK( rtc_irq_hack )
 {
-	e01_state *state = (e01_state *)timer.machine->driver_data;
+	e01_state *state = timer.machine->driver_data<e01_state>();
 
 	state->rtc_irq = !state->rtc_irq;
 
@@ -294,7 +292,7 @@ static TIMER_DEVICE_CALLBACK( rtc_irq_hack )
 /*
 static WRITE_LINE_DEVICE_HANDLER( adlc_irq_w )
 {
-    e01_state *driver_state = (e01_state *)device->machine->driver_data;
+    e01_state *driver_state = device->machine->driver_data<e01_state>();
 
     driver_state->adlc_irq = state;
 
@@ -315,7 +313,7 @@ static const mc6854_interface adlc_intf =
 
 static WRITE_LINE_DEVICE_HANDLER( via_irq_w )
 {
-	e01_state *driver_state = (e01_state *)device->machine->driver_data;
+	e01_state *driver_state = device->machine->driver_data<e01_state>();
 
 	driver_state->via_irq = state;
 
@@ -350,7 +348,7 @@ static const floppy_config e01_floppy_config =
 	DEVCB_NULL,
 	DEVCB_NULL,
 	DEVCB_NULL,
-	FLOPPY_STANDARD_5_25_DSHD,
+	FLOPPY_STANDARD_3_5_DSDD, // NEC FD1036 A
 	FLOPPY_OPTIONS_NAME(default),
 	NULL
 };
@@ -361,7 +359,7 @@ static const floppy_config e01_floppy_config =
 
 static WRITE_LINE_DEVICE_HANDLER( fdc_drq_w )
 {
-	e01_state *driver_state = (e01_state *)device->machine->driver_data;
+	e01_state *driver_state = device->machine->driver_data<e01_state>();
 
 	driver_state->fdc_drq = state;
 
@@ -386,10 +384,10 @@ static const wd17xx_interface fdc_intf =
 
 static MACHINE_START( e01 )
 {
-	e01_state *state = (e01_state *)machine->driver_data;
+	e01_state *state = machine->driver_data<e01_state>();
 
 	UINT8 *ram = messram_get_ptr(machine->device("messram"));
-	UINT8 *rom = memory_region(machine, R65C102_TAG);
+	UINT8 *rom = machine->region(R65C102_TAG)->base();
 
 	/* setup memory banking */
 	memory_configure_bank(machine, "bank1", 0, 1, ram, 0);
@@ -405,9 +403,6 @@ static MACHINE_START( e01 )
 
 	memory_configure_bank(machine, "bank4", 0, 1, ram + 0xfd00, 0);
 	memory_set_bank(machine, "bank4", 0);
-
-	/* initialize RTC */
-	mc146818_init(machine, MC146818_STANDARD);
 
 	/* register for state saving */
 	state_save_register_global(machine, state->adlc_ie);
@@ -437,34 +432,32 @@ static MACHINE_RESET( e01 )
     MACHINE_DRIVER( e01 )
 -------------------------------------------------*/
 
-static MACHINE_DRIVER_START( e01 )
-	MDRV_DRIVER_DATA(e01_state)
-
+static MACHINE_CONFIG_START( e01, e01_state )
     /* basic machine hardware */
-	MDRV_CPU_ADD(R65C102_TAG, M65C02, 1000000) // Rockwell R65C102P3
-    MDRV_CPU_PROGRAM_MAP(e01_mem)
+	MCFG_CPU_ADD(R65C102_TAG, M65C02, 1000000) // Rockwell R65C102P3
+    MCFG_CPU_PROGRAM_MAP(e01_mem)
 
-    MDRV_MACHINE_START(e01)
-    MDRV_MACHINE_RESET(e01)
+    MCFG_MACHINE_START(e01)
+    MCFG_MACHINE_RESET(e01)
 
-	MDRV_NVRAM_HANDLER(mc146818)
+	MCFG_MC146818_ADD(HD146818_TAG, MC146818_STANDARD)
 
-	MDRV_TIMER_ADD_PERIODIC("rtc", rtc_irq_hack, HZ(2)) // HACK!
+	MCFG_TIMER_ADD_PERIODIC("rtc_hack", rtc_irq_hack, HZ(2)) // HACK!
 
 	/* video hardware */
-	MDRV_DEFAULT_LAYOUT( layout_e01 )
+	MCFG_DEFAULT_LAYOUT( layout_e01 )
 
 	/* devices */
-	MDRV_VIA6522_ADD(R6522_TAG, 100000, via_intf)
-	MDRV_MC6854_ADD(MC6854_TAG, adlc_intf)
-	MDRV_WD2793_ADD(WD2793_TAG, fdc_intf)
-	MDRV_FLOPPY_2_DRIVES_ADD(e01_floppy_config)
-//  MDRV_CENTRONICS_ADD(CENTRONICS_TAG, e01_centronics_config)
+	MCFG_VIA6522_ADD(R6522_TAG, 100000, via_intf)
+	MCFG_MC6854_ADD(MC6854_TAG, adlc_intf)
+	MCFG_WD2793_ADD(WD2793_TAG, fdc_intf)
+	MCFG_FLOPPY_2_DRIVES_ADD(e01_floppy_config)
+//  MCFG_CENTRONICS_ADD(CENTRONICS_TAG, e01_centronics_config)
 
 	/* internal ram */
-	MDRV_RAM_ADD("messram")
-	MDRV_RAM_DEFAULT_SIZE("64K")
-MACHINE_DRIVER_END
+	MCFG_RAM_ADD("messram")
+	MCFG_RAM_DEFAULT_SIZE("64K")
+MACHINE_CONFIG_END
 
 /***************************************************************************
     ROMS

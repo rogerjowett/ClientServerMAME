@@ -27,12 +27,11 @@
 #define IREMM15_VBSTART			(240)
 #define IREMM15_VBEND			(16)
 
-class m10_state
+class m10_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, m10_state(machine)); }
-
-	m10_state(running_machine &machine) { }
+	m10_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *             chargen;
@@ -57,10 +56,10 @@ public:
 	int                 last;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *ic8j1;
-	running_device *ic8j2;
-	running_device *samples;
+	device_t *maincpu;
+	device_t *ic8j1;
+	device_t *ic8j2;
+	device_t *samples;
 };
 
 

@@ -97,12 +97,11 @@ p2 ink doesn't always light up in test mode
 #include "emu.h"
 #include "cpu/z80/z80.h"
 
-class marinedt_state
+class marinedt_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, marinedt_state(machine)); }
-
-	marinedt_state(running_machine &machine) { }
+	marinedt_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *     tx_tileram;
@@ -122,7 +121,7 @@ public:
 
 static WRITE8_HANDLER( tx_tileram_w )
 {
-	marinedt_state *state = (marinedt_state *)space->machine->driver_data;
+	marinedt_state *state = space->machine->driver_data<marinedt_state>();
 
 	state->tx_tileram[offset] = data;
 	tilemap_mark_tile_dirty(state->tx_tilemap, offset);
@@ -130,7 +129,7 @@ static WRITE8_HANDLER( tx_tileram_w )
 
 static READ8_HANDLER( marinedt_port1_r )
 {
-	marinedt_state *state = (marinedt_state *)space->machine->driver_data;
+	marinedt_state *state = space->machine->driver_data<marinedt_state>();
 
 	//might need to be reversed for cocktail stuff
 
@@ -146,7 +145,7 @@ static READ8_HANDLER( marinedt_coll_r )
 	//----x--- obj1 to playfield collision
 	//-----xxx unused
 
-	marinedt_state *state = (marinedt_state *)space->machine->driver_data;
+	marinedt_state *state = space->machine->driver_data<marinedt_state>();
 	return state->coll | state->collh;
 }
 
@@ -160,8 +159,8 @@ static READ8_HANDLER( marinedt_obj1_x_r )
 	//xxxx---- unknown
 	//----xxxx x pos in tile ram
 
-	marinedt_state *state = (marinedt_state *)space->machine->driver_data;
-	UINT8 *RAM = memory_region(space->machine, "maincpu");
+	marinedt_state *state = space->machine->driver_data<marinedt_state>();
+	UINT8 *RAM = space->machine->region("maincpu")->base();
 
 	if (RAM[0x430e])
 		--state->cx;
@@ -178,7 +177,7 @@ static READ8_HANDLER( marinedt_obj1_yr_r )
 	//xxxx---- unknown
 	//----xxxx row in current screen quarter
 
-	marinedt_state *state = (marinedt_state *)space->machine->driver_data;
+	marinedt_state *state = space->machine->driver_data<marinedt_state>();
 
 	//has to be +1 if cx went over?
 	if (state->cx == 0x10)
@@ -195,18 +194,18 @@ static READ8_HANDLER( marinedt_obj1_yq_r )
 	//----xx-- unknown
 	//------xx screen quarter
 
-	marinedt_state *state = (marinedt_state *)space->machine->driver_data;
+	marinedt_state *state = space->machine->driver_data<marinedt_state>();
 	return state->cyq | (state->cyqh << 4);
 }
 
-static WRITE8_HANDLER( marinedt_obj1_a_w ) { marinedt_state *state = (marinedt_state *)space->machine->driver_data;    state->obj1_a = data; }
-static WRITE8_HANDLER( marinedt_obj1_x_w ) { marinedt_state *state = (marinedt_state *)space->machine->driver_data;    state->obj1_x = data; }
-static WRITE8_HANDLER( marinedt_obj1_y_w ) { marinedt_state *state = (marinedt_state *)space->machine->driver_data;    state->obj1_y = data; }
-static WRITE8_HANDLER( marinedt_obj2_a_w ) { marinedt_state *state = (marinedt_state *)space->machine->driver_data;    state->obj2_a = data; }
-static WRITE8_HANDLER( marinedt_obj2_x_w ) { marinedt_state *state = (marinedt_state *)space->machine->driver_data;    state->obj2_x = data; }
-static WRITE8_HANDLER( marinedt_obj2_y_w ) { marinedt_state *state = (marinedt_state *)space->machine->driver_data;    state->obj2_y = data; }
+static WRITE8_HANDLER( marinedt_obj1_a_w ) { marinedt_state *state = space->machine->driver_data<marinedt_state>();    state->obj1_a = data; }
+static WRITE8_HANDLER( marinedt_obj1_x_w ) { marinedt_state *state = space->machine->driver_data<marinedt_state>();    state->obj1_x = data; }
+static WRITE8_HANDLER( marinedt_obj1_y_w ) { marinedt_state *state = space->machine->driver_data<marinedt_state>();    state->obj1_y = data; }
+static WRITE8_HANDLER( marinedt_obj2_a_w ) { marinedt_state *state = space->machine->driver_data<marinedt_state>();    state->obj2_a = data; }
+static WRITE8_HANDLER( marinedt_obj2_x_w ) { marinedt_state *state = space->machine->driver_data<marinedt_state>();    state->obj2_x = data; }
+static WRITE8_HANDLER( marinedt_obj2_y_w ) { marinedt_state *state = space->machine->driver_data<marinedt_state>();    state->obj2_y = data; }
 
-static WRITE8_HANDLER( marinedt_music_w ){ marinedt_state *state = (marinedt_state *)space->machine->driver_data;    state->music = data; }
+static WRITE8_HANDLER( marinedt_music_w ){ marinedt_state *state = space->machine->driver_data<marinedt_state>();    state->music = data; }
 
 static WRITE8_HANDLER( marinedt_sound_w )
 {
@@ -219,7 +218,7 @@ static WRITE8_HANDLER( marinedt_sound_w )
 	//------x- dots hit
 	//-------x ??
 
-	marinedt_state *state = (marinedt_state *)space->machine->driver_data;
+	marinedt_state *state = space->machine->driver_data<marinedt_state>();
 	state->sound = data;
 }
 
@@ -233,7 +232,7 @@ static WRITE8_HANDLER( marinedt_pd_w )
 	//------x- obj2 enable
 	//-------x obj1 enable
 
-	marinedt_state *state = (marinedt_state *)space->machine->driver_data;
+	marinedt_state *state = space->machine->driver_data<marinedt_state>();
 	state->pd = data;
 }
 
@@ -261,7 +260,7 @@ static WRITE8_HANDLER( marinedt_pf_w )
 	//------x- ?? upright/cocktail
 	//-------x ?? service mode (coin lockout??)
 
-	marinedt_state *state = (marinedt_state *)space->machine->driver_data;
+	marinedt_state *state = space->machine->driver_data<marinedt_state>();
 
 	//if ((state->pf & 0x07) != (data & 0x07))
 	//  mame_printf_debug("marinedt_pf_w: %02x\n", data & 0x07);
@@ -457,7 +456,7 @@ bit0 = 0;
 
 static TILE_GET_INFO( get_tile_info )
 {
-	marinedt_state *state = (marinedt_state *)machine->driver_data;
+	marinedt_state *state = machine->driver_data<marinedt_state>();
 	int code = state->tx_tileram[tile_index];
 	int color = 0;
 	int flags = TILE_FLIPX;
@@ -467,7 +466,7 @@ static TILE_GET_INFO( get_tile_info )
 
 static VIDEO_START( marinedt )
 {
-	marinedt_state *state = (marinedt_state *)machine->driver_data;
+	marinedt_state *state = machine->driver_data<marinedt_state>();
 	state->tx_tilemap = tilemap_create(machine, get_tile_info, tilemap_scan_rows, 8, 8, 32, 32);
 
 	tilemap_set_transparent_pen(state->tx_tilemap, 0);
@@ -495,7 +494,7 @@ static VIDEO_START( marinedt )
 
 static VIDEO_UPDATE( marinedt )
 {
-	marinedt_state *state = (marinedt_state *)screen->machine->driver_data;
+	marinedt_state *state = screen->machine->driver_data<marinedt_state>();
 	int sx, sy;
 
 	bitmap_fill(state->tile, NULL, 0);
@@ -598,7 +597,7 @@ static VIDEO_UPDATE( marinedt )
 
 static MACHINE_START( marinedt )
 {
-	marinedt_state *state = (marinedt_state *)machine->driver_data;
+	marinedt_state *state = machine->driver_data<marinedt_state>();
 
 	state_save_register_global(machine, state->obj1_a);
 	state_save_register_global(machine, state->obj1_x);
@@ -622,7 +621,7 @@ static MACHINE_START( marinedt )
 
 static MACHINE_RESET( marinedt )
 {
-	marinedt_state *state = (marinedt_state *)machine->driver_data;
+	marinedt_state *state = machine->driver_data<marinedt_state>();
 
 	state->obj1_a = 0;
 	state->obj1_x = 0;
@@ -644,38 +643,35 @@ static MACHINE_RESET( marinedt )
 	state->cyqh = 0;
 }
 
-static MACHINE_DRIVER_START( marinedt )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(marinedt_state)
+static MACHINE_CONFIG_START( marinedt, marinedt_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80,10000000/4)
-	MDRV_CPU_PROGRAM_MAP(marinedt_map)
-	MDRV_CPU_IO_MAP(marinedt_io_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80,10000000/4)
+	MCFG_CPU_PROGRAM_MAP(marinedt_map)
+	MCFG_CPU_IO_MAP(marinedt_io_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_MACHINE_START(marinedt)
-	MDRV_MACHINE_RESET(marinedt)
+	MCFG_MACHINE_START(marinedt)
+	MCFG_MACHINE_RESET(marinedt)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(4*8+32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 4*8, 32*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(4*8+32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 4*8, 32*8-1)
 
-	MDRV_GFXDECODE(marinedt)
-	MDRV_PALETTE_LENGTH(64)
+	MCFG_GFXDECODE(marinedt)
+	MCFG_PALETTE_LENGTH(64)
 
-	MDRV_PALETTE_INIT(marinedt)
-	MDRV_VIDEO_START(marinedt)
-	MDRV_VIDEO_UPDATE(marinedt)
+	MCFG_PALETTE_INIT(marinedt)
+	MCFG_VIDEO_START(marinedt)
+	MCFG_VIDEO_UPDATE(marinedt)
 
 	/* sound hardware */
 	//discrete sound
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
 
 /***************************************************************************

@@ -38,6 +38,7 @@ Tomasz Slanina 20050225
 #include "cpu/z80/z80.h"
 #include "machine/8255ppi.h"
 #include "sound/ay8910.h"
+#include "machine/nvram.h"
 
 /* video */
 
@@ -105,7 +106,7 @@ static VIDEO_UPDATE(vroulet)
 
 static ADDRESS_MAP_START( vroulet_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x5fff) AM_ROM
-	AM_RANGE(0x6000, 0x67ff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0x6000, 0x67ff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0x8000, 0x8000) AM_NOP
 	AM_RANGE(0x9000, 0x93ff) AM_RAM_WRITE(vroulet_videoram_w) AM_BASE(&videoram)
 	AM_RANGE(0x9400, 0x97ff) AM_RAM_WRITE(vroulet_colorram_w) AM_BASE(&colorram)
@@ -259,41 +260,41 @@ static const ppi8255_interface ppi8255_intf[2] =
 
 /* Machine Driver */
 
-static MACHINE_DRIVER_START( vroulet )
+static MACHINE_CONFIG_START( vroulet, driver_device )
 	// basic machine hardware
-	MDRV_CPU_ADD("maincpu", Z80, 4000000)	//???
-	MDRV_CPU_PROGRAM_MAP(vroulet_map)
-	MDRV_CPU_IO_MAP(vroulet_io_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80, 4000000)	//???
+	MCFG_CPU_PROGRAM_MAP(vroulet_map)
+	MCFG_CPU_IO_MAP(vroulet_io_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_NVRAM_HANDLER(generic_1fill)
+	MCFG_NVRAM_ADD_1FILL("nvram")
 
-	MDRV_PPI8255_ADD( "ppi8255_0", ppi8255_intf[0] )
-	MDRV_PPI8255_ADD( "ppi8255_1", ppi8255_intf[1] )
+	MCFG_PPI8255_ADD( "ppi8255_0", ppi8255_intf[0] )
+	MCFG_PPI8255_ADD( "ppi8255_1", ppi8255_intf[1] )
 
 	// video hardware
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(vroulet)
-	MDRV_PALETTE_LENGTH(128*4)
+	MCFG_GFXDECODE(vroulet)
+	MCFG_PALETTE_LENGTH(128*4)
 
-	MDRV_VIDEO_START(vroulet)
-	MDRV_VIDEO_UPDATE(vroulet)
+	MCFG_VIDEO_START(vroulet)
+	MCFG_VIDEO_UPDATE(vroulet)
 
 	// sound hardware
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("aysnd", AY8910, 2000000)
-	MDRV_SOUND_CONFIG(ay8910_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+	MCFG_SOUND_ADD("aysnd", AY8910, 2000000)
+	MCFG_SOUND_CONFIG(ay8910_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
 /* ROMs */
 

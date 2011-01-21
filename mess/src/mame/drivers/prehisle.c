@@ -13,16 +13,7 @@
 #include "cpu/m68000/m68000.h"
 #include "sound/upd7759.h"
 #include "sound/3812intf.h"
-
-extern WRITE16_HANDLER( prehisle_bg_videoram16_w );
-extern WRITE16_HANDLER( prehisle_fg_videoram16_w );
-extern WRITE16_HANDLER( prehisle_control16_w );
-extern READ16_HANDLER( prehisle_control16_r );
-
-extern VIDEO_START( prehisle );
-extern VIDEO_UPDATE( prehisle );
-
-extern UINT16 *prehisle_bg_videoram16;
+#include "includes/prehisle.h"
 
 /******************************************************************************/
 
@@ -37,9 +28,9 @@ static WRITE16_HANDLER( prehisle_sound16_w )
 static ADDRESS_MAP_START( prehisle_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x000000, 0x03ffff) AM_ROM
 	AM_RANGE(0x070000, 0x073fff) AM_RAM
-	AM_RANGE(0x090000, 0x0907ff) AM_RAM_WRITE(prehisle_fg_videoram16_w) AM_BASE_GENERIC(videoram)
-	AM_RANGE(0x0a0000, 0x0a07ff) AM_RAM AM_BASE_GENERIC(spriteram)
-	AM_RANGE(0x0b0000, 0x0b3fff) AM_RAM_WRITE(prehisle_bg_videoram16_w) AM_BASE(&prehisle_bg_videoram16)
+	AM_RANGE(0x090000, 0x0907ff) AM_RAM_WRITE(prehisle_fg_videoram16_w) AM_BASE_MEMBER(prehisle_state, videoram)
+	AM_RANGE(0x0a0000, 0x0a07ff) AM_RAM AM_BASE_MEMBER(prehisle_state, spriteram)
+	AM_RANGE(0x0b0000, 0x0b3fff) AM_RAM_WRITE(prehisle_bg_videoram16_w) AM_BASE_MEMBER(prehisle_state, bg_videoram16)
 	AM_RANGE(0x0d0000, 0x0d07ff) AM_RAM_WRITE(paletteram16_RRRRGGGGBBBBxxxx_word_w) AM_BASE_GENERIC(paletteram)
 	AM_RANGE(0x0e0000, 0x0e00ff) AM_READ(prehisle_control16_r)
 	AM_RANGE(0x0f0070, 0x0ff071) AM_WRITE(prehisle_sound16_w)
@@ -200,7 +191,7 @@ GFXDECODE_END
 
 /******************************************************************************/
 
-static void irqhandler(running_device *device, int irq)
+static void irqhandler(device_t *device, int irq)
 {
 	cputag_set_input_line(device->machine, "audiocpu", 0, irq ? ASSERT_LINE : CLEAR_LINE);
 }
@@ -212,41 +203,41 @@ static const ym3812_interface ym3812_config =
 
 /******************************************************************************/
 
-static MACHINE_DRIVER_START( prehisle )
+static MACHINE_CONFIG_START( prehisle, prehisle_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, XTAL_18MHz/2)	/* verified on pcb */
-	MDRV_CPU_PROGRAM_MAP(prehisle_map)
-	MDRV_CPU_VBLANK_INT("screen", irq4_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, XTAL_18MHz/2)	/* verified on pcb */
+	MCFG_CPU_PROGRAM_MAP(prehisle_map)
+	MCFG_CPU_VBLANK_INT("screen", irq4_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80, XTAL_4MHz)	/* verified on pcb */
-	MDRV_CPU_PROGRAM_MAP(prehisle_sound_map)
-	MDRV_CPU_IO_MAP(prehisle_sound_io_map)
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL_4MHz)	/* verified on pcb */
+	MCFG_CPU_PROGRAM_MAP(prehisle_sound_map)
+	MCFG_CPU_IO_MAP(prehisle_sound_io_map)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(prehisle)
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_GFXDECODE(prehisle)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_VIDEO_START(prehisle)
-	MDRV_VIDEO_UPDATE(prehisle)
+	MCFG_VIDEO_START(prehisle)
+	MCFG_VIDEO_UPDATE(prehisle)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM3812, XTAL_4MHz)	/* verified on pcb */
-	MDRV_SOUND_CONFIG(ym3812_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM3812, XTAL_4MHz)	/* verified on pcb */
+	MCFG_SOUND_CONFIG(ym3812_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-	MDRV_SOUND_ADD("upd", UPD7759, UPD7759_STANDARD_CLOCK)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.90)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("upd", UPD7759, UPD7759_STANDARD_CLOCK)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.90)
+MACHINE_CONFIG_END
 
 /******************************************************************************/
 

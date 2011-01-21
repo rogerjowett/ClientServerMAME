@@ -12,8 +12,8 @@
 
 WRITE8_HANDLER( atarifb_out1_w )
 {
-	atarifb_state *state = (atarifb_state *)space->machine->driver_data;
-	running_device *discrete = space->machine->device("discrete");
+	atarifb_state *state = space->machine->driver_data<atarifb_state>();
+	device_t *discrete = space->machine->device("discrete");
 
 	state->CTRLD = data;
 
@@ -26,8 +26,8 @@ WRITE8_HANDLER( atarifb_out1_w )
 
 WRITE8_HANDLER( atarifb4_out1_w )
 {
-	atarifb_state *state = (atarifb_state *)space->machine->driver_data;
-	running_device *discrete = space->machine->device("discrete");
+	atarifb_state *state = space->machine->driver_data<atarifb_state>();
+	device_t *discrete = space->machine->device("discrete");
 
 	state->CTRLD = data;
 
@@ -42,8 +42,8 @@ WRITE8_HANDLER( atarifb4_out1_w )
 
 WRITE8_HANDLER( abaseb_out1_w )
 {
-	atarifb_state *state = (atarifb_state *)space->machine->driver_data;
-	running_device *discrete = space->machine->device("discrete");
+	atarifb_state *state = space->machine->driver_data<atarifb_state>();
+	device_t *discrete = space->machine->device("discrete");
 
 	state->CTRLD = data;
 
@@ -69,8 +69,8 @@ WRITE8_HANDLER( abaseb_out1_w )
 
 WRITE8_HANDLER( soccer_out1_w )
 {
-	atarifb_state *state = (atarifb_state *)space->machine->driver_data;
-	running_device *discrete = space->machine->device("discrete");
+	atarifb_state *state = space->machine->driver_data<atarifb_state>();
+	device_t *discrete = space->machine->device("discrete");
 
 	state->CTRLD = data;
 
@@ -94,7 +94,7 @@ WRITE8_HANDLER( soccer_out1_w )
 
 WRITE8_HANDLER( atarifb_out2_w )
 {
-	running_device *discrete = space->machine->device("discrete");
+	device_t *discrete = space->machine->device("discrete");
 
 	discrete_sound_w(discrete, ATARIFB_CROWD_DATA, data & 0x0f);	// Crowd
 
@@ -104,7 +104,7 @@ WRITE8_HANDLER( atarifb_out2_w )
 
 WRITE8_HANDLER( soccer_out2_w )
 {
-	running_device *discrete = space->machine->device("discrete");
+	device_t *discrete = space->machine->device("discrete");
 
 	discrete_sound_w(discrete, ATARIFB_CROWD_DATA, data & 0x0f);	// Crowd
 
@@ -123,7 +123,7 @@ WRITE8_HANDLER( soccer_out2_w )
 
 WRITE8_HANDLER( atarifb_out3_w )
 {
-	atarifb_state *state = (atarifb_state *)space->machine->driver_data;
+	atarifb_state *state = space->machine->driver_data<atarifb_state>();
 	int loop = cpu_getiloops(state->maincpu);
 
 	switch (loop)
@@ -155,7 +155,7 @@ WRITE8_HANDLER( atarifb_out3_w )
 
 READ8_HANDLER( atarifb_in0_r )
 {
-	atarifb_state *state = (atarifb_state *)space->machine->driver_data;
+	atarifb_state *state = space->machine->driver_data<atarifb_state>();
 	if ((state->CTRLD & 0x20) == 0x00)
 	{
 		int val;
@@ -193,7 +193,7 @@ READ8_HANDLER( atarifb_in0_r )
 
 READ8_HANDLER( atarifb_in2_r )
 {
-	atarifb_state *state = (atarifb_state *)space->machine->driver_data;
+	atarifb_state *state = space->machine->driver_data<atarifb_state>();
 
 	if ((state->CTRLD & 0x20) == 0x00)
 	{
@@ -224,7 +224,7 @@ READ8_HANDLER( atarifb_in2_r )
 
 READ8_HANDLER( atarifb4_in0_r )
 {
-	atarifb_state *state = (atarifb_state *)space->machine->driver_data;
+	atarifb_state *state = space->machine->driver_data<atarifb_state>();
 
 	/* LD1 and LD2 low, return sign bits */
 	if ((state->CTRLD & 0x60) == 0x00)
@@ -292,7 +292,7 @@ READ8_HANDLER( atarifb4_in0_r )
 
 READ8_HANDLER( atarifb4_in2_r )
 {
-	atarifb_state *state = (atarifb_state *)space->machine->driver_data;
+	atarifb_state *state = space->machine->driver_data<atarifb_state>();
 
 	if ((state->CTRLD & 0x40) == 0x00)
 	{

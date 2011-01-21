@@ -280,54 +280,51 @@ static const ay8910_interface ay8910_config =
 
 static MACHINE_START( funkybee )
 {
-	funkybee_state *state = (funkybee_state *)machine->driver_data;
+	funkybee_state *state = machine->driver_data<funkybee_state>();
 
 	state_save_register_global(machine, state->gfx_bank);
 }
 
 static MACHINE_RESET( funkybee )
 {
-	funkybee_state *state = (funkybee_state *)machine->driver_data;
+	funkybee_state *state = machine->driver_data<funkybee_state>();
 
 	state->gfx_bank = 0;
 }
 
-static MACHINE_DRIVER_START( funkybee )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(funkybee_state)
+static MACHINE_CONFIG_START( funkybee, funkybee_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, 3072000)	/* 3.072 MHz */
-	MDRV_CPU_PROGRAM_MAP(funkybee_map)
-	MDRV_CPU_IO_MAP(io_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80, 3072000)	/* 3.072 MHz */
+	MCFG_CPU_PROGRAM_MAP(funkybee_map)
+	MCFG_CPU_IO_MAP(io_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_MACHINE_START(funkybee)
-	MDRV_MACHINE_RESET(funkybee)
+	MCFG_MACHINE_START(funkybee)
+	MCFG_MACHINE_RESET(funkybee)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(12, 32*8-8-1, 0*8, 28*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(12, 32*8-8-1, 0*8, 28*8-1)
 
-	MDRV_GFXDECODE(funkybee)
-	MDRV_PALETTE_LENGTH(32)
+	MCFG_GFXDECODE(funkybee)
+	MCFG_PALETTE_LENGTH(32)
 
-	MDRV_PALETTE_INIT(funkybee)
-	MDRV_VIDEO_START(funkybee)
-	MDRV_VIDEO_UPDATE(funkybee)
+	MCFG_PALETTE_INIT(funkybee)
+	MCFG_VIDEO_START(funkybee)
+	MCFG_VIDEO_UPDATE(funkybee)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("aysnd", AY8910, 1500000)
-	MDRV_SOUND_CONFIG(ay8910_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("aysnd", AY8910, 1500000)
+	MCFG_SOUND_CONFIG(ay8910_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************

@@ -210,7 +210,7 @@ static WRITE8_HANDLER( sound_bankswitch_w )
 
 static TIMER_CALLBACK( delayed_command_w	)
 {
-	fromance_state *state = (fromance_state *)machine->driver_data;
+	fromance_state *state = machine->driver_data<fromance_state>();
 	state->sound_command = param & 0xff;
 	state->pending_command = 1;
 
@@ -236,7 +236,7 @@ static WRITE8_HANDLER( sound_command_nonmi_w )
 
 static WRITE8_HANDLER( pending_command_clear_w )
 {
-	fromance_state *state = (fromance_state *)space->machine->driver_data;
+	fromance_state *state = space->machine->driver_data<fromance_state>();
 	state->pending_command = 0;
 	cpu_set_input_line(state->subcpu, INPUT_LINE_NMI, CLEAR_LINE);
 }
@@ -244,14 +244,14 @@ static WRITE8_HANDLER( pending_command_clear_w )
 
 static READ8_HANDLER( pending_command_r )
 {
-	fromance_state *state = (fromance_state *)space->machine->driver_data;
+	fromance_state *state = space->machine->driver_data<fromance_state>();
 	return state->pending_command;
 }
 
 
 static READ8_HANDLER( sound_command_r )
 {
-	fromance_state *state = (fromance_state *)space->machine->driver_data;
+	fromance_state *state = space->machine->driver_data<fromance_state>();
 	return state->sound_command;
 }
 
@@ -556,9 +556,9 @@ GFXDECODE_END
  *
  *************************************/
 
-static void irqhandler( running_device *device, int irq )
+static void irqhandler( device_t *device, int irq )
 {
-	fromance_state *state = (fromance_state *)device->machine->driver_data;
+	fromance_state *state = device->machine->driver_data<fromance_state>();
 	cpu_set_input_line(state->subcpu, 0, irq ? ASSERT_LINE : CLEAR_LINE);
 }
 
@@ -589,16 +589,16 @@ static const ym2610_interface ym2610_config =
 
 static MACHINE_START( pipedrm )
 {
-	fromance_state *state = (fromance_state *)machine->driver_data;
+	fromance_state *state = machine->driver_data<fromance_state>();
 
 	state->subcpu = machine->device("sub");
 
 	/* initialize main Z80 bank */
-	memory_configure_bank(machine, "bank1", 0, 8, memory_region(machine, "maincpu") + 0x10000, 0x2000);
+	memory_configure_bank(machine, "bank1", 0, 8, machine->region("maincpu")->base() + 0x10000, 0x2000);
 	memory_set_bank(machine, "bank1", 0);
 
 	/* initialize sound bank */
-	memory_configure_bank(machine, "bank2", 0, 2, memory_region(machine, "sub") + 0x10000, 0x8000);
+	memory_configure_bank(machine, "bank2", 0, 2, machine->region("sub")->base() + 0x10000, 0x8000);
 	memory_set_bank(machine, "bank2", 0);
 
 	/* state save */
@@ -610,7 +610,7 @@ static MACHINE_START( pipedrm )
 
 static MACHINE_RESET( pipedrm )
 {
-	fromance_state *state = (fromance_state *)machine->driver_data;
+	fromance_state *state = machine->driver_data<fromance_state>();
 	int i;
 
 	state->pending_command = 0;
@@ -633,90 +633,84 @@ static MACHINE_RESET( pipedrm )
 		state->crtc_data[i] = 0;
 }
 
-static MACHINE_DRIVER_START( pipedrm )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(fromance_state)
+static MACHINE_CONFIG_START( pipedrm, fromance_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80,12000000/2)
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_IO_MAP(main_portmap)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80,12000000/2)
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_IO_MAP(main_portmap)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("sub", Z80,14318000/4)
-	MDRV_CPU_PROGRAM_MAP(sound_map)
-	MDRV_CPU_IO_MAP(sound_portmap)
+	MCFG_CPU_ADD("sub", Z80,14318000/4)
+	MCFG_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_IO_MAP(sound_portmap)
 
-	MDRV_MACHINE_START(pipedrm)
-	MDRV_MACHINE_RESET(pipedrm)
+	MCFG_MACHINE_START(pipedrm)
+	MCFG_MACHINE_RESET(pipedrm)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(44*8, 30*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 44*8-1, 0*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(44*8, 30*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 44*8-1, 0*8, 30*8-1)
 
-	MDRV_GFXDECODE(pipedrm)
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_GFXDECODE(pipedrm)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(pipedrm)
-	MDRV_VIDEO_UPDATE(pipedrm)
+	MCFG_VIDEO_START(pipedrm)
+	MCFG_VIDEO_UPDATE(pipedrm)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM2610, 8000000)
-	MDRV_SOUND_CONFIG(ym2610_config)
-	MDRV_SOUND_ROUTE(0, "mono", 0.50)
-	MDRV_SOUND_ROUTE(1, "mono", 1.0)
-	MDRV_SOUND_ROUTE(2, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2610, 8000000)
+	MCFG_SOUND_CONFIG(ym2610_config)
+	MCFG_SOUND_ROUTE(0, "mono", 0.50)
+	MCFG_SOUND_ROUTE(1, "mono", 1.0)
+	MCFG_SOUND_ROUTE(2, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( hatris )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(fromance_state)
+static MACHINE_CONFIG_START( hatris, fromance_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80,12000000/2)
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_IO_MAP(main_portmap)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80,12000000/2)
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_IO_MAP(main_portmap)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("sub", Z80,14318000/4)
-	MDRV_CPU_PROGRAM_MAP(sound_map)
-	MDRV_CPU_IO_MAP(hatris_sound_portmap)
+	MCFG_CPU_ADD("sub", Z80,14318000/4)
+	MCFG_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_IO_MAP(hatris_sound_portmap)
 
-	MDRV_MACHINE_START(pipedrm)
-	MDRV_MACHINE_RESET(pipedrm)
+	MCFG_MACHINE_START(pipedrm)
+	MCFG_MACHINE_RESET(pipedrm)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(44*8, 30*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 44*8-1, 0*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(44*8, 30*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 44*8-1, 0*8, 30*8-1)
 
-	MDRV_GFXDECODE(hatris)
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_GFXDECODE(hatris)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(hatris)
-	MDRV_VIDEO_UPDATE(fromance)
+	MCFG_VIDEO_START(hatris)
+	MCFG_VIDEO_UPDATE(fromance)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM2608, 8000000)
-	MDRV_SOUND_CONFIG(ym2608_config)
-	MDRV_SOUND_ROUTE(0, "mono", 0.50)
-	MDRV_SOUND_ROUTE(1, "mono", 1.0)
-	MDRV_SOUND_ROUTE(2, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2608, 8000000)
+	MCFG_SOUND_CONFIG(ym2608_config)
+	MCFG_SOUND_ROUTE(0, "mono", 0.50)
+	MCFG_SOUND_ROUTE(1, "mono", 1.0)
+	MCFG_SOUND_ROUTE(2, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 
@@ -883,7 +877,7 @@ ROM_END
 
 static DRIVER_INIT( pipedrm )
 {
-	fromance_state *state = (fromance_state *)machine->driver_data;
+	fromance_state *state = machine->driver_data<fromance_state>();
 
 	/* sprite RAM lives at the end of palette RAM */
 	state->spriteram = &machine->generic.paletteram.u8[0xc00];

@@ -44,7 +44,7 @@ static void update_display(poly880_state *state)
 
 static WRITE8_HANDLER( cldig_w )
 {
-	poly880_state *state = (poly880_state *)space->machine->driver_data;
+	poly880_state *state = space->machine->driver_data<poly880_state>();
 
 	state->digit = data;
 
@@ -164,7 +164,7 @@ static WRITE8_DEVICE_HANDLER( pio1_port_a_w )
 
     */
 
-	poly880_state *state = (poly880_state *)device->machine->driver_data;
+	poly880_state *state = device->machine->driver_data<poly880_state>();
 
 	state->segment = BITSWAP8(data, 3, 4, 6, 0, 1, 2, 7, 5);
 
@@ -188,7 +188,7 @@ static READ8_DEVICE_HANDLER( pio1_port_b_r )
 
     */
 
-	poly880_state *state = (poly880_state *)device->machine->driver_data;
+	poly880_state *state = device->machine->driver_data<poly880_state>();
 
 	UINT8 data = 0xf0 | ((cassette_input(state->cassette) < +0.0) << 1);
 	int i;
@@ -223,7 +223,7 @@ static WRITE8_DEVICE_HANDLER( pio1_port_b_w )
 
     */
 
-	poly880_state *state = (poly880_state *)device->machine->driver_data;
+	poly880_state *state = device->machine->driver_data<poly880_state>();
 
 	/* tape output */
 	cassette_output(state->cassette, BIT(data, 2) ? +1.0 : -1.0);
@@ -265,7 +265,7 @@ static const z80_daisy_config poly880_daisy_chain[] =
 
 static MACHINE_START( poly880 )
 {
-	poly880_state *state = (poly880_state *)machine->driver_data;
+	poly880_state *state = machine->driver_data<poly880_state>();
 
 	/* find devices */
 	state->cassette = machine->device(CASSETTE_TAG);
@@ -285,30 +285,29 @@ static const cassette_config poly880_cassette_config =
 	NULL
 };
 
-static MACHINE_DRIVER_START( poly880 )
-	MDRV_DRIVER_DATA(poly880_state)
+static MACHINE_CONFIG_START( poly880, poly880_state )
 
 	/* basic machine hardware */
-    MDRV_CPU_ADD(Z80_TAG, Z80, XTAL_7_3728MHz/8)
-    MDRV_CPU_PROGRAM_MAP(poly880_mem)
-    MDRV_CPU_IO_MAP(poly880_io)
+    MCFG_CPU_ADD(Z80_TAG, Z80, XTAL_7_3728MHz/8)
+    MCFG_CPU_PROGRAM_MAP(poly880_mem)
+    MCFG_CPU_IO_MAP(poly880_io)
 
-    MDRV_MACHINE_START(poly880)
+    MCFG_MACHINE_START(poly880)
 
 	/* video hardware */
-	MDRV_DEFAULT_LAYOUT( layout_poly880 )
+	MCFG_DEFAULT_LAYOUT( layout_poly880 )
 
 	/* devices */
-	MDRV_Z80CTC_ADD(Z80CTC_TAG, XTAL_7_3728MHz/16, ctc_intf)
-	MDRV_Z80PIO_ADD(Z80PIO1_TAG, XTAL_7_3728MHz/16, pio1_intf)
-	MDRV_Z80PIO_ADD(Z80PIO2_TAG, XTAL_7_3728MHz/16, pio2_intf)
+	MCFG_Z80CTC_ADD(Z80CTC_TAG, XTAL_7_3728MHz/16, ctc_intf)
+	MCFG_Z80PIO_ADD(Z80PIO1_TAG, XTAL_7_3728MHz/16, pio1_intf)
+	MCFG_Z80PIO_ADD(Z80PIO2_TAG, XTAL_7_3728MHz/16, pio2_intf)
 
-	MDRV_CASSETTE_ADD(CASSETTE_TAG, poly880_cassette_config)
+	MCFG_CASSETTE_ADD(CASSETTE_TAG, poly880_cassette_config)
 
 	/* internal ram */
-	MDRV_RAM_ADD("messram")
-	MDRV_RAM_DEFAULT_SIZE("1K")
-MACHINE_DRIVER_END
+	MCFG_RAM_ADD("messram")
+	MCFG_RAM_DEFAULT_SIZE("1K")
+MACHINE_CONFIG_END
 
 /* ROMs */
 

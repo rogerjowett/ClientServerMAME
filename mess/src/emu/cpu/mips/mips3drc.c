@@ -273,7 +273,7 @@ static const UINT8 fpmode_source[4] =
     INLINE FUNCTIONS
 ***************************************************************************/
 
-INLINE mips3_state *get_safe_token(running_device *device)
+INLINE mips3_state *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
 	assert(device->type() == VR4300BE ||
@@ -625,7 +625,7 @@ static CPU_GET_INFO( mips3 )
     mips3drc_set_options - configure DRC options
 -------------------------------------------------*/
 
-void mips3drc_set_options(running_device *device, UINT32 options)
+void mips3drc_set_options(device_t *device, UINT32 options)
 {
 	mips3_state *mips3 = get_safe_token(device);
 	mips3->impstate->drcoptions = options;
@@ -637,7 +637,7 @@ void mips3drc_set_options(running_device *device, UINT32 options)
     region
 -------------------------------------------------*/
 
-void mips3drc_add_fastram(running_device *device, offs_t start, offs_t end, UINT8 readonly, void *base)
+void mips3drc_add_fastram(device_t *device, offs_t start, offs_t end, UINT8 readonly, void *base)
 {
 	mips3_state *mips3 = get_safe_token(device);
 	if (mips3->impstate->fastram_select < ARRAY_LENGTH(mips3->impstate->fastram))
@@ -655,7 +655,7 @@ void mips3drc_add_fastram(running_device *device, offs_t start, offs_t end, UINT
     mips3drc_add_hotspot - add a new hotspot
 -------------------------------------------------*/
 
-void mips3drc_add_hotspot(running_device *device, offs_t pc, UINT32 opcode, UINT32 cycles)
+void mips3drc_add_hotspot(device_t *device, offs_t pc, UINT32 opcode, UINT32 cycles)
 {
 	mips3_state *mips3 = get_safe_token(device);
 	if (mips3->impstate->hotspot_select < ARRAY_LENGTH(mips3->impstate->hotspot))
@@ -742,7 +742,7 @@ static void code_compile_block(mips3_state *mips3, UINT8 mode, offs_t pc)
 	drcuml_block *block;
 	jmp_buf errorbuf;
 
-	profiler_mark_start(PROFILER_DRC_COMPILE);
+	g_profiler.start(PROFILER_DRC_COMPILE);
 
 	/* get a description of this sequence */
 	desclist = drcfe_describe_code(mips3->impstate->drcfe, pc);
@@ -794,7 +794,7 @@ static void code_compile_block(mips3_state *mips3, UINT8 mode, offs_t pc)
 		}
 
 		/* validate this code block if we're not pointing into ROM */
-		if (memory_get_write_ptr(mips3->program, seqhead->physpc) != NULL)
+		if (mips3->program->get_write_ptr(seqhead->physpc) != NULL)
 			generate_checksum_block(mips3, block, &compiler, seqhead, seqlast);
 
 		/* label this instruction, if it may be jumped to locally */
@@ -827,7 +827,7 @@ static void code_compile_block(mips3_state *mips3, UINT8 mode, offs_t pc)
 
 	/* end the sequence */
 	drcuml_block_end(block);
-	profiler_mark_end();
+	g_profiler.stop();
 }
 
 
@@ -1520,7 +1520,7 @@ static void generate_checksum_block(mips3_state *mips3, drcuml_block *block, com
 	{
 		if (!(seqhead->flags & OPFLAG_VIRTUAL_NOOP))
 		{
-			void *base = memory_decrypted_read_ptr(mips3->program, seqhead->physpc);
+			void *base = mips3->direct->read_decrypted_ptr(seqhead->physpc);
 			UML_LOAD(block, IREG(0), base, IMM(0), DWORD);							// load    i0,base,0,dword
 			UML_CMP(block, IREG(0), IMM(seqhead->opptr.l[0]));						// cmp     i0,opptr[0]
 			UML_EXHc(block, IF_NE, mips3->impstate->nocode, IMM(epc(seqhead)));		// exne    nocode,seqhead->pc
@@ -1534,20 +1534,20 @@ static void generate_checksum_block(mips3_state *mips3, drcuml_block *block, com
 		for (curdesc = seqhead->next; curdesc != seqlast->next; curdesc = curdesc->next)
 			if (!(curdesc->flags & OPFLAG_VIRTUAL_NOOP))
 			{
-				void *base = memory_decrypted_read_ptr(mips3->program, seqhead->physpc);
+				void *base = mips3->direct->read_decrypted_ptr(seqhead->physpc);
 				UML_LOAD(block, IREG(0), base, IMM(0), DWORD);						// load    i0,base,0,dword
 				UML_CMP(block, IREG(0), IMM(curdesc->opptr.l[0]));					// cmp     i0,opptr[0]
 				UML_EXHc(block, IF_NE, mips3->impstate->nocode, IMM(epc(seqhead)));	// exne    nocode,seqhead->pc
 			}
 #else
 		UINT32 sum = 0;
-		void *base = memory_decrypted_read_ptr(mips3->program, seqhead->physpc);
+		void *base = mips3->direct->read_decrypted_ptr(seqhead->physpc);
 		UML_LOAD(block, IREG(0), base, IMM(0), DWORD);								// load    i0,base,0,dword
 		sum += seqhead->opptr.l[0];
 		for (curdesc = seqhead->next; curdesc != seqlast->next; curdesc = curdesc->next)
 			if (!(curdesc->flags & OPFLAG_VIRTUAL_NOOP))
 			{
-				base = memory_decrypted_read_ptr(mips3->program, curdesc->physpc);
+				base = mips3->direct->read_decrypted_ptr(curdesc->physpc);
 				UML_LOAD(block, IREG(1), base, IMM(0), DWORD);						// load    i1,base,dword
 				UML_ADD(block, IREG(0), IREG(0), IREG(1));							// add     i0,i0,i1
 				sum += curdesc->opptr.l[0];

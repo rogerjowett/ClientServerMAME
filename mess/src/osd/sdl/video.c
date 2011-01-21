@@ -82,8 +82,6 @@ osd_gl_dispatch *gl_dispatch;
 static sdl_monitor_info *primary_monitor;
 static sdl_monitor_info *sdl_monitor_list;
 
-static bitmap_t *effect_bitmap;
-
 //============================================================
 //  PROTOTYPES
 //============================================================
@@ -96,7 +94,6 @@ static void check_osd_inputs(running_machine *machine);
 
 static void extract_video_config(running_machine *machine);
 static void extract_window_config(running_machine *machine, int index, sdl_window_config *conf);
-static void load_effect_overlay(running_machine *machine, const char *filename);
 static float get_aspect(const char *name, int report_error);
 static void get_resolution(const char *name, sdl_window_config *config, int report_error);
 
@@ -152,10 +149,6 @@ error:
 
 static void video_exit(running_machine &machine)
 {
-	// free the overlay effect
-	global_free(effect_bitmap);
-	effect_bitmap = NULL;
-
 	// free all of our monitor information
 	while (sdl_monitor_list != NULL)
 	{
@@ -333,10 +326,10 @@ sdl_monitor_info *sdlvideo_monitor_from_handle(UINT32 hmonitor)
 
 
 //============================================================
-//  osd_update
+//  update
 //============================================================
 
-void osd_update(running_machine *machine, int skip_redraw)
+void sdl_osd_interface::update(bool skip_redraw)
 {
 	sdl_window_info *window;
 
@@ -345,16 +338,16 @@ void osd_update(running_machine *machine, int skip_redraw)
 	{
 //      profiler_mark(PROFILER_BLIT);
 		for (window = sdl_window_list; window != NULL; window = window->next)
-			sdlwindow_video_window_update(machine, window);
+			sdlwindow_video_window_update(&machine(), window);
 //      profiler_mark(PROFILER_END);
 	}
 
 	// poll the joystick values here
-	sdlinput_poll(machine);
-	check_osd_inputs(machine);
+	sdlinput_poll(&machine());
+	check_osd_inputs(&machine());
 
-	if ((machine->debug_flags & DEBUG_FLAG_OSD_ENABLED) != 0)
-		debugwin_update_during_game(machine);
+	if ((machine().debug_flags & DEBUG_FLAG_OSD_ENABLED) != 0)
+		debugwin_update_during_game(&machine());
 }
 
 
@@ -418,6 +411,8 @@ static BOOL CALLBACK monitor_enum_callback(HMONITOR handle, HDC dc, LPRECT rect,
 #endif
 	monitor->monitor_width = info.rcMonitor.right - info.rcMonitor.left;
 	monitor->monitor_height = info.rcMonitor.bottom - info.rcMonitor.top;
+	monitor->center_width = monitor->monitor_width;
+	monitor->center_height = monitor->monitor_height;
 	char *temp = utf8_from_wstring(info.szDevice);
 	strcpy(monitor->monitor_device, temp);
 	osd_free(temp);
@@ -646,10 +641,6 @@ static void extract_video_config(running_machine *machine)
 	if (machine->debug_flags & DEBUG_FLAG_OSD_ENABLED)
 		video_config.windowed = TRUE;
 
-	stemp = options_get_string(machine->options(), SDLOPTION_EFFECT);
-	if (stemp != NULL && strcmp(stemp, "none") != 0)
-		load_effect_overlay(machine, stemp);
-
 	// default to working video please
 	video_config.novideo = 0;
 
@@ -808,39 +799,6 @@ static void extract_video_config(running_machine *machine)
 		mame_printf_warning("scalemode is only for -video soft, overriding\n");
 		video_config.scale_mode = VIDEO_SCALE_MODE_NONE;
 	}
-}
-
-
-//============================================================
-//  load_effect_overlay
-//============================================================
-
-static void load_effect_overlay(running_machine *machine, const char *filename)
-{
-	char *tempstr = global_alloc_array(char, strlen(filename) + 5);
-	char *dest;
-
-	// append a .PNG extension
-	strcpy(tempstr, filename);
-	dest = strrchr(tempstr, '.');
-	if (dest == NULL)
-		dest = &tempstr[strlen(tempstr)];
-	strcpy(dest, ".png");
-
-	// load the file
-	effect_bitmap = render_load_png(OPTION_ARTPATH, NULL, tempstr, NULL, NULL);
-	if (effect_bitmap == NULL)
-	{
-		mame_printf_error("Unable to load PNG file '%s'\n", tempstr);
-		global_free(tempstr);
-		return;
-	}
-
-	// set the overlay on all screens
-	for (screen_device *screen = screen_first(*machine); screen != NULL; screen = screen_next(screen))
-		render_container_set_overlay(render_container_get_screen(screen), effect_bitmap);
-
-	global_free(tempstr);
 }
 
 

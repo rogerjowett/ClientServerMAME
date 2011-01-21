@@ -112,12 +112,11 @@ PCB2  (Top board, CPU board)
 
 #define MASTER_CLOCK			XTAL_18_432MHz
 
-class sub_state
+class sub_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, sub_state(machine)); }
-
-	sub_state(running_machine &machine) { }
+	sub_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	UINT8* vid;
 	UINT8* attr;
@@ -133,7 +132,7 @@ static VIDEO_START(sub)
 
 static VIDEO_UPDATE(sub)
 {
-	sub_state *state = (sub_state *)screen->machine->driver_data;
+	sub_state *state = screen->machine->driver_data<sub_state>();
 	const gfx_element *gfx = screen->machine->gfx[0];
 	const gfx_element *gfx_1 = screen->machine->gfx[1];
 	int y,x;
@@ -244,7 +243,7 @@ static WRITE8_HANDLER( subm_to_sound_w )
 
 static WRITE8_HANDLER( nmi_mask_w )
 {
-	sub_state *state = (sub_state *)space->machine->driver_data;
+	sub_state *state = space->machine->driver_data<sub_state>();
 
 	state->nmi_en = data & 1;
 }
@@ -382,7 +381,7 @@ GFXDECODE_END
 static PALETTE_INIT( sub )
 {
 	int i;
-	UINT8* lookup = memory_region(machine,"proms2");
+	UINT8* lookup = machine->region("proms2")->base();
 
 	/* allocate the colortable */
 	machine->colortable = colortable_alloc(machine, 0x100);
@@ -412,52 +411,50 @@ static PALETTE_INIT( sub )
 
 static INTERRUPT_GEN( subm_sound_irq )
 {
-	sub_state *state = (sub_state *)device->machine->driver_data;
+	sub_state *state = device->machine->driver_data<sub_state>();
 
 	if(state->nmi_en)
 		cputag_set_input_line(device->machine, "soundcpu", INPUT_LINE_NMI, PULSE_LINE);
 }
 
-static MACHINE_DRIVER_START( sub )
-
-	MDRV_DRIVER_DATA( sub_state )
+static MACHINE_CONFIG_START( sub, sub_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80,MASTER_CLOCK/6)		 /* ? MHz */
-	MDRV_CPU_PROGRAM_MAP(subm_map)
-	MDRV_CPU_IO_MAP(subm_io)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80,MASTER_CLOCK/6)		 /* ? MHz */
+	MCFG_CPU_PROGRAM_MAP(subm_map)
+	MCFG_CPU_IO_MAP(subm_io)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("soundcpu", Z80,MASTER_CLOCK/6)		 /* ? MHz */
-	MDRV_CPU_PROGRAM_MAP(subm_sound_map)
-	MDRV_CPU_IO_MAP(subm_sound_io)
-	MDRV_CPU_PERIODIC_INT(subm_sound_irq, 120) //???
+	MCFG_CPU_ADD("soundcpu", Z80,MASTER_CLOCK/6)		 /* ? MHz */
+	MCFG_CPU_PROGRAM_MAP(subm_sound_map)
+	MCFG_CPU_IO_MAP(subm_sound_io)
+	MCFG_CPU_PERIODIC_INT(subm_sound_irq, 120) //???
 
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(256, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 256-1, 16, 256-16-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(256, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 256-1, 16, 256-16-1)
 
-	MDRV_GFXDECODE(sub)
-	MDRV_PALETTE_LENGTH(0x400)
-	MDRV_PALETTE_INIT(sub)
+	MCFG_GFXDECODE(sub)
+	MCFG_PALETTE_LENGTH(0x400)
+	MCFG_PALETTE_INIT(sub)
 
-	MDRV_VIDEO_START(sub)
-	MDRV_VIDEO_UPDATE(sub)
+	MCFG_VIDEO_START(sub)
+	MCFG_VIDEO_UPDATE(sub)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ay1", AY8910, MASTER_CLOCK/6/2) /* ? Mhz */
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.23)
+	MCFG_SOUND_ADD("ay1", AY8910, MASTER_CLOCK/6/2) /* ? Mhz */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.23)
 
-	MDRV_SOUND_ADD("ay2", AY8910, MASTER_CLOCK/6/2) /* ? Mhz */
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.23)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ay2", AY8910, MASTER_CLOCK/6/2) /* ? Mhz */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.23)
+MACHINE_CONFIG_END
 
 
 ROM_START( sub )

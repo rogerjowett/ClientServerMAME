@@ -24,6 +24,7 @@
 #include "sound/2413intf.h"
 #include "sound/upd7759.h"
 #include "video/tms34061.h"
+#include "machine/nvram.h"
 
 
 /*************************************
@@ -211,7 +212,7 @@ static VIDEO_UPDATE( jpmsys5v )
 
 static WRITE16_HANDLER( rombank_w )
 {
-	UINT8 *rom = memory_region(space->machine, "maincpu");
+	UINT8 *rom = space->machine->region("maincpu")->base();
 	data &= 0x1f;
 	memory_set_bankptr(space->machine, "bank1", &rom[0x20000 + 0x20000 * data]);
 }
@@ -282,7 +283,7 @@ static ADDRESS_MAP_START( 68000_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x000000, 0x01ffff) AM_ROM
 	AM_RANGE(0x01fffe, 0x01ffff) AM_WRITE(rombank_w)
 	AM_RANGE(0x020000, 0x03ffff) AM_ROMBANK("bank1")
-	AM_RANGE(0x040000, 0x043fff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0x040000, 0x043fff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0x046000, 0x046001) AM_WRITENOP
 	AM_RANGE(0x046020, 0x046021) AM_DEVREADWRITE8("acia6850_0", acia6850_stat_r, acia6850_ctrl_w, 0xff)
 	AM_RANGE(0x046022, 0x046023) AM_DEVREADWRITE8("acia6850_0", acia6850_data_r, acia6850_data_w, 0xff)
@@ -575,7 +576,7 @@ static ACIA6850_INTERFACE( acia2_if )
 
 static MACHINE_START( jpmsys5v )
 {
-	memory_set_bankptr(machine, "bank1", memory_region(machine, "maincpu"));
+	memory_set_bankptr(machine, "bank1", machine->region("maincpu")->base());
 	touch_timer = timer_alloc(machine, touch_cb, NULL);
 }
 
@@ -594,40 +595,40 @@ static MACHINE_RESET( jpmsys5v )
  *
  *************************************/
 
-static MACHINE_DRIVER_START( jpmsys5v )
-	MDRV_CPU_ADD("maincpu", M68000, 8000000)
-	MDRV_CPU_PROGRAM_MAP(68000_map)
+static MACHINE_CONFIG_START( jpmsys5v, driver_device )
+	MCFG_CPU_ADD("maincpu", M68000, 8000000)
+	MCFG_CPU_PROGRAM_MAP(68000_map)
 
-	MDRV_ACIA6850_ADD("acia6850_0", acia0_if)
-	MDRV_ACIA6850_ADD("acia6850_1", acia1_if)
-	MDRV_ACIA6850_ADD("acia6850_2", acia2_if)
+	MCFG_ACIA6850_ADD("acia6850_0", acia0_if)
+	MCFG_ACIA6850_ADD("acia6850_1", acia1_if)
+	MCFG_ACIA6850_ADD("acia6850_2", acia2_if)
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
-	MDRV_MACHINE_START(jpmsys5v)
-	MDRV_MACHINE_RESET(jpmsys5v)
+	MCFG_MACHINE_START(jpmsys5v)
+	MCFG_MACHINE_RESET(jpmsys5v)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_RAW_PARAMS(XTAL_40MHz / 4, 676, 20*4, 147*4, 256, 0, 254)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_RAW_PARAMS(XTAL_40MHz / 4, 676, 20*4, 147*4, 256, 0, 254)
 
-	MDRV_VIDEO_START(jpmsys5v)
-	MDRV_VIDEO_UPDATE(jpmsys5v)
+	MCFG_VIDEO_START(jpmsys5v)
+	MCFG_VIDEO_UPDATE(jpmsys5v)
 
-	MDRV_PALETTE_LENGTH(16)
+	MCFG_PALETTE_LENGTH(16)
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("upd7759", UPD7759, UPD7759_STANDARD_CLOCK)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
+	MCFG_SOUND_ADD("upd7759", UPD7759, UPD7759_STANDARD_CLOCK)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
 
 	/* Earlier revisions use an SAA1099 */
-	MDRV_SOUND_ADD("ym2413", YM2413, 4000000 ) /* Unconfirmed */
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
+	MCFG_SOUND_ADD("ym2413", YM2413, 4000000 ) /* Unconfirmed */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
 
 	/* 6840 PTM */
-	MDRV_PTM6840_ADD("6840ptm", ptm_intf)
-MACHINE_DRIVER_END
+	MCFG_PTM6840_ADD("6840ptm", ptm_intf)
+MACHINE_CONFIG_END
 
 
 /*************************************

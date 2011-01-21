@@ -6,12 +6,11 @@
 #define GAME_IS_RIPCORD		(state->game_id == 4)
 
 
-class circus_state
+class circus_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, circus_state(machine)); }
-
-	circus_state(running_machine &machine) { }
+	circus_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *  videoram;
@@ -21,9 +20,9 @@ public:
 	int      clown_x, clown_y, clown_z;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *samples;
-	running_device *discrete;
+	device_t *maincpu;
+	device_t *samples;
+	device_t *discrete;
 
 	/* game id */
 	int      game_id;

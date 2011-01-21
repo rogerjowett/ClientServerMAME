@@ -76,34 +76,34 @@ IO ports and memory map changes. Dip switches differ too.
 
 static WRITE8_HANDLER( control_w )
 {
-	kchamp_state *state = (kchamp_state *)space->machine->driver_data;
+	kchamp_state *state = space->machine->driver_data<kchamp_state>();
 	state->nmi_enable = data & 1;
 }
 
 static WRITE8_HANDLER( sound_reset_w )
 {
-	kchamp_state *state = (kchamp_state *)space->machine->driver_data;
+	kchamp_state *state = space->machine->driver_data<kchamp_state>();
 	if (!(data & 1))
 		cpu_set_input_line(state->audiocpu, INPUT_LINE_RESET, PULSE_LINE);
 }
 
 static WRITE8_DEVICE_HANDLER( sound_control_w )
 {
-	kchamp_state *state = (kchamp_state *)device->machine->driver_data;
+	kchamp_state *state = device->machine->driver_data<kchamp_state>();
 	msm5205_reset_w(device, !(data & 1));
 	state->sound_nmi_enable = ((data >> 1) & 1);
 }
 
 static WRITE8_HANDLER( sound_command_w )
 {
-	kchamp_state *state = (kchamp_state *)space->machine->driver_data;
+	kchamp_state *state = space->machine->driver_data<kchamp_state>();
 	soundlatch_w(space, 0, data);
 	cpu_set_input_line_and_vector(state->audiocpu, 0, HOLD_LINE, 0xff);
 }
 
 static WRITE8_HANDLER( sound_msm_w )
 {
-	kchamp_state *state = (kchamp_state *)space->machine->driver_data;
+	kchamp_state *state = space->machine->driver_data<kchamp_state>();
 	state->msm_data = data;
 	state->msm_play_lo_nibble = 1;
 }
@@ -148,14 +148,14 @@ ADDRESS_MAP_END
 ********************/
 static READ8_HANDLER( sound_reset_r )
 {
-	kchamp_state *state = (kchamp_state *)space->machine->driver_data;
+	kchamp_state *state = space->machine->driver_data<kchamp_state>();
 	cpu_set_input_line(state->audiocpu, INPUT_LINE_RESET, PULSE_LINE);
 	return 0;
 }
 
 static WRITE8_HANDLER( kc_sound_control_w )
 {
-	kchamp_state *state = (kchamp_state *)space->machine->driver_data;
+	kchamp_state *state = space->machine->driver_data<kchamp_state>();
 
 	if (offset == 0)
 		state->sound_nmi_enable = ((data >> 7) & 1);
@@ -348,14 +348,14 @@ GFXDECODE_END
 
 static INTERRUPT_GEN( kc_interrupt )
 {
-	kchamp_state *state = (kchamp_state *)device->machine->driver_data;
+	kchamp_state *state = device->machine->driver_data<kchamp_state>();
 	if (state->nmi_enable)
 		cpu_set_input_line(device, INPUT_LINE_NMI, PULSE_LINE);
 }
 
-static void msmint( running_device *device )
+static void msmint( device_t *device )
 {
-	kchamp_state *state = (kchamp_state *)device->machine->driver_data;
+	kchamp_state *state = device->machine->driver_data<kchamp_state>();
 
 	if (state->msm_play_lo_nibble)
 		msm5205_data_w(device, state->msm_data & 0x0f);
@@ -383,7 +383,7 @@ static const msm5205_interface msm_interface =
 
 static INTERRUPT_GEN( sound_int )
 {
-	kchamp_state *state = (kchamp_state *)device->machine->driver_data;
+	kchamp_state *state = device->machine->driver_data<kchamp_state>();
 	if (state->sound_nmi_enable)
 		cpu_set_input_line(device, INPUT_LINE_NMI, PULSE_LINE);
 }
@@ -391,7 +391,7 @@ static INTERRUPT_GEN( sound_int )
 
 static MACHINE_START( kchamp )
 {
-	kchamp_state *state = (kchamp_state *)machine->driver_data;
+	kchamp_state *state = machine->driver_data<kchamp_state>();
 
 	state->audiocpu = machine->device("audiocpu");
 
@@ -401,7 +401,7 @@ static MACHINE_START( kchamp )
 
 static MACHINE_START( kchampvs )
 {
-	kchamp_state *state = (kchamp_state *)machine->driver_data;
+	kchamp_state *state = machine->driver_data<kchamp_state>();
 
 	MACHINE_START_CALL(kchamp);
 
@@ -412,112 +412,106 @@ static MACHINE_START( kchampvs )
 
 static MACHINE_RESET( kchamp )
 {
-	kchamp_state *state = (kchamp_state *)machine->driver_data;
+	kchamp_state *state = machine->driver_data<kchamp_state>();
 
 	state->nmi_enable = 0;
 	state->sound_nmi_enable = 0;
 }
 
-static MACHINE_DRIVER_START( kchampvs )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(kchamp_state)
+static MACHINE_CONFIG_START( kchampvs, kchamp_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, XTAL_12MHz/4)    /* verified on pcb */
-	MDRV_CPU_PROGRAM_MAP(kchampvs_map)
-	MDRV_CPU_IO_MAP(kchampvs_io_map)
-	MDRV_CPU_VBLANK_INT("screen", kc_interrupt)
+	MCFG_CPU_ADD("maincpu", Z80, XTAL_12MHz/4)    /* verified on pcb */
+	MCFG_CPU_PROGRAM_MAP(kchampvs_map)
+	MCFG_CPU_IO_MAP(kchampvs_io_map)
+	MCFG_CPU_VBLANK_INT("screen", kc_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z80, XTAL_12MHz/4)    /* verified on pcb */
-	MDRV_CPU_PROGRAM_MAP(kchampvs_sound_map)
-	MDRV_CPU_IO_MAP(kchampvs_sound_io_map)		/* irq's triggered from main cpu */
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL_12MHz/4)    /* verified on pcb */
+	MCFG_CPU_PROGRAM_MAP(kchampvs_sound_map)
+	MCFG_CPU_IO_MAP(kchampvs_sound_io_map)		/* irq's triggered from main cpu */
 										/* nmi's from msm5205 */
 
-	MDRV_MACHINE_START(kchampvs)
-	MDRV_MACHINE_RESET(kchamp)
+	MCFG_MACHINE_START(kchampvs)
+	MCFG_MACHINE_RESET(kchamp)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(59.10) /* verified on pcb */
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(59.10) /* verified on pcb */
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(kchamp)
-	MDRV_PALETTE_LENGTH(256)
+	MCFG_GFXDECODE(kchamp)
+	MCFG_PALETTE_LENGTH(256)
 
-	MDRV_PALETTE_INIT(kchamp)
-	MDRV_VIDEO_START(kchamp)
-	MDRV_VIDEO_UPDATE(kchampvs)
+	MCFG_PALETTE_INIT(kchamp)
+	MCFG_VIDEO_START(kchamp)
+	MCFG_VIDEO_UPDATE(kchampvs)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ay1", AY8910, XTAL_12MHz/8)    /* verified on pcb */
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
+	MCFG_SOUND_ADD("ay1", AY8910, XTAL_12MHz/8)    /* verified on pcb */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
 
-	MDRV_SOUND_ADD("ay2", AY8910, XTAL_12MHz/8)    /* verified on pcb */
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
+	MCFG_SOUND_ADD("ay2", AY8910, XTAL_12MHz/8)    /* verified on pcb */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
 
-	MDRV_SOUND_ADD("msm", MSM5205, 375000)  /* verified on pcb, discrete circuit clock */
-	MDRV_SOUND_CONFIG(msm_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("msm", MSM5205, 375000)  /* verified on pcb, discrete circuit clock */
+	MCFG_SOUND_CONFIG(msm_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 /********************
 * 1 Player Version  *
 ********************/
 
-static MACHINE_DRIVER_START( kchamp )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(kchamp_state)
+static MACHINE_CONFIG_START( kchamp, kchamp_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, 3000000)	/* 12MHz / 4 = 3.0 MHz */
-	MDRV_CPU_PROGRAM_MAP(kchamp_map)
-	MDRV_CPU_IO_MAP(kchamp_io_map)
-	MDRV_CPU_VBLANK_INT("screen", kc_interrupt)
+	MCFG_CPU_ADD("maincpu", Z80, 3000000)	/* 12MHz / 4 = 3.0 MHz */
+	MCFG_CPU_PROGRAM_MAP(kchamp_map)
+	MCFG_CPU_IO_MAP(kchamp_io_map)
+	MCFG_CPU_VBLANK_INT("screen", kc_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 3000000)	/* 12MHz / 4 = 3.0 MHz */
-	MDRV_CPU_PROGRAM_MAP(kchamp_sound_map)
-	MDRV_CPU_IO_MAP(kchamp_sound_io_map)
-	MDRV_CPU_PERIODIC_INT(sound_int, 125)	/* Hz */
+	MCFG_CPU_ADD("audiocpu", Z80, 3000000)	/* 12MHz / 4 = 3.0 MHz */
+	MCFG_CPU_PROGRAM_MAP(kchamp_sound_map)
+	MCFG_CPU_IO_MAP(kchamp_sound_io_map)
+	MCFG_CPU_PERIODIC_INT(sound_int, 125)	/* Hz */
 											/* irq's triggered from main cpu */
 											/* nmi's from 125 Hz clock */
 
-	MDRV_MACHINE_START(kchamp)
-	MDRV_MACHINE_RESET(kchamp)
+	MCFG_MACHINE_START(kchamp)
+	MCFG_MACHINE_RESET(kchamp)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(kchamp)
-	MDRV_PALETTE_LENGTH(256)
+	MCFG_GFXDECODE(kchamp)
+	MCFG_PALETTE_LENGTH(256)
 
-	MDRV_PALETTE_INIT(kchamp)
-	MDRV_VIDEO_START(kchamp)
-	MDRV_VIDEO_UPDATE(kchamp)
+	MCFG_PALETTE_INIT(kchamp)
+	MCFG_VIDEO_START(kchamp)
+	MCFG_VIDEO_UPDATE(kchamp)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ay1", AY8910, 1500000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
+	MCFG_SOUND_ADD("ay1", AY8910, 1500000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
 
-	MDRV_SOUND_ADD("ay2", AY8910, 1500000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
+	MCFG_SOUND_ADD("ay2", AY8910, 1500000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
 
-	MDRV_SOUND_ADD("dac", DAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15) /* guess: using volume 0.50 makes the sound to clip a lot */
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("dac", DAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15) /* guess: using volume 0.50 makes the sound to clip a lot */
+MACHINE_CONFIG_END
 
 
 /***************************************************************************
@@ -736,12 +730,12 @@ ROM_END
 
 static UINT8 *decrypt_code(running_machine *machine)
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 	UINT8 *decrypted = auto_alloc_array(machine, UINT8, 0x10000);
-	UINT8 *rom = memory_region(machine, "maincpu");
+	UINT8 *rom = machine->region("maincpu")->base();
 	int A;
 
-	memory_set_decrypted_region(space, 0x0000, 0xffff, decrypted);
+	space->set_decrypted_region(0x0000, 0xffff, decrypted);
 
 	for (A = 0; A < 0x10000; A++)
 		decrypted[A] = (rom[A] & 0x55) | ((rom[A] & 0x88) >> 2) | ((rom[A] & 0x22) << 2);
@@ -752,8 +746,8 @@ static UINT8 *decrypt_code(running_machine *machine)
 
 static DRIVER_INIT( kchampvs )
 {
-	kchamp_state *state = (kchamp_state *)machine->driver_data;
-	UINT8 *rom = memory_region(machine, "maincpu");
+	kchamp_state *state = machine->driver_data<kchamp_state>();
+	UINT8 *rom = machine->region("maincpu")->base();
 	UINT8 *decrypted = decrypt_code(machine);
 	int A;
 
@@ -784,7 +778,7 @@ static DRIVER_INIT( kchampvs )
 
 static DRIVER_INIT( kchampvs2 )
 {
-	kchamp_state *state = (kchamp_state *)machine->driver_data;
+	kchamp_state *state = machine->driver_data<kchamp_state>();
 
 	decrypt_code(machine);
 	state->counter = 0;

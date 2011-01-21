@@ -53,12 +53,11 @@ struct _ems_t
 	} mapper[26];
 };
 
-class pasogo_state
+class pasogo_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, pasogo_state(machine)); }
-
-	pasogo_state(running_machine &machine) { }
+	pasogo_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 
 	struct _vg230_t vg230;
@@ -68,7 +67,7 @@ public:
 
 static TIMER_CALLBACK( vg230_timer )
 {
-	pasogo_state *state = (pasogo_state *)machine->driver_data;
+	pasogo_state *state = machine->driver_data<pasogo_state>();
 	vg230_t *vg230 = &state->vg230;
 
 	vg230->rtc.seconds+=1;
@@ -99,7 +98,7 @@ static TIMER_CALLBACK( vg230_timer )
 
 static void vg230_reset(running_machine *machine)
 {
-	pasogo_state *state = (pasogo_state *)machine->driver_data;
+	pasogo_state *state = machine->driver_data<pasogo_state>();
 	vg230_t *vg230 = &state->vg230;
 	system_time systime;
 
@@ -126,7 +125,7 @@ static void vg230_init(running_machine *machine)
 
 static READ8_HANDLER( vg230_io_r )
 {
-	pasogo_state *state = (pasogo_state *)space->machine->driver_data;
+	pasogo_state *state = space->machine->driver_data<pasogo_state>();
 	vg230_t *vg230 = &state->vg230;
 	int log=TRUE;
 	UINT8 data=0;
@@ -180,7 +179,7 @@ static READ8_HANDLER( vg230_io_r )
 
 		if (log)
 			logerror("%.5x vg230 %02x read %.2x\n",(int) cpu_get_pc(space->cpu),vg230->index,data);
-      //    data=memory_region(machine, "maincpu")[0x4000+offset];
+      //    data=machine->region("maincpu")->base()[0x4000+offset];
 	}
 	else
 	{
@@ -191,13 +190,13 @@ static READ8_HANDLER( vg230_io_r )
 
 static WRITE8_HANDLER( vg230_io_w )
 {
-	pasogo_state *state = (pasogo_state *)space->machine->driver_data;
+	pasogo_state *state = space->machine->driver_data<pasogo_state>();
 	vg230_t *vg230 = &state->vg230;
 	int log=TRUE;
 
 	if (offset&1)
 	{
-		//  memory_region(machine, "maincpu")[0x4000+offset]=data;
+		//  machine->region("maincpu")->base()[0x4000+offset]=data;
 		vg230->data[vg230->index]=data;
 		switch (vg230->index)
 		{
@@ -236,7 +235,7 @@ static WRITE8_HANDLER( vg230_io_w )
 
 static READ8_HANDLER( ems_r )
 {
-	pasogo_state *state = (pasogo_state *)space->machine->driver_data;
+	pasogo_state *state = space->machine->driver_data<pasogo_state>();
 	ems_t *ems = &state->ems;
 	UINT8 data=0;
 
@@ -250,7 +249,7 @@ static READ8_HANDLER( ems_r )
 
 static WRITE8_HANDLER( ems_w )
 {
-	pasogo_state *state = (pasogo_state *)space->machine->driver_data;
+	pasogo_state *state = space->machine->driver_data<pasogo_state>();
 	ems_t *ems = &state->ems;
 	char bank[10];
 
@@ -304,7 +303,7 @@ static WRITE8_HANDLER( ems_w )
 		case 0: /*external*/
 		case 1: /*ram*/
 		sprintf(bank,"bank%d",ems->index+1);
-		memory_set_bankptr( space->machine, bank, memory_region(space->machine, "maincpu") + (ems->mapper[ems->index].address&0xfffff) );
+		memory_set_bankptr( space->machine, bank, space->machine->region("maincpu")->base() + (ems->mapper[ems->index].address&0xfffff) );
 		break;
 		case 3: /* rom 1 */
 		case 4: /* pc card a */
@@ -313,7 +312,7 @@ static WRITE8_HANDLER( ems_w )
 		break;
 		case 2:
 		sprintf(bank,"bank%d",ems->index+1);
-		memory_set_bankptr( space->machine,  bank, memory_region(space->machine, "user1") + (ems->mapper[ems->index].address&0xfffff) );
+		memory_set_bankptr( space->machine,  bank, space->machine->region("user1")->base() + (ems->mapper[ems->index].address&0xfffff) );
 		break;
 		}
 		break;
@@ -401,8 +400,8 @@ static PALETTE_INIT( pasogo )
 static VIDEO_UPDATE( pasogo )
 {
 	//static int width=-1,height=-1;
-	UINT8 *rom = memory_region(screen->machine, "maincpu")+0xb8000;
-	UINT16 c[]={ 3, 0 };
+	UINT8 *rom = screen->machine->region("maincpu")->base()+0xb8000;
+	static const UINT16 c[]={ 3, 0 };
 	int x,y;
 //  plot_box(bitmap, 0, 0, 64/*bitmap->width*/, bitmap->height, 0);
 	int w=640;
@@ -505,7 +504,7 @@ static const struct pic8259_interface pasogo_pic8259_config =
 
 static DEVICE_IMAGE_LOAD( pasogo_cart )
 {
-	UINT8 *user = memory_region(image.device().machine, "user1");
+	UINT8 *user = image.device().machine->region("user1")->base();
 	UINT32 size;
 
 	if (image.software_entry() == NULL)
@@ -527,43 +526,41 @@ static DEVICE_IMAGE_LOAD( pasogo_cart )
 	return IMAGE_INIT_PASS;
 }
 
-static MACHINE_DRIVER_START( pasogo )
+static MACHINE_CONFIG_START( pasogo, pasogo_state )
 
-	MDRV_DRIVER_DATA( pasogo_state )
+	MCFG_CPU_ADD("maincpu", I80188/*V30HL in vadem vg230*/, 10000000/*?*/)
+	MCFG_CPU_PROGRAM_MAP(pasogo_mem)
+	MCFG_CPU_IO_MAP( pasogo_io)
+	MCFG_CPU_VBLANK_INT("screen", pasogo_interrupt)
+//  MCFG_CPU_CONFIG(i86_address_mask)
+	MCFG_MACHINE_RESET( pasogo )
 
-	MDRV_CPU_ADD("maincpu", I80188/*V30HL in vadem vg230*/, 10000000/*?*/)
-	MDRV_CPU_PROGRAM_MAP(pasogo_mem)
-	MDRV_CPU_IO_MAP( pasogo_io)
-	MDRV_CPU_VBLANK_INT("screen", pasogo_interrupt)
-//  MDRV_CPU_CONFIG(i86_address_mask)
-	MDRV_MACHINE_RESET( pasogo )
+	MCFG_PIT8254_ADD( "pit8254", pc_pit8254_config )
 
-	MDRV_PIT8254_ADD( "pit8254", pc_pit8254_config )
+	MCFG_PIC8259_ADD( "pic8259", pasogo_pic8259_config )
 
-	MDRV_PIC8259_ADD( "pic8259", pasogo_pic8259_config )
-
-	MDRV_SCREEN_ADD("screen", LCD)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_SIZE(640, 400)
-	MDRV_SCREEN_VISIBLE_AREA(0, 640-1, 0, 400-1)
-	MDRV_PALETTE_LENGTH(ARRAY_LENGTH(pasogo_palette))
-	MDRV_VIDEO_UPDATE(pasogo)
-	MDRV_PALETTE_INIT(pasogo)
+	MCFG_SCREEN_ADD("screen", LCD)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_SIZE(640, 400)
+	MCFG_SCREEN_VISIBLE_AREA(0, 640-1, 0, 400-1)
+	MCFG_PALETTE_LENGTH(ARRAY_LENGTH(pasogo_palette))
+	MCFG_VIDEO_UPDATE(pasogo)
+	MCFG_PALETTE_INIT(pasogo)
 #if 0
-	MDRV_SPEAKER_STANDARD_MONO("gmaster")
-	MDRV_SOUND_ADD("custom", CUSTOM, 0)
-	MDRV_SOUND_CONFIG(gmaster_sound_interface)
-	MDRV_SOUND_ROUTE(0, "gmaster", 0.50)
+	MCFG_SPEAKER_STANDARD_MONO("gmaster")
+	MCFG_SOUND_ADD("custom", CUSTOM, 0)
+	MCFG_SOUND_CONFIG(gmaster_sound_interface)
+	MCFG_SOUND_ROUTE(0, "gmaster", 0.50)
 #endif
 
-	MDRV_CARTSLOT_ADD("cart")
-	MDRV_CARTSLOT_EXTENSION_LIST("bin")
-	MDRV_CARTSLOT_MANDATORY
-	MDRV_CARTSLOT_INTERFACE("pasogo_cart")
-	MDRV_CARTSLOT_LOAD(pasogo_cart)
-	MDRV_SOFTWARE_LIST_ADD("cart_list","pasogo")
-MACHINE_DRIVER_END
+	MCFG_CARTSLOT_ADD("cart")
+	MCFG_CARTSLOT_EXTENSION_LIST("bin")
+	MCFG_CARTSLOT_MANDATORY
+	MCFG_CARTSLOT_INTERFACE("pasogo_cart")
+	MCFG_CARTSLOT_LOAD(pasogo_cart)
+	MCFG_SOFTWARE_LIST_ADD("cart_list","pasogo")
+MACHINE_CONFIG_END
 
 
 ROM_START(pasogo)
@@ -574,11 +571,11 @@ ROM_END
 
 static DRIVER_INIT( pasogo )
 {
-	pasogo_state *state = (pasogo_state *)machine->driver_data;
+	pasogo_state *state = machine->driver_data<pasogo_state>();
 	vg230_init(machine);
 	memset(&state->ems, 0, sizeof(state->ems));
-	memory_set_bankptr( machine, "bank27", memory_region(machine, "user1") + 0x00000 );
-	memory_set_bankptr( machine, "bank28", memory_region(machine, "maincpu") + 0xb8000/*?*/ );
+	memory_set_bankptr( machine, "bank27", machine->region("user1")->base() + 0x00000 );
+	memory_set_bankptr( machine, "bank28", machine->region("maincpu")->base() + 0xb8000/*?*/ );
 }
 
 /*    YEAR      NAME            PARENT  MACHINE   INPUT     INIT

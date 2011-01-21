@@ -41,7 +41,6 @@ static int gx_specialrozenable; // type 1 roz, with voxel height-map, rendered f
 static int gx_rushingheroes_hack;
 static int gx_le2_textcolour_hack;
 static tilemap_t *gx_psac_tilemap, *gx_psac_tilemap2;
-extern UINT32 *gx_psacram, *gx_subpaletteram32;
 static bitmap_t* type3_roz_temp_bitmap;
 static tilemap_t* gx_psac_tilemap_alt;
 
@@ -1869,7 +1868,7 @@ WRITE32_HANDLER( konamigx_type3_psac2_bank_w )
  static TILE_GET_INFO( get_gx_psac3_tile_info )
  {
 	int tileno, colour, flip;
-	UINT8 *tmap = memory_region(machine, "gfx4");
+	UINT8 *tmap = machine->region("gfx4")->base();
 
 	int base_index = tile_index;
 
@@ -1890,7 +1889,7 @@ WRITE32_HANDLER( konamigx_type3_psac2_bank_w )
  static TILE_GET_INFO( get_gx_psac3_alt_tile_info )
  {
 	int tileno, colour, flip;
-	UINT8 *tmap = memory_region(machine, "gfx4")+0x20000;
+	UINT8 *tmap = machine->region("gfx4")->base()+0x20000;
 
 	int base_index = tile_index;
 
@@ -2388,8 +2387,8 @@ VIDEO_UPDATE(konamigx)
 
 	if (konamigx_has_dual_screen)
 	{
-		running_device *left_screen  = screen->machine->device("screen");
-		running_device *right_screen = screen->machine->device("screen2");
+		device_t *left_screen  = screen->machine->device("screen");
+		device_t *right_screen = screen->machine->device("screen2");
 
 		/* the video gets demuxed by a board which plugs into the jamma connector */
 		if (screen==left_screen)
@@ -2599,8 +2598,8 @@ VIDEO_UPDATE(konamigx)
 
 	if (konamigx_has_dual_screen)
 	{
-		running_device *left_screen  = screen->machine->device("screen");
-		running_device *right_screen = screen->machine->device("screen2");
+		device_t *left_screen  = screen->machine->device("screen");
+		device_t *right_screen = screen->machine->device("screen2");
 
 		if (screen==left_screen)
 		{

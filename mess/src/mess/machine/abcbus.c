@@ -24,7 +24,7 @@ typedef struct _abcbus_daisy_state abcbus_daisy_state;
 struct _abcbus_daisy_state
 {
 	abcbus_daisy_state			*next;			/* next device */
-	running_device				*device;		/* associated device */
+	device_t				*device;		/* associated device */
 
 	devcb_resolved_write8		out_cs_func;
 
@@ -42,24 +42,38 @@ typedef struct _abcbus_t abcbus_t;
 struct _abcbus_t
 {
 	abcbus_daisy_state *daisy_state;
+
+	device_t *cpu;
+
+	int resin;
+	int irq;
+	int nmi;
+	int rdy;
 };
 
 /***************************************************************************
     INLINE FUNCTIONS
 ***************************************************************************/
 
-INLINE abcbus_t *get_safe_token(running_device *device)
+INLINE abcbus_t *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
 	assert(device->type() == ABCBUS);
 	return (abcbus_t *)downcast<legacy_device_base *>(device)->token();
 }
 
-INLINE const abcbus_daisy_chain *get_interface(running_device *device)
+INLINE const abcbus_daisy_chain *get_interface(device_t *device)
 {
 	assert(device != NULL);
 	assert(device->type() == ABCBUS);
 	return (const abcbus_daisy_chain *) device->baseconfig().static_config();
+}
+
+INLINE abcbus_config *get_safe_config(device_t *device)
+{
+	assert(device != NULL);
+	assert(device->type() == ABCBUS);
+	return (abcbus_config *)downcast<const legacy_device_config_base &>(device->baseconfig()).inline_config();
 }
 
 /***************************************************************************
@@ -83,6 +97,8 @@ READ8_DEVICE_HANDLER( abcbus_rst_r )
 {
 	abcbus_t *abcbus = get_safe_token(device);
 	abcbus_daisy_state *daisy = abcbus->daisy_state;
+
+	if (LOG) logerror("ABCBUS: '%s' RST\n", device->tag());
 
 	for ( ; daisy != NULL; daisy = daisy->next)
 	{
@@ -138,7 +154,7 @@ READ8_DEVICE_HANDLER( abcbus_stat_r )
 	return data;
 }
 
-static void command_w(running_device *device, int index, UINT8 data)
+static void command_w(device_t *device, int index, UINT8 data)
 {
 	abcbus_t *abcbus = get_safe_token(device);
 	abcbus_daisy_state *daisy = abcbus->daisy_state;
@@ -156,6 +172,56 @@ WRITE8_DEVICE_HANDLER( abcbus_c2_w ) { command_w(device, 1, data); }
 WRITE8_DEVICE_HANDLER( abcbus_c3_w ) { command_w(device, 2, data); }
 WRITE8_DEVICE_HANDLER( abcbus_c4_w ) { command_w(device, 3, data); }
 
+WRITE_LINE_DEVICE_HANDLER( abcbus_resin_w )
+{
+	abcbus_t *abcbus = get_safe_token(device);
+
+	if (abcbus->resin != state)
+	{
+		if (LOG) logerror("ABCBUS: '%s' RESIN %u\n", device->tag(), state);
+		
+		cpu_set_input_line(abcbus->cpu, INPUT_LINE_RESET, state);
+		abcbus->resin = state;
+	}
+}
+
+WRITE_LINE_DEVICE_HANDLER( abcbus_int_w )
+{
+	abcbus_t *abcbus = get_safe_token(device);
+
+	if (abcbus->irq != state)
+	{
+		if (LOG) logerror("ABCBUS: '%s' INT %u\n", device->tag(), state);
+
+		cpu_set_input_line(abcbus->cpu, INPUT_LINE_IRQ0, state);
+		abcbus->irq = state;
+	}
+}
+
+WRITE_LINE_DEVICE_HANDLER( abcbus_nmi_w )
+{
+	abcbus_t *abcbus = get_safe_token(device);
+
+	if (abcbus->nmi != state)
+	{
+		if (LOG) logerror("ABCBUS: '%s' NMI %u\n", device->tag(), state);
+
+		cpu_set_input_line(abcbus->cpu, INPUT_LINE_NMI, state);
+		abcbus->nmi = state;
+	}
+}
+
+WRITE_LINE_DEVICE_HANDLER( abcbus_rdy_w )
+{
+	abcbus_t *abcbus = get_safe_token(device);
+
+	if (abcbus->rdy != state)
+	{
+		if (LOG) logerror("ABCBUS: '%s' RDY %u\n", device->tag(), state);
+		abcbus->rdy = state;
+	}
+}
+
 /*-------------------------------------------------
     DEVICE_START( abcbus )
 -------------------------------------------------*/
@@ -164,9 +230,13 @@ static DEVICE_START( abcbus )
 {
 	abcbus_t *abcbus = get_safe_token(device);
 	const abcbus_daisy_chain *daisy = get_interface(device);
+	const abcbus_config *config = get_safe_config(device);
 
 	abcbus_daisy_state *head = NULL;
 	abcbus_daisy_state **tailptr = &head;
+
+	/* get CPU */
+	abcbus->cpu = device->machine->device(config->cpu_tag);
 
 	/* create a linked list of devices */
 	for ( ; daisy->tag != NULL; daisy++)
@@ -209,7 +279,7 @@ DEVICE_GET_INFO( abcbus )
 	{
 		/* --- the following bits of info are returned as 64-bit signed integers --- */
 		case DEVINFO_INT_TOKEN_BYTES:					info->i = sizeof(abcbus_t);									break;
-		case DEVINFO_INT_INLINE_CONFIG_BYTES:			info->i = 0;												break;
+		case DEVINFO_INT_INLINE_CONFIG_BYTES:			info->i = sizeof(abcbus_config);							break;
 
 		/* --- the following bits of info are returned as pointers to data or functions --- */
 		case DEVINFO_FCT_START:							info->start = DEVICE_START_NAME(abcbus);					break;

@@ -6,12 +6,11 @@
 
 
 
-class dribling_state
+class dribling_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, dribling_state(machine)); }
-
-	dribling_state(running_machine &machine) { }
+	dribling_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *  videoram;
@@ -24,9 +23,9 @@ public:
 	UINT8    di;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *ppi_0;
-	running_device *ppi_1;
+	device_t *maincpu;
+	device_t *ppi_0;
+	device_t *ppi_1;
 };
 
 

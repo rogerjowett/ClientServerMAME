@@ -14,11 +14,15 @@ void osd_customize_input_type_list(input_type_desc *typelist)
 {
 }
 
-void osd_wait_for_debugger(running_device *device, int firststop)
+void osd_wait_for_debugger(device_t *device, int firststop)
 {
 }
 
 void osd_mess_options_init(core_options *options)
+{
+}
+
+void osd_init_debugger(running_machine *machine)
 {
 }
 

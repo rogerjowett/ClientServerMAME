@@ -188,7 +188,6 @@ Notes:
 ******************************************************************************/
 
 #include "emu.h"
-#include "video/system1.h"
 #include "cpu/z80/z80.h"
 #include "cpu/mcs51/mcs51.h"
 #include "machine/z80pio.h"
@@ -197,6 +196,7 @@ Notes:
 #include "machine/segacrp2.h"
 #include "machine/mc8123.h"
 #include "sound/sn76496.h"
+#include "includes/system1.h"
 
 
 #define MASTER_CLOCK	XTAL_20MHz
@@ -355,12 +355,12 @@ static const UINT8 cc_ex[0x100] = {
 
 static MACHINE_START( system1 )
 {
-	UINT32 numbanks = (memory_region_length(machine, "maincpu") - 0x10000) / 0x4000;
+	UINT32 numbanks = (machine->region("maincpu")->bytes() - 0x10000) / 0x4000;
 
 	if (numbanks > 0)
-		memory_configure_bank(machine, "bank1", 0, numbanks, memory_region(machine, "maincpu") + 0x10000, 0x4000);
+		memory_configure_bank(machine, "bank1", 0, numbanks, machine->region("maincpu")->base() + 0x10000, 0x4000);
 	else
-		memory_configure_bank(machine, "bank1", 0, 1, memory_region(machine, "maincpu") + 0x8000, 0);
+		memory_configure_bank(machine, "bank1", 0, 1, machine->region("maincpu")->base() + 0x8000, 0);
 	memory_set_bank(machine, "bank1", 0);
 
 	z80_set_cycle_tables(machine->device("maincpu"), cc_op, cc_cb, cc_ed, cc_xy, cc_xycb, cc_ex);
@@ -410,7 +410,7 @@ static void bank0c_custom_w(running_machine *machine, UINT8 data, UINT8 prevdata
 
 static WRITE8_HANDLER( videomode_w )
 {
-	running_device *i8751 = space->machine->device("mcu");
+	device_t *i8751 = space->machine->device("mcu");
 
 	/* bit 6 is connected to the 8751 IRQ */
 	if (i8751 != NULL)
@@ -555,11 +555,11 @@ static WRITE8_HANDLER( mcu_io_w )
 	switch ((mcu_control >> 3) & 3)
 	{
 		case 0:
-			memory_write_byte(cputag_get_address_space(space->machine, "maincpu", ADDRESS_SPACE_PROGRAM), offset, data);
+			space->machine->device<z80_device>("maincpu")->space(AS_PROGRAM)->write_byte(offset, data);
 			break;
 
 		case 2:
-			memory_write_byte(cputag_get_address_space(space->machine, "maincpu", ADDRESS_SPACE_IO), offset, data);
+			space->machine->device<z80_device>("maincpu")->space(AS_IO)->write_byte(offset, data);
 			break;
 
 		default:
@@ -575,13 +575,13 @@ static READ8_HANDLER( mcu_io_r )
 	switch ((mcu_control >> 3) & 3)
 	{
 		case 0:
-			return memory_read_byte(cputag_get_address_space(space->machine, "maincpu", ADDRESS_SPACE_PROGRAM), offset);
+			return space->machine->device<z80_device>("maincpu")->space(AS_PROGRAM)->read_byte(offset);
 
 		case 1:
-			return memory_region(space->machine, "maincpu")[offset + 0x10000];
+			return space->machine->region("maincpu")->base()[offset + 0x10000];
 
 		case 2:
-			return memory_read_byte(cputag_get_address_space(space->machine, "maincpu", ADDRESS_SPACE_IO), offset);
+			return space->machine->device<z80_device>("maincpu")->space(AS_IO)->read_byte(offset);
 
 		default:
 			logerror("%03X: MCU movx read mode %02X offset %04X\n",
@@ -608,7 +608,7 @@ static TIMER_DEVICE_CALLBACK( mcu_t0_callback )
        enough, the MCU will fail; on shtngmst this happens after 3
        VBLANKs without a tick */
 
-	running_device *mcu = timer.machine->device("mcu");
+	device_t *mcu = timer.machine->device("mcu");
 	cpu_set_input_line(mcu, MCS51_T0_LINE, ASSERT_LINE);
 	cpu_set_input_line(mcu, MCS51_T0_LINE, CLEAR_LINE);
 }
@@ -2099,142 +2099,133 @@ static Z80PIO_INTERFACE( pio_interface )
  *************************************/
 
 /* original board with 64kbit ROMs and an 8255 PPI for outputs */
-static MACHINE_DRIVER_START( sys1ppi )
+static MACHINE_CONFIG_START( sys1ppi, system1_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, MASTER_CLOCK)	/* not really, see notes above */
-	MDRV_CPU_PROGRAM_MAP(system1_map)
-	MDRV_CPU_IO_MAP(system1_ppi_io_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80, MASTER_CLOCK)	/* not really, see notes above */
+	MCFG_CPU_PROGRAM_MAP(system1_map)
+	MCFG_CPU_IO_MAP(system1_ppi_io_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("soundcpu", Z80, SOUND_CLOCK/2)
-	MDRV_CPU_PROGRAM_MAP(sound_map)
-	MDRV_TIMER_ADD_SCANLINE("soundirq", soundirq_gen, "screen", 32, 64)
+	MCFG_CPU_ADD("soundcpu", Z80, SOUND_CLOCK/2)
+	MCFG_CPU_PROGRAM_MAP(sound_map)
+	MCFG_TIMER_ADD_SCANLINE("soundirq", soundirq_gen, "screen", 32, 64)
 
-	MDRV_MACHINE_START(system1)
-	MDRV_MACHINE_RESET(system1)
+	MCFG_MACHINE_START(system1)
+	MCFG_MACHINE_RESET(system1)
 
-	MDRV_PPI8255_ADD("ppi", ppi_interface)
+	MCFG_PPI8255_ADD("ppi", ppi_interface)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_ALWAYS_UPDATE)	/* needed for proper hardware collisions */
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_ALWAYS_UPDATE)	/* needed for proper hardware collisions */
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_RAW_PARAMS(MASTER_CLOCK/4, 320, 0, 256, 260, 0, 224)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_RAW_PARAMS(MASTER_CLOCK/4, 320, 0, 256, 260, 0, 224)
 
-	MDRV_GFXDECODE(system1)
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_GFXDECODE(system1)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(system1)
-	MDRV_VIDEO_UPDATE(system1)
+	MCFG_VIDEO_START(system1)
+	MCFG_VIDEO_UPDATE(system1)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("sn1", SN76489A, SOUND_CLOCK/4)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_SOUND_ADD("sn1", SN76489A, SOUND_CLOCK/4)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MDRV_SOUND_ADD("sn2", SN76489A, SOUND_CLOCK/2)	/* selectable via jumper */
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("sn2", SN76489A, SOUND_CLOCK/2)	/* selectable via jumper */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 /* reduced visible area for scrolling games */
-static MACHINE_DRIVER_START( sys1ppis )
-	MDRV_IMPORT_FROM( sys1ppi )
+static MACHINE_CONFIG_DERIVED( sys1ppis, sys1ppi )
 
 	/* video hardware */
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_VISIBLE_AREA(0*8+8, 32*8-1-8, 0*8, 28*8-1)
-MACHINE_DRIVER_END
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_VISIBLE_AREA(0*8+8, 32*8-1-8, 0*8, 28*8-1)
+MACHINE_CONFIG_END
 
 
 
 /* revised board with 128kbit ROMs and a Z80 PIO for outputs */
-static MACHINE_DRIVER_START( sys1pio )
-	MDRV_IMPORT_FROM( sys1ppi )
+static MACHINE_CONFIG_DERIVED( sys1pio, sys1ppi )
 
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_IO_MAP(system1_pio_io_map)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_IO_MAP(system1_pio_io_map)
 
-	MDRV_DEVICE_REMOVE("ppi")
-	MDRV_Z80PIO_ADD("pio", MASTER_CLOCK, pio_interface)
-MACHINE_DRIVER_END
+	MCFG_DEVICE_REMOVE("ppi")
+	MCFG_Z80PIO_ADD("pio", MASTER_CLOCK, pio_interface)
+MACHINE_CONFIG_END
 
 /* reduced visible area for scrolling games */
-static MACHINE_DRIVER_START( sys1pios )
-	MDRV_IMPORT_FROM( sys1pio )
+static MACHINE_CONFIG_DERIVED( sys1pios, sys1pio )
 
 	/* video hardware */
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_VISIBLE_AREA(0*8+8, 32*8-1-8, 0*8, 28*8-1)
-MACHINE_DRIVER_END
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_VISIBLE_AREA(0*8+8, 32*8-1-8, 0*8, 28*8-1)
+MACHINE_CONFIG_END
 
 
 
 /* this describes the additional 8751 MCU when present */
-static MACHINE_DRIVER_START( mcu )
+static MACHINE_CONFIG_FRAGMENT( mcu )
 
 	/* basic machine hardware */
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_VBLANK_INT(NULL, NULL)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_VBLANK_INT(NULL, NULL)
 
-	MDRV_CPU_ADD("mcu", I8751, SOUND_CLOCK)
-	MDRV_CPU_IO_MAP(mcu_io_map)
-	MDRV_CPU_VBLANK_INT("screen", mcu_irq_assert)
+	MCFG_CPU_ADD("mcu", I8751, SOUND_CLOCK)
+	MCFG_CPU_IO_MAP(mcu_io_map)
+	MCFG_CPU_VBLANK_INT("screen", mcu_irq_assert)
 
-	MDRV_TIMER_ADD_PERIODIC("mcu_t0", mcu_t0_callback, MSEC(20))	/* ??? actual clock unknown */
-MACHINE_DRIVER_END
+	MCFG_TIMER_ADD_PERIODIC("mcu_t0", mcu_t0_callback, MSEC(20))	/* ??? actual clock unknown */
+MACHINE_CONFIG_END
 
 
 
 /* alternate program map with RAM/collision swapped */
-static MACHINE_DRIVER_START( nob )
-	MDRV_IMPORT_FROM( sys1ppi )
+static MACHINE_CONFIG_DERIVED( nob, sys1ppi )
 
 	/* basic machine hardware */
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(nobo_map)
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(nobo_map)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( nobm )
-	MDRV_IMPORT_FROM( nob )
+static MACHINE_CONFIG_DERIVED( nobm, nob )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("mcu", I8751, SOUND_CLOCK)
-	MDRV_CPU_IO_MAP(nob_mcu_io_map)
-MACHINE_DRIVER_END
+	MCFG_CPU_ADD("mcu", I8751, SOUND_CLOCK)
+	MCFG_CPU_IO_MAP(nob_mcu_io_map)
+MACHINE_CONFIG_END
 
 
 
 /* system2 video */
-static MACHINE_DRIVER_START( sys2 )
-	MDRV_IMPORT_FROM( sys1ppi )
+static MACHINE_CONFIG_DERIVED( sys2, sys1ppi )
 
-	MDRV_MACHINE_START(system2)
+	MCFG_MACHINE_START(system2)
 
 	/* video hardware */
-	MDRV_VIDEO_START(system2)
-	MDRV_VIDEO_UPDATE(system2)
-MACHINE_DRIVER_END
+	MCFG_VIDEO_START(system2)
+	MCFG_VIDEO_UPDATE(system2)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( sys2m )
-	MDRV_IMPORT_FROM( sys2 )
-	MDRV_IMPORT_FROM( mcu )
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( sys2m, sys2 )
+	MCFG_FRAGMENT_ADD( mcu )
+MACHINE_CONFIG_END
 
 /* system2 with rowscroll */
-static MACHINE_DRIVER_START( sys2row )
-	MDRV_IMPORT_FROM( sys2 )
+static MACHINE_CONFIG_DERIVED( sys2row, sys2 )
 
 	/* video hardware */
-	MDRV_VIDEO_UPDATE(system2_rowscroll)
-MACHINE_DRIVER_END
+	MCFG_VIDEO_UPDATE(system2_rowscroll)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( sys2rowm )
-	MDRV_IMPORT_FROM( sys2row )
-	MDRV_IMPORT_FROM( mcu )
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( sys2rowm, sys2row )
+	MCFG_FRAGMENT_ADD( mcu )
+MACHINE_CONFIG_END
 
 
 
@@ -4555,12 +4546,12 @@ static DRIVER_INIT( myherok )
 
 	/* additionally to the usual protection, all the program ROMs have data lines */
 	/* D0 and D1 swapped. */
-	rom = memory_region(machine, "maincpu");
+	rom = machine->region("maincpu")->base();
 	for (A = 0;A < 0xc000;A++)
 		rom[A] = (rom[A] & 0xfc) | ((rom[A] & 1) << 1) | ((rom[A] & 2) >> 1);
 
 	/* the tile gfx ROMs are mangled as well: */
-	rom = memory_region(machine, "tiles");
+	rom = machine->region("tiles")->base();
 
 	/* the first ROM has data lines D0 and D6 swapped. */
 	for (A = 0x0000;A < 0x4000;A++)
@@ -4595,13 +4586,13 @@ static DRIVER_INIT( myherok )
 static READ8_HANDLER( nob_start_r )
 {
 	/* in reality, it's likely some M1-dependent behavior */
-	return (cpu_get_pc(space->cpu) <= 0x0003) ? 0x80 : memory_region(space->machine, "maincpu")[1];
+	return (cpu_get_pc(space->cpu) <= 0x0003) ? 0x80 : space->machine->region("maincpu")->base()[1];
 }
 
 static DRIVER_INIT( nob )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
-	const address_space *iospace = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_IO);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *iospace = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_IO);
 
 	DRIVER_INIT_CALL(bank44);
 
@@ -4620,7 +4611,7 @@ static DRIVER_INIT( nobb )
 	/* Patch to get PRG ROMS ('T', 'R' and 'S) status as "GOOD" in the "test mode" */
 	/* not really needed */
 
-//  UINT8 *ROM = memory_region(machine, "maincpu");
+//  UINT8 *ROM = machine->region("maincpu")->base();
 
 //  ROM[0x3296] = 0x18;     // 'jr' instead of 'jr z' - 'T' (PRG Main ROM)
 //  ROM[0x32be] = 0x18;     // 'jr' instead of 'jr z' - 'R' (Banked ROM 1)
@@ -4632,8 +4623,8 @@ static DRIVER_INIT( nobb )
 //  ROM[0x10000 + 0 * 0x8000 + 0x3347] = 0x18;  // 'jr' instead of 'jr z'
 
 	/* Patch to get sound in later levels(the program enters into a tight loop)*/
-	const address_space *iospace = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_IO);
-	UINT8 *ROM2 = memory_region(machine, "soundcpu");
+	address_space *iospace = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_IO);
+	UINT8 *ROM2 = machine->region("soundcpu")->base();
 
 	ROM2[0x02f9] = 0x28;//'jr z' instead of 'jr'
 
@@ -4648,23 +4639,23 @@ static DRIVER_INIT( nobb )
 
 static DRIVER_INIT( bootleg )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
-	memory_set_decrypted_region(space, 0x0000, 0x7fff, memory_region(machine, "maincpu") + 0x10000);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	space->set_decrypted_region(0x0000, 0x7fff, machine->region("maincpu")->base() + 0x10000);
 	DRIVER_INIT_CALL(bank00);
 }
 
 
 static DRIVER_INIT( bootsys2 )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
-	memory_set_decrypted_region(space, 0x0000, 0x7fff, memory_region(machine, "maincpu") + 0x20000);
-	memory_configure_bank_decrypted(machine, "bank1", 0, 4, memory_region(machine, "maincpu") + 0x30000, 0x4000);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	space->set_decrypted_region(0x0000, 0x7fff, machine->region("maincpu")->base() + 0x20000);
+	memory_configure_bank_decrypted(machine, "bank1", 0, 4, machine->region("maincpu")->base() + 0x30000, 0x4000);
 	DRIVER_INIT_CALL(bank0c);
 }
 
 static DRIVER_INIT( choplift )
 {
-	UINT8 *mcurom = memory_region(machine, "mcu");
+	UINT8 *mcurom = machine->region("mcu")->base();
 
 	/* the ROM dump we have is bad; the following patches make it work */
 	mcurom[0x100] = 0x55;		/* D5 in current dump */
@@ -4676,7 +4667,7 @@ static DRIVER_INIT( choplift )
 
 static DRIVER_INIT( shtngmst )
 {
-	const address_space *iospace = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_IO);
+	address_space *iospace = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_IO);
 	memory_install_read_port(iospace, 0x12, 0x12, 0x00, 0x00, "TRIGGER");
 	memory_install_read_port(iospace, 0x18, 0x18, 0x00, 0x03, "18");
 	memory_install_read_port(iospace, 0x1c, 0x1c, 0x00, 0x02, "GUNX");

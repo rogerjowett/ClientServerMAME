@@ -66,7 +66,7 @@ static const eeprom_interface eeprom_intf =
 
 static READ16_HANDLER( control2_r )
 {
-	moo_state *state = (moo_state *)space->machine->driver_data;
+	moo_state *state = space->machine->driver_data<moo_state>();
 	return state->cur_control2;
 }
 
@@ -80,7 +80,7 @@ static WRITE16_HANDLER( control2_w )
 	/* bit 10 is watchdog */
 	/* bit 11 is enable irq 4 (unconfirmed) */
 
-	moo_state *state = (moo_state *)space->machine->driver_data;
+	moo_state *state = space->machine->driver_data<moo_state>();
 	COMBINE_DATA(&state->cur_control2);
 
 	input_port_write(space->machine, "EEPROMOUT", state->cur_control2, 0xff);
@@ -94,7 +94,7 @@ static WRITE16_HANDLER( control2_w )
 
 static void moo_objdma( running_machine *machine, int type )
 {
-	moo_state *state = (moo_state *)machine->driver_data;
+	moo_state *state = machine->driver_data<moo_state>();
 	int num_inactive;
 	UINT16 *src, *dst, zmask;
 	int counter = k053247_get_dy(state->k053246);
@@ -121,20 +121,20 @@ static void moo_objdma( running_machine *machine, int type )
 
 static TIMER_CALLBACK( dmaend_callback )
 {
-	moo_state *state = (moo_state *)machine->driver_data;
+	moo_state *state = machine->driver_data<moo_state>();
 	if (state->cur_control2 & 0x800)
 		cpu_set_input_line(state->maincpu, 4, HOLD_LINE);
 }
 
 static INTERRUPT_GEN( moo_interrupt )
 {
-	moo_state *state = (moo_state *)device->machine->driver_data;
+	moo_state *state = device->machine->driver_data<moo_state>();
 	if (k053246_is_irq_enabled(state->k053246))
 	{
 		moo_objdma(device->machine, state->game_type);
 
 		// schedule DMA end interrupt (delay shortened to catch up with V-blank)
-		timer_set(device->machine, ATTOTIME_IN_USEC(MOO_DMADELAY), NULL, 0, dmaend_callback);
+        timer_adjust_oneshot(state->dmaend_timer, ATTOTIME_IN_USEC(MOO_DMADELAY), 0);
 	}
 
 	// trigger V-blank interrupt
@@ -144,11 +144,11 @@ static INTERRUPT_GEN( moo_interrupt )
 
 static INTERRUPT_GEN( moobl_interrupt )
 {
-	moo_state *state = (moo_state *)device->machine->driver_data;
+	moo_state *state = device->machine->driver_data<moo_state>();
 	moo_objdma(device->machine, state->game_type);
 
 	// schedule DMA end interrupt (delay shortened to catch up with V-blank)
-	timer_set(device->machine, ATTOTIME_IN_USEC(MOO_DMADELAY), NULL, 0, dmaend_callback);
+    timer_adjust_oneshot(state->dmaend_timer, ATTOTIME_IN_USEC(MOO_DMADELAY), 0);
 
 	// trigger V-blank interrupt
 	cpu_set_input_line(device, 5, HOLD_LINE);
@@ -171,7 +171,7 @@ static WRITE16_HANDLER( sound_cmd2_w )
 
 static WRITE16_HANDLER( sound_irq_w )
 {
-	moo_state *state = (moo_state *)space->machine->driver_data;
+	moo_state *state = space->machine->driver_data<moo_state>();
 	cpu_set_input_line(state->audiocpu, 0, HOLD_LINE);
 }
 
@@ -182,7 +182,7 @@ static READ16_HANDLER( sound_status_r )
 
 static WRITE8_HANDLER( sound_bankswitch_w )
 {
-	memory_set_bankptr(space->machine, "bank1", memory_region(space->machine, "soundcpu") + 0x10000 + (data&0xf)*0x4000);
+	memory_set_bankptr(space->machine, "bank1", space->machine->region("soundcpu")->base() + 0x10000 + (data&0xf)*0x4000);
 }
 
 
@@ -192,7 +192,7 @@ static WRITE8_HANDLER( sound_bankswitch_w )
 /* of RAM, but they put 0x10000 there. The CPU can access them all. */
 static READ16_HANDLER( K053247_scattered_word_r )
 {
-	moo_state *state = (moo_state *)space->machine->driver_data;
+	moo_state *state = space->machine->driver_data<moo_state>();
 
 	if (offset & 0x0078)
 		return state->spriteram[offset];
@@ -205,7 +205,7 @@ static READ16_HANDLER( K053247_scattered_word_r )
 
 static WRITE16_HANDLER( K053247_scattered_word_w )
 {
-	moo_state *state = (moo_state *)space->machine->driver_data;
+	moo_state *state = space->machine->driver_data<moo_state>();
 
 	if (offset & 0x0078)
 		COMBINE_DATA(state->spriteram + offset);
@@ -222,7 +222,7 @@ static WRITE16_HANDLER( K053247_scattered_word_w )
 
 static WRITE16_HANDLER( moo_prot_w )
 {
-	moo_state *state = (moo_state *)space->machine->driver_data;
+	moo_state *state = space->machine->driver_data<moo_state>();
 	UINT32 src1, src2, dst, length, a, b, res;
 
 	COMBINE_DATA(&state->protram[offset]);
@@ -236,11 +236,11 @@ static WRITE16_HANDLER( moo_prot_w )
 
 		while (length)
 		{
-			a = memory_read_word(space, src1);
-			b = memory_read_word(space, src2);
+			a = space->read_word(src1);
+			b = space->read_word(src2);
 			res = a + 2 * b;
 
-			memory_write_word(space, dst, res);
+			space->write_word(dst, res);
 
 			src1 += 2;
 			src2 += 2;
@@ -306,7 +306,7 @@ static ADDRESS_MAP_START( moobl_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x0cc000, 0x0cc01f) AM_DEVWRITE("k053251", k053251_lsb_w)
 	AM_RANGE(0x0d0000, 0x0d001f) AM_WRITEONLY		            /* CCU regs (ignored) */
 	AM_RANGE(0x0d6ffc, 0x0d6ffd) AM_DEVWRITE("oki", moobl_oki_bank_w)
-	AM_RANGE(0x0d6ffe, 0x0d6fff) AM_DEVREADWRITE8("oki", okim6295_r,okim6295_w, 0x00ff)
+	AM_RANGE(0x0d6ffe, 0x0d6fff) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0x00ff)
 	AM_RANGE(0x0d8000, 0x0d8007) AM_DEVWRITE("k056832", k056832_b_word_w)     /* VSCCS regs */
 	AM_RANGE(0x0da000, 0x0da001) AM_READ_PORT("P1_P3")
 	AM_RANGE(0x0da002, 0x0da003) AM_READ_PORT("P2_P4")
@@ -431,7 +431,7 @@ INPUT_PORTS_END
 
 static MACHINE_START( moo )
 {
-	moo_state *state = (moo_state *)machine->driver_data;
+	moo_state *state = machine->driver_data<moo_state>();
 
 	state->maincpu = machine->device("maincpu");
 	state->audiocpu = machine->device("soundcpu");
@@ -447,11 +447,13 @@ static MACHINE_START( moo )
 	state_save_register_global_array(machine, state->layer_colorbase);
 	state_save_register_global_array(machine, state->layerpri);
 	state_save_register_global_array(machine, state->protram);
+
+    state->dmaend_timer = timer_alloc(machine, dmaend_callback, 0);
 }
 
 static MACHINE_RESET( moo )
 {
-	moo_state *state = (moo_state *)machine->driver_data;
+	moo_state *state = machine->driver_data<moo_state>();
 	int i;
 
 	for (i = 0; i < 16; i++)
@@ -505,113 +507,106 @@ static const k054338_interface moo_k054338_intf =
 };
 
 
-static MACHINE_DRIVER_START( moo )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(moo_state)
+static MACHINE_CONFIG_START( moo, moo_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 16000000)
-	MDRV_CPU_PROGRAM_MAP(moo_map)
-	MDRV_CPU_VBLANK_INT("screen", moo_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, 16000000)
+	MCFG_CPU_PROGRAM_MAP(moo_map)
+	MCFG_CPU_VBLANK_INT("screen", moo_interrupt)
 
-	MDRV_CPU_ADD("soundcpu", Z80, 8000000)
-	MDRV_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_ADD("soundcpu", Z80, 8000000)
+	MCFG_CPU_PROGRAM_MAP(sound_map)
 
-	MDRV_MACHINE_START(moo)
-	MDRV_MACHINE_RESET(moo)
+	MCFG_MACHINE_START(moo)
+	MCFG_MACHINE_RESET(moo)
 
-	MDRV_EEPROM_ADD("eeprom", eeprom_intf)
+	MCFG_EEPROM_ADD("eeprom", eeprom_intf)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_HAS_HIGHLIGHTS | VIDEO_UPDATE_AFTER_VBLANK)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_HAS_HIGHLIGHTS | VIDEO_UPDATE_AFTER_VBLANK)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(1200))	 // should give IRQ4 sufficient time to update scroll registers
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(40, 40+384-1, 16, 16+224-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(1200))	 // should give IRQ4 sufficient time to update scroll registers
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(40, 40+384-1, 16, 16+224-1)
 
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(moo)
-	MDRV_VIDEO_UPDATE(moo)
+	MCFG_VIDEO_START(moo)
+	MCFG_VIDEO_UPDATE(moo)
 
-	MDRV_K053247_ADD("k053246", moo_k053247_intf)
-	MDRV_K056832_ADD("k056832", moo_k056832_intf)
-	MDRV_K053251_ADD("k053251")
-	MDRV_K054338_ADD("k054338", moo_k054338_intf)
+	MCFG_K053247_ADD("k053246", moo_k053247_intf)
+	MCFG_K056832_ADD("k056832", moo_k056832_intf)
+	MCFG_K053251_ADD("k053251")
+	MCFG_K054338_ADD("k054338", moo_k054338_intf)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, 4000000)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.50)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.50)
+	MCFG_SOUND_ADD("ymsnd", YM2151, 4000000)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.50)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.50)
 
-	MDRV_SOUND_ADD("k054539", K054539, 48000)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.75)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.75)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("k054539", K054539, 48000)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.75)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.75)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( moobl )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(moo_state)
+static MACHINE_CONFIG_START( moobl, moo_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 16100000)
-	MDRV_CPU_PROGRAM_MAP(moobl_map)
-	MDRV_CPU_VBLANK_INT("screen", moobl_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, 16100000)
+	MCFG_CPU_PROGRAM_MAP(moobl_map)
+	MCFG_CPU_VBLANK_INT("screen", moobl_interrupt)
 
-	MDRV_MACHINE_START(moo)
-	MDRV_MACHINE_RESET(moo)
+	MCFG_MACHINE_START(moo)
+	MCFG_MACHINE_RESET(moo)
 
-	MDRV_EEPROM_ADD("eeprom", eeprom_intf)
+	MCFG_EEPROM_ADD("eeprom", eeprom_intf)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_HAS_HIGHLIGHTS | VIDEO_UPDATE_AFTER_VBLANK)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_HAS_HIGHLIGHTS | VIDEO_UPDATE_AFTER_VBLANK)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(1200)) // should give IRQ4 sufficient time to update scroll registers
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(40, 40+384-1, 16, 16+224-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(1200)) // should give IRQ4 sufficient time to update scroll registers
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(40, 40+384-1, 16, 16+224-1)
 
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(moo)
-	MDRV_VIDEO_UPDATE(moo)
+	MCFG_VIDEO_START(moo)
+	MCFG_VIDEO_UPDATE(moo)
 
-	MDRV_K053247_ADD("k053246", moo_k053247_intf)
-	MDRV_K056832_ADD("k056832", moo_k056832_intf)
-	MDRV_K053251_ADD("k053251")
-	MDRV_K054338_ADD("k054338", moo_k054338_intf)
+	MCFG_K053247_ADD("k053246", moo_k053247_intf)
+	MCFG_K056832_ADD("k056832", moo_k056832_intf)
+	MCFG_K053251_ADD("k053251")
+	MCFG_K054338_ADD("k054338", moo_k054338_intf)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( bucky )
-	MDRV_IMPORT_FROM(moo)
+static MACHINE_CONFIG_DERIVED( bucky, moo )
 
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(bucky_map)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(bucky_map)
 
-	MDRV_K054000_ADD("k054000")
+	MCFG_K054000_ADD("k054000")
 
-	MDRV_DEVICE_REMOVE("k053246")
-	MDRV_K053247_ADD("k053246", bucky_k053247_intf)		// diff x offset
+	MCFG_DEVICE_REMOVE("k053246")
+	MCFG_K053247_ADD("k053246", bucky_k053247_intf)		// diff x offset
 
 	/* video hardware */
-	MDRV_PALETTE_LENGTH(4096)
-MACHINE_DRIVER_END
+	MCFG_PALETTE_LENGTH(4096)
+MACHINE_CONFIG_END
 
 
 
@@ -885,7 +880,7 @@ ROM_END
 
 static DRIVER_INIT( moo )
 {
-	moo_state *state = (moo_state *)machine->driver_data;
+	moo_state *state = machine->driver_data<moo_state>();
 	state->game_type = (!strcmp(machine->gamedrv->name, "bucky") || !strcmp(machine->gamedrv->name, "buckyua"));
 }
 

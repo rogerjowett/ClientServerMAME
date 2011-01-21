@@ -13,15 +13,14 @@
     TYPE DEFINITIONS
 ***************************************************************************/
 
-class einstein_state
+class einstein_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, einstein_state(machine)); }
+	einstein_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
-	einstein_state(running_machine &machine) { }
-
-	running_device *color_screen;
-	running_device *ctc;
+	device_t *color_screen;
+	device_t *ctc;
 
 	int rom_enabled;
 	int interrupt;
@@ -33,7 +32,7 @@ public:
 	UINT8 keyboard_data;
 
 	/* 80 column device */
-	running_device *mc6845;
+	device_t *mc6845;
 	screen_device *crtc_screen;
 	UINT8 *crtc_ram;
 };

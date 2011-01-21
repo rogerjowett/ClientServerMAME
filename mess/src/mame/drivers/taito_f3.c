@@ -129,7 +129,7 @@ static WRITE32_HANDLER( f3_sound_reset_1_w )
 static WRITE32_HANDLER( f3_sound_bankswitch_w )
 {
 	if (f3_game==KIRAMEKI) {
-		UINT16 *rom = (UINT16 *)memory_region(space->machine, "audiocpu");
+		UINT16 *rom = (UINT16 *)space->machine->region("audiocpu")->base();
 		UINT32 idx;
 
 		idx = (offset << 1) & 0x1e;
@@ -158,7 +158,7 @@ static ADDRESS_MAP_START( f3_map, ADDRESS_SPACE_PROGRAM, 32 )
 	AM_RANGE(0x4a0000, 0x4a001f) AM_READWRITE(f3_control_r,  f3_control_w)
 	AM_RANGE(0x600000, 0x60ffff) AM_RAM AM_BASE_SIZE_GENERIC(spriteram)
 	AM_RANGE(0x610000, 0x61bfff) AM_RAM_WRITE(f3_pf_data_w) AM_BASE(&f3_pf_data)
-	AM_RANGE(0x61c000, 0x61dfff) AM_RAM_WRITE(f3_videoram_w) AM_BASE_GENERIC(videoram)
+	AM_RANGE(0x61c000, 0x61dfff) AM_RAM_WRITE(f3_videoram_w) AM_BASE_MEMBER(taito_f3_state, videoram)
 	AM_RANGE(0x61e000, 0x61ffff) AM_RAM_WRITE(f3_vram_w) AM_BASE(&f3_vram)
 	AM_RANGE(0x620000, 0x62ffff) AM_RAM_WRITE(f3_lineram_w) AM_BASE(&f3_line_ram)
 	AM_RANGE(0x630000, 0x63ffff) AM_RAM_WRITE(f3_pivot_w) AM_BASE(&f3_pivot_ram)
@@ -373,15 +373,15 @@ static SOUND_RESET( f3 )
 }
 
 
-static const UINT8 recalh_eeprom[128] =	{
-	0x85,0x54,0x00,0x00,0x30,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xf3,0x35,
-	0x00,0x01,0x86,0xa0,0x00,0x13,0x04,0x13,0x00,0x00,0xc3,0x50,0x00,0x19,0x00,0x0a,
-	0x00,0x00,0x4e,0x20,0x00,0x03,0x18,0x0d,0x00,0x00,0x27,0x10,0x00,0x05,0x14,0x18,
-	0x00,0x00,0x13,0x88,0x00,0x00,0x12,0x27,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
-	0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
-	0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
-	0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
-	0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff
+static const UINT16 recalh_eeprom[64] =	{
+	0x8554,0x0000,0x3000,0x0000,0x0000,0x0000,0x0000,0xf335,
+	0x0001,0x86a0,0x0013,0x0413,0x0000,0xc350,0x0019,0x000a,
+	0x0000,0x4e20,0x0003,0x180d,0x0000,0x2710,0x0005,0x1418,
+	0x0000,0x1388,0x0000,0x1227,0xffff,0xffff,0xffff,0xffff,
+	0xffff,0xffff,0xffff,0xffff,0xffff,0xffff,0xffff,0xffff,
+	0xffff,0xffff,0xffff,0xffff,0xffff,0xffff,0xffff,0xffff,
+	0xffff,0xffff,0xffff,0xffff,0xffff,0xffff,0xffff,0xffff,
+	0xffff,0xffff,0xffff,0xffff,0xffff,0xffff,0xffff,0xffff
 };
 
 static MACHINE_START(f3)
@@ -389,76 +389,71 @@ static MACHINE_START(f3)
 	state_save_register_global_array(machine, coin_word);
 }
 
-static MACHINE_DRIVER_START( f3 )
+static MACHINE_CONFIG_START( f3, taito_f3_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68EC020, XTAL_16MHz)
-	MDRV_CPU_PROGRAM_MAP(f3_map)
-	MDRV_CPU_VBLANK_INT("screen", f3_interrupt2)
+	MCFG_CPU_ADD("maincpu", M68EC020, XTAL_16MHz)
+	MCFG_CPU_PROGRAM_MAP(f3_map)
+	MCFG_CPU_VBLANK_INT("screen", f3_interrupt2)
 
-	MDRV_MACHINE_START(f3)
+	MCFG_MACHINE_START(f3)
 
-	MDRV_EEPROM_93C46_ADD("eeprom")
+	MCFG_EEPROM_93C46_ADD("eeprom")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(58.97)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(624) /* 58.97 Hz, 624us vblank time */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(40*8+48*2, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(46, 40*8-1 + 46, 24, 24+232-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(58.97)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(624) /* 58.97 Hz, 624us vblank time */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(40*8+48*2, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(46, 40*8-1 + 46, 24, 24+232-1)
 
-	MDRV_GFXDECODE(taito_f3)
-	MDRV_PALETTE_LENGTH(0x2000)
+	MCFG_GFXDECODE(taito_f3)
+	MCFG_PALETTE_LENGTH(0x2000)
 
-	MDRV_VIDEO_START(f3)
-	MDRV_VIDEO_EOF(f3)
-	MDRV_VIDEO_UPDATE(f3)
+	MCFG_VIDEO_START(f3)
+	MCFG_VIDEO_EOF(f3)
+	MCFG_VIDEO_UPDATE(f3)
 
 	/* sound hardware */
-	MDRV_IMPORT_FROM(taito_f3_sound)
-	MDRV_SOUND_RESET(f3)
-MACHINE_DRIVER_END
+	MCFG_FRAGMENT_ADD(taito_f3_sound)
+	MCFG_SOUND_RESET(f3)
+MACHINE_CONFIG_END
 
 /* These games reprogram the video output registers to display different scanlines,
  we can't change our screen display at runtime, so we do it here instead.  None
  of the games change the registers during the game (to do so would probably require
  monitor recalibration.)
 */
-static MACHINE_DRIVER_START( f3_224a )
-	MDRV_IMPORT_FROM(f3)
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_VISIBLE_AREA(46, 40*8-1 + 46, 31, 31+224-1)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( f3_224a, f3 )
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_VISIBLE_AREA(46, 40*8-1 + 46, 31, 31+224-1)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( f3_224b )
-	MDRV_IMPORT_FROM(f3)
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_VISIBLE_AREA(46, 40*8-1 + 46, 32, 32+224-1)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( f3_224b, f3 )
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_VISIBLE_AREA(46, 40*8-1 + 46, 32, 32+224-1)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( f3_224c )
-	MDRV_IMPORT_FROM(f3)
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_VISIBLE_AREA(46, 40*8-1 + 46, 24, 24+224-1)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( f3_224c, f3 )
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_VISIBLE_AREA(46, 40*8-1 + 46, 24, 24+224-1)
+MACHINE_CONFIG_END
 
 /* recalh and gseeker need a default EEPROM to work */
-static MACHINE_DRIVER_START( f3_eeprom )
-	MDRV_IMPORT_FROM(f3)
+static MACHINE_CONFIG_DERIVED( f3_eeprom, f3 )
 
-	MDRV_DEVICE_REMOVE("eeprom")
-	MDRV_EEPROM_93C46_ADD("eeprom")
-	MDRV_EEPROM_DATA(recalh_eeprom, 128)
-MACHINE_DRIVER_END
+	MCFG_DEVICE_REMOVE("eeprom")
+	MCFG_EEPROM_93C46_ADD("eeprom")
+	MCFG_EEPROM_DATA(recalh_eeprom, 128)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( f3_224b_eeprom )
-	MDRV_IMPORT_FROM(f3)
+static MACHINE_CONFIG_DERIVED( f3_224b_eeprom, f3 )
 
-	MDRV_DEVICE_REMOVE("eeprom")
-	MDRV_EEPROM_93C46_ADD("eeprom")
-	MDRV_EEPROM_DATA(recalh_eeprom, 128)
-MACHINE_DRIVER_END
+	MCFG_DEVICE_REMOVE("eeprom")
+	MCFG_EEPROM_93C46_ADD("eeprom")
+	MCFG_EEPROM_DATA(recalh_eeprom, 128)
+MACHINE_CONFIG_END
 
 static const gfx_layout bubsympb_sprite_layout =
 {
@@ -490,37 +485,37 @@ static GFXDECODE_START( bubsympb )
 	GFXDECODE_ENTRY( NULL,           0x000000, pivotlayout,         0,  64 ) /* Dynamically modified */
 GFXDECODE_END
 
-static MACHINE_DRIVER_START( bubsympb )
+static MACHINE_CONFIG_START( bubsympb, taito_f3_state )
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68EC020, XTAL_16MHz)
-	MDRV_CPU_PROGRAM_MAP(f3_map)
-	MDRV_CPU_VBLANK_INT("screen", f3_interrupt2)
+	MCFG_CPU_ADD("maincpu", M68EC020, XTAL_16MHz)
+	MCFG_CPU_PROGRAM_MAP(f3_map)
+	MCFG_CPU_VBLANK_INT("screen", f3_interrupt2)
 
-	MDRV_MACHINE_START(f3)
+	MCFG_MACHINE_START(f3)
 
-	MDRV_EEPROM_93C46_ADD("eeprom")
+	MCFG_EEPROM_93C46_ADD("eeprom")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(58.97)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(624) /* 58.97 Hz, 624us vblank time */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(40*8+48*2, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(46, 40*8-1 + 46, 31, 31+224-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(58.97)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(624) /* 58.97 Hz, 624us vblank time */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(40*8+48*2, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(46, 40*8-1 + 46, 31, 31+224-1)
 
-	MDRV_GFXDECODE(bubsympb)
-	MDRV_PALETTE_LENGTH(8192)
+	MCFG_GFXDECODE(bubsympb)
+	MCFG_PALETTE_LENGTH(8192)
 
-	MDRV_VIDEO_START(f3)
-	MDRV_VIDEO_EOF(f3)
-	MDRV_VIDEO_UPDATE(f3)
+	MCFG_VIDEO_START(f3)
+	MCFG_VIDEO_EOF(f3)
+	MCFG_VIDEO_UPDATE(f3)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_OKIM6295_ADD("oki", 1000000 , OKIM6295_PIN7_HIGH) // not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 1000000 , OKIM6295_PIN7_HIGH) // not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 /******************************************************************************/
 
@@ -3475,8 +3470,8 @@ static void tile_decode(running_machine *machine)
 {
 	UINT8 lsb,msb;
 	UINT32 offset,i;
-	UINT8 *gfx = memory_region(machine, "gfx2");
-	int size=memory_region_length(machine, "gfx2");
+	UINT8 *gfx = machine->region("gfx2")->base();
+	int size=machine->region("gfx2")->bytes();
 	int data;
 
 	/* Setup ROM formats:
@@ -3508,8 +3503,8 @@ static void tile_decode(running_machine *machine)
 		offset+=4;
 	}
 
-	gfx = memory_region(machine, "gfx1");
-	size=memory_region_length(machine, "gfx1");
+	gfx = machine->region("gfx1")->base();
+	size=machine->region("gfx1")->bytes();
 
 	offset = size/2;
 	for (i = size/2+size/4; i<size; i++)
@@ -3581,7 +3576,7 @@ static DRIVER_INIT( trstaroj )
 
 static DRIVER_INIT( scfinals )
 {
-	UINT32 *RAM = (UINT32 *)memory_region(machine, "maincpu");
+	UINT32 *RAM = (UINT32 *)machine->region("maincpu")->base();
 
 	/* Doesn't boot without this - eprom related? */
     RAM[0x5af0/4]=0x4e710000|(RAM[0x5af0/4]&0xffff);
@@ -3648,18 +3643,18 @@ static DRIVER_INIT( bubsymph )
 }
 
 
-static READ32_DEVICE_HANDLER( bubsympb_oki_r )
+static READ32_HANDLER( bubsympb_oki_r )
 {
-	return okim6295_r(device,0);
+	return space->machine->device<okim6295_device>("oki")->read(*space,0);
 }
-static WRITE32_DEVICE_HANDLER( bubsympb_oki_w )
+static WRITE32_HANDLER( bubsympb_oki_w )
 {
 	//printf("write %08x %08x\n",data,mem_mask);
-	if (ACCESSING_BITS_0_7) okim6295_w(device,0,data&0xff);
-	//if (mem_mask==0x000000ff) okim6295_w(device,0,data&0xff);
+	if (ACCESSING_BITS_0_7) space->machine->device<okim6295_device>("oki")->write(*space, 0,data&0xff);
+	//if (mem_mask==0x000000ff) downcast<okim6295_device *>(device)->write(0,data&0xff);
 	if (ACCESSING_BITS_16_23)
 	{
-		UINT8 *snd = memory_region(device->machine, "oki");
+		UINT8 *snd = space->machine->region("oki")->base();
 		int bank = (data & 0x000f0000) >> 16;
 		// almost certainly wrong
 		memcpy(snd+0x30000, snd+0x80000+0x30000+bank*0x10000, 0x10000);
@@ -3673,14 +3668,13 @@ static WRITE32_DEVICE_HANDLER( bubsympb_oki_w )
 
 static DRIVER_INIT( bubsympb )
 {
-	running_device *oki = machine->device("oki");
 	f3_game=BUBSYMPH;
 	//tile_decode(machine);
 
 	/* expand gfx rom */
 	{
 		int i;
-		UINT8 *gfx = memory_region(machine, "gfx2");
+		UINT8 *gfx = machine->region("gfx2")->base();
 
 		for (i=0x200000;i<0x400000; i+=4)
 		{
@@ -3696,8 +3690,8 @@ static DRIVER_INIT( bubsympb )
 		}
 	}
 
-	memory_install_read32_device_handler(cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM), oki, 0x4a001c, 0x4a001f, 0, 0, bubsympb_oki_r );
-	memory_install_write32_device_handler(cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM), oki, 0x4a001c, 0x4a001f, 0, 0, bubsympb_oki_w );
+	memory_install_read32_handler(cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM), 0x4a001c, 0x4a001f, 0, 0, bubsympb_oki_r );
+	memory_install_write32_handler(cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM), 0x4a001c, 0x4a001f, 0, 0, bubsympb_oki_w );
 }
 
 
@@ -3727,7 +3721,7 @@ static DRIVER_INIT( landmakr )
 
 static DRIVER_INIT( landmkrp )
 {
-	UINT32 *RAM = (UINT32 *)memory_region(machine, "maincpu");
+	UINT32 *RAM = (UINT32 *)machine->region("maincpu")->base();
 
 	/* For some reason the least significant byte in the last 2 long words of
     ROM is swapped.  As the roms have been verified ok, I assume this is some
@@ -3770,7 +3764,7 @@ static DRIVER_INIT( pbobbl2p )
 	// which eventually causes the game to crash
 	//  -- protection check?? or some kind of checksum fail?
 
-	UINT32 *ROM = (UINT32 *)memory_region(machine, "maincpu");
+	UINT32 *ROM = (UINT32 *)machine->region("maincpu")->base();
 
 	/* protection? */
     ROM[0x40090/4]=0x00004e71|(ROM[0x40090/4]&0xffff0000);

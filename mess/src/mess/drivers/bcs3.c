@@ -16,12 +16,11 @@
 #include "emu.h"
 #include "cpu/z80/z80.h"
 
-class bcs3_state
+class bcs3_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, bcs3_state(machine)); }
-
-	bcs3_state(running_machine &machine) { }
+	bcs3_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	const UINT8 *fnt;
 	UINT8 *videoram;
@@ -29,14 +28,14 @@ public:
 
 static READ8_HANDLER( bcs3_videoram_r )
 {
-	bcs3_state *state = (bcs3_state *)space->machine->driver_data;
+	bcs3_state *state = space->machine->driver_data<bcs3_state>();
 
 	return state->videoram[offset];
 }
 
 static WRITE8_HANDLER( bcs3_videoram_w )
 {
-	bcs3_state *state = (bcs3_state *)space->machine->driver_data;
+	bcs3_state *state = space->machine->driver_data<bcs3_state>();
 
 	state->videoram[offset] = data;
 }
@@ -221,14 +220,14 @@ static MACHINE_RESET(bcs3)
 
 static VIDEO_START( bcs3 )
 {
-	bcs3_state *state = (bcs3_state *)machine->driver_data;
+	bcs3_state *state = machine->driver_data<bcs3_state>();
 
-	state->fnt = memory_region(machine, "gfx1");
+	state->fnt = machine->region("gfx1")->base();
 }
 
 static VIDEO_UPDATE( bcs3 )
 {
-	bcs3_state *state = (bcs3_state *)screen->machine->driver_data;
+	bcs3_state *state = screen->machine->driver_data<bcs3_state>();
 	UINT8 y,ra,chr,gfx,rat;
 	UINT16 sy=0,ma=0,x;
 
@@ -252,14 +251,14 @@ static VIDEO_UPDATE( bcs3 )
 					gfx = 0;
 
 				/* Display a scanline of a character (8 pixels) */
-				*p = ( gfx & 0x80 ) ? 0 : 1; p++;
-				*p = ( gfx & 0x40 ) ? 0 : 1; p++;
-				*p = ( gfx & 0x20 ) ? 0 : 1; p++;
-				*p = ( gfx & 0x10 ) ? 0 : 1; p++;
-				*p = ( gfx & 0x08 ) ? 0 : 1; p++;
-				*p = ( gfx & 0x04 ) ? 0 : 1; p++;
-				*p = ( gfx & 0x02 ) ? 0 : 1; p++;
-				*p = ( gfx & 0x01 ) ? 0 : 1; p++;
+				*p++ = ( gfx & 0x80 ) ? 0 : 1;
+				*p++ = ( gfx & 0x40 ) ? 0 : 1;
+				*p++ = ( gfx & 0x20 ) ? 0 : 1;
+				*p++ = ( gfx & 0x10 ) ? 0 : 1;
+				*p++ = ( gfx & 0x08 ) ? 0 : 1;
+				*p++ = ( gfx & 0x04 ) ? 0 : 1;
+				*p++ = ( gfx & 0x02 ) ? 0 : 1;
+				*p++ = ( gfx & 0x01 ) ? 0 : 1;
 			}
 		}
 		ma+=28;
@@ -271,7 +270,7 @@ static VIDEO_UPDATE( bcs3 )
     with the cursor always in sight. */
 static VIDEO_UPDATE( bcs3a )
 {
-	bcs3_state *state = (bcs3_state *)screen->machine->driver_data;
+	bcs3_state *state = screen->machine->driver_data<bcs3_state>();
 	UINT8 y,ra,chr,gfx,rat;
 	UINT16 sy=0,ma=128,x;
 	UINT16 cursor = (state->videoram[0x7a] | (state->videoram[0x7b] << 8)) - 0x3c80;	// get cursor relative position
@@ -298,14 +297,14 @@ static VIDEO_UPDATE( bcs3a )
 					gfx = 0;
 
 				/* Display a scanline of a character (8 pixels) */
-				*p = ( gfx & 0x80 ) ? 0 : 1; p++;
-				*p = ( gfx & 0x40 ) ? 0 : 1; p++;
-				*p = ( gfx & 0x20 ) ? 0 : 1; p++;
-				*p = ( gfx & 0x10 ) ? 0 : 1; p++;
-				*p = ( gfx & 0x08 ) ? 0 : 1; p++;
-				*p = ( gfx & 0x04 ) ? 0 : 1; p++;
-				*p = ( gfx & 0x02 ) ? 0 : 1; p++;
-				*p = ( gfx & 0x01 ) ? 0 : 1; p++;
+				*p++ = ( gfx & 0x80 ) ? 0 : 1;
+				*p++ = ( gfx & 0x40 ) ? 0 : 1;
+				*p++ = ( gfx & 0x20 ) ? 0 : 1;
+				*p++ = ( gfx & 0x10 ) ? 0 : 1;
+				*p++ = ( gfx & 0x08 ) ? 0 : 1;
+				*p++ = ( gfx & 0x04 ) ? 0 : 1;
+				*p++ = ( gfx & 0x02 ) ? 0 : 1;
+				*p++ = ( gfx & 0x01 ) ? 0 : 1;
 			}
 		}
 		ma+=30;
@@ -315,7 +314,7 @@ static VIDEO_UPDATE( bcs3a )
 
 static VIDEO_UPDATE( bcs3b )
 {
-	bcs3_state *state = (bcs3_state *)screen->machine->driver_data;
+	bcs3_state *state = screen->machine->driver_data<bcs3_state>();
 	UINT8 y,ra,chr,gfx,rat;
 	UINT16 sy=0,ma=128,x;
 	UINT16 cursor = (state->videoram[0x7a] | (state->videoram[0x7b] << 8)) - 0x3c80;	// get cursor relative position
@@ -342,14 +341,14 @@ static VIDEO_UPDATE( bcs3b )
 					gfx = 0;
 
 				/* Display a scanline of a character (8 pixels) */
-				*p = ( gfx & 0x80 ) ? 0 : 1; p++;
-				*p = ( gfx & 0x40 ) ? 0 : 1; p++;
-				*p = ( gfx & 0x20 ) ? 0 : 1; p++;
-				*p = ( gfx & 0x10 ) ? 0 : 1; p++;
-				*p = ( gfx & 0x08 ) ? 0 : 1; p++;
-				*p = ( gfx & 0x04 ) ? 0 : 1; p++;
-				*p = ( gfx & 0x02 ) ? 0 : 1; p++;
-				*p = ( gfx & 0x01 ) ? 0 : 1; p++;
+				*p++ = ( gfx & 0x80 ) ? 0 : 1;
+				*p++ = ( gfx & 0x40 ) ? 0 : 1;
+				*p++ = ( gfx & 0x20 ) ? 0 : 1;
+				*p++ = ( gfx & 0x10 ) ? 0 : 1;
+				*p++ = ( gfx & 0x08 ) ? 0 : 1;
+				*p++ = ( gfx & 0x04 ) ? 0 : 1;
+				*p++ = ( gfx & 0x02 ) ? 0 : 1;
+				*p++ = ( gfx & 0x01 ) ? 0 : 1;
 			}
 		}
 		ma+=41;
@@ -359,7 +358,7 @@ static VIDEO_UPDATE( bcs3b )
 
 static VIDEO_UPDATE( bcs3c )
 {
-	bcs3_state *state = (bcs3_state *)screen->machine->driver_data;
+	bcs3_state *state = screen->machine->driver_data<bcs3_state>();
 	UINT8 y,ra,chr,gfx,rat;
 	UINT16 sy=0,ma=0xb4,x;
 	UINT16 cursor = (state->videoram[0x08] | (state->videoram[0x09] << 8)) - 0x3c80;	// get cursor relative position
@@ -386,14 +385,14 @@ static VIDEO_UPDATE( bcs3c )
 					gfx = 0;
 
 				/* Display a scanline of a character (8 pixels) */
-				*p = ( gfx & 0x80 ) ? 0 : 1; p++;
-				*p = ( gfx & 0x40 ) ? 0 : 1; p++;
-				*p = ( gfx & 0x20 ) ? 0 : 1; p++;
-				*p = ( gfx & 0x10 ) ? 0 : 1; p++;
-				*p = ( gfx & 0x08 ) ? 0 : 1; p++;
-				*p = ( gfx & 0x04 ) ? 0 : 1; p++;
-				*p = ( gfx & 0x02 ) ? 0 : 1; p++;
-				*p = ( gfx & 0x01 ) ? 0 : 1; p++;
+				*p++ = ( gfx & 0x80 ) ? 0 : 1;
+				*p++ = ( gfx & 0x40 ) ? 0 : 1;
+				*p++ = ( gfx & 0x20 ) ? 0 : 1;
+				*p++ = ( gfx & 0x10 ) ? 0 : 1;
+				*p++ = ( gfx & 0x08 ) ? 0 : 1;
+				*p++ = ( gfx & 0x04 ) ? 0 : 1;
+				*p++ = ( gfx & 0x02 ) ? 0 : 1;
+				*p++ = ( gfx & 0x01 ) ? 0 : 1;
 			}
 		}
 		ma+=30;
@@ -420,67 +419,62 @@ static GFXDECODE_START( bcs3 )
 GFXDECODE_END
 
 
-static MACHINE_DRIVER_START( bcs3 )
-
-	MDRV_DRIVER_DATA( bcs3_state )
+static MACHINE_CONFIG_START( bcs3, bcs3_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu",Z80, XTAL_5MHz /2)
-	MDRV_CPU_PROGRAM_MAP(bcs3_mem)
-	MDRV_CPU_IO_MAP(bcs3_io)
+	MCFG_CPU_ADD("maincpu",Z80, XTAL_5MHz /2)
+	MCFG_CPU_PROGRAM_MAP(bcs3_mem)
+	MCFG_CPU_IO_MAP(bcs3_io)
 
-	MDRV_MACHINE_RESET(bcs3)
+	MCFG_MACHINE_RESET(bcs3)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(50)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(28*8, 12*10)
-	MDRV_SCREEN_VISIBLE_AREA(0,28*8-1,0,12*10-1)
-	MDRV_GFXDECODE(bcs3)
-	MDRV_PALETTE_LENGTH(2)
-	MDRV_PALETTE_INIT(black_and_white)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(50)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(28*8, 12*10)
+	MCFG_SCREEN_VISIBLE_AREA(0,28*8-1,0,12*10-1)
+	MCFG_GFXDECODE(bcs3)
+	MCFG_PALETTE_LENGTH(2)
+	MCFG_PALETTE_INIT(black_and_white)
 
-	MDRV_VIDEO_START(bcs3)
-	MDRV_VIDEO_UPDATE(bcs3)
-MACHINE_DRIVER_END
+	MCFG_VIDEO_START(bcs3)
+	MCFG_VIDEO_UPDATE(bcs3)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( bcs3a )
-	MDRV_IMPORT_FROM( bcs3 )
+static MACHINE_CONFIG_DERIVED( bcs3a, bcs3 )
 	/* basic machine hardware */
-	MDRV_CPU_MODIFY( "maincpu" )
-	MDRV_CPU_PROGRAM_MAP(bcs3a_mem)
+	MCFG_CPU_MODIFY( "maincpu" )
+	MCFG_CPU_PROGRAM_MAP(bcs3a_mem)
 
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_SIZE(29*8, 12*10)
-	MDRV_SCREEN_VISIBLE_AREA(0,29*8-1,0,12*10-1)
-	MDRV_VIDEO_UPDATE(bcs3a)
-MACHINE_DRIVER_END
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_SIZE(29*8, 12*10)
+	MCFG_SCREEN_VISIBLE_AREA(0,29*8-1,0,12*10-1)
+	MCFG_VIDEO_UPDATE(bcs3a)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( bcs3b )
-	MDRV_IMPORT_FROM( bcs3 )
+static MACHINE_CONFIG_DERIVED( bcs3b, bcs3 )
 	/* basic machine hardware */
-	MDRV_CPU_REPLACE( "maincpu", Z80, XTAL_7MHz / 2)
-	MDRV_CPU_PROGRAM_MAP(bcs3b_mem)
+	MCFG_CPU_REPLACE( "maincpu", Z80, XTAL_7MHz / 2)
+	MCFG_CPU_PROGRAM_MAP(bcs3b_mem)
 
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_SIZE(40*8, 24*10)
-	MDRV_SCREEN_VISIBLE_AREA(0,40*8-1,0,24*10-1)
-	MDRV_VIDEO_UPDATE(bcs3b)
-MACHINE_DRIVER_END
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_SIZE(40*8, 24*10)
+	MCFG_SCREEN_VISIBLE_AREA(0,40*8-1,0,24*10-1)
+	MCFG_VIDEO_UPDATE(bcs3b)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( bcs3c )
-	MDRV_IMPORT_FROM( bcs3 )
+static MACHINE_CONFIG_DERIVED( bcs3c, bcs3 )
 	/* basic machine hardware */
-	MDRV_CPU_MODIFY( "maincpu" )
-	MDRV_CPU_PROGRAM_MAP(bcs3c_mem)
+	MCFG_CPU_MODIFY( "maincpu" )
+	MCFG_CPU_PROGRAM_MAP(bcs3c_mem)
 
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_SIZE(29*8, 12*10)
-	MDRV_SCREEN_VISIBLE_AREA(0,29*8-1,0,12*10-1)
-	MDRV_VIDEO_UPDATE(bcs3c)
-MACHINE_DRIVER_END
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_SIZE(29*8, 12*10)
+	MCFG_SCREEN_VISIBLE_AREA(0,29*8-1,0,12*10-1)
+	MCFG_VIDEO_UPDATE(bcs3c)
+MACHINE_CONFIG_END
 
 /* ROM definition */
 ROM_START( bcs3 )

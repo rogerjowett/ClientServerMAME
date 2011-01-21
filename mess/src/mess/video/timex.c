@@ -23,30 +23,11 @@ INLINE void spectrum_plot_pixel(bitmap_t *bitmap, int x, int y, UINT32 color)
 }
 
 /* Update FLASH status for ts2068. Assumes flash update every 1/2s. */
-VIDEO_EOF( ts2068 )
+VIDEO_START( ts2068 )
 {
-	spectrum_state *state = (spectrum_state *)machine->driver_data;
-	EVENT_LIST_ITEM *pItem;
-	int NumItems;
-
-	state->frame_number++;
-	if (state->frame_number >= 30)
-	{
-		state->frame_number = 0;
-		state->flash_invert = !state->flash_invert;
-	}
-
-	/* Empty event buffer for undisplayed frames noting the last border
-       colour (in case colours are not changed in the next frame). */
-	NumItems = EventList_NumEvents();
-	if (NumItems)
-	{
-		pItem = EventList_GetFirstItem();
-		border_set_last_color ( pItem[NumItems-1].Event_Data );
-		EventList_Reset();
-		EventList_SetOffsetStartTime ( machine->firstcpu->attotime_to_cycles(attotime_mul(machine->primary_screen->scan_period(), machine->primary_screen->vpos())) );
-		logerror ("Event log reset in callback fn.\n");
-	}
+	spectrum_state *state = machine->driver_data<spectrum_state>();
+	VIDEO_START_CALL( spectrum );
+	state->frame_invert_count = 30;
 }
 
 
@@ -75,7 +56,7 @@ VIDEO_EOF( ts2068 )
 /* Draw a scanline in TS2068/TC2048 hires mode (code modified from COUPE.C) */
 static void ts2068_hires_scanline(running_machine *machine,bitmap_t *bitmap, int y, int borderlines)
 {
-	spectrum_state *state = (spectrum_state *)machine->driver_data;
+	spectrum_state *state = machine->driver_data<spectrum_state>();
 	int x,b,scrx,scry;
 	unsigned short ink,pap;
 	unsigned char *attr, *scr;
@@ -155,7 +136,7 @@ static void ts2068_64col_scanline(running_machine *machine,bitmap_t *bitmap, int
 /* Draw a scanline in TS2068/TC2048 lores (normal Spectrum) mode */
 static void ts2068_lores_scanline(running_machine *machine,bitmap_t *bitmap, int y, int borderlines, int screen)
 {
-	spectrum_state *state = (spectrum_state *)machine->driver_data;
+	spectrum_state *state = machine->driver_data<spectrum_state>();
 	int x,b,scrx,scry;
 	unsigned short ink,pap;
 	unsigned char *attr, *scr;
@@ -201,7 +182,7 @@ static void ts2068_lores_scanline(running_machine *machine,bitmap_t *bitmap, int
 VIDEO_UPDATE( ts2068 )
 {
 	/* for now TS2068 will do a full-refresh */
-	spectrum_state *state = (spectrum_state *)screen->machine->driver_data;
+	spectrum_state *state = screen->machine->driver_data<spectrum_state>();
 	int count;
 	int full_refresh = 1;
 
@@ -231,7 +212,7 @@ VIDEO_UPDATE( ts2068 )
 			ts2068_lores_scanline(screen->machine,bitmap, count, TS2068_TOP_BORDER, 0);
 	}
 
-	border_draw(screen->machine, bitmap, full_refresh,
+	spectrum_border_draw(screen->machine, bitmap, full_refresh,
 		TS2068_TOP_BORDER, SPEC_DISPLAY_YSIZE, TS2068_BOTTOM_BORDER,
 		TS2068_LEFT_BORDER, TS2068_DISPLAY_XSIZE, TS2068_RIGHT_BORDER,
 		SPEC_LEFT_BORDER_CYCLES, SPEC_DISPLAY_XSIZE_CYCLES,
@@ -242,7 +223,7 @@ VIDEO_UPDATE( ts2068 )
 VIDEO_UPDATE( tc2048 )
 {
 	/* for now TS2068 will do a full-refresh */
-	spectrum_state *state = (spectrum_state *)screen->machine->driver_data;
+	spectrum_state *state = screen->machine->driver_data<spectrum_state>();
 	int count;
 	int full_refresh = 1;
 
@@ -272,7 +253,7 @@ VIDEO_UPDATE( tc2048 )
 			ts2068_lores_scanline(screen->machine,bitmap, count, SPEC_TOP_BORDER, 0);
 	}
 
-	border_draw(screen->machine, bitmap, full_refresh,
+	spectrum_border_draw(screen->machine, bitmap, full_refresh,
 		SPEC_TOP_BORDER, SPEC_DISPLAY_YSIZE, SPEC_BOTTOM_BORDER,
 		TS2068_LEFT_BORDER, TS2068_DISPLAY_XSIZE, TS2068_RIGHT_BORDER,
 		SPEC_LEFT_BORDER_CYCLES, SPEC_DISPLAY_XSIZE_CYCLES,

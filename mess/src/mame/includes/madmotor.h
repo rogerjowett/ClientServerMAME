@@ -4,12 +4,11 @@
 
 *************************************************************************/
 
-class madmotor_state
+class madmotor_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, madmotor_state(machine)); }
-
-	madmotor_state(running_machine &machine) { }
+	madmotor_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT16 *        pf1_rowscroll;
@@ -28,8 +27,8 @@ public:
 	int             flipscreen;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *audiocpu;
+	device_t *maincpu;
+	device_t *audiocpu;
 };
 
 

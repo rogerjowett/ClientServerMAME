@@ -76,12 +76,11 @@ Notes:
 #define x_offset 0x45
 #define y_offset 0x0d
 
-class sliver_state
+class sliver_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, sliver_state(machine)); }
-
-	sliver_state(running_machine &machine) { }
+	sliver_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	UINT16 io_offset;
 	UINT16 io_reg[IO_SIZE];
@@ -188,14 +187,14 @@ static const int gfxlookup[][4]=
 
 static WRITE16_HANDLER( sliver_RAMDAC_offset_w )
 {
-	sliver_state *state = (sliver_state *)space->machine->driver_data;
+	sliver_state *state = space->machine->driver_data<sliver_state>();
 
 	state->clr_offset=data*3;
 }
 
 static WRITE16_HANDLER( sliver_RAMDAC_color_w )
 {
-	sliver_state *state = (sliver_state *)space->machine->driver_data;
+	sliver_state *state = space->machine->driver_data<sliver_state>();
 
 	state->colorram[state->clr_offset]=data;
 	state->clr_offset=(state->clr_offset+1)%768;
@@ -224,7 +223,7 @@ static void plot_pixel_rgb(sliver_state *state, int x, int y, UINT32 r, UINT32 g
 
 static void plot_pixel_pal(running_machine *machine, int x, int y, int addr)
 {
-	sliver_state *state = (sliver_state *)machine->driver_data;
+	sliver_state *state = machine->driver_data<sliver_state>();
 	UINT32 r,g,b;
 	UINT16 color;
 
@@ -254,7 +253,7 @@ static void plot_pixel_pal(running_machine *machine, int x, int y, int addr)
 
 static WRITE16_HANDLER( fifo_data_w )
 {
-	sliver_state *state = (sliver_state *)space->machine->driver_data;
+	sliver_state *state = space->machine->driver_data<sliver_state>();
 
 	if (state->tmp_counter < 8)
 	{
@@ -277,9 +276,9 @@ static WRITE16_HANDLER( fifo_data_w )
 
 static void blit_gfx(running_machine *machine)
 {
-	sliver_state *state = (sliver_state *)machine->driver_data;
+	sliver_state *state = machine->driver_data<sliver_state>();
 	int tmpptr=0;
-	const UINT8 *rom = memory_region(machine, "user1");
+	const UINT8 *rom = machine->region("user1")->base();
 
 	while (tmpptr < state->fptr)
 	{
@@ -311,7 +310,7 @@ static void blit_gfx(running_machine *machine)
 
 static WRITE16_HANDLER( fifo_clear_w )
 {
-	sliver_state *state = (sliver_state *)space->machine->driver_data;
+	sliver_state *state = space->machine->driver_data<sliver_state>();
 
 	bitmap_fill(state->bitmap_fg, 0,0);
 	state->fptr=0;
@@ -326,14 +325,14 @@ static WRITE16_HANDLER( fifo_flush_w )
 
 static WRITE16_HANDLER( jpeg1_w )
 {
-	sliver_state *state = (sliver_state *)space->machine->driver_data;
+	sliver_state *state = space->machine->driver_data<sliver_state>();
 
 	COMBINE_DATA(&state->jpeg1);
 }
 
 static void render_jpeg(running_machine *machine)
 {
-	sliver_state *state = (sliver_state *)machine->driver_data;
+	sliver_state *state = machine->driver_data<sliver_state>();
 	int x, y;
 	int addr = state->jpeg_addr;
 	UINT8 *rom;
@@ -344,7 +343,7 @@ static void render_jpeg(running_machine *machine)
 		return;
 	}
 
-	rom = memory_region(machine, "user3");
+	rom = machine->region("user3")->base();
 	for (y = 0; y < state->jpeg_h; y++)
 	{
 		for (x = 0; x < state->jpeg_w; x++)
@@ -371,7 +370,7 @@ static int find_data(int offset)
 
 static WRITE16_HANDLER( jpeg2_w )
 {
-	sliver_state *state = (sliver_state *)space->machine->driver_data;
+	sliver_state *state = space->machine->driver_data<sliver_state>();
 	int idx;
 
 	COMBINE_DATA(&state->jpeg2);
@@ -392,14 +391,14 @@ static WRITE16_HANDLER( jpeg2_w )
 
 static WRITE16_HANDLER(io_offset_w)
 {
-	sliver_state *state = (sliver_state *)space->machine->driver_data;
+	sliver_state *state = space->machine->driver_data<sliver_state>();
 
 	COMBINE_DATA(&state->io_offset);
 }
 
 static WRITE16_HANDLER(io_data_w)
 {
-	sliver_state *state = (sliver_state *)space->machine->driver_data;
+	sliver_state *state = space->machine->driver_data<sliver_state>();
 
 	if (state->io_offset < IO_SIZE)
 	{
@@ -460,7 +459,7 @@ ADDRESS_MAP_END
 
 static WRITE8_HANDLER(oki_setbank)
 {
-	UINT8 *sound = memory_region(space->machine, "oki");
+	UINT8 *sound = space->machine->region("oki")->base();
 	int bank=(data^0xff)&3; //xor or not ?
 	memcpy(sound+0x20000, sound+0x100000+0x20000*bank, 0x20000);
 }
@@ -470,7 +469,7 @@ static ADDRESS_MAP_START( soundmem_prg, ADDRESS_SPACE_PROGRAM, 8 )
 ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( soundmem_io, ADDRESS_SPACE_IO, 8 )
-	AM_RANGE(0x0100, 0x0100) AM_DEVREADWRITE( "oki", okim6295_r, okim6295_w )
+	AM_RANGE(0x0100, 0x0100) AM_DEVREADWRITE_MODERN("oki", okim6295_device, read, write)
 	AM_RANGE(0x0101, 0x0101) AM_READ(soundlatch_r)
 	/* ports */
 	AM_RANGE(MCS51_PORT_P1, MCS51_PORT_P1) AM_WRITE( oki_setbank )
@@ -478,7 +477,7 @@ ADDRESS_MAP_END
 
 static VIDEO_START(sliver)
 {
-	sliver_state *state = (sliver_state *)machine->driver_data;
+	sliver_state *state = machine->driver_data<sliver_state>();
 
 	state->bitmap_bg = machine->primary_screen->alloc_compatible_bitmap();
 	state->bitmap_fg = machine->primary_screen->alloc_compatible_bitmap();
@@ -486,7 +485,7 @@ static VIDEO_START(sliver)
 
 static VIDEO_UPDATE(sliver)
 {
-	sliver_state *state = (sliver_state *)screen->machine->driver_data;
+	sliver_state *state = screen->machine->driver_data<sliver_state>();
 
 	copybitmap      (bitmap, state->bitmap_bg, 0, 0, 0, 0, cliprect);
 	copybitmap_trans(bitmap, state->bitmap_fg, 0, 0, 0, 0, cliprect, 0);
@@ -569,35 +568,33 @@ static INTERRUPT_GEN( sliver_int )
 	cpu_set_input_line(device, 2+cpu_getiloops(device), HOLD_LINE);
 }
 
-static MACHINE_DRIVER_START( sliver )
+static MACHINE_CONFIG_START( sliver, sliver_state )
 
-	MDRV_DRIVER_DATA( sliver_state )
+	MCFG_CPU_ADD("maincpu", M68000, 12000000)
+	MCFG_CPU_PROGRAM_MAP(sliver_map)
+	MCFG_CPU_VBLANK_INT_HACK(sliver_int,3)
 
-	MDRV_CPU_ADD("maincpu", M68000, 12000000)
-	MDRV_CPU_PROGRAM_MAP(sliver_map)
-	MDRV_CPU_VBLANK_INT_HACK(sliver_int,3)
-
-	MDRV_CPU_ADD("audiocpu", I8051, 8000000)
-	MDRV_CPU_PROGRAM_MAP(soundmem_prg)
-	MDRV_CPU_IO_MAP(soundmem_io)
+	MCFG_CPU_ADD("audiocpu", I8051, 8000000)
+	MCFG_CPU_PROGRAM_MAP(soundmem_prg)
+	MCFG_CPU_IO_MAP(soundmem_io)
 
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 384-1-16, 0*8, 240-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 384-1-16, 0*8, 240-1)
 
-	MDRV_VIDEO_START(sliver)
-	MDRV_VIDEO_UPDATE(sliver)
+	MCFG_VIDEO_START(sliver)
+	MCFG_VIDEO_UPDATE(sliver)
 
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_OKIM6295_ADD("oki", 1000000, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.6)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.6)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 1000000, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.6)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.6)
+MACHINE_CONFIG_END
 
 ROM_START( sliver )
 	ROM_REGION( 0x100000, "maincpu", 0 ) /* 68000 Code */
@@ -628,7 +625,7 @@ ROM_END
 
 static DRIVER_INIT(sliver)
 {
-	sliver_state *state = (sliver_state *)machine->driver_data;
+	sliver_state *state = machine->driver_data<sliver_state>();
 
 	state->jpeg_addr = -1;
 	state->colorram=auto_alloc_array(machine, UINT8, 256*3);

@@ -55,7 +55,7 @@ Runs in interrupt mode 0, the interrupt vectors are 0xcf (RST 08h) and
 
 static INTERRUPT_GEN( yamyam_interrupt )
 {
-	gundealr_state *state = (gundealr_state *)device->machine->driver_data;
+	gundealr_state *state = device->machine->driver_data<gundealr_state>();
 
 	if (cpu_getiloops(device) == 0)
 	{
@@ -78,7 +78,7 @@ static WRITE8_HANDLER( yamyam_bankswitch_w )
 
 static WRITE8_HANDLER( yamyam_protection_w )
 {
-	gundealr_state *state = (gundealr_state *)space->machine->driver_data;
+	gundealr_state *state = space->machine->driver_data<gundealr_state>();
 	logerror("e000 = %02x\n", state->rambase[0x000]);
 	state->rambase[0x000] = data;
 	if (data == 0x03) state->rambase[0x001] = 0x03;
@@ -446,8 +446,8 @@ GFXDECODE_END
 
 static MACHINE_START( gundealr )
 {
-	gundealr_state *state = (gundealr_state *)machine->driver_data;
-	UINT8 *ROM = memory_region(machine, "maincpu");
+	gundealr_state *state = machine->driver_data<gundealr_state>();
+	UINT8 *ROM = machine->region("maincpu")->base();
 
 	memory_configure_bank(machine, "bank1", 0, 8, &ROM[0x10000], 0x4000);
 
@@ -457,7 +457,7 @@ static MACHINE_START( gundealr )
 
 static MACHINE_RESET( gundealr )
 {
-	gundealr_state *state = (gundealr_state *)machine->driver_data;
+	gundealr_state *state = machine->driver_data<gundealr_state>();
 
 	state->flipscreen = 0;
 	state->scroll[0] = 0;
@@ -466,40 +466,37 @@ static MACHINE_RESET( gundealr )
 	state->scroll[3] = 0;
 }
 
-static MACHINE_DRIVER_START( gundealr )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(gundealr_state)
+static MACHINE_CONFIG_START( gundealr, gundealr_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, 8000000)	/* 8 MHz ??? */
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_IO_MAP(main_portmap)
-	MDRV_CPU_VBLANK_INT_HACK(yamyam_interrupt,4)	/* ? */
+	MCFG_CPU_ADD("maincpu", Z80, 8000000)	/* 8 MHz ??? */
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_IO_MAP(main_portmap)
+	MCFG_CPU_VBLANK_INT_HACK(yamyam_interrupt,4)	/* ? */
 
-	MDRV_MACHINE_START(gundealr)
-	MDRV_MACHINE_RESET(gundealr)
+	MCFG_MACHINE_START(gundealr)
+	MCFG_MACHINE_RESET(gundealr)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(gundealr)
-	MDRV_PALETTE_LENGTH(512)
+	MCFG_GFXDECODE(gundealr)
+	MCFG_PALETTE_LENGTH(512)
 
-	MDRV_VIDEO_START(gundealr)
-	MDRV_VIDEO_UPDATE(gundealr)
+	MCFG_VIDEO_START(gundealr)
+	MCFG_VIDEO_UPDATE(gundealr)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM2203, 1500000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2203, 1500000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+MACHINE_CONFIG_END
 
 
 
@@ -574,13 +571,13 @@ ROM_END
 
 static DRIVER_INIT( gundealr )
 {
-	gundealr_state *state = (gundealr_state *)machine->driver_data;
+	gundealr_state *state = machine->driver_data<gundealr_state>();
 	state->input_ports_hack = 0;
 }
 
 static DRIVER_INIT( yamyam )
 {
-	gundealr_state *state = (gundealr_state *)machine->driver_data;
+	gundealr_state *state = machine->driver_data<gundealr_state>();
 	state->input_ports_hack = 1;
 	memory_install_write8_handler(cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM), 0xe000, 0xe000, 0, 0, yamyam_protection_w);
 }

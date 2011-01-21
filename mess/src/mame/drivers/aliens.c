@@ -21,7 +21,7 @@ static KONAMI_SETLINES_CALLBACK( aliens_banking );
 
 static INTERRUPT_GEN( aliens_interrupt )
 {
-	aliens_state *state = (aliens_state *)device->machine->driver_data;
+	aliens_state *state = device->machine->driver_data<aliens_state>();
 
 	if (k051960_is_irq_enabled(state->k051960))
 		cpu_set_input_line(device, KONAMI_IRQ_LINE, HOLD_LINE);
@@ -29,7 +29,7 @@ static INTERRUPT_GEN( aliens_interrupt )
 
 static READ8_HANDLER( bankedram_r )
 {
-	aliens_state *state = (aliens_state *)space->machine->driver_data;
+	aliens_state *state = space->machine->driver_data<aliens_state>();
 
 	if (state->palette_selected)
 		return space->machine->generic.paletteram.u8[offset];
@@ -39,7 +39,7 @@ static READ8_HANDLER( bankedram_r )
 
 static WRITE8_HANDLER( bankedram_w )
 {
-	aliens_state *state = (aliens_state *)space->machine->driver_data;
+	aliens_state *state = space->machine->driver_data<aliens_state>();
 
 	if (state->palette_selected)
 		paletteram_xBBBBBGGGGGRRRRR_be_w(space, offset, data);
@@ -49,7 +49,7 @@ static WRITE8_HANDLER( bankedram_w )
 
 static WRITE8_HANDLER( aliens_coin_counter_w )
 {
-	aliens_state *state = (aliens_state *)space->machine->driver_data;
+	aliens_state *state = space->machine->driver_data<aliens_state>();
 
 	/* bits 0-1 = coin counters */
 	coin_counter_w(space->machine, 0, data & 0x01);
@@ -73,7 +73,7 @@ static WRITE8_HANDLER( aliens_coin_counter_w )
 
 static WRITE8_HANDLER( aliens_sh_irqtrigger_w )
 {
-	aliens_state *state = (aliens_state *)space->machine->driver_data;
+	aliens_state *state = space->machine->driver_data<aliens_state>();
 
 	soundlatch_w(space, offset, data);
 	cpu_set_input_line_and_vector(state->audiocpu, 0, HOLD_LINE, 0xff);
@@ -81,7 +81,7 @@ static WRITE8_HANDLER( aliens_sh_irqtrigger_w )
 
 static WRITE8_DEVICE_HANDLER( aliens_snd_bankswitch_w )
 {
-	aliens_state *state = (aliens_state *)device->machine->driver_data;
+	aliens_state *state = device->machine->driver_data<aliens_state>();
 
 	/* b1: bank for chanel A */
 	/* b0: bank for chanel B */
@@ -95,7 +95,7 @@ static WRITE8_DEVICE_HANDLER( aliens_snd_bankswitch_w )
 
 static READ8_HANDLER( k052109_051960_r )
 {
-	aliens_state *state = (aliens_state *)space->machine->driver_data;
+	aliens_state *state = space->machine->driver_data<aliens_state>();
 
 	if (k052109_get_rmrd_line(state->k052109) == CLEAR_LINE)
 	{
@@ -112,7 +112,7 @@ static READ8_HANDLER( k052109_051960_r )
 
 static WRITE8_HANDLER( k052109_051960_w )
 {
-	aliens_state *state = (aliens_state *)space->machine->driver_data;
+	aliens_state *state = space->machine->driver_data<aliens_state>();
 
 	if (offset >= 0x3800 && offset < 0x3808)
 		k051937_w(state->k051960, offset - 0x3800, data);
@@ -201,7 +201,7 @@ INPUT_PORTS_END
 
 ***************************************************************************/
 
-static void volume_callback( running_device *device, int v )
+static void volume_callback( device_t *device, int v )
 {
 	k007232_set_volume(device, 0, (v & 0x0f) * 0x11, 0);
 	k007232_set_volume(device, 1, 0, (v >> 4) * 0x11);
@@ -237,8 +237,8 @@ static const k051960_interface aliens_k051960_intf =
 
 static MACHINE_START( aliens )
 {
-	aliens_state *state = (aliens_state *)machine->driver_data;
-	UINT8 *ROM = memory_region(machine, "maincpu");
+	aliens_state *state = machine->driver_data<aliens_state>();
+	UINT8 *ROM = machine->region("maincpu")->base();
 
 	memory_configure_bank(machine, "bank1", 0, 20, &ROM[0x10000], 0x2000);
 	memory_set_bank(machine, "bank1", 0);
@@ -254,63 +254,60 @@ static MACHINE_START( aliens )
 
 static MACHINE_RESET( aliens )
 {
-	aliens_state *state = (aliens_state *)machine->driver_data;
+	aliens_state *state = machine->driver_data<aliens_state>();
 
 	konami_configure_set_lines(machine->device("maincpu"), aliens_banking);
 
 	state->palette_selected = 0;
 }
 
-static MACHINE_DRIVER_START( aliens )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(aliens_state)
+static MACHINE_CONFIG_START( aliens, aliens_state )
 
 	/* basic machine hardware */
 
 	/* external clock should be 12MHz probably, CPU internal divider and precise cycle timings */
 	/* are unknown though. 3MHz is too low, sprites flicker in the pseudo-3D levels */
-	MDRV_CPU_ADD("maincpu", KONAMI, 6000000)		/* ? */
-	MDRV_CPU_PROGRAM_MAP(aliens_map)
-	MDRV_CPU_VBLANK_INT("screen", aliens_interrupt)
+	MCFG_CPU_ADD("maincpu", KONAMI, 6000000)		/* ? */
+	MCFG_CPU_PROGRAM_MAP(aliens_map)
+	MCFG_CPU_VBLANK_INT("screen", aliens_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 3579545)
-	MDRV_CPU_PROGRAM_MAP(aliens_sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 3579545)
+	MCFG_CPU_PROGRAM_MAP(aliens_sound_map)
 
-	MDRV_MACHINE_START(aliens)
-	MDRV_MACHINE_RESET(aliens)
+	MCFG_MACHINE_START(aliens)
+	MCFG_MACHINE_RESET(aliens)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(14*8, (64-14)*8-1, 2*8, 30*8-1 )
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(14*8, (64-14)*8-1, 2*8, 30*8-1 )
 
-	MDRV_PALETTE_LENGTH(512)
+	MCFG_PALETTE_LENGTH(512)
 
-	MDRV_VIDEO_START(aliens)
-	MDRV_VIDEO_UPDATE(aliens)
+	MCFG_VIDEO_START(aliens)
+	MCFG_VIDEO_UPDATE(aliens)
 
-	MDRV_K052109_ADD("k052109", aliens_k052109_intf)
-	MDRV_K051960_ADD("k051960", aliens_k051960_intf)
+	MCFG_K052109_ADD("k052109", aliens_k052109_intf)
+	MCFG_K051960_ADD("k051960", aliens_k051960_intf)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, 3579545)
-	MDRV_SOUND_CONFIG(ym2151_config)
-	MDRV_SOUND_ROUTE(0, "mono", 0.60)
-	MDRV_SOUND_ROUTE(1, "mono", 0.60)
+	MCFG_SOUND_ADD("ymsnd", YM2151, 3579545)
+	MCFG_SOUND_CONFIG(ym2151_config)
+	MCFG_SOUND_ROUTE(0, "mono", 0.60)
+	MCFG_SOUND_ROUTE(1, "mono", 0.60)
 
-	MDRV_SOUND_ADD("k007232", K007232, 3579545)
-	MDRV_SOUND_CONFIG(k007232_config)
-	MDRV_SOUND_ROUTE(0, "mono", 0.20)
-	MDRV_SOUND_ROUTE(1, "mono", 0.20)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("k007232", K007232, 3579545)
+	MCFG_SOUND_CONFIG(k007232_config)
+	MCFG_SOUND_ROUTE(0, "mono", 0.20)
+	MCFG_SOUND_ROUTE(1, "mono", 0.20)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************

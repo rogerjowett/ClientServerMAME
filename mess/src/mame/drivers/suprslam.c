@@ -92,7 +92,7 @@ EB26IC73.BIN    27C240      /  Main Program
 
 static WRITE16_HANDLER( sound_command_w )
 {
-	suprslam_state *state = (suprslam_state *)space->machine->driver_data;
+	suprslam_state *state = space->machine->driver_data<suprslam_state>();
 	if (ACCESSING_BITS_0_7)
 	{
 		state->pending_command = 1;
@@ -104,20 +104,20 @@ static WRITE16_HANDLER( sound_command_w )
 #if 0
 static READ16_HANDLER( pending_command_r )
 {
-	suprslam_state *state = (suprslam_state *)space->machine->driver_data;
+	suprslam_state *state = space->machine->driver_data<suprslam_state>();
 	return pending_command;
 }
 #endif
 
 static WRITE8_HANDLER( pending_command_clear_w )
 {
-	suprslam_state *state = (suprslam_state *)space->machine->driver_data;
+	suprslam_state *state = space->machine->driver_data<suprslam_state>();
 	state->pending_command = 0;
 }
 
 static WRITE8_HANDLER( suprslam_sh_bankswitch_w )
 {
-	UINT8 *RAM = memory_region(space->machine, "audiocpu");
+	UINT8 *RAM = space->machine->region("audiocpu")->base();
 	int bankaddress;
 
 	bankaddress = 0x10000 + (data & 0x03) * 0x8000;
@@ -278,9 +278,9 @@ GFXDECODE_END
 
 /*** MORE SOUND **************************************************************/
 
-static void irqhandler(running_device *device, int irq)
+static void irqhandler(device_t *device, int irq)
 {
-	suprslam_state *state = (suprslam_state *)device->machine->driver_data;
+	suprslam_state *state = device->machine->driver_data<suprslam_state>();
 	cpu_set_input_line(state->audiocpu, 0, irq ? ASSERT_LINE : CLEAR_LINE);
 }
 
@@ -298,7 +298,7 @@ static const k053936_interface suprslam_k053936_intf =
 
 static MACHINE_START( suprslam )
 {
-	suprslam_state *state = (suprslam_state *)machine->driver_data;
+	suprslam_state *state = machine->driver_data<suprslam_state>();
 
 	state->audiocpu = machine->device("audiocpu");
 	state->k053936 = machine->device("k053936");
@@ -310,54 +310,53 @@ static MACHINE_START( suprslam )
 
 static MACHINE_RESET( suprslam )
 {
-	suprslam_state *state = (suprslam_state *)machine->driver_data;
+	suprslam_state *state = machine->driver_data<suprslam_state>();
 
 	state->screen_bank = 0;
 	state->bg_bank = 0;
 	state->pending_command = 0;
 }
 
-static MACHINE_DRIVER_START( suprslam )
-	MDRV_DRIVER_DATA(suprslam_state)
+static MACHINE_CONFIG_START( suprslam, suprslam_state )
 
-	MDRV_CPU_ADD("maincpu", M68000, 16000000)
-	MDRV_CPU_PROGRAM_MAP(suprslam_map)
-	MDRV_CPU_VBLANK_INT("screen", irq1_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, 16000000)
+	MCFG_CPU_PROGRAM_MAP(suprslam_map)
+	MCFG_CPU_VBLANK_INT("screen", irq1_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80,8000000/2)	/* 4 MHz ??? */
-	MDRV_CPU_PROGRAM_MAP(sound_map)
-	MDRV_CPU_IO_MAP(sound_io_map)
+	MCFG_CPU_ADD("audiocpu", Z80,8000000/2)	/* 4 MHz ??? */
+	MCFG_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_IO_MAP(sound_io_map)
 
-	MDRV_MACHINE_START(suprslam)
-	MDRV_MACHINE_RESET(suprslam)
+	MCFG_MACHINE_START(suprslam)
+	MCFG_MACHINE_RESET(suprslam)
 
-	MDRV_GFXDECODE(suprslam)
+	MCFG_GFXDECODE(suprslam)
 
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_UPDATE_AFTER_VBLANK)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_AFTER_VBLANK)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2300) /* hand-tuned */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 64*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 0*8, 28*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2300) /* hand-tuned */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 64*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 0*8, 28*8-1)
 
-	MDRV_PALETTE_LENGTH(0x800)
+	MCFG_PALETTE_LENGTH(0x800)
 
-	MDRV_VIDEO_START(suprslam)
-	MDRV_VIDEO_UPDATE(suprslam)
+	MCFG_VIDEO_START(suprslam)
+	MCFG_VIDEO_UPDATE(suprslam)
 
-	MDRV_K053936_ADD("k053936", suprslam_k053936_intf)
+	MCFG_K053936_ADD("k053936", suprslam_k053936_intf)
 
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2610, 8000000)
-	MDRV_SOUND_CONFIG(ym2610_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker",  0.25)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.25)
-	MDRV_SOUND_ROUTE(1, "lspeaker",  1.0)
-	MDRV_SOUND_ROUTE(2, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2610, 8000000)
+	MCFG_SOUND_CONFIG(ym2610_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker",  0.25)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.25)
+	MCFG_SOUND_ROUTE(1, "lspeaker",  1.0)
+	MCFG_SOUND_ROUTE(2, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 /*** ROM LOADING *************************************************************/
 

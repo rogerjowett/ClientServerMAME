@@ -44,13 +44,14 @@ struct _ccpu_state
 	int					icount;
 
 	legacy_cpu_device *device;
-	const address_space *program;
-	const address_space *data;
-	const address_space *io;
+	address_space *program;
+	direct_read_data *direct;
+	address_space *data;
+	address_space *io;
 };
 
 
-INLINE ccpu_state *get_safe_token(running_device *device)
+INLINE ccpu_state *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
 	assert(device->type() == CCPU);
@@ -62,13 +63,13 @@ INLINE ccpu_state *get_safe_token(running_device *device)
     MACROS
 ***************************************************************************/
 
-#define READOP(C,a)			(memory_decrypted_read_byte((C)->program, a))
+#define READOP(C,a)			((C)->direct->read_decrypted_byte(a))
 
-#define RDMEM(C,a)			(memory_read_word_16be((C)->data, (a) * 2) & 0xfff)
-#define WRMEM(C,a,v)		(memory_write_word_16be((C)->data, (a) * 2, (v)))
+#define RDMEM(C,a)			((C)->data->read_word((a) * 2) & 0xfff)
+#define WRMEM(C,a,v)		((C)->data->write_word((a) * 2, (v)))
 
-#define READPORT(C,a)		(memory_read_byte_8be((C)->io, a))
-#define WRITEPORT(C,a,v)	(memory_write_byte_8be((C)->io, (a), (v)))
+#define READPORT(C,a)		((C)->io->read_byte(a))
+#define WRITEPORT(C,a,v)	((C)->io->write_byte((a), (v)))
 
 #define SET_A0(C)			do { (C)->a0flag = (C)->A; } while (0)
 #define SET_CMP_VAL(C,x)	do { (C)->cmpacc = *(C)->acc; (C)->cmpval = (x) & 0xfff; } while (0)
@@ -102,7 +103,7 @@ do { \
     INITIALIZATION AND SHUTDOWN
 ***************************************************************************/
 
-static UINT8 read_jmi(running_device *device)
+static UINT8 read_jmi(device_t *device)
 {
 	/* this routine is called when there is no external input */
 	/* and the JMI jumper is present */
@@ -111,7 +112,7 @@ static UINT8 read_jmi(running_device *device)
 }
 
 
-void ccpu_wdt_timer_trigger(running_device *device)
+void ccpu_wdt_timer_trigger(device_t *device)
 {
 	ccpu_state *cpustate = get_safe_token(device);
 	cpustate->waiting = FALSE;
@@ -131,6 +132,7 @@ static CPU_INIT( ccpu )
 	cpustate->vector_callback = configdata->vector_callback;
 	cpustate->device = device;
 	cpustate->program = device->space(AS_PROGRAM);
+	cpustate->direct = &cpustate->program->direct();
 	cpustate->data = device->space(AS_DATA);
 	cpustate->io = device->space(AS_IO);
 

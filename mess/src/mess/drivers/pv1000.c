@@ -14,10 +14,11 @@ DECLARE_LEGACY_SOUND_DEVICE(PV1000,pv1000_sound);
 DEFINE_LEGACY_SOUND_DEVICE(PV1000,pv1000_sound);
 
 
-class d65010_state {
+class d65010_state : public driver_device
+{
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, d65010_state(machine)); }
-	d65010_state(running_machine &machine) { }
+	d65010_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	UINT8	io_regs[8];
 	UINT8	fd_data;
@@ -32,12 +33,10 @@ public:
 	emu_timer		*irq_on_timer;
 	emu_timer		*irq_off_timer;
 
-	running_device *maincpu;
+	device_t *maincpu;
 	screen_device *screen;
+	UINT8 *ram;
 };
-
-
-static UINT8 *pv1000_ram;
 
 
 static WRITE8_HANDLER( pv1000_io_w );
@@ -47,7 +46,7 @@ static WRITE8_HANDLER( pv1000_gfxram_w );
 
 static ADDRESS_MAP_START( pv1000, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE( 0x0000, 0x3fff ) AM_MIRROR( 0x4000 ) AM_ROM AM_REGION( "cart", 0 )
-	AM_RANGE( 0xb800, 0xbbff ) AM_RAM AM_BASE( &pv1000_ram )
+	AM_RANGE( 0xb800, 0xbbff ) AM_RAM AM_BASE_MEMBER( d65010_state, ram )
 	AM_RANGE( 0xbc00, 0xbfff ) AM_RAM_WRITE( pv1000_gfxram_w ) AM_REGION( "gfxram", 0 )
 ADDRESS_MAP_END
 
@@ -60,7 +59,7 @@ ADDRESS_MAP_END
 
 static WRITE8_HANDLER( pv1000_gfxram_w )
 {
-	UINT8 *gfxram = memory_region( space->machine, "gfxram" );
+	UINT8 *gfxram = space->machine->region( "gfxram" )->base();
 
 	gfxram[ offset ] = data;
 	gfx_element_mark_dirty(space->machine->gfx[1], offset/32);
@@ -69,7 +68,7 @@ static WRITE8_HANDLER( pv1000_gfxram_w )
 
 static WRITE8_HANDLER( pv1000_io_w )
 {
-	d65010_state *state = (d65010_state *)space->machine->driver_data;
+	d65010_state *state = space->machine->driver_data<d65010_state>();
 
 	switch ( offset )
 	{
@@ -95,7 +94,7 @@ static WRITE8_HANDLER( pv1000_io_w )
 
 static READ8_HANDLER( pv1000_io_r )
 {
-	d65010_state *state = (d65010_state *)space->machine->driver_data;
+	d65010_state *state = space->machine->driver_data<d65010_state>();
 	UINT8 data = state->io_regs[offset];
 
 //  logerror("pv1000_io_r offset=%02x\n", offset );
@@ -176,7 +175,7 @@ static PALETTE_INIT( pv1000 )
 
 static DEVICE_IMAGE_LOAD( pv1000_cart )
 {
-	UINT8 *cart = memory_region(image.device().machine, "cart");
+	UINT8 *cart = image.device().machine->region("cart")->base();
 	UINT32 size;
 
 	if (image.software_entry() == NULL)
@@ -213,14 +212,14 @@ static DEVICE_IMAGE_LOAD( pv1000_cart )
 
 static VIDEO_UPDATE( pv1000 )
 {
-	d65010_state *state = (d65010_state *)screen->machine->driver_data;
+	d65010_state *state = screen->machine->driver_data<d65010_state>();
 	int x, y;
 
 	for ( y = 0; y < 24; y++ )
 	{
 		for ( x = 0; x < 32; x++ )
 		{
-			UINT16 tile = pv1000_ram[ y * 32 + x ];
+			UINT16 tile = state->ram[ y * 32 + x ];
 
 			if ( tile < 0xe0 )
 			{
@@ -251,7 +250,7 @@ static VIDEO_UPDATE( pv1000 )
 
 static STREAM_UPDATE( pv1000_sound_update )
 {
-	d65010_state *state = (d65010_state *)device->machine->driver_data;
+	d65010_state *state = device->machine->driver_data<d65010_state>();
 	stream_sample_t *buffer = outputs[0];
 
 	while ( samples > 0 )
@@ -284,7 +283,7 @@ static STREAM_UPDATE( pv1000_sound_update )
 
 static DEVICE_START( pv1000_sound )
 {
-	d65010_state *state = (d65010_state *)device->machine->driver_data;
+	d65010_state *state = device->machine->driver_data<d65010_state>();
 	state->sh_channel = stream_create( device, 0, 1, device->clock()/1024, 0, pv1000_sound_update );
 }
 
@@ -307,7 +306,7 @@ DEVICE_GET_INFO( pv1000_sound )
 /* we have chosen to trigger on scanlines 195, 199, 203, 207, 211, 215, 219, 223, 227, 231, 235, 239, 243, 247, 251, 255 */
 static TIMER_CALLBACK( d65010_irq_on_cb )
 {
-	d65010_state *state = (d65010_state *)machine->driver_data;
+	d65010_state *state = machine->driver_data<d65010_state>();
 	int vpos = state->screen->vpos();
 	int next_vpos = vpos + 12;
 
@@ -326,7 +325,7 @@ static TIMER_CALLBACK( d65010_irq_on_cb )
 
 static TIMER_CALLBACK( d65010_irq_off_cb )
 {
-	d65010_state *state = (d65010_state *)machine->driver_data;
+	d65010_state *state = machine->driver_data<d65010_state>();
 
 	cpu_set_input_line( state->maincpu, 0, CLEAR_LINE );
 }
@@ -334,7 +333,7 @@ static TIMER_CALLBACK( d65010_irq_off_cb )
 
 static MACHINE_START( pv1000 )
 {
-	d65010_state *state = (d65010_state *)machine->driver_data;
+	d65010_state *state = machine->driver_data<d65010_state>();
 
 	state->irq_on_timer = timer_alloc( machine, d65010_irq_on_cb, NULL );
 	state->irq_off_timer = timer_alloc( machine, d65010_irq_off_cb, NULL );
@@ -345,7 +344,7 @@ static MACHINE_START( pv1000 )
 
 static MACHINE_RESET( pv1000 )
 {
-	d65010_state *state = (d65010_state *)machine->driver_data;
+	d65010_state *state = machine->driver_data<d65010_state>();
 
 	state->io_regs[5] = 0;
 	state->fd_data = 0;
@@ -372,41 +371,40 @@ static GFXDECODE_START( pv1000 )
 GFXDECODE_END
 
 
-static MACHINE_DRIVER_START( pv1000 )
-	MDRV_DRIVER_DATA( d65010_state )
+static MACHINE_CONFIG_START( pv1000, d65010_state )
 
-	MDRV_CPU_ADD( "maincpu", Z80, 17897725/5 )
-	MDRV_CPU_PROGRAM_MAP( pv1000 )
-	MDRV_CPU_IO_MAP( pv1000_io )
+	MCFG_CPU_ADD( "maincpu", Z80, 17897725/5 )
+	MCFG_CPU_PROGRAM_MAP( pv1000 )
+	MCFG_CPU_IO_MAP( pv1000_io )
 
-	MDRV_MACHINE_START( pv1000 )
-	MDRV_MACHINE_RESET( pv1000 )
+	MCFG_MACHINE_START( pv1000 )
+	MCFG_MACHINE_RESET( pv1000 )
 
-	MDRV_SCREEN_ADD( "screen", RASTER )
-	MDRV_SCREEN_FORMAT( BITMAP_FORMAT_INDEXED16 )
-	MDRV_SCREEN_RAW_PARAMS( 17897725/3, 380, 0, 256, 262, 0, 192 )
+	MCFG_SCREEN_ADD( "screen", RASTER )
+	MCFG_SCREEN_FORMAT( BITMAP_FORMAT_INDEXED16 )
+	MCFG_SCREEN_RAW_PARAMS( 17897725/3, 380, 0, 256, 262, 0, 192 )
 
-	MDRV_PALETTE_LENGTH( 8 )
-	MDRV_PALETTE_INIT( pv1000 )
-	MDRV_GFXDECODE( pv1000 )
+	MCFG_PALETTE_LENGTH( 8 )
+	MCFG_PALETTE_INIT( pv1000 )
+	MCFG_GFXDECODE( pv1000 )
 
 	/* D65010G031 - Video & sound chip */
-	MDRV_VIDEO_UPDATE( pv1000 )
+	MCFG_VIDEO_UPDATE( pv1000 )
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD( "pv1000_sound", PV1000, 17897725 )
-	MDRV_SOUND_ROUTE( ALL_OUTPUTS, "mono", 1.00 )
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD( "pv1000_sound", PV1000, 17897725 )
+	MCFG_SOUND_ROUTE( ALL_OUTPUTS, "mono", 1.00 )
 
 	/* Cartridge slot */
-	MDRV_CARTSLOT_ADD("cart")
-	MDRV_CARTSLOT_EXTENSION_LIST("bin")
-	MDRV_CARTSLOT_MANDATORY
-	MDRV_CARTSLOT_INTERFACE("pv1000_cart")
-	MDRV_CARTSLOT_LOAD(pv1000_cart)
+	MCFG_CARTSLOT_ADD("cart")
+	MCFG_CARTSLOT_EXTENSION_LIST("bin")
+	MCFG_CARTSLOT_MANDATORY
+	MCFG_CARTSLOT_INTERFACE("pv1000_cart")
+	MCFG_CARTSLOT_LOAD(pv1000_cart)
 
 	/* Software lists */
-	MDRV_SOFTWARE_LIST_ADD("cart_list","pv1000")
-MACHINE_DRIVER_END
+	MCFG_SOFTWARE_LIST_ADD("cart_list","pv1000")
+MACHINE_CONFIG_END
 
 
 ROM_START( pv1000 )

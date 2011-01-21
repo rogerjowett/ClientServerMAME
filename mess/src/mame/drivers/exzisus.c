@@ -37,6 +37,7 @@ TODO:
 #include "includes/taitoipt.h"
 #include "audio/taitosnd.h"
 #include "sound/2151intf.h"
+#include "includes/exzisus.h"
 
 
 /***************************************************************************
@@ -48,25 +49,6 @@ TODO:
 static UINT8 *exzisus_sharedram_ab;
 static UINT8 *exzisus_sharedram_ac;
 
-extern UINT8 *exzisus_videoram0;
-extern UINT8 *exzisus_videoram1;
-extern UINT8 *exzisus_objectram0;
-extern UINT8 *exzisus_objectram1;
-extern size_t  exzisus_objectram_size0;
-extern size_t  exzisus_objectram_size1;
-
-READ8_HANDLER ( exzisus_videoram_0_r );
-READ8_HANDLER ( exzisus_videoram_1_r );
-READ8_HANDLER ( exzisus_objectram_0_r );
-READ8_HANDLER ( exzisus_objectram_1_r );
-WRITE8_HANDLER( exzisus_videoram_0_w );
-WRITE8_HANDLER( exzisus_videoram_1_w );
-WRITE8_HANDLER( exzisus_objectram_0_w );
-WRITE8_HANDLER( exzisus_objectram_1_w );
-
-VIDEO_UPDATE( exzisus );
-
-
 /***************************************************************************
 
   Memory Handler(s)
@@ -75,7 +57,7 @@ VIDEO_UPDATE( exzisus );
 
 static WRITE8_HANDLER( exzisus_cpua_bankswitch_w )
 {
-	UINT8 *RAM = memory_region(space->machine, "cpua");
+	UINT8 *RAM = space->machine->region("cpua")->base();
 	static int exzisus_cpua_bank = 0;
 
 	if ( (data & 0x0f) != exzisus_cpua_bank )
@@ -92,7 +74,7 @@ static WRITE8_HANDLER( exzisus_cpua_bankswitch_w )
 
 static WRITE8_HANDLER( exzisus_cpub_bankswitch_w )
 {
-	UINT8 *RAM = memory_region(space->machine, "cpub");
+	UINT8 *RAM = space->machine->region("cpub")->base();
 	static int exzisus_cpub_bank = 0;
 
 	if ( (data & 0x0f) != exzisus_cpub_bank )
@@ -146,7 +128,7 @@ static WRITE8_HANDLER( exzisus_cpub_reset_w )
 // the RAM check to work
 static DRIVER_INIT( exzisus )
 {
-	UINT8 *RAM = memory_region(machine, "cpua");
+	UINT8 *RAM = machine->region("cpua")->base();
 
 	/* Fix WORK RAM error */
 	RAM[0x67fd] = 0x18;
@@ -281,7 +263,7 @@ GFXDECODE_END
 
 
 
-static void irqhandler(running_device *device, int irq)
+static void irqhandler(device_t *device, int irq)
 {
 	cputag_set_input_line(device->machine, "audiocpu", 0, irq ? ASSERT_LINE : CLEAR_LINE);
 }
@@ -298,50 +280,50 @@ static const tc0140syt_interface exzisus_tc0140syt_intf =
 };
 
 /* All clocks are unconfirmed */
-static MACHINE_DRIVER_START( exzisus )
+static MACHINE_CONFIG_START( exzisus, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("cpua", Z80, 6000000)
-	MDRV_CPU_PROGRAM_MAP(cpua_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("cpua", Z80, 6000000)
+	MCFG_CPU_PROGRAM_MAP(cpua_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("cpub", Z80, 6000000)
-	MDRV_CPU_PROGRAM_MAP(cpub_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("cpub", Z80, 6000000)
+	MCFG_CPU_PROGRAM_MAP(cpub_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("cpuc", Z80, 6000000)
-	MDRV_CPU_PROGRAM_MAP(cpuc_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("cpuc", Z80, 6000000)
+	MCFG_CPU_PROGRAM_MAP(cpuc_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 4000000)
-	MDRV_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 4000000)
+	MCFG_CPU_PROGRAM_MAP(sound_map)
 
-	MDRV_QUANTUM_TIME(HZ(600))	/* 10 CPU slices per frame - enough for the sound CPU to read all commands */
+	MCFG_QUANTUM_TIME(HZ(600))	/* 10 CPU slices per frame - enough for the sound CPU to read all commands */
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(exzisus)
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_GFXDECODE(exzisus)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_PALETTE_INIT(RRRR_GGGG_BBBB)
-	MDRV_VIDEO_UPDATE(exzisus)
+	MCFG_PALETTE_INIT(RRRR_GGGG_BBBB)
+	MCFG_VIDEO_UPDATE(exzisus)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, 4000000)
-	MDRV_SOUND_CONFIG(ym2151_config)
-	MDRV_SOUND_ROUTE(0, "mono", 0.50)
-	MDRV_SOUND_ROUTE(1, "mono", 0.50)
+	MCFG_SOUND_ADD("ymsnd", YM2151, 4000000)
+	MCFG_SOUND_CONFIG(ym2151_config)
+	MCFG_SOUND_ROUTE(0, "mono", 0.50)
+	MCFG_SOUND_ROUTE(1, "mono", 0.50)
 
-	MDRV_TC0140SYT_ADD("tc0140syt", exzisus_tc0140syt_intf)
-MACHINE_DRIVER_END
+	MCFG_TC0140SYT_ADD("tc0140syt", exzisus_tc0140syt_intf)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************

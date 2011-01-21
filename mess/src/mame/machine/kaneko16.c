@@ -92,7 +92,7 @@ READ16_HANDLER(galpanib_calc_r) /* Simulation of the CALC1 MCU */
 			return (((UINT32)hit.mult_a * (UINT32)hit.mult_b) & 0xffff);
 
 		case 0x14/2:
-			return (mame_rand(space->machine) & 0xffff);
+			return (space->machine->rand() & 0xffff);
 
 		default:
 			logerror("CPU #0 PC %06x: warning - read unmapped calc address %06x\n",cpu_get_pc(space->cpu),offset<<1);
@@ -243,7 +243,7 @@ READ16_HANDLER(bloodwar_calc_r)
 			return data;
 
 		case 0x14/2:
-			return (mame_rand(space->machine) & 0xffff);
+			return (space->machine->rand() & 0xffff);
 
 		case 0x20/2: return hit.x1p;
 		case 0x22/2: return hit.x1s;
@@ -488,7 +488,7 @@ static READ16_HANDLER(shogwarr_calc_r)
 			return shogwarr_hit.flags;
 
 		case 0x28:
-			return (mame_rand(space->machine) & 0xffff);
+			return (space->machine->rand() & 0xffff);
 
 		case 0x40: return shogwarr_hit.x1po;
 		case 0x44: return shogwarr_hit.x1so;
@@ -1714,8 +1714,8 @@ static int calc3_decompress_table(running_machine* machine, int tabnum, UINT8* d
 
 
 
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
-	UINT8* rom = memory_region(machine,"cpu1");
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	UINT8* rom = machine->region("cpu1")->base();
 	UINT8 numregions;
 	UINT16 length;
 	int local_counter=0;
@@ -1814,11 +1814,11 @@ static int calc3_decompress_table(running_machine* machine, int tabnum, UINT8* d
 					//printf("save to eeprom\n");
 
 					{
-						const address_space *eeprom_space = space->machine->device<eeprom_device>("eeprom")->space();
+						address_space *eeprom_space = space->machine->device<eeprom_device>("eeprom")->space();
 
 						for (i=0;i<0x80;i++)
 						{
-							memory_write_byte(eeprom_space, i, memory_read_byte(space, calc3_eeprom_addr+0x200000+i));
+							eeprom_space->write_byte(i, space->read_byte(calc3_eeprom_addr+0x200000+i));
 						}
 
 					}
@@ -1918,7 +1918,7 @@ static int calc3_decompress_table(running_machine* machine, int tabnum, UINT8* d
 					{
 						if (space)
 						{
-							memory_write_byte(space, dstoffset+i, dat);
+							space->write_byte(dstoffset+i, dat);
 						}
 
 						// debug, used to output tables at the start
@@ -1992,7 +1992,7 @@ static int calc3_decompress_table(running_machine* machine, int tabnum, UINT8* d
 					{
 						if (space)
 						{
-							memory_write_byte(space, dstoffset+i, dat);
+							space->write_byte(dstoffset+i, dat);
 						}
 
 						// debug, used to output tables at the start
@@ -2024,7 +2024,7 @@ static int calc3_decompress_table(running_machine* machine, int tabnum, UINT8* d
 
 DRIVER_INIT(calc3_scantables)
 {
-	UINT8* rom = memory_region(machine,"cpu1");
+	UINT8* rom = machine->region("cpu1")->base();
 	UINT8 numregions;
 
 	int x;
@@ -2107,11 +2107,11 @@ void calc3_mcu_run(running_machine *machine)
 {
 	UINT16 mcu_command;
 	int i;
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	if ( calc3_mcu_status != (1|2|4|8) )	return;
 
-	if (calc3_dsw_addr) memory_write_byte(space, calc3_dsw_addr+0x200000, ( ~input_port_read(machine, "DSW1"))&0xff); // // DSW // dsw actually updates in realtime - mcu reads+writes it every frame
+	if (calc3_dsw_addr) space->write_byte(calc3_dsw_addr+0x200000, ( ~input_port_read(machine, "DSW1"))&0xff); // // DSW // dsw actually updates in realtime - mcu reads+writes it every frame
 
 
 	//calc3_mcu_status = 0;
@@ -2152,7 +2152,7 @@ void calc3_mcu_run(running_machine *machine)
 			printf("Calc 3 Init Command - %04x ROM Checksum Address\n",  cakc3_checkumaddress);
 			printf("Calc 3 Init Command - %08x Data Write Address\n",  calc3_writeaddress);
 #endif
-	//      memory_write_byte(space, calc3_dsw_addr+0x200000, ( ~input_port_read(machine, "DSW1"))&0xff); // // DSW // dsw actually updates in realtime - mcu reads+writes it every frame
+	//      space->write_byte(calc3_dsw_addr+0x200000, ( ~input_port_read(machine, "DSW1"))&0xff); // // DSW // dsw actually updates in realtime - mcu reads+writes it every frame
 
 			kaneko16_mcu_ram[cakc3_checkumaddress / 2] = calc3_mcu_crc;				// MCU Rom Checksum!
 
@@ -2164,11 +2164,11 @@ void calc3_mcu_run(running_machine *machine)
             */
 
 			{
-				const address_space *eeprom_space = space->machine->device<eeprom_device>("eeprom")->space();
+				address_space *eeprom_space = space->machine->device<eeprom_device>("eeprom")->space();
 
 				for (i=0;i<0x80;i++)
 				{
-					memory_write_byte(space, calc3_eeprom_addr+0x200000+i, memory_read_byte(eeprom_space, i));
+					space->write_byte(calc3_eeprom_addr+0x200000+i, eeprom_space->read_byte(i));
 				}
 
 			}
@@ -2207,12 +2207,12 @@ void calc3_mcu_run(running_machine *machine)
 						printf("writing back address %08x to %08x %08x\n", calc3_writeaddress_current, commandaddr,write);
 #endif
 
-						memory_write_byte(space,write+0x200000, data_header[0]);
-						memory_write_byte(space,write+0x200001, data_header[1]);
+						space->write_byte(write+0x200000, data_header[0]);
+						space->write_byte(write+0x200001, data_header[1]);
 
 						write=commandaddr+(char)commandunk;
-						memory_write_word(space,write+0x200000, (calc3_writeaddress_current>>16)&0xffff);
-						memory_write_word(space,write+0x200002,  (calc3_writeaddress_current&0xffff));
+						space->write_word(write+0x200000, (calc3_writeaddress_current>>16)&0xffff);
+						space->write_word(write+0x200002,  (calc3_writeaddress_current&0xffff));
 
 						calc3_writeaddress_current += ((length+3)&(~1));
 					}
@@ -2336,7 +2336,7 @@ static const UINT8 toybox_mcu_decryption_table_alt[0x100] = {
 DRIVER_INIT( decrypt_toybox_rom )
 {
 
-	UINT8 *src = (UINT8 *)memory_region(machine, "mcudata" );
+	UINT8 *src = (UINT8 *)machine->region("mcudata" )->base();
 
 	int i;
 
@@ -2363,7 +2363,7 @@ DRIVER_INIT( decrypt_toybox_rom )
 DRIVER_INIT( decrypt_toybox_rom_alt )
 {
 
-	UINT8 *src = (UINT8 *)memory_region(machine, "mcudata" );
+	UINT8 *src = (UINT8 *)machine->region("mcudata" )->base();
 
 	int i;
 
@@ -2375,7 +2375,7 @@ DRIVER_INIT( decrypt_toybox_rom_alt )
 
 void toxboy_handle_04_subcommand(running_machine* machine,UINT8 mcu_subcmd, UINT16*mcu_ram)
 {
-	UINT8 *src = (UINT8 *)memory_region(machine, "mcudata")+0x10000;
+	UINT8 *src = (UINT8 *)machine->region("mcudata")->base()+0x10000;
 	UINT8* dst = (UINT8 *)mcu_ram;
 
 	int offs = (mcu_subcmd&0x3f)*8;

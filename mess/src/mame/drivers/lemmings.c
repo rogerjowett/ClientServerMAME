@@ -24,7 +24,7 @@
 
 static WRITE16_HANDLER( lemmings_control_w )
 {
-	lemmings_state *state = (lemmings_state *)space->machine->driver_data;
+	lemmings_state *state = space->machine->driver_data<lemmings_state>();
 
 	/* Offset==0 Pixel layer X scroll */
 	if (offset == 4)
@@ -64,7 +64,7 @@ static READ16_HANDLER( lemmings_prot_r )
 
 static WRITE16_HANDLER( lemmings_palette_24bit_w )
 {
-	lemmings_state *state = (lemmings_state *)space->machine->driver_data;
+	lemmings_state *state = space->machine->driver_data<lemmings_state>();
 	int r, g, b;
 
 	COMBINE_DATA(&state->paletteram[offset]);
@@ -80,14 +80,14 @@ static WRITE16_HANDLER( lemmings_palette_24bit_w )
 
 static WRITE16_HANDLER( lemmings_sound_w )
 {
-	lemmings_state *state = (lemmings_state *)space->machine->driver_data;
+	lemmings_state *state = space->machine->driver_data<lemmings_state>();
 	soundlatch_w(space, 0, data & 0xff);
 	cpu_set_input_line(state->audiocpu, 1, HOLD_LINE);
 }
 
 static WRITE8_HANDLER( lemmings_sound_ack_w )
 {
-	lemmings_state *state = (lemmings_state *)space->machine->driver_data;
+	lemmings_state *state = space->machine->driver_data<lemmings_state>();
 	cpu_set_input_line(state->audiocpu, 1, CLEAR_LINE);
 }
 
@@ -116,7 +116,7 @@ ADDRESS_MAP_END
 static ADDRESS_MAP_START( sound_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x07ff) AM_RAM
 	AM_RANGE(0x0800, 0x0801) AM_DEVREADWRITE("ymsnd", ym2151_r,ym2151_w)
-	AM_RANGE(0x1000, 0x1000) AM_DEVREADWRITE("oki", okim6295_r,okim6295_w)
+	AM_RANGE(0x1000, 0x1000) AM_DEVREADWRITE_MODERN("oki", okim6295_device, read, write)
 	AM_RANGE(0x1800, 0x1800) AM_READWRITE(soundlatch_r,lemmings_sound_ack_w)
 	AM_RANGE(0x8000, 0xffff) AM_ROM
 ADDRESS_MAP_END
@@ -244,9 +244,9 @@ GFXDECODE_END
 
 /******************************************************************************/
 
-static void sound_irq( running_device *device, int state )
+static void sound_irq( device_t *device, int state )
 {
-	lemmings_state *lemmings = (lemmings_state *)device->machine->driver_data;
+	lemmings_state *lemmings = device->machine->driver_data<lemmings_state>();
 	cpu_set_input_line(lemmings->audiocpu, 0, state);
 }
 
@@ -257,55 +257,52 @@ static const ym2151_interface ym2151_config =
 
 static MACHINE_START( lemmings )
 {
-	lemmings_state *state = (lemmings_state *)machine->driver_data;
+	lemmings_state *state = machine->driver_data<lemmings_state>();
 
 	state->audiocpu = machine->device("audiocpu");
 }
 
-static MACHINE_DRIVER_START( lemmings )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(lemmings_state)
+static MACHINE_CONFIG_START( lemmings, lemmings_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 14000000)
-	MDRV_CPU_PROGRAM_MAP(lemmings_map)
-	MDRV_CPU_VBLANK_INT("screen", irq6_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, 14000000)
+	MCFG_CPU_PROGRAM_MAP(lemmings_map)
+	MCFG_CPU_VBLANK_INT("screen", irq6_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", M6809,32220000/8)
-	MDRV_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_ADD("audiocpu", M6809,32220000/8)
+	MCFG_CPU_PROGRAM_MAP(sound_map)
 
-	MDRV_MACHINE_START(lemmings)
+	MCFG_MACHINE_START(lemmings)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_BUFFERS_SPRITERAM)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_BUFFERS_SPRITERAM)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(529))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(40*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(529))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(40*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(lemmings)
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_GFXDECODE(lemmings)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_VIDEO_EOF(lemmings)
-	MDRV_VIDEO_START(lemmings)
-	MDRV_VIDEO_UPDATE(lemmings)
+	MCFG_VIDEO_EOF(lemmings)
+	MCFG_VIDEO_START(lemmings)
+	MCFG_VIDEO_UPDATE(lemmings)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, 32220000/9)
-	MDRV_SOUND_CONFIG(ym2151_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.45)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.45)
+	MCFG_SOUND_ADD("ymsnd", YM2151, 32220000/9)
+	MCFG_SOUND_CONFIG(ym2151_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.45)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.45)
 
-	MDRV_OKIM6295_ADD("oki", 1023924, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 1023924, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
+MACHINE_CONFIG_END
 
 /******************************************************************************/
 

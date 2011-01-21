@@ -14,7 +14,7 @@
    * Noraut Deluxe Poker (console),       198?,  Noraut Ltd.
    * Noraut Deluxe Poker (bootleg),       198?,  Unknown.
    * Noraut Joker Poker (original),       198?,  Noraut Ltd.
-   * Noraut Joker Poker (Prologic HW),    198?,  Prologic / Noraut Ltd.
+   * Noraut Joker Poker (Prologic HW),    198?,  Video Fun Games Ltd.
    * Noraut Joker Poker (alt),            1988,  Noraut Ltd.
    * Noraut Red Hot Joker Poker,          1988,  Noraut Ltd.
    * Noraut Red Hot Joker Poker (alt HW), 198?,  Noraut Ltd.
@@ -539,6 +539,7 @@
 #include "cpu/z80/z80.h"
 #include "cpu/i8085/i8085.h"
 #include "machine/i8255a.h"
+#include "machine/nvram.h"
 #include "includes/norautp.h"
 
 #include "noraut11.lh"
@@ -657,7 +658,7 @@ static WRITE8_DEVICE_HANDLER( soundlamps_w )
   xxxx ----  * Discrete Sound Lines.
 */
 
-	running_device *discrete = device->machine->device("discrete");
+	device_t *discrete = device->machine->device("discrete");
 
 	output_set_lamp_value(8, (data >> 0) & 1);	/* DEAL / DRAW lamp */
 	output_set_lamp_value(9, (data >> 1) & 1);	/* BET / COLLECT lamp */
@@ -802,7 +803,7 @@ static READ8_HANDLER( test2_r )
 static ADDRESS_MAP_START( norautp_map, ADDRESS_SPACE_PROGRAM, 8 )
 	ADDRESS_MAP_GLOBAL_MASK(0x3fff)
 	AM_RANGE(0x0000, 0x1fff) AM_ROM
-	AM_RANGE(0x2000, 0x27ff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)	/* 6116 */
+	AM_RANGE(0x2000, 0x27ff) AM_RAM AM_SHARE("nvram")	/* 6116 */
 ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( norautp_portmap, ADDRESS_SPACE_IO, 8 )
@@ -833,35 +834,39 @@ ADDRESS_MAP_END
 static ADDRESS_MAP_START( nortest1_map, ADDRESS_SPACE_PROGRAM, 8 )
 	ADDRESS_MAP_GLOBAL_MASK(0x7fff)
 	AM_RANGE(0x0000, 0x2fff) AM_ROM
-	AM_RANGE(0x5000, 0x57ff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0x5000, 0x57ff) AM_RAM AM_SHARE("nvram")
 ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( norautxp_map, ADDRESS_SPACE_PROGRAM, 8 )
 //  ADDRESS_MAP_GLOBAL_MASK(~0x4000)
 	ADDRESS_MAP_GLOBAL_MASK(0x7fff)
 	AM_RANGE(0x0000, 0x3fff) AM_ROM	/* need to be checked */
-	AM_RANGE(0x6000, 0x67ff) AM_RAM AM_BASE_SIZE_GENERIC(nvram) /* HM6116 */
+	AM_RANGE(0x6000, 0x67ff) AM_RAM AM_SHARE("nvram") /* HM6116 */
 ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( norautx4_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x3fff) AM_ROM
-	AM_RANGE(0x6000, 0x67ff) AM_RAM AM_BASE_SIZE_GENERIC(nvram) /* 6116 */
+	AM_RANGE(0x6000, 0x67ff) AM_RAM AM_SHARE("nvram") /* 6116 */
 ADDRESS_MAP_END
 
+#ifdef UNUSED_CODE
 static ADDRESS_MAP_START( norautx8_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x7fff) AM_ROM	/* need to be checked */
-	AM_RANGE(0xc000, 0xc7ff) AM_RAM AM_BASE_SIZE_GENERIC(nvram) /* 6116 */
+	AM_RANGE(0xc000, 0xc7ff) AM_RAM AM_SHARE("nvram") /* 6116 */
 ADDRESS_MAP_END
+#endif
 
 static ADDRESS_MAP_START( kimble_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0xbfff) AM_ROM
-	AM_RANGE(0xc000, 0xc7ff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0xc000, 0xc7ff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0xc800, 0xc9ff) AM_RAM	/* working RAM? */
 ADDRESS_MAP_END
 
+#ifdef UNUSED_CODE
 static ADDRESS_MAP_START( norautxp_portmap, ADDRESS_SPACE_IO, 8 )
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 ADDRESS_MAP_END
+#endif
 
 
 /*********** 8080 based **********/
@@ -869,26 +874,26 @@ ADDRESS_MAP_END
 static ADDRESS_MAP_START( dphl_map, ADDRESS_SPACE_PROGRAM, 8 )
 	ADDRESS_MAP_GLOBAL_MASK(0x7fff)	/* A15 not connected */
 	AM_RANGE(0x0000, 0x3fff) AM_ROM
-	AM_RANGE(0x5000, 0x53ff) AM_RAM	AM_BASE_SIZE_GENERIC(nvram)	/* should be 2x 0x100 segments (4x 2111) */
+	AM_RANGE(0x5000, 0x53ff) AM_RAM	AM_SHARE("nvram")	/* should be 2x 0x100 segments (4x 2111) */
 ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( dphla_map, ADDRESS_SPACE_PROGRAM, 8 )
 	ADDRESS_MAP_GLOBAL_MASK(0x3fff)
 	AM_RANGE(0x0000, 0x1fff) AM_ROM
-	AM_RANGE(0x2000, 0x23ff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0x2000, 0x23ff) AM_RAM AM_SHARE("nvram")
 ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( ssjkrpkr_map, ADDRESS_SPACE_PROGRAM, 8 )
 	ADDRESS_MAP_GLOBAL_MASK(0x7fff)
 	AM_RANGE(0x0000, 0x1fff) AM_ROM
-	AM_RANGE(0x4000, 0x43ff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0x4000, 0x43ff) AM_RAM AM_SHARE("nvram")
 ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( dphltest_map, ADDRESS_SPACE_PROGRAM, 8 )
 //  ADDRESS_MAP_GLOBAL_MASK(0x7fff) /* A15 not connected */
 	AM_RANGE(0x0000, 0x6fff) AM_ROM
 	AM_RANGE(0x7000, 0x7fff) AM_RAM
-	AM_RANGE(0x8000, 0x87ff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0x8000, 0x87ff) AM_RAM AM_SHARE("nvram")
 ADDRESS_MAP_END
 
 /*
@@ -906,13 +911,13 @@ ADDRESS_MAP_END
 */
 static ADDRESS_MAP_START( kimbldhl_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0xc000, 0xc7ff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0xc000, 0xc7ff) AM_RAM AM_SHARE("nvram")
 ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( drhl_map, ADDRESS_SPACE_PROGRAM, 8 )
 	ADDRESS_MAP_GLOBAL_MASK(0x7fff)	/* A15 not connected */
 	AM_RANGE(0x0000, 0x3fff) AM_ROM
-	AM_RANGE(0x5000, 0x53ff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0x5000, 0x53ff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0x5400, 0x57ff) AM_RAM
 ADDRESS_MAP_END
 
@@ -1231,203 +1236,193 @@ static I8255A_INTERFACE (ppi8255_intf_1)
 *    Machine Drivers     *
 *************************/
 
-static MACHINE_DRIVER_START( noraut_base )
+static MACHINE_CONFIG_START( noraut_base, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, NORAUT_CPU_CLOCK)
-	MDRV_CPU_PROGRAM_MAP(norautp_map)
-	MDRV_CPU_IO_MAP(norautp_portmap)
+	MCFG_CPU_ADD("maincpu", Z80, NORAUT_CPU_CLOCK)
+	MCFG_CPU_PROGRAM_MAP(norautp_map)
+	MCFG_CPU_IO_MAP(norautp_portmap)
 
-	MDRV_NVRAM_HANDLER(generic_0fill)	/* doesn't work if placed at derivative drivers */
+	MCFG_NVRAM_ADD_0FILL("nvram")	/* doesn't work if placed at derivative drivers */
 
 	/* 3x 8255 */
-	MDRV_I8255A_ADD( "ppi8255_0", ppi8255_intf_0 )
-	MDRV_I8255A_ADD( "ppi8255_1", ppi8255_intf_1 )
-//  MDRV_I8255A_ADD( "ppi8255_2", ppi8255_intf_2 )
+	MCFG_I8255A_ADD( "ppi8255_0", ppi8255_intf_0 )
+	MCFG_I8255A_ADD( "ppi8255_1", ppi8255_intf_1 )
+//  MCFG_I8255A_ADD( "ppi8255_2", ppi8255_intf_2 )
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*16, 32*16)
-	MDRV_SCREEN_VISIBLE_AREA(2*16, 31*16-1, (0*16) + 8, 16*16-1)	/* the hardware clips the top 8 pixels */
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*16, 32*16)
+	MCFG_SCREEN_VISIBLE_AREA(2*16, 31*16-1, (0*16) + 8, 16*16-1)	/* the hardware clips the top 8 pixels */
 
-	MDRV_GFXDECODE(norautp)
+	MCFG_GFXDECODE(norautp)
 
-	MDRV_PALETTE_INIT(norautp)
-	MDRV_PALETTE_LENGTH(8)
-	MDRV_VIDEO_START(norautp)
-	MDRV_VIDEO_UPDATE(norautp)
-
-	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("discrete", DISCRETE, 0)
-	MDRV_SOUND_CONFIG_DISCRETE(norautp)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( norautp )
-	MDRV_IMPORT_FROM(noraut_base)
-
-	/* basic machine hardware */
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( norautpl )
-	MDRV_IMPORT_FROM(noraut_base)
-
-	/* basic machine hardware */
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_PALETTE_INIT(norautp)
+	MCFG_PALETTE_LENGTH(8)
+	MCFG_VIDEO_START(norautp)
+	MCFG_VIDEO_UPDATE(norautp)
 
 	/* sound hardware */
-	MDRV_SOUND_MODIFY("discrete")
-	MDRV_SOUND_CONFIG_DISCRETE(kimble)
-MACHINE_DRIVER_END
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("discrete", DISCRETE, 0)
+	MCFG_SOUND_CONFIG_DISCRETE(norautp)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( norautxp )
-	MDRV_IMPORT_FROM(noraut_base)
-
-	/* basic machine hardware */
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(norautxp_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( nortest1 )
-	MDRV_IMPORT_FROM(noraut_base)
+static MACHINE_CONFIG_DERIVED( norautp, noraut_base )
 
 	/* basic machine hardware */
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(nortest1_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( norautx4 )
-	MDRV_IMPORT_FROM(noraut_base)
+static MACHINE_CONFIG_DERIVED( norautpl, noraut_base )
 
 	/* basic machine hardware */
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(norautx4_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( norautx8 )
-	MDRV_IMPORT_FROM(noraut_base)
-
-	/* basic machine hardware */
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(norautx8_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( kimble )
-	MDRV_IMPORT_FROM(noraut_base)
-
-	/* basic machine hardware */
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(kimble_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
 	/* sound hardware */
-	MDRV_SOUND_MODIFY("discrete")
-	MDRV_SOUND_CONFIG_DISCRETE(kimble)
-MACHINE_DRIVER_END
+	MCFG_SOUND_MODIFY("discrete")
+	MCFG_SOUND_CONFIG_DISCRETE(kimble)
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( norautxp, noraut_base )
+
+	/* basic machine hardware */
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(norautxp_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( nortest1, noraut_base )
+
+	/* basic machine hardware */
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(nortest1_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( norautx4, noraut_base )
+
+	/* basic machine hardware */
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(norautx4_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
+MACHINE_CONFIG_END
+
+
+#ifdef UNUSED_CODE
+static MACHINE_CONFIG_DERIVED( norautx8, noraut_base )
+
+	/* basic machine hardware */
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(norautx8_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
+MACHINE_CONFIG_END
+#endif
+
+
+static MACHINE_CONFIG_DERIVED( kimble, noraut_base )
+
+	/* basic machine hardware */
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(kimble_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
+
+	/* sound hardware */
+	MCFG_SOUND_MODIFY("discrete")
+	MCFG_SOUND_CONFIG_DISCRETE(kimble)
+MACHINE_CONFIG_END
 
 
 /********** 8080 based **********/
 
 
-static MACHINE_DRIVER_START( dphl )
-	MDRV_IMPORT_FROM(noraut_base)
+static MACHINE_CONFIG_DERIVED( dphl, noraut_base )
 
 	/* basic machine hardware */
-	MDRV_CPU_REPLACE("maincpu", I8080, DPHL_CPU_CLOCK)
-	MDRV_CPU_PROGRAM_MAP(dphl_map)
-	MDRV_CPU_IO_MAP(norautp_portmap)
+	MCFG_CPU_REPLACE("maincpu", I8080, DPHL_CPU_CLOCK)
+	MCFG_CPU_PROGRAM_MAP(dphl_map)
+	MCFG_CPU_IO_MAP(norautp_portmap)
 
 	/* sound hardware */
-	MDRV_SOUND_MODIFY("discrete")
-	MDRV_SOUND_CONFIG_DISCRETE(dphl)
-MACHINE_DRIVER_END
+	MCFG_SOUND_MODIFY("discrete")
+	MCFG_SOUND_CONFIG_DISCRETE(dphl)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( dphla )
-	MDRV_IMPORT_FROM(noraut_base)
+static MACHINE_CONFIG_DERIVED( dphla, noraut_base )
 
 	/* basic machine hardware */
-	MDRV_CPU_REPLACE("maincpu", I8080, DPHL_CPU_CLOCK)
-	MDRV_CPU_PROGRAM_MAP(dphla_map)
-	MDRV_CPU_IO_MAP(norautp_portmap)
+	MCFG_CPU_REPLACE("maincpu", I8080, DPHL_CPU_CLOCK)
+	MCFG_CPU_PROGRAM_MAP(dphla_map)
+	MCFG_CPU_IO_MAP(norautp_portmap)
 
 	/* sound hardware */
-	MDRV_SOUND_MODIFY("discrete")
-	MDRV_SOUND_CONFIG_DISCRETE(dphl)
-MACHINE_DRIVER_END
+	MCFG_SOUND_MODIFY("discrete")
+	MCFG_SOUND_CONFIG_DISCRETE(dphl)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( kimbldhl )
-	MDRV_IMPORT_FROM(noraut_base)
+static MACHINE_CONFIG_DERIVED( kimbldhl, noraut_base )
 
 	/* basic machine hardware */
-	MDRV_CPU_REPLACE("maincpu", I8080, DPHL_CPU_CLOCK)
-	MDRV_CPU_PROGRAM_MAP(kimbldhl_map)
-	MDRV_CPU_IO_MAP(norautp_portmap)
+	MCFG_CPU_REPLACE("maincpu", I8080, DPHL_CPU_CLOCK)
+	MCFG_CPU_PROGRAM_MAP(kimbldhl_map)
+	MCFG_CPU_IO_MAP(norautp_portmap)
 
 	/* sound hardware */
-	MDRV_SOUND_MODIFY("discrete")
-	MDRV_SOUND_CONFIG_DISCRETE(kimble)
-MACHINE_DRIVER_END
+	MCFG_SOUND_MODIFY("discrete")
+	MCFG_SOUND_CONFIG_DISCRETE(kimble)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( dphltest )
-	MDRV_IMPORT_FROM(noraut_base)
+static MACHINE_CONFIG_DERIVED( dphltest, noraut_base )
 
 	/* basic machine hardware */
-	MDRV_CPU_REPLACE("maincpu", I8080, DPHL_CPU_CLOCK)
-	MDRV_CPU_PROGRAM_MAP(dphltest_map)
-	MDRV_CPU_IO_MAP(norautp_portmap)
+	MCFG_CPU_REPLACE("maincpu", I8080, DPHL_CPU_CLOCK)
+	MCFG_CPU_PROGRAM_MAP(dphltest_map)
+	MCFG_CPU_IO_MAP(norautp_portmap)
 
 	/* sound hardware */
-	MDRV_SOUND_MODIFY("discrete")
-	MDRV_SOUND_CONFIG_DISCRETE(dphl)
-MACHINE_DRIVER_END
+	MCFG_SOUND_MODIFY("discrete")
+	MCFG_SOUND_CONFIG_DISCRETE(dphl)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( drhl )
-	MDRV_IMPORT_FROM(noraut_base)
+static MACHINE_CONFIG_DERIVED( drhl, noraut_base )
 
 	/* basic machine hardware */
-	MDRV_CPU_REPLACE("maincpu", I8080, DPHL_CPU_CLOCK)
-	MDRV_CPU_PROGRAM_MAP(drhl_map)
-	MDRV_CPU_IO_MAP(norautp_portmap)
+	MCFG_CPU_REPLACE("maincpu", I8080, DPHL_CPU_CLOCK)
+	MCFG_CPU_PROGRAM_MAP(drhl_map)
+	MCFG_CPU_IO_MAP(norautp_portmap)
 
 	/* sound hardware */
-	MDRV_SOUND_MODIFY("discrete")
-	MDRV_SOUND_CONFIG_DISCRETE(dphl)
-MACHINE_DRIVER_END
+	MCFG_SOUND_MODIFY("discrete")
+	MCFG_SOUND_CONFIG_DISCRETE(dphl)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( ssjkrpkr )
-	MDRV_IMPORT_FROM(noraut_base)
+static MACHINE_CONFIG_DERIVED( ssjkrpkr, noraut_base )
 
 	/* basic machine hardware */
-	MDRV_CPU_REPLACE("maincpu", I8080, DPHL_CPU_CLOCK)
-	MDRV_CPU_PROGRAM_MAP(ssjkrpkr_map)
+	MCFG_CPU_REPLACE("maincpu", I8080, DPHL_CPU_CLOCK)
+	MCFG_CPU_PROGRAM_MAP(ssjkrpkr_map)
+	MCFG_CPU_IO_MAP(norautp_portmap)
 
 	/* sound hardware */
-	MDRV_SOUND_MODIFY("discrete")
-	MDRV_SOUND_CONFIG_DISCRETE(dphl)
-MACHINE_DRIVER_END
+	MCFG_SOUND_MODIFY("discrete")
+	MCFG_SOUND_CONFIG_DISCRETE(dphl)
+MACHINE_CONFIG_END
 
 
 /*************************
@@ -1788,7 +1783,7 @@ ROM_START( norautjp )
 	ROM_LOAD( "2732-1char.bin",   0x0800, 0x0800, CRC(d94be899) SHA1(b7212162324fa2d67383a475052e3b351bb1af5f) )	/* first half 0xff filled */
 	ROM_CONTINUE(                 0x0800, 0x0800 )
 
-	ROM_REGION( 0x400,	"nvram", 0 )
+	ROM_REGION( 0x800,	"nvram", 0 )
 	ROM_LOAD( "norautjp_nv.bin",  0x0000, 0x0400, CRC(0a0614b2) SHA1(eb21b2723b41743daf787cfc379bc67cce2b8538) )	/* default NVRAM */
 
 ROM_END
@@ -3348,21 +3343,21 @@ ROM_END
 */
 //static DRIVER_INIT( norautrh )
 //{
-//  UINT8 *ROM = memory_region(machine, "maincpu");
+//  UINT8 *ROM = machine->region("maincpu")->base();
 //  ROM[0x1110] = 0x00;
 //  ROM[0x1111] = 0x00;
 //}
 
 //static DRIVER_INIT( norautpn )
 //{
-//  UINT8 *ROM = memory_region(machine, "maincpu");
+//  UINT8 *ROM = machine->region("maincpu")->base();
 //  ROM[0x0827] = 0x00;
 //  ROM[0x0828] = 0x00;
 //}
 
 //static DRIVER_INIT( norautu )
 //{
-//  UINT8 *ROM = memory_region(machine, "maincpu");
+//  UINT8 *ROM = machine->region("maincpu")->base();
 //  ROM[0x083c] = 0x00;
 //  ROM[0x083d] = 0x00;
 //  ROM[0x083e] = 0x00;
@@ -3370,7 +3365,7 @@ ROM_END
 
 //static DRIVER_INIT( gtipoker )
 //{
-//  UINT8 *ROM = memory_region(machine, "maincpu");
+//  UINT8 *ROM = machine->region("maincpu")->base();
 //  ROM[0x0cc6] = 0x00;
 //  ROM[0x0cc7] = 0x00;
 //  ROM[0x0cc8] = 0x00;
@@ -3381,7 +3376,7 @@ ROM_END
 
 //static DRIVER_INIT( dphl )
 //{
-//  UINT8 *ROM = memory_region(machine, "maincpu");
+//  UINT8 *ROM = machine->region("maincpu")->base();
 //  ROM[0x1510] = 0x00;
 //  ROM[0x1511] = 0x00;
 //  ROM[0x1512] = 0x00;
@@ -3389,7 +3384,7 @@ ROM_END
 
 //static DRIVER_INIT( dphla )
 //{
-//  UINT8 *ROM = memory_region(machine, "maincpu");
+//  UINT8 *ROM = machine->region("maincpu")->base();
 //  ROM[0x0b09] = 0x00;
 //  ROM[0x0b0a] = 0x00;
 //  ROM[0x0b0b] = 0x00;
@@ -3399,9 +3394,9 @@ static DRIVER_INIT( enc )
 {
 /* Attempt to decrypt the program ROM */
 
-//  UINT8 *rom = memory_region(machine, "maincpu");
+//  UINT8 *rom = machine->region("maincpu")->base();
 //  UINT8 *buffer;
-//  int size = 0x2000; //memory_region_length(machine, "maincpu");
+//  int size = 0x2000; //machine->region("maincpu")->bytes();
 //  int start = 0;
 //  int i;
 
@@ -3438,7 +3433,7 @@ static DRIVER_INIT( deb )
 /* Just for debugging purposes */
 /*   Should be removed soon    */
 {
-	UINT8 *ROM = memory_region(machine, "maincpu");
+	UINT8 *ROM = machine->region("maincpu")->base();
 	ROM[0x02f7] = 0xca;
 	ROM[0x02f8] = 0x18;
 	ROM[0x206c] = 0xff;
@@ -3448,7 +3443,12 @@ static DRIVER_INIT( ssa )
 /* Passing the video PPI handshaking lines */
 /* Just for debugging purposes */
 {
-//  UINT8 *ROM = memory_region(machine, "maincpu");
+//  UINT8 *ROM = machine->region("maincpu")->base();
+
+//  ROM[0x073b] = 0x00;
+//  ROM[0x073c] = 0x00;
+//  ROM[0x073d] = 0x00;
+
 //  ROM[0x07af] = 0x00;
 //  ROM[0x07b0] = 0x00;
 //  ROM[0x07b1] = 0x00;
@@ -3469,7 +3469,7 @@ GAMEL( 1988, norautp,  0,       norautp,  norautp,  0,   ROT0, "Noraut Ltd.",   
 GAMEL( 198?, norautdx, 0,       norautp,  norautpn, 0,   ROT0, "Noraut Ltd.",              "Noraut Deluxe Poker (console)",       0,                layout_noraut12 )
 GAMEL( 198?, norautpn, norautp, norautp,  norautpn, 0,   ROT0, "bootleg",                  "Noraut Deluxe Poker (bootleg)",       0,                layout_noraut12 )
 GAMEL( 198?, norautjo, 0,       norautp,  mainline, 0,   ROT0, "Noraut Ltd.",              "Noraut Joker Poker (original)",       0,                layout_noraut12 )
-GAMEL( 198?, norautpl, 0,       norautpl, mainline, 0,   ROT0, "Prologic / Noraut Ltd.",   "Noraut Joker Poker (Prologic HW)",    0,                layout_noraut12 )
+GAMEL( 198?, norautpl, 0,       norautpl, mainline, 0,   ROT0, "Video Fun Games Ltd.",     "Noraut Joker Poker (Prologic HW)",    0,                layout_noraut12 )
 GAMEL( 1988, norautjp, norautp, norautp,  norautp,  0,   ROT0, "Noraut Ltd.",              "Noraut Joker Poker (alt)",            0,                layout_noraut11 )
 GAMEL( 1988, norautrh, 0,       norautp,  norautrh, 0,   ROT0, "Noraut Ltd.",              "Noraut Red Hot Joker Poker",          0,                layout_noraut12 )
 GAMEL( 198?, norautra, 0,       norautp,  norautrh, 0,   ROT0, "Noraut Ltd.",              "Noraut Red Hot Joker Poker (alt HW)", 0,                layout_noraut12 ) // 1-bet?? where??...

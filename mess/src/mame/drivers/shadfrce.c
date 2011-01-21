@@ -236,7 +236,7 @@ static WRITE16_HANDLER( shadfrce_flip_screen )
 
 static READ16_HANDLER( shadfrce_input_ports_r )
 {
-	shadfrce_state *state = (shadfrce_state *)space->machine->driver_data;
+	shadfrce_state *state = space->machine->driver_data<shadfrce_state>();
 	UINT16 data = 0xffff;
 
 	switch (offset)
@@ -283,7 +283,7 @@ static WRITE16_HANDLER( shadfrce_irq_ack_w )
 
 static WRITE16_HANDLER( shadfrce_irq_w )
 {
-	shadfrce_state *state = (shadfrce_state *)space->machine->driver_data;
+	shadfrce_state *state = space->machine->driver_data<shadfrce_state>();
 
 	state->irqs_enable = data & 1;	/* maybe, it's set/unset inside every trap instruction which is executed */
 	state->video_enable = data & 8;	/* probably */
@@ -305,14 +305,14 @@ static WRITE16_HANDLER( shadfrce_irq_w )
 
 static WRITE16_HANDLER( shadfrce_scanline_w )
 {
-	shadfrce_state *state = (shadfrce_state *)space->machine->driver_data;
+	shadfrce_state *state = space->machine->driver_data<shadfrce_state>();
 
 	state->raster_scanline = data;	/* guess, 0 is always written */
 }
 
 static TIMER_DEVICE_CALLBACK( shadfrce_scanline )
 {
-	shadfrce_state *state = (shadfrce_state *)timer.machine->driver_data;
+	shadfrce_state *state = timer.machine->driver_data<shadfrce_state>();
 	int scanline = param;
 
 	/* Vblank is lowered on scanline 0 */
@@ -403,7 +403,7 @@ static ADDRESS_MAP_START( shadfrce_sound_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0xbfff) AM_ROM
 	AM_RANGE(0xc000, 0xc7ff) AM_RAM
 	AM_RANGE(0xc800, 0xc801) AM_DEVREADWRITE("ymsnd", ym2151_r, ym2151_w)
-	AM_RANGE(0xd800, 0xd800) AM_DEVREADWRITE("oki", okim6295_r, okim6295_w)
+	AM_RANGE(0xd800, 0xd800) AM_DEVREADWRITE_MODERN("oki", okim6295_device, read, write)
 	AM_RANGE(0xe000, 0xe000) AM_READ(soundlatch_r)
 	AM_RANGE(0xe800, 0xe800) AM_DEVWRITE("oki", oki_bankswitch_w)
 	AM_RANGE(0xf000, 0xffff) AM_RAM
@@ -546,7 +546,7 @@ GFXDECODE_END
 
 /* Machine Driver Bits */
 
-static void irq_handler(running_device *device, int irq)
+static void irq_handler(device_t *device, int irq)
 {
 	cputag_set_input_line(device->machine, "audiocpu", 0, irq ? ASSERT_LINE : CLEAR_LINE );
 }
@@ -556,40 +556,38 @@ static const ym2151_interface ym2151_config =
 	irq_handler
 };
 
-static MACHINE_DRIVER_START( shadfrce )
+static MACHINE_CONFIG_START( shadfrce, shadfrce_state )
 
-	MDRV_DRIVER_DATA( shadfrce_state )
+	MCFG_CPU_ADD("maincpu", M68000, CPU_CLOCK)			/* verified on pcb */
+	MCFG_CPU_PROGRAM_MAP(shadfrce_map)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", shadfrce_scanline, "screen", 0, 1)
 
-	MDRV_CPU_ADD("maincpu", M68000, CPU_CLOCK)			/* verified on pcb */
-	MDRV_CPU_PROGRAM_MAP(shadfrce_map)
-	MDRV_TIMER_ADD_SCANLINE("scantimer", shadfrce_scanline, "screen", 0, 1)
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL_3_579545MHz)			/* verified on pcb */
+	MCFG_CPU_PROGRAM_MAP(shadfrce_sound_map)
 
-	MDRV_CPU_ADD("audiocpu", Z80, XTAL_3_579545MHz)			/* verified on pcb */
-	MDRV_CPU_PROGRAM_MAP(shadfrce_sound_map)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_RAW_PARAMS(PIXEL_CLOCK, 432, 0, 320, 272, 8, 248)	/* HTOTAL and VTOTAL are guessed */
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_RAW_PARAMS(PIXEL_CLOCK, 432, 0, 320, 272, 8, 248)	/* HTOTAL and VTOTAL are guessed */
+	MCFG_GFXDECODE(shadfrce)
+	MCFG_PALETTE_LENGTH(0x4000)
 
-	MDRV_GFXDECODE(shadfrce)
-	MDRV_PALETTE_LENGTH(0x4000)
-
-	MDRV_VIDEO_START(shadfrce)
-	MDRV_VIDEO_EOF(shadfrce)
-	MDRV_VIDEO_UPDATE(shadfrce)
+	MCFG_VIDEO_START(shadfrce)
+	MCFG_VIDEO_EOF(shadfrce)
+	MCFG_VIDEO_UPDATE(shadfrce)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, XTAL_3_579545MHz)		/* verified on pcb */
-	MDRV_SOUND_CONFIG(ym2151_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.50)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.50)
+	MCFG_SOUND_ADD("ymsnd", YM2151, XTAL_3_579545MHz)		/* verified on pcb */
+	MCFG_SOUND_CONFIG(ym2151_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.50)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.50)
 
-	MDRV_OKIM6295_ADD("oki", XTAL_13_4952MHz/8, OKIM6295_PIN7_HIGH)	/* verified on pcb */
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", XTAL_13_4952MHz/8, OKIM6295_PIN7_HIGH)	/* verified on pcb */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
+MACHINE_CONFIG_END
 
 /* Rom Defs. */
 

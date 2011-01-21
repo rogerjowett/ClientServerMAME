@@ -105,7 +105,8 @@ TODO:
 #include "emu.h"
 #include "cpu/z80/z80.h"
 #include "sound/tms36xx.h"
-#include "includes/phoenix.h"
+#include "audio/pleiads.h"
+#include "includes/naughtyb.h"
 
 #define CLOCK_XTAL 12000000
 
@@ -249,12 +250,12 @@ static WRITE8_HANDLER( popflame_protection_w )
 static ADDRESS_MAP_START( naughtyb_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x3fff) AM_ROM
 	AM_RANGE(0x4000, 0x7fff) AM_RAM
-	AM_RANGE(0x8000, 0x87ff) AM_RAM AM_BASE_GENERIC(videoram) AM_SIZE_GENERIC(videoram)
+	AM_RANGE(0x8000, 0x87ff) AM_RAM AM_BASE_MEMBER(naughtyb_state, videoram)
 	AM_RANGE(0x8800, 0x8fff) AM_RAM AM_BASE(&naughtyb_videoram2)
 	AM_RANGE(0x9000, 0x97ff) AM_RAM_WRITE(naughtyb_videoreg_w)
 	AM_RANGE(0x9800, 0x9fff) AM_RAM AM_BASE(&naughtyb_scrollreg)
-	AM_RANGE(0xa000, 0xa7ff) AM_WRITE(pleiads_sound_control_a_w)
-	AM_RANGE(0xa800, 0xafff) AM_WRITE(pleiads_sound_control_b_w)
+	AM_RANGE(0xa000, 0xa7ff) AM_DEVWRITE("cust", pleiads_sound_control_a_w)
+	AM_RANGE(0xa800, 0xafff) AM_DEVWRITE("cust", pleiads_sound_control_b_w)
 	AM_RANGE(0xb000, 0xb7ff) AM_READ(in0_port_r)	// IN0
 	AM_RANGE(0xb800, 0xbfff) AM_READ(dsw0_port_r)	// DSW0
 ADDRESS_MAP_END
@@ -262,12 +263,12 @@ ADDRESS_MAP_END
 static ADDRESS_MAP_START( popflame_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x3fff) AM_ROM
 	AM_RANGE(0x4000, 0x7fff) AM_RAM
-	AM_RANGE(0x8000, 0x87ff) AM_RAM AM_BASE_GENERIC(videoram) AM_SIZE_GENERIC(videoram)
+	AM_RANGE(0x8000, 0x87ff) AM_RAM AM_BASE_MEMBER(naughtyb_state, videoram)
 	AM_RANGE(0x8800, 0x8fff) AM_RAM AM_BASE(&naughtyb_videoram2)
 	AM_RANGE(0x9000, 0x97ff) AM_RAM_WRITE(popflame_videoreg_w)
 	AM_RANGE(0x9800, 0x9fff) AM_RAM AM_BASE(&naughtyb_scrollreg)
-	AM_RANGE(0xa000, 0xa7ff) AM_WRITE(pleiads_sound_control_a_w)
-	AM_RANGE(0xa800, 0xafff) AM_WRITE(pleiads_sound_control_b_w)
+	AM_RANGE(0xa000, 0xa7ff) AM_DEVWRITE("cust", pleiads_sound_control_a_w)
+	AM_RANGE(0xa800, 0xafff) AM_DEVWRITE("cust", pleiads_sound_control_b_w)
 	AM_RANGE(0xb000, 0xb7ff) AM_READ(in0_port_r)	// IN0
 	AM_RANGE(0xb800, 0xbfff) AM_READ(dsw0_port_r)	// DSW0
 ADDRESS_MAP_END
@@ -433,74 +434,74 @@ static const tms36xx_interface tms3615_interface =
 
 
 
-static MACHINE_DRIVER_START( naughtyb )
+static MACHINE_CONFIG_START( naughtyb, naughtyb_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, CLOCK_XTAL / 4) /* 12 MHz clock, divided by 4. CPU is a Z80A */
-	MDRV_CPU_PROGRAM_MAP(naughtyb_map)
-	MDRV_CPU_VBLANK_INT("screen", naughtyb_interrupt)
+	MCFG_CPU_ADD("maincpu", Z80, CLOCK_XTAL / 4) /* 12 MHz clock, divided by 4. CPU is a Z80A */
+	MCFG_CPU_PROGRAM_MAP(naughtyb_map)
+	MCFG_CPU_VBLANK_INT("screen", naughtyb_interrupt)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(36*8, 28*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 36*8-1, 0*8, 28*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(36*8, 28*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 36*8-1, 0*8, 28*8-1)
 
-	MDRV_GFXDECODE(naughtyb)
-	MDRV_PALETTE_LENGTH(256)
+	MCFG_GFXDECODE(naughtyb)
+	MCFG_PALETTE_LENGTH(256)
 
-	MDRV_PALETTE_INIT(naughtyb)
-	MDRV_VIDEO_START(naughtyb)
-	MDRV_VIDEO_UPDATE(naughtyb)
+	MCFG_PALETTE_INIT(naughtyb)
+	MCFG_VIDEO_START(naughtyb)
+	MCFG_VIDEO_UPDATE(naughtyb)
 
 	/* sound hardware */
 	/* uses the TMS3615NS for sound */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("tms", TMS36XX, 350)
-	MDRV_SOUND_CONFIG(tms3615_interface)
-	MDRV_SOUND_ROUTE(0, "mono", 0.60)
+	MCFG_SOUND_ADD("tms", TMS36XX, 350)
+	MCFG_SOUND_CONFIG(tms3615_interface)
+	MCFG_SOUND_ROUTE(0, "mono", 0.60)
 
-	MDRV_SOUND_ADD("naughtyb", NAUGHTYB, 0)
-	MDRV_SOUND_ROUTE(0, "mono", 0.40)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("cust", NAUGHTYB, 0)
+	MCFG_SOUND_ROUTE(0, "mono", 0.40)
+MACHINE_CONFIG_END
 
 
 /* Exactly the same but for certain address writes */
-static MACHINE_DRIVER_START( popflame )
+static MACHINE_CONFIG_START( popflame, naughtyb_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, CLOCK_XTAL / 4) /* 12 MHz clock, divided by 4. CPU is a Z80A */
-	MDRV_CPU_PROGRAM_MAP(popflame_map)
-	MDRV_CPU_VBLANK_INT("screen", naughtyb_interrupt)
+	MCFG_CPU_ADD("maincpu", Z80, CLOCK_XTAL / 4) /* 12 MHz clock, divided by 4. CPU is a Z80A */
+	MCFG_CPU_PROGRAM_MAP(popflame_map)
+	MCFG_CPU_VBLANK_INT("screen", naughtyb_interrupt)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(36*8, 28*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 36*8-1, 0*8, 28*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(36*8, 28*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 36*8-1, 0*8, 28*8-1)
 
-	MDRV_GFXDECODE(naughtyb)
-	MDRV_PALETTE_LENGTH(256)
+	MCFG_GFXDECODE(naughtyb)
+	MCFG_PALETTE_LENGTH(256)
 
-	MDRV_PALETTE_INIT(naughtyb)
-	MDRV_VIDEO_START(naughtyb)
-	MDRV_VIDEO_UPDATE(naughtyb)
+	MCFG_PALETTE_INIT(naughtyb)
+	MCFG_VIDEO_START(naughtyb)
+	MCFG_VIDEO_UPDATE(naughtyb)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("tms", TMS36XX, 350)
-	MDRV_SOUND_CONFIG(tms3615_interface)
-	MDRV_SOUND_ROUTE(0, "mono", 0.60)
+	MCFG_SOUND_ADD("tms", TMS36XX, 350)
+	MCFG_SOUND_CONFIG(tms3615_interface)
+	MCFG_SOUND_ROUTE(0, "mono", 0.60)
 
-	MDRV_SOUND_ADD("popflame", POPFLAME, 0)
-	MDRV_SOUND_ROUTE(0, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("cust", POPFLAME, 0)
+	MCFG_SOUND_ROUTE(0, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 
@@ -864,7 +865,7 @@ static int question_offset = 0;
 
 static READ8_HANDLER( trvmstr_questions_r )
 {
-	return memory_region(space->machine, "user1")[question_offset];
+	return space->machine->region("user1")->base()[question_offset];
 }
 
 static WRITE8_HANDLER( trvmstr_questions_w )

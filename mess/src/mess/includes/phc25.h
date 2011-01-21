@@ -10,12 +10,11 @@
 
 #define PHC25_VIDEORAM_SIZE		0x1800
 
-class phc25_state
+class phc25_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, phc25_state(machine)); }
-
-	phc25_state(running_machine &machine) { }
+	phc25_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* video state */
 	UINT8 *video_ram;
@@ -25,9 +24,9 @@ public:
 	UINT8 char_substact;
 
 	/* devices */
-	running_device *mc6847;
-	running_device *centronics;
-	running_device *cassette;
+	device_t *mc6847;
+	device_t *centronics;
+	device_t *cassette;
 };
 
 #endif

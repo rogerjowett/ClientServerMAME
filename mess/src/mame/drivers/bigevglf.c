@@ -66,7 +66,7 @@ J1100072A
 
 static WRITE8_HANDLER( beg_banking_w )
 {
-	bigevglf_state *state = (bigevglf_state *)space->machine->driver_data;
+	bigevglf_state *state = space->machine->driver_data<bigevglf_state>();
 	state->beg_bank = data;
 
 /* d0-d3 connect to A11-A14 of the ROMs (via ls273 latch)
@@ -77,7 +77,7 @@ static WRITE8_HANDLER( beg_banking_w )
 
 static TIMER_CALLBACK( from_sound_latch_callback )
 {
-	bigevglf_state *state = (bigevglf_state *)machine->driver_data;
+	bigevglf_state *state = machine->driver_data<bigevglf_state>();
 	state->from_sound = param & 0xff;
 	state->sound_state |= 2;
 }
@@ -88,7 +88,7 @@ static WRITE8_HANDLER( beg_fromsound_w )	/* write to D800 sets bit 1 in status *
 
 static READ8_HANDLER( beg_fromsound_r )
 {
-	bigevglf_state *state = (bigevglf_state *)space->machine->driver_data;
+	bigevglf_state *state = space->machine->driver_data<bigevglf_state>();
 	/* set a timer to force synchronization after the read */
 	timer_call_after_resynch(space->machine, NULL, 0, NULL);
 	return state->from_sound;
@@ -96,7 +96,7 @@ static READ8_HANDLER( beg_fromsound_r )
 
 static READ8_HANDLER( beg_soundstate_r )
 {
-	bigevglf_state *state = (bigevglf_state *)space->machine->driver_data;
+	bigevglf_state *state = space->machine->driver_data<bigevglf_state>();
 	UINT8 ret = state->sound_state;
 	/* set a timer to force synchronization after the read */
 	timer_call_after_resynch(space->machine, NULL, 0, NULL);
@@ -106,7 +106,7 @@ static READ8_HANDLER( beg_soundstate_r )
 
 static READ8_HANDLER( soundstate_r )
 {
-	bigevglf_state *state = (bigevglf_state *)space->machine->driver_data;
+	bigevglf_state *state = space->machine->driver_data<bigevglf_state>();
 	/* set a timer to force synchronization after the read */
 	timer_call_after_resynch(space->machine, NULL, 0, NULL);
 	return state->sound_state;
@@ -114,7 +114,7 @@ static READ8_HANDLER( soundstate_r )
 
 static TIMER_CALLBACK( nmi_callback )
 {
-	bigevglf_state *state = (bigevglf_state *)machine->driver_data;
+	bigevglf_state *state = machine->driver_data<bigevglf_state>();
 
 	if (state->sound_nmi_enable)
 		cpu_set_input_line(state->audiocpu, INPUT_LINE_NMI, PULSE_LINE);
@@ -125,27 +125,27 @@ static TIMER_CALLBACK( nmi_callback )
 
 static WRITE8_HANDLER( sound_command_w )	/* write to port 20 clears bit 0 in status */
 {
-	bigevglf_state *state = (bigevglf_state *)space->machine->driver_data;
+	bigevglf_state *state = space->machine->driver_data<bigevglf_state>();
 	state->for_sound = data;
 	timer_call_after_resynch(space->machine, NULL, data, nmi_callback);
 }
 
 static READ8_HANDLER( sound_command_r )	/* read from D800 sets bit 0 in status */
 {
-	bigevglf_state *state = (bigevglf_state *)space->machine->driver_data;
+	bigevglf_state *state = space->machine->driver_data<bigevglf_state>();
 	state->sound_state |= 1;
 	return state->for_sound;
 }
 
 static WRITE8_HANDLER( nmi_disable_w )
 {
-	bigevglf_state *state = (bigevglf_state *)space->machine->driver_data;
+	bigevglf_state *state = space->machine->driver_data<bigevglf_state>();
 	state->sound_nmi_enable = 0;
 }
 
 static WRITE8_HANDLER( nmi_enable_w )
 {
-	bigevglf_state *state = (bigevglf_state *)space->machine->driver_data;
+	bigevglf_state *state = space->machine->driver_data<bigevglf_state>();
 	state->sound_nmi_enable = 1;
 	if (state->pending_nmi)
 	{
@@ -156,7 +156,7 @@ static WRITE8_HANDLER( nmi_enable_w )
 
 static TIMER_CALLBACK( deferred_ls74_w )
 {
-	bigevglf_state *state = (bigevglf_state *)machine->driver_data;
+	bigevglf_state *state = machine->driver_data<bigevglf_state>();
 	int offs = (param >> 8) & 255;
 	int data = param & 255;
 	state->beg13_ls74[offs] = data;
@@ -185,7 +185,7 @@ static WRITE8_HANDLER( beg13_b_set_w )
 
 static READ8_HANDLER( beg_status_r )
 {
-	bigevglf_state *state = (bigevglf_state *)space->machine->driver_data;
+	bigevglf_state *state = space->machine->driver_data<bigevglf_state>();
 
 /* d0 = Q of 74ls74 IC13(partA)
    d1 = Q of 74ls74 IC13(partB)
@@ -204,7 +204,7 @@ static READ8_HANDLER( beg_status_r )
 
 static READ8_HANDLER( beg_trackball_x_r )
 {
-	bigevglf_state *state = (bigevglf_state *)space->machine->driver_data;
+	bigevglf_state *state = space->machine->driver_data<bigevglf_state>();
 	static const char *const portx_name[2] = { "P1X", "P2X" };
 
 	return input_port_read(space->machine, portx_name[state->port_select]);
@@ -212,7 +212,7 @@ static READ8_HANDLER( beg_trackball_x_r )
 
 static READ8_HANDLER( beg_trackball_y_r )
 {
-	bigevglf_state *state = (bigevglf_state *)space->machine->driver_data;
+	bigevglf_state *state = space->machine->driver_data<bigevglf_state>();
 	static const char *const porty_name[2] = { "P1Y", "P2Y" };
 
 	return input_port_read(space->machine, porty_name[state->port_select]);
@@ -220,7 +220,7 @@ static READ8_HANDLER( beg_trackball_y_r )
 
 static WRITE8_HANDLER( beg_port08_w )
 {
-	bigevglf_state *state = (bigevglf_state *)space->machine->driver_data;
+	bigevglf_state *state = space->machine->driver_data<bigevglf_state>();
 	state->port_select = (data & 0x04) >> 2;
 }
 
@@ -342,7 +342,7 @@ ADDRESS_MAP_END
 
 static READ8_HANDLER( sub_cpu_mcu_coin_port_r )
 {
-	bigevglf_state *state = (bigevglf_state *)space->machine->driver_data;
+	bigevglf_state *state = space->machine->driver_data<bigevglf_state>();
 	/*
             bit 0 and bit 1 = coin inputs
             bit 3 and bit 4 = MCU status
@@ -432,7 +432,7 @@ static const msm5232_interface msm5232_config =
 
 static MACHINE_START( bigevglf )
 {
-	bigevglf_state *state = (bigevglf_state *)machine->driver_data;
+	bigevglf_state *state = machine->driver_data<bigevglf_state>();
 
 	state->audiocpu = machine->device("audiocpu");
 	state->mcu = machine->device("mcu");
@@ -469,7 +469,7 @@ static MACHINE_START( bigevglf )
 
 static MACHINE_RESET( bigevglf )
 {
-	bigevglf_state *state = (bigevglf_state *)machine->driver_data;
+	bigevglf_state *state = machine->driver_data<bigevglf_state>();
 
 	state->vidram_bank = 0;
 	state->plane_selected = 0;
@@ -503,68 +503,65 @@ static MACHINE_RESET( bigevglf )
 }
 
 
-static MACHINE_DRIVER_START( bigevglf )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(bigevglf_state)
+static MACHINE_CONFIG_START( bigevglf, bigevglf_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80,10000000/2)		/* 5 MHz ? */
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_IO_MAP(bigevglf_portmap)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)	/* vblank */
+	MCFG_CPU_ADD("maincpu", Z80,10000000/2)		/* 5 MHz ? */
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_IO_MAP(bigevglf_portmap)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)	/* vblank */
 
-	MDRV_CPU_ADD("sub", Z80,10000000/2)		/* 5 MHz ? */
-	MDRV_CPU_PROGRAM_MAP(sub_map)
-	MDRV_CPU_IO_MAP(bigevglf_sub_portmap)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)	/* vblank */
+	MCFG_CPU_ADD("sub", Z80,10000000/2)		/* 5 MHz ? */
+	MCFG_CPU_PROGRAM_MAP(sub_map)
+	MCFG_CPU_IO_MAP(bigevglf_sub_portmap)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)	/* vblank */
 
-	MDRV_CPU_ADD("audiocpu", Z80,8000000/2)	/* 4 MHz ? */
-	MDRV_CPU_PROGRAM_MAP(sound_map)
-	MDRV_CPU_VBLANK_INT_HACK(irq0_line_hold,2)	/* IRQ generated by ???;
+	MCFG_CPU_ADD("audiocpu", Z80,8000000/2)	/* 4 MHz ? */
+	MCFG_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_VBLANK_INT_HACK(irq0_line_hold,2)	/* IRQ generated by ???;
         2 irqs/frame give good music tempo but also SOUND ERROR in test mode,
         4 irqs/frame give SOUND OK in test mode but music seems to be running too fast */
 
-	MDRV_CPU_ADD("mcu", M68705,2000000)	/* ??? */
-	MDRV_CPU_PROGRAM_MAP(m68705_map)
+	MCFG_CPU_ADD("mcu", M68705,2000000)	/* ??? */
+	MCFG_CPU_PROGRAM_MAP(m68705_map)
 
-	MDRV_QUANTUM_TIME(HZ(600))	/* 10 CPU slices per frame - interleaving is forced on the fly */
+	MCFG_QUANTUM_TIME(HZ(600))	/* 10 CPU slices per frame - interleaving is forced on the fly */
 
-	MDRV_MACHINE_START(bigevglf)
-	MDRV_MACHINE_RESET(bigevglf)
+	MCFG_MACHINE_START(bigevglf)
+	MCFG_MACHINE_RESET(bigevglf)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
-	MDRV_GFXDECODE(bigevglf)
-	MDRV_PALETTE_LENGTH(0x800)
-	MDRV_VIDEO_START(bigevglf)
-	MDRV_VIDEO_UPDATE(bigevglf)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_GFXDECODE(bigevglf)
+	MCFG_PALETTE_LENGTH(0x800)
+	MCFG_VIDEO_START(bigevglf)
+	MCFG_VIDEO_UPDATE(bigevglf)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("aysnd", AY8910, 8000000/4)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15) /* YM2149 really */
+	MCFG_SOUND_ADD("aysnd", AY8910, 8000000/4)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15) /* YM2149 really */
 
-	MDRV_SOUND_ADD("msm", MSM5232, 8000000/4)
-	MDRV_SOUND_CONFIG(msm5232_config)
-	MDRV_SOUND_ROUTE(0, "mono", 1.0)	// pin 28  2'-1
-	MDRV_SOUND_ROUTE(1, "mono", 1.0)	// pin 29  4'-1
-	MDRV_SOUND_ROUTE(2, "mono", 1.0)	// pin 30  8'-1
-	MDRV_SOUND_ROUTE(3, "mono", 1.0)	// pin 31 16'-1
-	MDRV_SOUND_ROUTE(4, "mono", 1.0)	// pin 36  2'-2
-	MDRV_SOUND_ROUTE(5, "mono", 1.0)	// pin 35  4'-2
-	MDRV_SOUND_ROUTE(6, "mono", 1.0)	// pin 34  8'-2
-	MDRV_SOUND_ROUTE(7, "mono", 1.0)	// pin 33 16'-2
+	MCFG_SOUND_ADD("msm", MSM5232, 8000000/4)
+	MCFG_SOUND_CONFIG(msm5232_config)
+	MCFG_SOUND_ROUTE(0, "mono", 1.0)	// pin 28  2'-1
+	MCFG_SOUND_ROUTE(1, "mono", 1.0)	// pin 29  4'-1
+	MCFG_SOUND_ROUTE(2, "mono", 1.0)	// pin 30  8'-1
+	MCFG_SOUND_ROUTE(3, "mono", 1.0)	// pin 31 16'-1
+	MCFG_SOUND_ROUTE(4, "mono", 1.0)	// pin 36  2'-2
+	MCFG_SOUND_ROUTE(5, "mono", 1.0)	// pin 35  4'-2
+	MCFG_SOUND_ROUTE(6, "mono", 1.0)	// pin 34  8'-2
+	MCFG_SOUND_ROUTE(7, "mono", 1.0)	// pin 33 16'-2
 	// pin 1 SOLO  8'       not mapped
 	// pin 2 SOLO 16'       not mapped
 	// pin 22 Noise Output  not mapped
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
 /***************************************************************************
 
@@ -636,7 +633,7 @@ ROM_END
 
 static DRIVER_INIT( bigevglf )
 {
-	UINT8 *ROM = memory_region(machine, "maincpu");
+	UINT8 *ROM = machine->region("maincpu")->base();
 	memory_configure_bank(machine, "bank1", 0, 0xff, &ROM[0x10000], 0x800);
 }
 

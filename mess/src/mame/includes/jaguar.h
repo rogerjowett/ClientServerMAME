@@ -26,8 +26,6 @@ extern UINT32 *jaguar_gpu_clut;
 extern UINT32 *jaguar_dsp_ram;
 extern UINT32 *jaguar_wave_rom;
 
-extern UINT8 blitter_status;
-
 /*----------- defined in audio/jaguar.c -----------*/
 
 TIMER_DEVICE_CALLBACK( jaguar_serial_callback );
@@ -37,7 +35,7 @@ void jaguar_dsp_resume(running_machine *machine);
 
 void cojag_sound_init(running_machine *machine);
 
-void jaguar_external_int(running_device *device, int state);
+void jaguar_external_int(device_t *device, int state);
 
 READ16_HANDLER( jaguar_jerry_regs_r );
 WRITE16_HANDLER( jaguar_jerry_regs_w );
@@ -50,11 +48,13 @@ WRITE32_HANDLER( jaguar_serial_w );
 
 /*----------- defined in video/jaguar.c -----------*/
 
+extern UINT8 blitter_status;
+
 void jaguar_gpu_suspend(running_machine *machine);
 void jaguar_gpu_resume(running_machine *machine);
 
-void jaguar_gpu_cpu_int(running_device *device);
-void jaguar_dsp_cpu_int(running_device *device);
+void jaguar_gpu_cpu_int(device_t *device);
+void jaguar_dsp_cpu_int(device_t *device);
 
 READ32_HANDLER( jaguar_blitter_r );
 WRITE32_HANDLER( jaguar_blitter_w );

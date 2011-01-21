@@ -79,7 +79,8 @@ struct _m6509_Regs {
 	UINT8	so_state;
 	device_irq_callback irq_callback;
 	legacy_cpu_device *device;
-	const address_space *space;
+	address_space *space;
+	direct_read_data *direct;
 
 	int 	icount;
 
@@ -87,7 +88,7 @@ struct _m6509_Regs {
 	write8_space_func wrmem_id;					/* writemem callback for indexed instructions */
 };
 
-INLINE m6509_Regs *get_safe_token(running_device *device)
+INLINE m6509_Regs *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
 	assert(device->type() == M6509);
@@ -134,8 +135,8 @@ static ADDRESS_MAP_START(m6509_mem, ADDRESS_SPACE_PROGRAM, 8)
 	AM_RANGE(0x00001, 0x00001) AM_MIRROR(0xF0000) AM_READWRITE(m6509_read_00001, m6509_write_00001)
 ADDRESS_MAP_END
 
-static UINT8 default_rdmem_id(const address_space *space, offs_t address) { return memory_read_byte_8le(space, address); }
-static void default_wdmem_id(const address_space *space, offs_t address, UINT8 data) { memory_write_byte_8le(space, address, data); }
+static UINT8 default_rdmem_id(address_space *space, offs_t address) { return space->read_byte(address); }
+static void default_wdmem_id(address_space *space, offs_t address, UINT8 data) { space->write_byte(address, data); }
 
 static CPU_INIT( m6509 )
 {
@@ -147,6 +148,7 @@ static CPU_INIT( m6509 )
 	cpustate->irq_callback = irqcallback;
 	cpustate->device = device;
 	cpustate->space = device->space(AS_PROGRAM);
+	cpustate->direct = &cpustate->space->direct();
 
 	if ( intf )
 	{

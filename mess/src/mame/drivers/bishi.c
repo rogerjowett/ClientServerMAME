@@ -92,27 +92,27 @@ Notes:
 
 static READ16_HANDLER( control_r )
 {
-	bishi_state *state = (bishi_state *)space->machine->driver_data;
+	bishi_state *state = space->machine->driver_data<bishi_state>();
 	return state->cur_control;
 }
 
 static WRITE16_HANDLER( control_w )
 {
 	// bit 8 = interrupt gate
-	bishi_state *state = (bishi_state *)space->machine->driver_data;
+	bishi_state *state = space->machine->driver_data<bishi_state>();
 	COMBINE_DATA(&state->cur_control);
 }
 
 static WRITE16_HANDLER( control2_w )
 {
 	// bit 12 = part of the banking calculation for the K056832 ROM readback
-	bishi_state *state = (bishi_state *)space->machine->driver_data;
+	bishi_state *state = space->machine->driver_data<bishi_state>();
 	COMBINE_DATA(&state->cur_control2);
 }
 
 static INTERRUPT_GEN(bishi_interrupt)
 {
-	bishi_state *state = (bishi_state *)device->machine->driver_data;
+	bishi_state *state = device->machine->driver_data<bishi_state>();
 	if (state->cur_control & 0x800)
 	{
 		switch (cpu_getiloops(device))
@@ -136,7 +136,7 @@ static READ16_HANDLER( bishi_mirror_r )
 
 static READ16_HANDLER( bishi_K056832_rom_r )
 {
-	bishi_state *state = (bishi_state *)space->machine->driver_data;
+	bishi_state *state = space->machine->driver_data<bishi_state>();
 	UINT16 ouroffs;
 
 	ouroffs = (offset >> 1) * 8;
@@ -367,9 +367,9 @@ static INPUT_PORTS_START( bishi2p )
 INPUT_PORTS_END
 
 
-static void sound_irq_gen(running_device *device, int state)
+static void sound_irq_gen(device_t *device, int state)
 {
-	bishi_state *bishi = (bishi_state *)device->machine->driver_data;
+	bishi_state *bishi = device->machine->driver_data<bishi_state>();
 	if (state)
 		cpu_set_input_line(bishi->maincpu, M68K_IRQ_1, ASSERT_LINE);
 	else
@@ -400,7 +400,7 @@ static const k054338_interface bishi_k054338_intf =
 
 static MACHINE_START( bishi )
 {
-	bishi_state *state = (bishi_state *)machine->driver_data;
+	bishi_state *state = machine->driver_data<bishi_state>();
 
 	state->maincpu = machine->device("maincpu");
 	state->k056832 = machine->device("k056832");
@@ -413,51 +413,48 @@ static MACHINE_START( bishi )
 
 static MACHINE_RESET( bishi )
 {
-	bishi_state *state = (bishi_state *)machine->driver_data;
+	bishi_state *state = machine->driver_data<bishi_state>();
 	state->cur_control = 0;
 	state->cur_control2 = 0;
 }
 
-static MACHINE_DRIVER_START( bishi )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(bishi_state)
+static MACHINE_CONFIG_START( bishi, bishi_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, CPU_CLOCK) /* 12MHz (24MHz OSC / 2 ) */
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_VBLANK_INT_HACK(bishi_interrupt, 2)
+	MCFG_CPU_ADD("maincpu", M68000, CPU_CLOCK) /* 12MHz (24MHz OSC / 2 ) */
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_VBLANK_INT_HACK(bishi_interrupt, 2)
 
-	MDRV_MACHINE_START(bishi)
-	MDRV_MACHINE_RESET(bishi)
+	MCFG_MACHINE_START(bishi)
+	MCFG_MACHINE_RESET(bishi)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_HAS_HIGHLIGHTS | VIDEO_UPDATE_AFTER_VBLANK)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_HAS_HIGHLIGHTS | VIDEO_UPDATE_AFTER_VBLANK)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(1200))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(29, 29+288-1, 16, 16+224-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(1200))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(29, 29+288-1, 16, 16+224-1)
 
-	MDRV_PALETTE_LENGTH(4096)
+	MCFG_PALETTE_LENGTH(4096)
 
-	MDRV_VIDEO_START(bishi)
-	MDRV_VIDEO_UPDATE(bishi)
+	MCFG_VIDEO_START(bishi)
+	MCFG_VIDEO_UPDATE(bishi)
 
-	MDRV_K056832_ADD("k056832", bishi_k056832_intf)
-	MDRV_K054338_ADD("k054338", bishi_k054338_intf)
-	MDRV_K055555_ADD("k055555")
+	MCFG_K056832_ADD("k056832", bishi_k056832_intf)
+	MCFG_K054338_ADD("k054338", bishi_k054338_intf)
+	MCFG_K055555_ADD("k055555")
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymz", YMZ280B, SOUND_CLOCK) /* 16.9344MHz */
-	MDRV_SOUND_CONFIG(ymz280b_intf)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymz", YMZ280B, SOUND_CLOCK) /* 16.9344MHz */
+	MCFG_SOUND_CONFIG(ymz280b_intf)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 // ROM definitions
 

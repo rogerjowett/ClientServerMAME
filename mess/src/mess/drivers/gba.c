@@ -20,10 +20,10 @@
 #include "cpu/arm7/arm7.h"
 #include "cpu/arm7/arm7core.h"
 #include "devices/cartslot.h"
-#include "includes/gba.h"
-#include "includes/gb.h"
 #include "sound/dac.h"
 #include "machine/intelfsh.h"
+#include "audio/gb.h"
+#include "includes/gba.h"
 
 #define VERBOSE_LEVEL	(0)
 
@@ -40,11 +40,13 @@ INLINE void verboselog(running_machine *machine, int n_level, const char *s_fmt,
 	}
 }
 
-static UINT32 timer_clks[4] = { 16777216, 16777216/64, 16777216/256, 16777216/1024 };
+#define GBA_ATTOTIME_NORMALIZE(a)	do { while ((a).attoseconds >= ATTOSECONDS_PER_SECOND) { (a).seconds++; (a).attoseconds -= ATTOSECONDS_PER_SECOND; } } while (0)
+
+static const UINT32 timer_clks[4] = { 16777216, 16777216/64, 16777216/256, 16777216/1024 };
 
 static void gba_machine_stop(running_machine &machine)
 {
-	gba_state *state = (gba_state *)machine.driver_data;
+	gba_state *state = machine.driver_data<gba_state>();
 
 	// only do this if the cart loader detected some form of backup
 	if (state->nvsize > 0)
@@ -73,7 +75,7 @@ static void dma_exec(running_machine *machine, FPTR ch);
 
 static void gba_request_irq(running_machine *machine, UINT32 int_type)
 {
-	gba_state *state = (gba_state *)machine->driver_data;
+	gba_state *state = machine->driver_data<gba_state>();
 
 	// set flag for later recovery
 	state->IF |= int_type;
@@ -95,8 +97,8 @@ static TIMER_CALLBACK( dma_complete )
 {
 	int ctrl;
 	FPTR ch;
-	static UINT32 ch_int[4] = { INT_DMA0, INT_DMA1, INT_DMA2, INT_DMA3 };
-	gba_state *state = (gba_state *)machine->driver_data;
+	static const UINT32 ch_int[4] = { INT_DMA0, INT_DMA1, INT_DMA2, INT_DMA3 };
+	gba_state *state = machine->driver_data<gba_state>();
 
 	ch = param;
 
@@ -141,8 +143,8 @@ static void dma_exec(running_machine *machine, FPTR ch)
 	int ctrl;
 	int srcadd, dstadd;
 	UINT32 src, dst;
-	const address_space *space = cpu_get_address_space(machine->device("maincpu"), ADDRESS_SPACE_PROGRAM);
-	gba_state *state = (gba_state *)machine->driver_data;
+	address_space *space = cpu_get_address_space(machine->device("maincpu"), ADDRESS_SPACE_PROGRAM);
+	gba_state *state = machine->driver_data<gba_state>();
 
 	src = state->dma_src[ch];
 	dst = state->dma_dst[ch];
@@ -194,7 +196,7 @@ static void dma_exec(running_machine *machine, FPTR ch)
 			dst &= 0xfffffffc;
 
 			// 32-bit
-			memory_write_dword(space, dst, memory_read_dword(space, src));
+			space->write_dword(dst, space->read_dword(src));
 			switch (dstadd)
 			{
 				case 0:	// increment
@@ -231,7 +233,7 @@ static void dma_exec(running_machine *machine, FPTR ch)
 			dst &= 0xfffffffe;
 
 			// 16-bit
-			memory_write_word(space, dst, memory_read_word(space, src));
+			space->write_word(dst, space->read_word(src));
 			switch (dstadd)
 			{
 				case 0:	// increment
@@ -273,7 +275,7 @@ static void dma_exec(running_machine *machine, FPTR ch)
 
 static void audio_tick(running_machine *machine, int ref)
 {
-	gba_state *state = (gba_state *)machine->driver_data;
+	gba_state *state = machine->driver_data<gba_state>();
 
 	if (!(state->SOUNDCNT_X & 0x80))
 	{
@@ -291,13 +293,13 @@ static void audio_tick(running_machine *machine, int ref)
 
 			if (state->SOUNDCNT_H & 0x200)
 			{
-				running_device *dac_device = machine->device("direct_a_left");
+				device_t *dac_device = machine->device("direct_a_left");
 
 				dac_signed_data_w(dac_device, state->fifo_a[state->fifo_a_ptr]^0x80);
 			}
 			if (state->SOUNDCNT_H & 0x100)
 			{
-				running_device *dac_device = machine->device("direct_a_right");
+				device_t *dac_device = machine->device("direct_a_right");
 
 				dac_signed_data_w(dac_device, state->fifo_a[state->fifo_a_ptr]^0x80);
 			}
@@ -331,13 +333,13 @@ static void audio_tick(running_machine *machine, int ref)
 
 			if (state->SOUNDCNT_H & 0x2000)
 			{
-				running_device *dac_device = machine->device("direct_b_left");
+				device_t *dac_device = machine->device("direct_b_left");
 
 				dac_signed_data_w(dac_device, state->fifo_b[state->fifo_b_ptr]^0x80);
 			}
 			if (state->SOUNDCNT_H & 0x1000)
 			{
-				running_device *dac_device = machine->device("direct_b_right");
+				device_t *dac_device = machine->device("direct_b_right");
 
 				dac_signed_data_w(dac_device, state->fifo_b[state->fifo_b_ptr]^0x80);
 			}
@@ -363,9 +365,9 @@ static void audio_tick(running_machine *machine, int ref)
 
 static TIMER_CALLBACK(timer_expire)
 {
-	static UINT32 tmr_ints[4] = { INT_TM0_OVERFLOW, INT_TM1_OVERFLOW, INT_TM2_OVERFLOW, INT_TM3_OVERFLOW };
+	static const UINT32 tmr_ints[4] = { INT_TM0_OVERFLOW, INT_TM1_OVERFLOW, INT_TM2_OVERFLOW, INT_TM3_OVERFLOW };
 	FPTR tmr = (FPTR) param;
-	gba_state *state = (gba_state *)machine->driver_data;
+	gba_state *state = machine->driver_data<gba_state>();
 
 //  printf("Timer %d expired, SOUNDCNT_H %04x\n", tmr, state->SOUNDCNT_H);
 
@@ -488,7 +490,7 @@ static TIMER_CALLBACK(timer_expire)
 
 static TIMER_CALLBACK(handle_irq)
 {
-	gba_state *state = (gba_state *)machine->driver_data;
+	gba_state *state = machine->driver_data<gba_state>();
 
 	gba_request_irq(machine, state->IF);
 
@@ -499,8 +501,8 @@ static READ32_HANDLER( gba_io_r )
 {
 	UINT32 retval = 0;
 	running_machine *machine = space->machine;
-	running_device *gb_device = space->machine->device("custom");
-	gba_state *state = (gba_state *)machine->driver_data;
+	device_t *gb_device = space->machine->device("custom");
+	gba_state *state = machine->driver_data<gba_state>();
 
 	switch( offset )
 	{
@@ -822,10 +824,13 @@ static READ32_HANDLER( gba_io_r )
 		case 0x00dc/4:
 			{
 				// no idea why here, but it matches VBA better
+				// note: this suspicious piece of code crashes "Buffy The Vampire Slayer" (08008DB4) and "The Ant Bully", so disable it for now
+				#if 0
 				if (((offset-0xb0/4) % 3) == 2)
 				{
 					return state->dma_regs[offset-(0xb0/4)] & 0xff000000;
 				}
+				#endif
 
 				return state->dma_regs[offset-(0xb0/4)];
 			}
@@ -1017,8 +1022,8 @@ static READ32_HANDLER( gba_io_r )
 static WRITE32_HANDLER( gba_io_w )
 {
 	running_machine *machine = space->machine;
-	running_device *gb_device = space->machine->device("custom");
-	gba_state *state = (gba_state *)machine->driver_data;
+	device_t *gb_device = space->machine->device("custom");
+	gba_state *state = machine->driver_data<gba_state>();
 
 	switch( offset )
 	{
@@ -1417,8 +1422,8 @@ static WRITE32_HANDLER( gba_io_w )
 				// DAC A reset?
 				if (data & 0x0800)
 				{
-					running_device *gb_a_l = machine->device("direct_a_left");
-					running_device *gb_a_r = machine->device("direct_a_right");
+					device_t *gb_a_l = machine->device("direct_a_left");
+					device_t *gb_a_r = machine->device("direct_a_right");
 
 					state->fifo_a_ptr = 17;
 					state->fifo_a_in = 17;
@@ -1429,8 +1434,8 @@ static WRITE32_HANDLER( gba_io_w )
 				// DAC B reset?
 				if (data & 0x8000)
 				{
-					running_device *gb_b_l = machine->device("direct_b_left");
-					running_device *gb_b_r = machine->device("direct_b_right");
+					device_t *gb_b_l = machine->device("direct_b_left");
+					device_t *gb_b_r = machine->device("direct_b_right");
 
 					state->fifo_b_ptr = 17;
 					state->fifo_b_in = 17;
@@ -1442,10 +1447,10 @@ static WRITE32_HANDLER( gba_io_w )
 		case 0x0084/4:
 			if( (mem_mask) & 0x000000ff )
 			{
-				running_device *gb_a_l = machine->device("direct_a_left");
-				running_device *gb_a_r = machine->device("direct_a_right");
-				running_device *gb_b_l = machine->device("direct_b_left");
-				running_device *gb_b_r = machine->device("direct_b_right");
+				device_t *gb_a_l = machine->device("direct_a_left");
+				device_t *gb_a_r = machine->device("direct_a_right");
+				device_t *gb_b_l = machine->device("direct_b_left");
+				device_t *gb_b_r = machine->device("direct_b_right");
 
 				gb_sound_w(gb_device, 0x16, data);
 				if ((data & 0x80) && !(state->SOUNDCNT_X & 0x80))
@@ -1652,7 +1657,9 @@ static WRITE32_HANDLER( gba_io_w )
 					// enable the timer
 					if( !(data & 0x40000) ) // if we're not in Count-Up mode
 					{
-						timer_adjust_periodic(state->tmr_timer[offset], ATTOTIME_IN_HZ(final), offset, ATTOTIME_IN_HZ(final));
+						attotime time = ATTOTIME_IN_HZ(final);
+						GBA_ATTOTIME_NORMALIZE(time);
+						timer_adjust_periodic(state->tmr_timer[offset], time, offset, time);
 					}
 				}
 			}
@@ -1866,7 +1873,7 @@ INLINE UINT32 COMBINE_DATA32_16(UINT32 prev, UINT32 data, UINT32 mem_mask)
 static WRITE32_HANDLER(gba_pram_w)
 {
 	running_machine *machine = space->machine;
-	gba_state *state = (gba_state *)machine->driver_data;
+	gba_state *state = machine->driver_data<gba_state>();
 
 	state->gba_pram[offset] = COMBINE_DATA32_16(state->gba_pram[offset], data, mem_mask);
 }
@@ -1874,7 +1881,7 @@ static WRITE32_HANDLER(gba_pram_w)
 static WRITE32_HANDLER(gba_vram_w)
 {
 	running_machine *machine = space->machine;
-	gba_state *state = (gba_state *)machine->driver_data;
+	gba_state *state = machine->driver_data<gba_state>();
 
 	state->gba_vram[offset] = COMBINE_DATA32_16(state->gba_vram[offset], data, mem_mask);
 }
@@ -1882,13 +1889,25 @@ static WRITE32_HANDLER(gba_vram_w)
 static WRITE32_HANDLER(gba_oam_w)
 {
 	running_machine *machine = space->machine;
-	gba_state *state = (gba_state *)machine->driver_data;
+	gba_state *state = machine->driver_data<gba_state>();
 
 	state->gba_oam[offset] = COMBINE_DATA32_16(state->gba_oam[offset], data, mem_mask);
 }
 
+static READ32_HANDLER(gba_bios_r)
+{
+	running_machine *machine = space->machine;
+	gba_state *state = machine->driver_data<gba_state>();
+	UINT32 *rom = (UINT32 *)space->machine->region("maincpu")->base();
+	if (state->bios_protected != 0)
+	{
+		offset = (state->bios_last_address + 8) / 4;
+	}
+	return rom[offset&0x3fff];
+}
+
 static ADDRESS_MAP_START( gbadvance_map, ADDRESS_SPACE_PROGRAM, 32 )
-	AM_RANGE(0x00000000, 0x00003fff) AM_ROMBANK("bank1")
+	AM_RANGE(0x00000000, 0x00003fff) AM_ROM AM_READ(gba_bios_r)
 	AM_RANGE(0x02000000, 0x0203ffff) AM_RAM AM_MIRROR(0xfc0000)
 	AM_RANGE(0x03000000, 0x03007fff) AM_RAM AM_MIRROR(0xff8000)
 	AM_RANGE(0x04000000, 0x040003ff) AM_READWRITE( gba_io_r, gba_io_w )
@@ -1918,7 +1937,7 @@ INPUT_PORTS_END
 static TIMER_CALLBACK( perform_hbl )
 {
 	int ch, ctrl;
-	gba_state *state = (gba_state *)machine->driver_data;
+	gba_state *state = machine->driver_data<gba_state>();
 	int scanline = machine->primary_screen->vpos();
 
 	// draw only visible scanlines
@@ -1949,7 +1968,7 @@ static TIMER_CALLBACK( perform_hbl )
 static TIMER_CALLBACK( perform_scan )
 {
 	int scanline;
-	gba_state *state = (gba_state *)machine->driver_data;
+	gba_state *state = machine->driver_data<gba_state>();
 
 	// clear hblank and raster IRQ flags
 	state->DISPSTAT &= ~(DISPSTAT_HBL|DISPSTAT_VCNT);
@@ -2004,13 +2023,13 @@ static TIMER_CALLBACK( perform_scan )
 
 static MACHINE_RESET( gba )
 {
-	running_device *gb_a_l = machine->device("direct_a_left");
-	running_device *gb_a_r = machine->device("direct_a_right");
-	running_device *gb_b_l = machine->device("direct_b_left");
-	running_device *gb_b_r = machine->device("direct_b_right");
-	gba_state *state = (gba_state *)machine->driver_data;
+	device_t *gb_a_l = machine->device("direct_a_left");
+	device_t *gb_a_r = machine->device("direct_a_right");
+	device_t *gb_b_l = machine->device("direct_b_left");
+	device_t *gb_b_r = machine->device("direct_b_right");
+	gba_state *state = machine->driver_data<gba_state>();
 
-	memset(state, 0, sizeof(state));
+	//memset(state, 0, sizeof(state));
 	state->SOUNDBIAS = 0x0200;
 	state->eeprom_state = EEP_IDLE;
 	state->SIOMULTI0 = 0xffff;
@@ -2029,6 +2048,8 @@ static MACHINE_RESET( gba )
 
 	state->windowOn = 0;
 	state->fxOn = 0;
+
+	state->bios_protected = 0;
 
 	timer_adjust_oneshot(state->scan_timer, machine->primary_screen->time_until_pos(0, 0), 0);
 	timer_adjust_oneshot(state->hbl_timer, attotime_never, 0);
@@ -2049,7 +2070,7 @@ static MACHINE_RESET( gba )
 
 static MACHINE_START( gba )
 {
-	gba_state *state = (gba_state *)machine->driver_data;
+	gba_state *state = machine->driver_data<gba_state>();
 
 	/* add a hook for battery save */
 	machine->add_notifier(MACHINE_NOTIFY_EXIT, gba_machine_stop);
@@ -2087,7 +2108,7 @@ static MACHINE_START( gba )
 }
 
 ROM_START( gba )
-	ROM_REGION( 0x8000, "bios", ROMREGION_ERASE00 )
+	ROM_REGION( 0x4000, "maincpu", 0 )
 	ROM_LOAD( "gba.bin", 0x000000, 0x004000, CRC(81977335) )
 
 	/* cartridge region - 32 MBytes (128 Mbit) */
@@ -2096,51 +2117,51 @@ ROM_END
 
 static READ32_HANDLER( sram_r )
 {
-	gba_state *state = (gba_state *)space->machine->driver_data;
+	gba_state *state = space->machine->driver_data<gba_state>();
 
 	return state->gba_sram[offset];
 }
 
 static WRITE32_HANDLER( sram_w )
 {
-	gba_state *state = (gba_state *)space->machine->driver_data;
+	gba_state *state = space->machine->driver_data<gba_state>();
 
 	COMBINE_DATA(&state->gba_sram[offset]);
 }
 
 static READ32_HANDLER( flash_r )
 {
-	gba_state *state = (gba_state *)space->machine->driver_data;
+	gba_state *state = space->machine->driver_data<gba_state>();
 	UINT32 rv;
 
 	rv = 0;
 	offset &= state->flash_mask;
-	if (mem_mask & 0xff) rv |= intelflash_read(0, offset*4);
-	if (mem_mask & 0xff00) rv |= intelflash_read(0, (offset*4)+1)<<8;
-	if (mem_mask & 0xff0000) rv |= intelflash_read(0, (offset*4)+2)<<16;
-	if (mem_mask & 0xff000000) rv |= intelflash_read(0, (offset*4)+3)<<24;
+	if (mem_mask & 0xff) rv |= state->mFlashDev->read(offset*4);
+	if (mem_mask & 0xff00) rv |= state->mFlashDev->read((offset*4)+1)<<8;
+	if (mem_mask & 0xff0000) rv |= state->mFlashDev->read((offset*4)+2)<<16;
+	if (mem_mask & 0xff000000) rv |= state->mFlashDev->read((offset*4)+3)<<24;
 
 	return rv;
 }
 
 static WRITE32_HANDLER( flash_w )
 {
-	gba_state *state = (gba_state *)space->machine->driver_data;
+	gba_state *state = space->machine->driver_data<gba_state>();
 
 	offset &= state->flash_mask;
 	switch (mem_mask)
 	{
 		case 0xff:
-			intelflash_write(0, offset*4, data&0xff);
+			state->mFlashDev->write(offset*4, data&0xff);
 			break;
 		case 0xff00:
-			intelflash_write(0, (offset*4)+1, (data>>8)&0xff);
+			state->mFlashDev->write((offset*4)+1, (data>>8)&0xff);
 			break;
 		case 0xff0000:
-			intelflash_write(0, (offset*4)+2, (data>>16)&0xff);
+			state->mFlashDev->write((offset*4)+2, (data>>16)&0xff);
 			break;
 		case 0xff000000:
-			intelflash_write(0, (offset*4)+3, (data>>24)&0xff);
+			state->mFlashDev->write((offset*4)+3, (data>>24)&0xff);
 			break;
 		default:
 			fatalerror("Unknown mem_mask for GBA flash_w %x\n", mem_mask);
@@ -2151,7 +2172,7 @@ static WRITE32_HANDLER( flash_w )
 static READ32_HANDLER( eeprom_r )
 {
 	UINT32 out;
-	gba_state *state = (gba_state *)space->machine->driver_data;
+	gba_state *state = space->machine->driver_data<gba_state>();
 
 	switch (state->eeprom_state)
 	{
@@ -2173,6 +2194,10 @@ static READ32_HANDLER( eeprom_r )
 		case EEP_READ:
 			if ((state->eeprom_bits == 0) && (state->eeprom_count))
 			{
+				if (state->eeprom_addr >= sizeof( state->gba_eeprom))
+				{
+					fatalerror( "eeprom: invalid address (%x)", state->eeprom_addr);
+				}
 				state->eep_data = state->gba_eeprom[state->eeprom_addr];
 		       //       printf("EEPROM read @ %x = %x (%x)\n", state->eeprom_addr, state->eep_data, (state->eep_data & 0x80) ? 1 : 0);
 				state->eeprom_addr++;
@@ -2201,7 +2226,7 @@ static READ32_HANDLER( eeprom_r )
 
 static WRITE32_HANDLER( eeprom_w )
 {
-	gba_state *state = (gba_state *)space->machine->driver_data;
+	gba_state *state = space->machine->driver_data<gba_state>();
 
 	if (~mem_mask == 0x0000ffff)
 	{
@@ -2229,7 +2254,7 @@ static WRITE32_HANDLER( eeprom_w )
 				state->eeprom_command = EEP_WRITE;
 			}
 			state->eeprom_state = EEP_ADDR;
-			state->eeprom_count = 6;
+			state->eeprom_count = state->eeprom_addr_bits;
 			state->eeprom_addr = 0;
 			break;
 
@@ -2274,6 +2299,10 @@ static WRITE32_HANDLER( eeprom_w )
 			if (state->eeprom_bits == 0)
 			{
 				mame_printf_verbose("%08x: EEPROM: %02x to %x\n", cpu_get_pc(space->machine->device("maincpu")), state->eep_data, state->eeprom_addr );
+				if (state->eeprom_addr >= sizeof( state->gba_eeprom))
+				{
+					fatalerror( "eeprom: invalid address (%x)", state->eeprom_addr);
+				}
 				state->gba_eeprom[state->eeprom_addr] = state->eep_data;
 				state->eeprom_addr++;
 				state->eep_data = 0;
@@ -2294,10 +2323,11 @@ static WRITE32_HANDLER( eeprom_w )
 
 static DEVICE_IMAGE_LOAD( gba_cart )
 {
-	UINT8 *ROM = memory_region(image.device().machine, "cartridge");
+	UINT8 *ROM = image.device().machine->region("cartridge")->base();
 	int i;
 	UINT32 cart_size;
-	gba_state *state = (gba_state *)image.device().machine->driver_data;
+	UINT8 game_code[4] = { 0 };
+	gba_state *state = image.device().machine->driver_data<gba_state>();
 
 	state->nvsize = 0;
 	state->flash_size = 0;
@@ -2314,12 +2344,29 @@ static DEVICE_IMAGE_LOAD( gba_cart )
 		memcpy(ROM, image.get_software_region("rom"), cart_size);
 	}
 
+	if (cart_size >= 0xAC + 4)
+	{
+		memcpy(game_code, ROM + 0xAC, 4);
+	}
+
 	for (i = 0; i < cart_size; i++)
 	{
 		if (!memcmp(&ROM[i], "EEPROM_", 7))
 		{
 			state->nvptr = (UINT8 *)&state->gba_eeprom;
 			state->nvsize = 0x2000;
+
+			// "Bomberman Max 2" and "Broken Sword" use 14 bit addressing
+			if ((!memcmp(game_code, "AMHE", 4)) || (!memcmp(game_code, "AMYJ", 4)) || (!memcmp(game_code, "AMYE", 4)) ||
+				(!memcmp(game_code, "AMHP", 4)) || (!memcmp(game_code, "AMHJ", 4)) || (!memcmp(game_code, "AMYP", 4)) ||
+				(!memcmp(game_code, "ABJE", 4)) || (!memcmp(game_code, "ABJP", 4)))
+			{
+				state->eeprom_addr_bits = 14;
+			}
+			else
+			{
+				state->eeprom_addr_bits = 6;
+			}
 
 			if (cart_size <= (16 * 1024 * 1024))
 			{
@@ -2344,8 +2391,8 @@ static DEVICE_IMAGE_LOAD( gba_cart )
 		}
 		else if (!memcmp(&ROM[i], "FLASH1M_", 8))
 		{
-			state->nvptr = (UINT8 *)&state->gba_flash;
-			state->nvsize = 0x20000;
+			state->nvptr = NULL;
+			state->nvsize = 0;
 			state->flash_size = 0x20000;
 			state->flash_mask = 0x1ffff/4;
 
@@ -2353,10 +2400,10 @@ static DEVICE_IMAGE_LOAD( gba_cart )
 			memory_install_write32_handler(cpu_get_address_space(image.device().machine->device("maincpu"), ADDRESS_SPACE_PROGRAM), 0xe000000, 0xe01ffff, 0, 0, flash_w);
 			break;
 		}
-		else if (!memcmp(&ROM[i], "FLASH", 5))
+		else if ((!memcmp(&ROM[i], "FLASH", 5)) && (memcmp(game_code, "BYHE", 4))) // "Backyard Hockey" false positive
 		{
-			state->nvptr = (UINT8 *)&state->gba_flash;
-			state->nvsize = 0x10000;
+			state->nvptr = NULL;
+			state->nvsize = 0;
 			state->flash_size = 0x10000;
 			state->flash_mask = 0xffff/4;
 
@@ -2388,11 +2435,11 @@ static DEVICE_IMAGE_LOAD( gba_cart )
 	{
 		if (state->flash_size == 0x10000)
 		{
-			intelflash_init(image.device().machine, 0, FLASH_PANASONIC_MN63F805MNP, &state->gba_flash);
+			state->mFlashDev = image.device().machine->device<intelfsh8_device>("pflash");
 		}
 		else
 		{
-			intelflash_init(image.device().machine, 0, FLASH_SANYO_LE26FV10N1TS, &state->gba_flash);
+			state->mFlashDev = image.device().machine->device<intelfsh8_device>("sflash");
 		}
 	}
 
@@ -2416,64 +2463,67 @@ static DEVICE_IMAGE_LOAD( gba_cart )
 	return IMAGE_INIT_PASS;
 }
 
-static MACHINE_DRIVER_START( gbadv )
-	MDRV_DRIVER_DATA(gba_state)
+static MACHINE_CONFIG_START( gbadv, gba_state )
 
-	MDRV_CPU_ADD("maincpu", ARM7, 16777216)
-	MDRV_CPU_PROGRAM_MAP(gbadvance_map)
+	MCFG_CPU_ADD("maincpu", ARM7, 16777216)
+	MCFG_CPU_PROGRAM_MAP(gbadvance_map)
 
-	MDRV_MACHINE_START(gba)
-	MDRV_MACHINE_RESET(gba)
+	MCFG_MACHINE_START(gba)
+	MCFG_MACHINE_RESET(gba)
 
-	MDRV_SCREEN_ADD("gbalcd", RASTER)	// htot hst vwid vtot vst vis
-	MDRV_SCREEN_RAW_PARAMS(16777216/4, 308, 0,  240, 228, 0,  160)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_DEFAULT_LAYOUT(layout_lcd)
-	MDRV_PALETTE_LENGTH(32768)
-	MDRV_PALETTE_INIT( gba )
+	MCFG_SCREEN_ADD("gbalcd", RASTER)	// htot hst vwid vtot vst vis
+	MCFG_SCREEN_RAW_PARAMS(16777216/4, 308, 0,  240, 228, 0,  160)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_DEFAULT_LAYOUT(layout_lcd)
+	MCFG_PALETTE_LENGTH(32768)
+	MCFG_PALETTE_INIT( gba )
 
-	MDRV_VIDEO_START(generic_bitmapped)
-	MDRV_VIDEO_UPDATE(generic_bitmapped)
+	MCFG_VIDEO_START(generic_bitmapped)
+	MCFG_VIDEO_UPDATE(generic_bitmapped)
 
-	MDRV_SPEAKER_STANDARD_STEREO("spkleft", "spkright")
-	MDRV_SOUND_ADD("custom", GAMEBOY, 0)
-	MDRV_SOUND_ROUTE(0, "spkleft", 0.50)
-	MDRV_SOUND_ROUTE(1, "spkright", 0.50)
-	MDRV_SOUND_ADD("direct_a_left", DAC, 0)			// GBA direct sound A left
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "spkleft", 0.50)
-	MDRV_SOUND_ADD("direct_a_right", DAC, 0)		// GBA direct sound A right
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "spkright", 0.50)
-	MDRV_SOUND_ADD("direct_b_left", DAC, 0)			// GBA direct sound B left
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "spkleft", 0.50)
-	MDRV_SOUND_ADD("direct_b_right", DAC, 0)		// GBA direct sound B right
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "spkright", 0.50)
+	MCFG_SPEAKER_STANDARD_STEREO("spkleft", "spkright")
+	MCFG_SOUND_ADD("custom", GAMEBOY, 0)
+	MCFG_SOUND_ROUTE(0, "spkleft", 0.50)
+	MCFG_SOUND_ROUTE(1, "spkright", 0.50)
+	MCFG_SOUND_ADD("direct_a_left", DAC, 0)			// GBA direct sound A left
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "spkleft", 0.50)
+	MCFG_SOUND_ADD("direct_a_right", DAC, 0)		// GBA direct sound A right
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "spkright", 0.50)
+	MCFG_SOUND_ADD("direct_b_left", DAC, 0)			// GBA direct sound B left
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "spkleft", 0.50)
+	MCFG_SOUND_ADD("direct_b_right", DAC, 0)		// GBA direct sound B right
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "spkright", 0.50)
 
-	MDRV_CARTSLOT_ADD("cart")
-	MDRV_CARTSLOT_EXTENSION_LIST("gba,bin")
-	MDRV_CARTSLOT_INTERFACE("gba_cart")
-	MDRV_CARTSLOT_LOAD(gba_cart)
-	MDRV_SOFTWARE_LIST_ADD("cart_list","gba")
-MACHINE_DRIVER_END
+	MCFG_PANASONIC_MN63F805MNP_ADD("pflash")
+	MCFG_SANYO_LE26FV10N1TS_ADD("sflash")
+
+	MCFG_CARTSLOT_ADD("cart")
+	MCFG_CARTSLOT_EXTENSION_LIST("gba,bin")
+	MCFG_CARTSLOT_INTERFACE("gba_cart")
+	MCFG_CARTSLOT_LOAD(gba_cart)
+	MCFG_SOFTWARE_LIST_ADD("cart_list","gba")
+MACHINE_CONFIG_END
 
 /* this emulates the GBA's hardware protection: the BIOS returns only zeros when the PC is not in it,
    and some games verify that as a protection check (notably Metroid Fusion) */
-static DIRECT_UPDATE_HANDLER( gba_direct )
+DIRECT_UPDATE_HANDLER( gba_direct )
 {
+	gba_state *state = machine->driver_data<gba_state>();
 	if (address > 0x4000)
 	{
-		memory_set_bankptr(space->machine, "bank1", memory_region(space->machine, "bios")+0x4000);
+		state->bios_protected = 1;
 	}
 	else
 	{
-		memory_set_bankptr(space->machine, "bank1", memory_region(space->machine, "bios"));
+		state->bios_protected = 0;
+		state->bios_last_address = address;
 	}
-
 	return address;
 }
 
 static DRIVER_INIT(gbadv)
 {
-	memory_set_direct_update_handler( cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM), gba_direct );
+	cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM)->set_direct_update_handler(direct_update_delegate_create_static(gba_direct, *machine));
 }
 
 /*    YEAR  NAME PARENT COMPAT MACHINE INPUT   INIT   COMPANY     FULLNAME */

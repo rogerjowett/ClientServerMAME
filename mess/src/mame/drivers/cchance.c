@@ -49,13 +49,13 @@ static WRITE8_HANDLER( output_0_w )
 
 static READ8_HANDLER( input_1_r )
 {
-	tnzs_state *state = (tnzs_state *)space->machine->driver_data;
+	tnzs_state *state = space->machine->driver_data<tnzs_state>();
 	return (state->hop_io) | (state->bell_io) | (input_port_read(space->machine, "SP") & 0xff);
 }
 
 static WRITE8_HANDLER( output_1_w )
 {
-	tnzs_state *state = (tnzs_state *)space->machine->driver_data;
+	tnzs_state *state = space->machine->driver_data<tnzs_state>();
 
 	state->hop_io = (data & 0x40)>>4;
 	state->bell_io = (data & 0x80)>>4;
@@ -183,7 +183,7 @@ static const ay8910_interface ay8910_config =
 
 static MACHINE_START( cchance )
 {
-	tnzs_state *state = (tnzs_state *)machine->driver_data;
+	tnzs_state *state = machine->driver_data<tnzs_state>();
 	state->mcu = NULL;
 
 	state_save_register_global(machine, state->screenflip);
@@ -193,7 +193,7 @@ static MACHINE_START( cchance )
 
 static MACHINE_RESET( cchance )
 {
-	tnzs_state *state = (tnzs_state *)machine->driver_data;
+	tnzs_state *state = machine->driver_data<tnzs_state>();
 
 	state->screenflip = 0;
 	state->mcu_type = -1;
@@ -202,40 +202,37 @@ static MACHINE_RESET( cchance )
 
 }
 
-static MACHINE_DRIVER_START( cchance )
+static MACHINE_CONFIG_START( cchance, tnzs_state )
 
-	/* driver data */
-	MDRV_DRIVER_DATA(tnzs_state)
+	MCFG_CPU_ADD("maincpu", Z80,4000000)		 /* ? MHz */
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("maincpu", Z80,4000000)		 /* ? MHz */
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_MACHINE_START(cchance)
+	MCFG_MACHINE_RESET(cchance)
 
-	MDRV_MACHINE_START(cchance)
-	MDRV_MACHINE_RESET(cchance)
-
-	MDRV_GFXDECODE(cchance)
+	MCFG_GFXDECODE(cchance)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(57.5)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(57.5)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_PALETTE_LENGTH(512)
+	MCFG_PALETTE_LENGTH(512)
 
-	MDRV_PALETTE_INIT(arknoid2)
-	MDRV_VIDEO_UPDATE(tnzs)
-	MDRV_VIDEO_EOF(tnzs)
+	MCFG_PALETTE_INIT(arknoid2)
+	MCFG_VIDEO_UPDATE(tnzs)
+	MCFG_VIDEO_EOF(tnzs)
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("aysnd", AY8910, 1500000/2)
-	MDRV_SOUND_CONFIG(ay8910_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("aysnd", AY8910, 1500000/2)
+	MCFG_SOUND_CONFIG(ay8910_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+MACHINE_CONFIG_END
 
 ROM_START( cchance )
 	ROM_REGION( 0x10000, "maincpu", 0 )

@@ -4,12 +4,11 @@
 
 ***************************************************************************/
 
-class esd16_state
+class esd16_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, esd16_state(machine)); }
-
-	esd16_state(running_machine &machine) { }
+	esd16_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT16 *       vram_0;
@@ -29,8 +28,8 @@ public:
 	int           tilemap0_color;
 
 	/* devices */
-	running_device *audio_cpu;
-	running_device *eeprom;
+	device_t *audio_cpu;
+	device_t *eeprom;
 };
 
 

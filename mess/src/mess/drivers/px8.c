@@ -85,10 +85,10 @@ enum
 
 static void bankswitch(running_machine *machine)
 {
-	px8_state *state = (px8_state *)machine->driver_data;
-	const address_space *program = cputag_get_address_space(machine, UPD70008_TAG, ADDRESS_SPACE_PROGRAM);
+	px8_state *state = machine->driver_data<px8_state>();
+	address_space *program = cputag_get_address_space(machine, UPD70008_TAG, ADDRESS_SPACE_PROGRAM);
 	UINT8 *ram = messram_get_ptr(machine->device("messram"));
-	UINT8 *ipl_rom = memory_region(machine, UPD70008_TAG);
+	UINT8 *ipl_rom = machine->region(UPD70008_TAG)->base();
 
 	if (!state->bank0)
 	{
@@ -275,7 +275,7 @@ static READ8_HANDLER( gah40m_r )
 
 static WRITE8_HANDLER( gah40m_w )
 {
-	px8_state *state = (px8_state *)space->machine->driver_data;
+	px8_state *state = space->machine->driver_data<px8_state>();
 
 	switch (offset)
 	{
@@ -383,7 +383,7 @@ static WRITE8_HANDLER( gah40m_w )
 
 static READ8_HANDLER( gah40s_r )
 {
-	px8_state *state = (px8_state *)space->machine->driver_data;
+	px8_state *state = space->machine->driver_data<px8_state>();
 	UINT8 data = 0xff;
 
 	switch (offset)
@@ -410,7 +410,7 @@ static READ8_HANDLER( gah40s_r )
 
 static WRITE8_HANDLER( gah40s_w )
 {
-	px8_state *state = (px8_state *)space->machine->driver_data;
+	px8_state *state = space->machine->driver_data<px8_state>();
 
 	switch (offset)
 	{
@@ -455,65 +455,65 @@ static WRITE8_HANDLER( gah40s_w )
 
 static WRITE8_HANDLER( gah40s_ier_w )
 {
-	px8_state *state = (px8_state *)space->machine->driver_data;
+	px8_state *state = space->machine->driver_data<px8_state>();
 
 	state->ier = data;
 }
 
-/*-------------------------------------------------
-    krtn_read - read keyboard return
--------------------------------------------------*/
-
-static UINT8 krtn_read(running_machine *machine)
-{
-	px8_state *state = (px8_state *)machine->driver_data;
-	UINT8 data = 0xff;
-
-	switch (state->ksc)
-	{
-	case 0: data = input_port_read(machine, "KSC0"); break;
-	case 1: data = input_port_read(machine, "KSC1"); break;
-	case 2: data = input_port_read(machine, "KSC2"); break;
-	case 3: data = input_port_read(machine, "KSC3"); break;
-	case 4: data = input_port_read(machine, "KSC4"); break;
-	case 5: data = input_port_read(machine, "KSC5"); break;
-	case 6: data = input_port_read(machine, "KSC6"); break;
-	case 7: data = input_port_read(machine, "KSC7"); break;
-	case 8: data = input_port_read(machine, "KSC8"); break;
-	case 9: data = input_port_read(machine, "SW4");  break;
-	}
-
-	return data;
-}
-
-/*-------------------------------------------------
-    krtn_0_3_r - keyboard return 0..3 read
--------------------------------------------------*/
-
-static READ8_HANDLER( krtn_0_3_r )
-{
-	return krtn_read(space->machine) & 0x0f;
-}
-
-/*-------------------------------------------------
-    krtn_4_7_r - keyboard return 4..7 read
--------------------------------------------------*/
-
-static READ8_HANDLER( krtn_4_7_r )
-{
-	return krtn_read(space->machine) >> 4;
-}
-
-/*-------------------------------------------------
-    ksc_w - keyboard scan write
--------------------------------------------------*/
-
-static WRITE8_HANDLER( ksc_w )
-{
-	px8_state *state = (px8_state *)space->machine->driver_data;
-
-	state->ksc = data;
-}
+///*-------------------------------------------------
+//    krtn_read - read keyboard return
+//-------------------------------------------------*/
+//
+//static UINT8 krtn_read(running_machine *machine)
+//{
+//  px8_state *state = machine->driver_data<px8_state>();
+//  UINT8 data = 0xff;
+//
+//  switch (state->ksc)
+//  {
+//  case 0: data = input_port_read(machine, "KSC0"); break;
+//  case 1: data = input_port_read(machine, "KSC1"); break;
+//  case 2: data = input_port_read(machine, "KSC2"); break;
+//  case 3: data = input_port_read(machine, "KSC3"); break;
+//  case 4: data = input_port_read(machine, "KSC4"); break;
+//  case 5: data = input_port_read(machine, "KSC5"); break;
+//  case 6: data = input_port_read(machine, "KSC6"); break;
+//  case 7: data = input_port_read(machine, "KSC7"); break;
+//  case 8: data = input_port_read(machine, "KSC8"); break;
+//  case 9: data = input_port_read(machine, "SW4");  break;
+//  }
+//
+//  return data;
+//}
+//
+///*-------------------------------------------------
+//    krtn_0_3_r - keyboard return 0..3 read
+//-------------------------------------------------*/
+//
+//static READ8_HANDLER( krtn_0_3_r )
+//{
+//  return krtn_read(space->machine) & 0x0f;
+//}
+//
+///*-------------------------------------------------
+//    krtn_4_7_r - keyboard return 4..7 read
+//-------------------------------------------------*/
+//
+//static READ8_HANDLER( krtn_4_7_r )
+//{
+//  return krtn_read(space->machine) >> 4;
+//}
+//
+///*-------------------------------------------------
+//    ksc_w - keyboard scan write
+//-------------------------------------------------*/
+//
+//static WRITE8_HANDLER( ksc_w )
+//{
+//  px8_state *state = space->machine->driver_data<px8_state>();
+//
+//  state->ksc = data;
+//}
 
 /***************************************************************************
     MEMORY MAPS
@@ -573,16 +573,16 @@ ADDRESS_MAP_END
     ADDRESS_MAP( px8_sub_io )
 -------------------------------------------------*/
 
-static ADDRESS_MAP_START( px8_sub_io, ADDRESS_SPACE_IO, 8 )
-//  AM_RANGE(0x00, 0x00) AM_READWRITE()
-	AM_RANGE(0x01, 0x01) AM_READ(krtn_0_3_r)
-//  AM_RANGE(0x02, 0x02) AM_WRITE()
-	AM_RANGE(0x03, 0x03) AM_WRITE(ksc_w)
-//  AM_RANGE(0x04, 0x04) AM_WRITE()
-	AM_RANGE(0x05, 0x05) AM_READ(krtn_4_7_r)
-//  AM_RANGE(0x06, 0x06) AM_READ()
-//  AM_RANGE(0x07, 0x07) AM_WRITE()
-ADDRESS_MAP_END
+//static ADDRESS_MAP_START( px8_sub_io, ADDRESS_SPACE_IO, 8 )
+////  AM_RANGE(0x00, 0x00) AM_READWRITE()
+//  AM_RANGE(0x01, 0x01) AM_READ(krtn_0_3_r)
+////  AM_RANGE(0x02, 0x02) AM_WRITE()
+//  AM_RANGE(0x03, 0x03) AM_WRITE(ksc_w)
+////  AM_RANGE(0x04, 0x04) AM_WRITE()
+//  AM_RANGE(0x05, 0x05) AM_READ(krtn_4_7_r)
+////  AM_RANGE(0x06, 0x06) AM_READ()
+////  AM_RANGE(0x07, 0x07) AM_WRITE()
+//ADDRESS_MAP_END
 
 /***************************************************************************
     INPUT PORTS
@@ -655,7 +655,7 @@ static INPUT_PORTS_START( px8 )
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_0) PORT_CHAR('0') PORT_CHAR('_')
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_MINUS) PORT_CHAR('-') PORT_CHAR('=')
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_EQUALS) PORT_CHAR('^') PORT_CHAR('~')
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("\xE2\x86\x91") PORT_CODE(KEYCODE_UP) PORT_CHAR(UCHAR_MAMEKEY(UP))
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(UTF8_UP) PORT_CODE(KEYCODE_UP) PORT_CHAR(UCHAR_MAMEKEY(UP))
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("HOME BS") PORT_CODE(KEYCODE_BACKSPACE) PORT_CHAR(8)
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("TAB") PORT_CODE(KEYCODE_TAB) PORT_CHAR('\t')
 
@@ -663,9 +663,9 @@ static INPUT_PORTS_START( px8 )
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_O) PORT_CHAR('o') PORT_CHAR('O')
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_P) PORT_CHAR('p') PORT_CHAR('P')
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_OPENBRACE) PORT_CHAR('@') PORT_CHAR(96)
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("\xE2\x86\x90") PORT_CODE(KEYCODE_LEFT) PORT_CHAR(UCHAR_MAMEKEY(LEFT))
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("\xE2\x86\x93") PORT_CODE(KEYCODE_DOWN) PORT_CHAR(UCHAR_MAMEKEY(DOWN))
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("\xE2\x86\x92") PORT_CODE(KEYCODE_RIGHT) PORT_CHAR(UCHAR_MAMEKEY(RIGHT))
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(UTF8_LEFT) PORT_CODE(KEYCODE_LEFT) PORT_CHAR(UCHAR_MAMEKEY(LEFT))
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(UTF8_DOWN) PORT_CODE(KEYCODE_DOWN) PORT_CHAR(UCHAR_MAMEKEY(DOWN))
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(UTF8_RIGHT) PORT_CODE(KEYCODE_RIGHT) PORT_CHAR(UCHAR_MAMEKEY(RIGHT))
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_A) PORT_CHAR('a') PORT_CHAR('A')
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_S) PORT_CHAR('s') PORT_CHAR('S')
 
@@ -709,14 +709,14 @@ INPUT_PORTS_END
 
 static READ8_DEVICE_HANDLER( vd_r )
 {
-	px8_state *state = (px8_state *)device->machine->driver_data;
+	px8_state *state = device->machine->driver_data<px8_state>();
 
 	return state->video_ram[offset & PX8_VIDEORAM_MASK];
 }
 
 static WRITE8_DEVICE_HANDLER( vd_w )
 {
-	px8_state *state = (px8_state *)device->machine->driver_data;
+	px8_state *state = device->machine->driver_data<px8_state>();
 
 	state->video_ram[offset & PX8_VIDEORAM_MASK] = data;
 }
@@ -752,7 +752,7 @@ static VIDEO_START( px8 )
 
 static VIDEO_UPDATE( px8 )
 {
-	px8_state *state = (px8_state *)screen->machine->driver_data;
+	px8_state *state = screen->machine->driver_data<px8_state>();
 
 	sed1330_update(state->sed1320, bitmap, cliprect);
 
@@ -792,7 +792,7 @@ GFXDECODE_END
     msm8251_interface i8251_intf
 -------------------------------------------------*/
 
-static msm8251_interface i8251_intf =
+static const msm8251_interface i8251_intf =
 {
 	NULL,
 	NULL,
@@ -821,7 +821,7 @@ static const cassette_config px8_cassette_config =
 
 static MACHINE_START( px8 )
 {
-	px8_state *state = (px8_state *)machine->driver_data;
+	px8_state *state = machine->driver_data<px8_state>();
 
 	/* find devices */
 	state->sed1320 = machine->device(SED1320_TAG);
@@ -838,7 +838,7 @@ static MACHINE_START( px8 )
 
 static MACHINE_RESET( px8 )
 {
-	px8_state *state = (px8_state *)machine->driver_data;
+	px8_state *state = machine->driver_data<px8_state>();
 
 	state->bank0 = 0;
 	state->bk2 = 1;
@@ -850,63 +850,62 @@ static MACHINE_RESET( px8 )
     MACHINE DRIVERS
 ***************************************************************************/
 
-static MACHINE_DRIVER_START( px8 )
-	MDRV_DRIVER_DATA(px8_state)
+static MACHINE_CONFIG_START( px8, px8_state )
 
 	/* main cpu (uPD70008) */
-	MDRV_CPU_ADD(UPD70008_TAG, Z80, XTAL_CR1 / 4) /* 2.45 MHz */
-	MDRV_CPU_PROGRAM_MAP(px8_mem)
-	MDRV_CPU_IO_MAP(px8_io)
+	MCFG_CPU_ADD(UPD70008_TAG, Z80, XTAL_CR1 / 4) /* 2.45 MHz */
+	MCFG_CPU_PROGRAM_MAP(px8_mem)
+	MCFG_CPU_IO_MAP(px8_io)
 
     /* slave cpu (HD6303) */
-	MDRV_CPU_ADD(HD6303_TAG, M6803, XTAL_CR1 / 4) /* 614 kHz */
-	MDRV_CPU_PROGRAM_MAP(px8_slave_mem)
-	MDRV_CPU_IO_MAP(px8_slave_io)
-	MDRV_DEVICE_DISABLE()
+	MCFG_CPU_ADD(HD6303_TAG, M6803, XTAL_CR1 / 4) /* 614 kHz */
+	MCFG_CPU_PROGRAM_MAP(px8_slave_mem)
+	MCFG_CPU_IO_MAP(px8_slave_io)
+	MCFG_DEVICE_DISABLE()
 
     /* sub CPU (uPD7508) */
-//  MDRV_CPU_ADD(UPD7508_TAG, UPD7508, 200000) /* 200 kHz */
-//  MDRV_CPU_IO_MAP(px8_sub_io)
-//  MDRV_DEVICE_DISABLE()
+//  MCFG_CPU_ADD(UPD7508_TAG, UPD7508, 200000) /* 200 kHz */
+//  MCFG_CPU_IO_MAP(px8_sub_io)
+//  MCFG_DEVICE_DISABLE()
 
-	MDRV_MACHINE_START(px8)
-	MDRV_MACHINE_RESET(px8)
+	MCFG_MACHINE_START(px8)
+	MCFG_MACHINE_RESET(px8)
 
 	/* video hardware */
-	MDRV_DEFAULT_LAYOUT(layout_px8)
+	MCFG_DEFAULT_LAYOUT(layout_px8)
 
-	MDRV_SCREEN_ADD(SCREEN_TAG, LCD)
-	MDRV_SCREEN_REFRESH_RATE(72)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(480, 64)
-	MDRV_SCREEN_VISIBLE_AREA(0, 479, 0, 63)
-	MDRV_GFXDECODE(px8)
-	MDRV_PALETTE_LENGTH(2)
-	MDRV_PALETTE_INIT(px8)
-	MDRV_VIDEO_START(px8)
-	MDRV_VIDEO_UPDATE(px8)
-	MDRV_SED1330_ADD(SED1320_TAG, 0, sed1320_intf)
+	MCFG_SCREEN_ADD(SCREEN_TAG, LCD)
+	MCFG_SCREEN_REFRESH_RATE(72)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(480, 64)
+	MCFG_SCREEN_VISIBLE_AREA(0, 479, 0, 63)
+	MCFG_GFXDECODE(px8)
+	MCFG_PALETTE_LENGTH(2)
+	MCFG_PALETTE_INIT(px8)
+	MCFG_VIDEO_START(px8)
+	MCFG_VIDEO_UPDATE(px8)
+	MCFG_SED1330_ADD(SED1320_TAG, 0, sed1320_intf)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_WAVE_ADD("wave", CASSETTE_TAG)
-	MDRV_SOUND_ROUTE(0, "mono", 0.25)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_WAVE_ADD("wave", CASSETTE_TAG)
+	MCFG_SOUND_ROUTE(0, "mono", 0.25)
 
 	/* cartridge */
-	MDRV_CARTSLOT_ADD("capsule1")
-	MDRV_CARTSLOT_EXTENSION_LIST("bin,rom")
+	MCFG_CARTSLOT_ADD("capsule1")
+	MCFG_CARTSLOT_EXTENSION_LIST("bin,rom")
 
-	MDRV_CARTSLOT_ADD("capsule2")
-	MDRV_CARTSLOT_EXTENSION_LIST("bin,rom")
+	MCFG_CARTSLOT_ADD("capsule2")
+	MCFG_CARTSLOT_EXTENSION_LIST("bin,rom")
 
 	/* devices */
-	MDRV_MSM8251_ADD(I8251_TAG, i8251_intf)
-	MDRV_CASSETTE_ADD(CASSETTE_TAG, px8_cassette_config)
+	MCFG_MSM8251_ADD(I8251_TAG, i8251_intf)
+	MCFG_CASSETTE_ADD(CASSETTE_TAG, px8_cassette_config)
 
 	/* internal ram */
-	MDRV_RAM_ADD("messram")
-	MDRV_RAM_DEFAULT_SIZE("64K")
-MACHINE_DRIVER_END
+	MCFG_RAM_ADD("messram")
+	MCFG_RAM_DEFAULT_SIZE("64K")
+MACHINE_CONFIG_END
 
 /***************************************************************************
     ROMS

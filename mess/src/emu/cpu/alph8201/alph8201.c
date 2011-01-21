@@ -165,10 +165,10 @@ Timming
 /* MAME is unnecessary */
 #define HANDLE_HALT_LINE 0
 
-#define M_RDMEM(A)		memory_read_byte_8le(cpustate->program, A)
-#define M_WRMEM(A,V)	memory_write_byte_8le(cpustate->program, A, V)
-#define M_RDOP(A)		memory_decrypted_read_byte(cpustate->program, A)
-#define M_RDOP_ARG(A)	memory_raw_read_byte(cpustate->program, A)
+#define M_RDMEM(A)		cpustate->program->read_byte(A)
+#define M_WRMEM(A,V)	cpustate->program->write_byte(A, V)
+#define M_RDOP(A)		cpustate->direct->read_decrypted_byte(A)
+#define M_RDOP_ARG(A)	cpustate->direct->read_raw_byte(A)
 
 typedef struct _alpha8201_state alpha8201_state;
 struct _alpha8201_state
@@ -198,7 +198,8 @@ struct _alpha8201_state
 #endif
 
 	legacy_cpu_device *device;
-	const address_space *program;
+	address_space *program;
+	direct_read_data *direct;
 	int icount;
 	int inst_cycles;
 };
@@ -224,7 +225,7 @@ typedef struct {
 #define LP1				lp1
 #define LP2				lp2
 
-INLINE alpha8201_state *get_safe_token(running_device *device)
+INLINE alpha8201_state *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
 	assert(device->type() == ALPHA8201 ||
@@ -669,6 +670,7 @@ static CPU_INIT( alpha8201 )
 
 	cpustate->device = device;
 	cpustate->program = device->space(AS_PROGRAM);
+	cpustate->direct = &cpustate->program->direct();
 
 	state_save_register_device_item_array(device, 0, cpustate->RAM);
 	state_save_register_device_item(device, 0, cpustate->PREVPC);
@@ -728,7 +730,7 @@ static CPU_EXIT( alpha8201 )
  * Execute cycles CPU cycles. Return number of cycles really executed
  ****************************************************************************/
 
-static void alpha8xxx_execute(running_device *device,const s_opcode *op_map)
+static void alpha8xxx_execute(device_t *device,const s_opcode *op_map)
 {
 	alpha8201_state *cpustate = get_safe_token(device);
 	unsigned opcode;

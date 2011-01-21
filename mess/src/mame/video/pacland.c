@@ -25,6 +25,7 @@ sprite color 0x7f will erase the tilemap and force it to be transparent.
 ***************************************************************************/
 
 #include "emu.h"
+#include "includes/pacland.h"
 
 
 UINT8 *pacland_videoram,*pacland_videoram2,*pacland_spriteram;
@@ -258,7 +259,7 @@ WRITE8_HANDLER( pacland_scroll1_w )
 WRITE8_HANDLER( pacland_bankswitch_w )
 {
 	int bankaddress;
-	UINT8 *RAM = memory_region(space->machine, "maincpu");
+	UINT8 *RAM = space->machine->region("maincpu")->base();
 
 	bankaddress = 0x10000 + ((data & 0x07) << 13);
 	memory_set_bankptr(space->machine, "bank1",&RAM[bankaddress]);

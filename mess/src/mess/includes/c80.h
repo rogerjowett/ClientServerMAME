@@ -7,12 +7,11 @@
 #define Z80PIO2_TAG		"d12"
 #define CASSETTE_TAG	"cassette"
 
-class c80_state
+class c80_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, c80_state(machine)); }
-
-	c80_state(running_machine &machine) { }
+	c80_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* keyboard state */
 	int keylatch;
@@ -23,8 +22,8 @@ public:
 	int pio1_brdy;
 
 	/* devices */
-	running_device *z80pio;
-	running_device *cassette;
+	device_t *z80pio;
+	device_t *cassette;
 };
 
 #endif

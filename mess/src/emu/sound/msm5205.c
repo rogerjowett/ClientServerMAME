@@ -32,7 +32,7 @@ typedef struct _msm5205_state msm5205_state;
 struct _msm5205_state
 {
 	const msm5205_interface *intf;
-	running_device *device;
+	device_t *device;
 	sound_stream * stream;  /* number of stream system      */
 	INT32 clock;				/* clock rate */
 	emu_timer *timer;        /* VCLK callback timer          */
@@ -46,10 +46,10 @@ struct _msm5205_state
 	int diff_lookup[49*16];
 };
 
-INLINE msm5205_state *get_safe_token(running_device *device)
+INLINE msm5205_state *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
-	assert(device->type() == SOUND_MSM5205);
+	assert(device->type() == MSM5205);
 	return (msm5205_state *)downcast<legacy_device_base *>(device)->token();
 }
 
@@ -209,7 +209,7 @@ static DEVICE_START( msm5205 )
  *    Handle an update of the vclk status of a chip (1 is reset ON, 0 is reset OFF)
  *    This function can use selector = MSM5205_SEX only
  */
-void msm5205_vclk_w (running_device *device, int vclk)
+void msm5205_vclk_w (device_t *device, int vclk)
 {
 	msm5205_state *voice = get_safe_token(device);
 
@@ -231,7 +231,7 @@ void msm5205_vclk_w (running_device *device, int vclk)
  *    Handle an update of the reset status of a chip (1 is reset ON, 0 is reset OFF)
  */
 
-void msm5205_reset_w (running_device *device, int reset)
+void msm5205_reset_w (device_t *device, int reset)
 {
 	msm5205_state *voice = get_safe_token(device);
 	voice->reset = reset;
@@ -241,7 +241,7 @@ void msm5205_reset_w (running_device *device, int reset)
  *    Handle an update of the data to the chip
  */
 
-void msm5205_data_w (running_device *device, int data)
+void msm5205_data_w (device_t *device, int data)
 {
 	msm5205_state *voice = get_safe_token(device);
 	if( voice->bitwidth == 4)
@@ -254,7 +254,7 @@ void msm5205_data_w (running_device *device, int data)
  *    Handle an change of the selector
  */
 
-void msm5205_playmode_w(running_device *device, int select)
+void msm5205_playmode_w(device_t *device, int select)
 {
 	msm5205_state *voice = get_safe_token(device);
 	msm5205_playmode(voice,select);
@@ -291,14 +291,23 @@ static void msm5205_playmode(msm5205_state *voice,int select)
 }
 
 
-void msm5205_set_volume(running_device *device,int volume)
+void msm5205_set_volume(device_t *device,int volume)
 {
 	msm5205_state *voice = get_safe_token(device);
 
 	stream_set_output_gain(voice->stream,0,volume / 100.0);
 }
 
+void msm5205_change_clock_w(device_t *device, INT32 clock)
+{
+	msm5205_state *voice = get_safe_token(device);
+	attotime period;
 
+	voice->clock = clock;
+
+	period = attotime_mul(ATTOTIME_IN_HZ(voice->clock), voice->prescaler);
+	timer_adjust_periodic(voice->timer, period, 0, period);
+}
 
 
 /**************************************************************************

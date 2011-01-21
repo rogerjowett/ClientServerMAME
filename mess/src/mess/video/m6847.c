@@ -183,6 +183,9 @@ struct _mc6847_state
 	UINT8 attrs[384];
 	m6847_pixel screendata[192][32];
 
+	UINT32 saved_artifacting, saved_c0, saved_c1;
+	UINT32 expanded_colors[128];
+
 	/* saved palette; used with CoCo 3 */
 	UINT32 saved_palette[16];
 
@@ -195,7 +198,7 @@ struct _mc6847_state
 
 
 
-static void apply_artifacts(running_machine *machine, UINT32 *line);
+static void apply_artifacts(device_t *device, UINT32 *line);
 
 
 static const UINT8 pal_round_fontdata8x12[] =
@@ -955,7 +958,7 @@ enum
 	GREEN, YELLOW, BLUE, RED,		/*  0 -  3 */
 	BUFF, CYAN, MAGENTA, ORANGE,	/*  4 -  7 */
 
-	BLACK,							/*  8 */
+	BLACK = 10,						/* 10 */
 
 	DKGREEN = 12, LTGREEN = 13,		/* 12 - 13 */
 	DKORANGE = 14, LTORANGE = 15,	/* 14 - 15 */
@@ -966,29 +969,83 @@ enum
 
 #define ATTOTIME_STRING_PRECISION	9
 
+/* MC6847 video output pins: Y, phiA, phiB (Y'UV color space).
+ *
+ * Y voltage levels:
+ * VB ("Black") = 0.72V; VWL ("White Low") = 0.65V; VWM ("White Medium") = 0.54V;
+ * VWH ("White High") = 0.42V.
+ *
+ * phiA and phiB voltage levels:
+ * VOL ("Output Low") = 1.0V; VR ("Reference"?) = 1.5V; VIH ("Input High") = 2.0V.
+ *
+ * Color composition:
+ * 
+ * COLOR       |  Y  | phiA | phiB
+ * ------------+-----+------+------
+ * GREEN       | VWM | VOL  | VOL
+ * YELLOW      | VWH | VOL  | VR
+ * BLUE        | VWL | VIH  | VR
+ * RED         | VWL | VR   | VIH
+ * WHITE       | VWH | VR   | VR
+ * CYAN        | VWM | VR   | VOL
+ * MAGENTA     | VWM | VIH  | VIH
+ * ORANGE      | VWM | VOL  | VIH
+ * BLACK       | VB  | VR   | VR
+ * DARK GREEN  | VB  | VOL  | VOL
+ * DARK ORANGE | VB  | VOL  | VIH
+ *
+ *
+ * Mapping voltages to a 0~255 range:
+ *
+ * Y values:
+ * VB = 0; VWL = 59; VWM = 153; VWH = 255.
+ *
+ * phiA and phiB values:
+ * VOL = -128; VR = 0; VIH = +128.
+ *
+ *
+ * Y'UV to RGB convertion:
+ * R = Y' + 1.13983 x U
+ * G = Y' - 0.39465 x U - 0.58060 x V
+ * B = Y' + 2.03211 x V
+ * 
+ * So we get:
+ * GREEN = Y'UV(153,-128,-128) = RGB(7,277,-107) --> #07ff00
+ * YELLOW = Y'UV(255,-128,0) = RGB(255,305,-5) --> #ffff00
+ * BLUE = Y'UV(59,+128,0) = RGB(59,8,319) --> #3b08ff
+ * RED: Y'UV(59,0,+128) = RGB(204,-15,59) --> #cc003b
+ * WHITE: Y'UV(255,0,0) = RGB(255,255,255) --> #ffffff
+ * CYAN: Y'UV(153,0,-128) = RGB(7,227,153) --> #07e399
+ * MAGENTA: Y'UV(153,+128,+128) = RGB(298,28,413) --> #ff1cff
+ * ORANGE: Y'UV(153,-128,+128) = RGB(298,129,-107) --> #ff8100
+ * BLACK: Y'UV(0,0,0) = RGB(0,0,0) --> #000000
+ * DARK GREEN: Y'UV(0,-128,-128) = RGB(-145,124,-260) --> #007c00
+ * DARK ORANGE: Y'UV(0,-128,+128) = RGB(145,-23,-260) --> #910000
+ */
+
 #define M6847_RGB(r,g,b)	((r << 16) | (g << 8) | (b << 0))
 
 
 static const UINT32 default_palette[] =
 {
-	M6847_RGB(0x00, 0xff, 0x00),	/* GREEN */
+	M6847_RGB(0x07, 0xff, 0x00),	/* GREEN */
 	M6847_RGB(0xff, 0xff, 0x00),	/* YELLOW */
-	M6847_RGB(0x00, 0x00, 0xff),	/* BLUE */
-	M6847_RGB(0xff, 0x00, 0x00),	/* RED */
+	M6847_RGB(0x3b, 0x08, 0xff),	/* BLUE */
+	M6847_RGB(0xcc, 0x00, 0x3b),	/* RED */
 	M6847_RGB(0xff, 0xff, 0xff),	/* BUFF */
-	M6847_RGB(0x00, 0xff, 0xff),	/* CYAN */
-	M6847_RGB(0xff, 0x00, 0xff),	/* MAGENTA */
-	M6847_RGB(0xff, 0x80, 0x00),	/* ORANGE */
+	M6847_RGB(0x07, 0xe3, 0x99),	/* CYAN */
+	M6847_RGB(0xff, 0x1c, 0xff),	/* MAGENTA */
+	M6847_RGB(0xff, 0x81, 0x00),	/* ORANGE */
 
-	M6847_RGB(0x00, 0x00, 0x00),	/* BLACK */
-	M6847_RGB(0x00, 0xff, 0x00),	/* GREEN */
+	M6847_RGB(0x00, 0x7c, 0x00),	/* DARK GREEN */
+	M6847_RGB(0x07, 0xff, 0x00),	/* GREEN */
 	M6847_RGB(0x00, 0x00, 0x00),	/* BLACK */
 	M6847_RGB(0xff, 0xff, 0xff),	/* BUFF */
 
-	M6847_RGB(0x00, 0x40, 0x00),	/* ALPHANUMERIC DARK GREEN */
-	M6847_RGB(0x00, 0xff, 0x00),	/* ALPHANUMERIC BRIGHT GREEN */
-	M6847_RGB(0x40, 0x10, 0x00),	/* ALPHANUMERIC DARK ORANGE */
-	M6847_RGB(0xff, 0xc4, 0x18)		/* ALPHANUMERIC BRIGHT ORANGE */
+	M6847_RGB(0x00, 0x7c, 0x00),	/* ALPHANUMERIC DARK GREEN */
+	M6847_RGB(0x07, 0xff, 0x00),	/* ALPHANUMERIC BRIGHT GREEN */
+	M6847_RGB(0x91, 0x00, 0x00),	/* ALPHANUMERIC DARK ORANGE */
+	M6847_RGB(0xff, 0x81, 0x00)		/* ALPHANUMERIC BRIGHT ORANGE */
 };
 
 
@@ -1072,7 +1129,7 @@ static const m6847_variant variants[] =
     INLINE FUNCTIONS
 *****************************************************************************/
 
-INLINE mc6847_state *get_safe_token(running_device *device)
+INLINE mc6847_state *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
 	assert(device->type() == MC6847);
@@ -1087,13 +1144,13 @@ INLINE mc6847_state *get_safe_token(running_device *device)
  *
  *************************************/
 
-static UINT32 color(running_device *device, int c)
+static UINT32 color(device_t *device, int c)
 {
 	mc6847_state *mc6847 = get_safe_token(device);
 	return mc6847->palette[c];
 }
 
-static int attr_index_from_attribute(running_device *device, UINT8 attr)
+static int attr_index_from_attribute(device_t *device, UINT8 attr)
 {
 	int result;
 
@@ -1105,7 +1162,7 @@ static int attr_index_from_attribute(running_device *device, UINT8 attr)
 	return result;
 }
 
-static UINT8 attribute_from_attr_index(running_device *device, int attr_index)
+static UINT8 attribute_from_attr_index(device_t *device, int attr_index)
 {
 	/* sanity check */
 	assert(attr_index >= 0);
@@ -1396,7 +1453,7 @@ static int get_beamx(mc6847_state *mc6847)
 }
 
 
-static void execute_m6847_dumpscanline(running_device *device, int ref, int params, const char **param)
+static void execute_m6847_dumpscanline(device_t *device, int ref, int params, const char **param)
 {
 	mc6847_state *mc6847 = get_safe_token(device);
 
@@ -1499,7 +1556,7 @@ static const UINT8 *find_char(const m6847_variant *v,
 
 
 
-static void build_fontdata(running_device *device, const m6847_variant *v)
+static void build_fontdata(device_t *device, const m6847_variant *v)
 {
 	mc6847_state *mc6847 = get_safe_token(device);
 
@@ -1536,7 +1593,7 @@ static void build_fontdata(running_device *device, const m6847_variant *v)
  *
  *************************************/
 
-static void graphics_color_64(running_device *device, UINT32 *RESTRICT line, const m6847_pixel *RESTRICT video_data)
+static void graphics_color_64(device_t *device, UINT32 *RESTRICT line, const m6847_pixel *RESTRICT video_data)
 {
 	int x;
 	UINT8 byte, attr;
@@ -1556,7 +1613,7 @@ static void graphics_color_64(running_device *device, UINT32 *RESTRICT line, con
 
 
 
-static void graphics_color_128(running_device *device, UINT32 *RESTRICT line, const m6847_pixel *RESTRICT video_data)
+static void graphics_color_128(device_t *device, UINT32 *RESTRICT line, const m6847_pixel *RESTRICT video_data)
 {
 	int x;
 	UINT8 byte, attr;
@@ -1576,7 +1633,7 @@ static void graphics_color_128(running_device *device, UINT32 *RESTRICT line, co
 
 
 
-static void graphics_bw_128(running_device *device, UINT32 *RESTRICT line, const m6847_pixel *RESTRICT video_data)
+static void graphics_bw_128(device_t *device, UINT32 *RESTRICT line, const m6847_pixel *RESTRICT video_data)
 {
 	int x;
 	UINT8 byte, attr;
@@ -1604,7 +1661,7 @@ static void graphics_bw_128(running_device *device, UINT32 *RESTRICT line, const
 
 
 
-static void graphics_bw_256(running_device *device, UINT32 *RESTRICT line, const m6847_pixel *RESTRICT video_data)
+static void graphics_bw_256(device_t *device, UINT32 *RESTRICT line, const m6847_pixel *RESTRICT video_data)
 {
 	int x;
 	UINT8 byte, attr;
@@ -1632,7 +1689,7 @@ static void graphics_bw_256(running_device *device, UINT32 *RESTRICT line, const
 
 
 
-static void (*const graphics_modes[8])(running_device *device, UINT32 *line, const m6847_pixel *video_data) =
+static void (*const graphics_modes[8])(device_t *device, UINT32 *line, const m6847_pixel *video_data) =
 {
 	graphics_color_64,	graphics_bw_128,
 	graphics_color_128,	graphics_bw_128,
@@ -1642,7 +1699,7 @@ static void (*const graphics_modes[8])(running_device *device, UINT32 *line, con
 
 
 
-static void text_mode(running_device *device, int scanline, UINT32 *RESTRICT line, const m6847_pixel *RESTRICT video_data)
+static void text_mode(device_t *device, int scanline, UINT32 *RESTRICT line, const m6847_pixel *RESTRICT video_data)
 {
 	mc6847_state *mc6847 = get_safe_token(device);
 	int x;
@@ -1687,7 +1744,7 @@ static void text_mode(running_device *device, int scanline, UINT32 *RESTRICT lin
 
 
 
-static void render_scanline(running_device *device, bitmap_t *bitmap, int scanline)
+static void render_scanline(device_t *device, bitmap_t *bitmap, int scanline)
 {
 	mc6847_state *mc6847 = get_safe_token(device);
 	UINT32 border_color;
@@ -1733,7 +1790,7 @@ static void render_scanline(running_device *device, bitmap_t *bitmap, int scanli
 		if ((attrs & (M6847_AG|M6847_GM2|M6847_GM1|M6847_GM0))
 			== (M6847_AG|M6847_GM2|M6847_GM1|M6847_GM0))
 		{
-			apply_artifacts(device->machine, line + 32);
+			apply_artifacts(device, line + 32);
 		}
 	}
 	else
@@ -1985,7 +2042,7 @@ READ_LINE_DEVICE_HANDLER( mc6847_hs_r )
 }
 
 
-void mc6847_set_palette(running_device *device, UINT32 *palette)
+void mc6847_set_palette(device_t *device, UINT32 *palette)
 {
 	mc6847_state *mc6847 = get_safe_token(device);
 	mc6847->has_custom_palette = 1;
@@ -2006,7 +2063,7 @@ static UINT32 mix_color(double factor, UINT8 c0, UINT8 c1)
 
 
 
-static void apply_artifacts(running_machine *machine, UINT32 *line)
+static void apply_artifacts(device_t *device, UINT32 *line)
 {
 	/* Boy this code sucks; this code was adapted from the old M6847
      * artifacting implmentation.  The only reason that it didn't look as
@@ -2056,17 +2113,16 @@ static void apply_artifacts(running_machine *machine, UINT32 *line)
 		15, 11,		15, 11,		15, 15,		15, 15
 	};
 
+	mc6847_state *mc6847 = get_safe_token(device);
 	UINT32 artifacting, c0, c1;
 	UINT32 colors[16];
-	static UINT32 saved_artifacting, saved_c0, saved_c1;
-	static UINT32 expanded_colors[128];
 	const double *factors;
 	UINT8 val;
 	UINT32 new_line[256];
 	int i;
 
 	/* are we artifacting? */
-	artifacting = input_port_read_safe(machine, "artifacting", 0x00) & 0x03;
+	artifacting = input_port_read_safe(device->machine, "artifacting", 0x00) & 0x03;
 	if (artifacting == 0x00)
 		return;
 	artifacting &= 0x01;
@@ -2083,11 +2139,11 @@ static void apply_artifacts(running_machine *machine, UINT32 *line)
 	c0 = line[i];
 
 	/* do we need to update our artifact colors table? */
-	if ((artifacting != saved_artifacting) || (c0 != saved_c0) || (c1 != saved_c1))
+	if ((artifacting != mc6847->saved_artifacting) || (c0 != mc6847->saved_c0) || (c1 != mc6847->saved_c1))
 	{
-		saved_artifacting = artifacting;
-		saved_c0 = colors[0] = c0;
-		saved_c1 = colors[15] = c1;
+		mc6847->saved_artifacting = artifacting;
+		mc6847->saved_c0 = colors[0] = c0;
+		mc6847->saved_c1 = colors[15] = c1;
 
 		/* mix the other colors */
 		for (i = 1; i <= 14; i++)
@@ -2099,7 +2155,7 @@ static void apply_artifacts(running_machine *machine, UINT32 *line)
 					|	(mix_color(factors[2], c0 >>  0, c1 >>  0) <<  0);
 		}
 		for (i = 0; i < 128; i++)
-			expanded_colors[i] = colors[artifactcorrection[i]];
+			mc6847->expanded_colors[i] = colors[artifactcorrection[i]];
 	}
 
 	/* artifact the line */
@@ -2112,8 +2168,8 @@ static void apply_artifacts(running_machine *machine, UINT32 *line)
 			|	((line[i + 2] == c1) ? 0x02 : 0x00)
 			|	((line[i + 3] == c1) ? 0x01 : 0x00);
 
-		new_line[i + 0] = expanded_colors[val * 2 + 0];
-		new_line[i + 1] = expanded_colors[val * 2 + 1];
+		new_line[i + 0] = mc6847->expanded_colors[val * 2 + 0];
+		new_line[i + 1] = mc6847->expanded_colors[val * 2 + 1];
 	}
 
 	/* and copy the results back */
@@ -2141,7 +2197,7 @@ INPUT_PORTS_END
 
 
 
-UINT32 mc6847_update(running_device *device, bitmap_t *bitmap, const rectangle *cliprect)
+UINT32 mc6847_update(device_t *device, bitmap_t *bitmap, const rectangle *cliprect)
 {
 	mc6847_state *mc6847 = get_safe_token(device);
 	int row, i;

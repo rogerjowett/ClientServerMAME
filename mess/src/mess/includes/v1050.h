@@ -1,6 +1,8 @@
 #ifndef __V1050__
 #define __V1050__
 
+#include "devices/flopdrv.h"
+
 #define SCREEN_TAG				"screen"
 
 #define Z80_TAG					"u80"
@@ -34,61 +36,103 @@
 #define INT_EXPANSION_B		0x40
 #define INT_EXPANSION_A		0x80
 
-class v1050_state
+class v1050_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, v1050_state(machine)); }
+	v1050_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config),
+		  m_maincpu(*this, Z80_TAG),
+		  m_subcpu(*this, M6502_TAG),
+		  m_pic(*this, UPB8214_TAG),
+		  m_rtc(*this, MSM58321RS_TAG),
+		  m_uart_kb(*this, I8251A_KB_TAG),
+		  m_uart_sio(*this, I8251A_SIO_TAG),
+		  m_fdc(*this, MB8877_TAG),
+		  m_crtc(*this, H46505_TAG),
+		  m_centronics(*this, CENTRONICS_TAG),
+		  m_ram(*this, "messram"),
+		  m_discrete(*this, DISCRETE_TAG),
+		  m_floppy0(*this, FLOPPY_0),
+		  m_floppy1(*this, FLOPPY_1),
+		  m_timer_sio(*this, TIMER_SIO_TAG)
+	{ }
 
-	v1050_state(running_machine &machine) { }
+	required_device<cpu_device> m_maincpu;
+	required_device<cpu_device> m_subcpu;
+	required_device<device_t> m_pic;
+	required_device<device_t> m_rtc;
+	required_device<device_t> m_uart_kb;
+	required_device<device_t> m_uart_sio;
+	required_device<device_t> m_fdc;
+	required_device<device_t> m_crtc;
+	required_device<device_t> m_centronics;
+	required_device<device_t> m_ram;
+	required_device<device_t> m_discrete;
+	required_device<device_t> m_floppy0;
+	required_device<device_t> m_floppy1;
+	required_device<timer_device> m_timer_sio;
+	
+	virtual void machine_start();
+	virtual void machine_reset();
+	
+	virtual void video_start();
+	virtual bool video_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect);
 
-	/* interrupt state */
-	UINT8 int_mask;				/* interrupt mask */
-	UINT8 int_state;			/* interrupt status */
-	int f_int_enb;				/* floppy interrupt enable */
+	DECLARE_READ8_MEMBER( kb_data_r );
+	DECLARE_READ8_MEMBER( kb_status_r );
+	DECLARE_WRITE8_MEMBER( v1050_i8214_w );
+	DECLARE_READ8_MEMBER( vint_clr_r );
+	DECLARE_WRITE8_MEMBER( vint_clr_w );
+	DECLARE_READ8_MEMBER( dint_clr_r );
+	DECLARE_WRITE8_MEMBER( dint_clr_w );
+	DECLARE_WRITE8_MEMBER( bank_w );
+	DECLARE_WRITE8_MEMBER( dint_w );
+	DECLARE_WRITE8_MEMBER( dvint_clr_w );
+	DECLARE_READ8_MEMBER( keyboard_r );
+	DECLARE_WRITE8_MEMBER( keyboard_w );
+	DECLARE_WRITE8_MEMBER( p2_w );
+	DECLARE_WRITE8_MEMBER( misc_ppi_pa_w );
+	DECLARE_WRITE8_MEMBER( misc_ppi_pc_w );
+	DECLARE_WRITE8_MEMBER( rtc_ppi_pb_w );
+	DECLARE_WRITE_LINE_MEMBER( fdc_intrq_w );
+	DECLARE_WRITE_LINE_MEMBER( fdc_drq_w );
+	DECLARE_READ8_MEMBER( attr_r );
+	DECLARE_WRITE8_MEMBER( attr_w );
+	DECLARE_READ8_MEMBER( videoram_r );
+	DECLARE_WRITE8_MEMBER( videoram_w );
+	DECLARE_WRITE_LINE_MEMBER( crtc_vs_w );
+	
+	void bankswitch();
+	void set_interrupt(UINT8 mask, int state);
+	void scan_keyboard();
 
-	/* keyboard state */
-	UINT8 keylatch;				/* keyboard row select */
-	UINT8 keydata;
-	int keyavail;
-	int kb_so;					/* keyboard serial output */
+	// interrupt state
+	UINT8 m_int_mask;			// interrupt mask
+	UINT8 m_int_state;			// interrupt status
+	int m_f_int_enb;			// floppy interrupt enable
 
-	/* serial state */
-	int rxrdy;					/* receiver ready */
-	int txrdy;					/* transmitter ready */
-	int baud_sel;				/* baud select */
+	// keyboard state
+	UINT8 m_keylatch;			// keyboard row select
+	UINT8 m_keydata;
+	int m_keyavail;
+	int m_kb_so;				// keyboard serial output
 
-	/* memory state */
-	UINT8 bank;					/* bank register */
+	// serial state
+	int m_rxrdy;				// receiver ready
+	int m_txrdy;				// transmitter ready
+	int m_baud_sel;				// baud select
 
-	/* video state */
-	UINT8 *video_ram;			/* video RAM */
-	UINT8 *attr_ram;			/* attribute RAM */
-	UINT8 attr;					/* attribute latch */
+	// memory state
+	UINT8 m_bank;				// bank register
 
-	/* devices */
-	running_device *i8214;
-	running_device *msm58321;
-	running_device *i8255a_crt_z80;
-	running_device *i8255a_crt_m6502;
-	running_device *i8251_kb;
-	running_device *i8251_sio;
-	running_device *mb8877;
-	running_device *mc6845;
-	running_device *centronics;
-	timer_device *timer_sio;
+	// video state
+	UINT8 *m_video_ram;			// video RAM
+	UINT8 *m_attr_ram;			// attribute RAM
+	UINT8 m_attr;				// attribute latch
 };
 
-/*----------- defined in drivers/v1050.c -----------*/
+//----------- defined in video/v1050.c -----------
 
-void v1050_set_int(running_machine *machine, UINT8 mask, int state);
-
-/*----------- defined in video/v1050.c -----------*/
-
-READ8_HANDLER( v1050_attr_r );
-WRITE8_HANDLER( v1050_attr_w );
-READ8_HANDLER( v1050_videoram_r );
-WRITE8_HANDLER( v1050_videoram_w );
-
-MACHINE_DRIVER_EXTERN( v1050_video );
+MACHINE_CONFIG_EXTERN( v1050_video );
 
 #endif

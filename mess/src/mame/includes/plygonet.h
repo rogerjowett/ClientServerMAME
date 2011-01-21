@@ -1,10 +1,8 @@
-class polygonet_state : public driver_data_t
+class polygonet_state : public driver_device
 {
 public:
-	static driver_data_t *alloc(running_machine &machine) { return auto_alloc_clear(&machine, polygonet_state(machine)); }
-
-	polygonet_state(running_machine &machine)
-		: driver_data_t(machine) { }
+	polygonet_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* 68k-side shared ram */
 	UINT32* shared_ram;
@@ -18,7 +16,7 @@ public:
 	UINT16* dsp56k_bank04_ram;
 	int cur_sound_region;
 
-	direct_update_func dsp56k_update_handler;
+	direct_update_delegate dsp56k_update_handler;
 
 	/* TTL text plane stuff */
 	int ttl_gfx_index;

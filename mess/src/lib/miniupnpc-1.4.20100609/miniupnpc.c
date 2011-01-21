@@ -4,6 +4,7 @@
  * copyright (c) 2005-2010 Thomas Bernard
  * This software is subjet to the conditions detailed in the
  * provided LICENSE file. */
+#define WINVER 0x0501
 #define _DARWIN_C_SOURCE
 #define __EXTENSIONS__ 1
 #if !defined(MACOSX) && !defined(__sun)

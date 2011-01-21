@@ -40,6 +40,7 @@
 //============================================================
 
 #include "options.h"
+#include "osdepend.h"
 
 
 //============================================================
@@ -57,6 +58,7 @@
 #define WINOPTION_MULTITHREADING		"multithreading"
 #define WINOPTION_NUMPROCESSORS			"numprocessors"
 #define WINOPTION_PROFILE				"profile"
+#define WINOPTION_BENCH					"bench"
 
 // video options
 #define WINOPTION_VIDEO					"video"
@@ -65,7 +67,6 @@
 #define WINOPTION_MAXIMIZE				"maximize"
 #define WINOPTION_KEEPASPECT			"keepaspect"
 #define WINOPTION_PRESCALE				"prescale"
-#define WINOPTION_EFFECT				"effect"
 #define WINOPTION_WAITVSYNC				"waitvsync"
 #define WINOPTION_SYNCREFRESH			"syncrefresh"
 
@@ -130,6 +131,45 @@
 
 
 //============================================================
+//  TYPE DEFINITIONS
+//============================================================
+
+class windows_osd_interface : public osd_interface
+{
+public:
+	// construction/destruction
+	windows_osd_interface();
+	virtual ~windows_osd_interface();
+
+	// general overridables
+	virtual void init(running_machine &machine);
+	virtual void update(bool skip_redraw);
+
+	// debugger overridables
+//  virtual void init_debugger();
+	virtual void wait_for_debugger(device_t &device, bool firststop);
+
+	// audio overridables
+	virtual void update_audio_stream(const INT16 *buffer, int samples_this_frame);
+	virtual void set_mastervolume(int attenuation);
+
+	// input overridables
+	virtual void customize_input_type_list(input_type_desc *typelist);
+
+	// font overridables
+	virtual osd_font font_open(const char *name, int &height);
+	virtual void font_close(osd_font font);
+	virtual bitmap_t *font_get_bitmap(osd_font font, unicode_char chnum, INT32 &width, INT32 &xoffs, INT32 &yoffs);
+
+private:
+	static void osd_exit(running_machine &machine);
+
+	static const int DEFAULT_FONT_HEIGHT = 200;
+};
+
+
+
+//============================================================
 //  GLOBAL VARIABLES
 //============================================================
 
@@ -137,6 +177,7 @@ extern const options_entry mame_win_options[];
 
 // defined in winwork.c
 extern int osd_num_processors;
+
 
 
 //============================================================
@@ -148,3 +189,4 @@ void CLIB_DECL mame_printf_verbose(const char *text, ...) ATTR_PRINTF(1,2);
 
 // use this to ping the watchdog
 void winmain_watchdog_ping(void);
+void winmain_dump_stack();

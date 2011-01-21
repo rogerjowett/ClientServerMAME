@@ -40,10 +40,12 @@ static ADDRESS_MAP_START( lc80_mem, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x2400, 0x2fff) AM_RAMBANK("bank4")
 ADDRESS_MAP_END
 
+#if 0
 static ADDRESS_MAP_START( sc80_mem, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_IMPORT_FROM(lc80_mem)
 	AM_RANGE(0xc000, 0xcfff) AM_ROM
 ADDRESS_MAP_END
+#endif
 
 static ADDRESS_MAP_START( lc80_io, ADDRESS_SPACE_IO, 8 )
 	ADDRESS_MAP_GLOBAL_MASK(0x1f)
@@ -154,7 +156,7 @@ static WRITE8_DEVICE_HANDLER( pio1_port_a_w )
 
     */
 
-	lc80_state *state = (lc80_state *)device->machine->driver_data;
+	lc80_state *state = device->machine->driver_data<lc80_state>();
 
 	state->segment = BITSWAP8(~data, 4, 3, 1, 6, 7, 5, 0, 2);
 
@@ -178,7 +180,7 @@ static READ8_DEVICE_HANDLER( pio1_port_b_r )
 
     */
 
-	lc80_state *state = (lc80_state *)device->machine->driver_data;
+	lc80_state *state = device->machine->driver_data<lc80_state>();
 
 	return (cassette_input(state->cassette) < +0.0);
 }
@@ -200,7 +202,7 @@ static WRITE8_DEVICE_HANDLER( pio1_port_b_w )
 
     */
 
-	lc80_state *state = (lc80_state *)device->machine->driver_data;
+	lc80_state *state = device->machine->driver_data<lc80_state>();
 
 	/* tape output */
 	cassette_output(state->cassette, BIT(data, 1) ? +1.0 : -1.0);
@@ -246,7 +248,7 @@ static READ8_DEVICE_HANDLER( pio2_port_b_r )
 
     */
 
-	lc80_state *state = (lc80_state *)device->machine->driver_data;
+	lc80_state *state = device->machine->driver_data<lc80_state>();
 	UINT8 data = 0xf0;
 	int i;
 
@@ -289,8 +291,8 @@ static const z80_daisy_config lc80_daisy_chain[] =
 
 static MACHINE_START( lc80 )
 {
-	lc80_state *state = (lc80_state *)machine->driver_data;
-	const address_space *program = cputag_get_address_space(machine, Z80_TAG, ADDRESS_SPACE_PROGRAM);
+	lc80_state *state = machine->driver_data<lc80_state>();
+	address_space *program = cputag_get_address_space(machine, Z80_TAG, ADDRESS_SPACE_PROGRAM);
 
 	/* find devices */
 	state->z80pio2 = machine->device(Z80PIO2_TAG);
@@ -298,19 +300,19 @@ static MACHINE_START( lc80 )
 	state->cassette = machine->device(CASSETTE_TAG);
 
 	/* setup memory banking */
-	memory_configure_bank(machine, "bank1", 0, 1, memory_region(machine, Z80_TAG), 0); // TODO
-	memory_configure_bank(machine, "bank1", 1, 1, memory_region(machine, Z80_TAG), 0);
+	memory_configure_bank(machine, "bank1", 0, 1, machine->region(Z80_TAG)->base(), 0); // TODO
+	memory_configure_bank(machine, "bank1", 1, 1, machine->region(Z80_TAG)->base(), 0);
 	memory_set_bank(machine, "bank1", 1);
 
-	memory_configure_bank(machine, "bank2", 0, 1, memory_region(machine, Z80_TAG) + 0x800, 0); // TODO
-	memory_configure_bank(machine, "bank2", 1, 1, memory_region(machine, Z80_TAG) + 0x800, 0);
+	memory_configure_bank(machine, "bank2", 0, 1, machine->region(Z80_TAG)->base() + 0x800, 0); // TODO
+	memory_configure_bank(machine, "bank2", 1, 1, machine->region(Z80_TAG)->base() + 0x800, 0);
 	memory_set_bank(machine, "bank2", 1);
 
-	memory_configure_bank(machine, "bank3", 0, 1, memory_region(machine, Z80_TAG) + 0x1000, 0); // TODO
-	memory_configure_bank(machine, "bank3", 1, 1, memory_region(machine, Z80_TAG) + 0x1000, 0);
+	memory_configure_bank(machine, "bank3", 0, 1, machine->region(Z80_TAG)->base() + 0x1000, 0); // TODO
+	memory_configure_bank(machine, "bank3", 1, 1, machine->region(Z80_TAG)->base() + 0x1000, 0);
 	memory_set_bank(machine, "bank3", 1);
 
-	memory_configure_bank(machine, "bank4", 0, 1, memory_region(machine, Z80_TAG) + 0x2000, 0);
+	memory_configure_bank(machine, "bank4", 0, 1, machine->region(Z80_TAG)->base() + 0x2000, 0);
 	memory_set_bank(machine, "bank4", 0);
 
 	memory_install_readwrite_bank(program, 0x0000, 0x07ff, 0, 0, "bank1");
@@ -354,73 +356,72 @@ static const cassette_config lc80_cassette_config =
 	NULL
 };
 
-static MACHINE_DRIVER_START( lc80 )
-	MDRV_DRIVER_DATA(lc80_state)
+static MACHINE_CONFIG_START( lc80, lc80_state )
 
 	/* basic machine hardware */
-    MDRV_CPU_ADD(Z80_TAG, Z80, 900000) /* UD880D */
-    MDRV_CPU_PROGRAM_MAP(lc80_mem)
-    MDRV_CPU_IO_MAP(lc80_io)
+    MCFG_CPU_ADD(Z80_TAG, Z80, 900000) /* UD880D */
+    MCFG_CPU_PROGRAM_MAP(lc80_mem)
+    MCFG_CPU_IO_MAP(lc80_io)
 
-    MDRV_MACHINE_START(lc80)
+    MCFG_MACHINE_START(lc80)
 
 	/* video hardware */
-	MDRV_DEFAULT_LAYOUT( layout_lc80 )
+	MCFG_DEFAULT_LAYOUT( layout_lc80 )
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD(SPEAKER_TAG, SPEAKER, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD(SPEAKER_TAG, SPEAKER_SOUND, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
 	/* devices */
-	MDRV_Z80CTC_ADD(Z80CTC_TAG, 900000, ctc_intf)
-	MDRV_Z80PIO_ADD(Z80PIO1_TAG, 900000, pio1_intf)
-	MDRV_Z80PIO_ADD(Z80PIO2_TAG, 900000, pio2_intf)
+	MCFG_Z80CTC_ADD(Z80CTC_TAG, 900000, ctc_intf)
+	MCFG_Z80PIO_ADD(Z80PIO1_TAG, 900000, pio1_intf)
+	MCFG_Z80PIO_ADD(Z80PIO2_TAG, 900000, pio2_intf)
 
-	MDRV_CASSETTE_ADD(CASSETTE_TAG, lc80_cassette_config)
+	MCFG_CASSETTE_ADD(CASSETTE_TAG, lc80_cassette_config)
 
-	MDRV_RAM_ADD("messram")
-	MDRV_RAM_DEFAULT_SIZE("1K")
-	MDRV_RAM_EXTRA_OPTIONS("2K,3K,4K")
-MACHINE_DRIVER_END
+	MCFG_RAM_ADD("messram")
+	MCFG_RAM_DEFAULT_SIZE("1K")
+	MCFG_RAM_EXTRA_OPTIONS("2K,3K,4K")
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( lc80_2 )
-	MDRV_DRIVER_DATA(lc80_state)
+static MACHINE_CONFIG_START( lc80_2, lc80_state )
 
 	/* basic machine hardware */
-    MDRV_CPU_ADD(Z80_TAG, Z80, 1800000) /* UD880D */
-    MDRV_CPU_PROGRAM_MAP(lc80_mem)
-    MDRV_CPU_IO_MAP(lc80_io)
+    MCFG_CPU_ADD(Z80_TAG, Z80, 1800000) /* UD880D */
+    MCFG_CPU_PROGRAM_MAP(lc80_mem)
+    MCFG_CPU_IO_MAP(lc80_io)
 
-    MDRV_MACHINE_START(lc80)
+    MCFG_MACHINE_START(lc80)
 
 	/* video hardware */
-	MDRV_DEFAULT_LAYOUT( layout_lc80 )
+	MCFG_DEFAULT_LAYOUT( layout_lc80 )
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD(SPEAKER_TAG, SPEAKER, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD(SPEAKER_TAG, SPEAKER_SOUND, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
 	/* devices */
-	MDRV_Z80CTC_ADD(Z80CTC_TAG, 900000, ctc_intf)
-	MDRV_Z80PIO_ADD(Z80PIO1_TAG, 900000, pio1_intf)
-	MDRV_Z80PIO_ADD(Z80PIO2_TAG, 900000, pio2_intf)
+	MCFG_Z80CTC_ADD(Z80CTC_TAG, 900000, ctc_intf)
+	MCFG_Z80PIO_ADD(Z80PIO1_TAG, 900000, pio1_intf)
+	MCFG_Z80PIO_ADD(Z80PIO2_TAG, 900000, pio2_intf)
 
-	MDRV_CASSETTE_ADD(CASSETTE_TAG, lc80_cassette_config)
+	MCFG_CASSETTE_ADD(CASSETTE_TAG, lc80_cassette_config)
 
 	/* internal ram */
-	MDRV_RAM_ADD("messram")
-	MDRV_RAM_DEFAULT_SIZE("4K")
-MACHINE_DRIVER_END
+	MCFG_RAM_ADD("messram")
+	MCFG_RAM_DEFAULT_SIZE("4K")
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( sc80 )
-	MDRV_IMPORT_FROM( lc80_2 )
+#if 0
+static MACHINE_CONFIG_DERIVED( sc80, lc80_2 )
 
 	/* basic machine hardware */
-    MDRV_CPU_MODIFY(Z80_TAG)
-    MDRV_CPU_PROGRAM_MAP(sc80_mem)
-MACHINE_DRIVER_END
+    MCFG_CPU_MODIFY(Z80_TAG)
+    MCFG_CPU_PROGRAM_MAP(sc80_mem)
+MACHINE_CONFIG_END
+#endif
 
 /* ROMs */
 

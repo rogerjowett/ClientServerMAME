@@ -154,7 +154,7 @@ struct _opcode_table_entry
 /* internal backend-specific state */
 struct _drcbe_state
 {
-	running_device *	device;					/* CPU device we are associated with */
+	device_t *	device;					/* CPU device we are associated with */
 	drcuml_state *			drcuml;					/* pointer back to our owner */
 	drccache *				cache;					/* pointer to the cache */
 	drcuml_machine_state	state;					/* state of the machine */
@@ -178,7 +178,8 @@ struct _drcbe_state
 	UINT32 *				last_upper_addr;		/* address where we last stored an upper register */
 	double					fptemp;					/* temporary storage for floating point */
 
-	const address_space *	space[ADDRESS_SPACES];	/* address spaces */
+	data_accessors			accessors[ADDRESS_SPACES];	/* memory accessors */
+	address_space *	space[ADDRESS_SPACES];	/* address spaces */
 
 	UINT8					sse3;					/* do we have SSE3 support? */
 	UINT16					fpumode;				/* saved FPU mode */
@@ -200,7 +201,7 @@ struct _drcbe_state
 ***************************************************************************/
 
 /* primary back-end callbacks */
-static drcbe_state *drcbex86_alloc(drcuml_state *drcuml, drccache *cache, running_device *device, UINT32 flags, int modes, int addrbits, int ignorebits);
+static drcbe_state *drcbex86_alloc(drcuml_state *drcuml, drccache *cache, device_t *device, UINT32 flags, int modes, int addrbits, int ignorebits);
 static void drcbex86_free(drcbe_state *drcbe);
 static void drcbex86_reset(drcbe_state *drcbe);
 static int drcbex86_execute(drcbe_state *drcbe, drcuml_codehandle *entry);
@@ -613,7 +614,7 @@ INLINE void track_resolve_link(drcbe_state *drcbe, x86code **destptr, const emit
     state
 -------------------------------------------------*/
 
-static drcbe_state *drcbex86_alloc(drcuml_state *drcuml, drccache *cache, running_device *device, UINT32 flags, int modes, int addrbits, int ignorebits)
+static drcbe_state *drcbex86_alloc(drcuml_state *drcuml, drccache *cache, device_t *device, UINT32 flags, int modes, int addrbits, int ignorebits)
 {
 	int opnum, regnum, entry, spacenum;
 	drcbe_state *drcbe;
@@ -629,9 +630,13 @@ static drcbe_state *drcbex86_alloc(drcuml_state *drcuml, drccache *cache, runnin
 	drcbe->drcuml = drcuml;
 	drcbe->cache = cache;
 
-	/* get address spaces */
+	/* get address spaces and accessors */
 	for (spacenum = 0; spacenum < ADDRESS_SPACES; spacenum++)
+	{
 		drcbe->space[spacenum] = downcast<cpu_device *>(device)->space(spacenum);
+		if (drcbe->space[spacenum] != NULL)
+			drcbe->space[spacenum]->accessors(drcbe->accessors[spacenum]);
+	}
 
 	/* allocate hash tables */
 	drcbe->hash = drchash_alloc(cache, modes, addrbits, ignorebits);
@@ -4262,25 +4267,25 @@ static x86code *op_read(drcbe_state *drcbe, x86code *dst, const drcuml_instructi
 	emit_mov_m32_imm(&dst, MBD(REG_ESP, 0), (UINT32)drcbe->space[spacesizep.value / 16]);// mov    [esp],space
 	if ((spacesizep.value & 3) == DRCUML_SIZE_BYTE)
 	{
-		emit_call(&dst, (x86code *)drcbe->space[spacesizep.value / 16]->accessors.read_byte);
+		emit_call(&dst, (x86code *)drcbe->accessors[spacesizep.value / 16].read_byte);
 																						// call   read_byte
 		emit_movzx_r32_r8(&dst, dstreg, REG_AL);										// movzx  dstreg,al
 	}
 	else if ((spacesizep.value & 3) == DRCUML_SIZE_WORD)
 	{
-		emit_call(&dst, (x86code *)drcbe->space[spacesizep.value / 16]->accessors.read_word);
+		emit_call(&dst, (x86code *)drcbe->accessors[spacesizep.value / 16].read_word);
 																						// call   read_word
 		emit_movzx_r32_r16(&dst, dstreg, REG_AX);										// movzx  dstreg,ax
 	}
 	else if ((spacesizep.value & 3) == DRCUML_SIZE_DWORD)
 	{
-		emit_call(&dst, (x86code *)drcbe->space[spacesizep.value / 16]->accessors.read_dword);
+		emit_call(&dst, (x86code *)drcbe->accessors[spacesizep.value / 16].read_dword);
 																						// call   read_dword
 		emit_mov_r32_r32(&dst, dstreg, REG_EAX);										// mov    dstreg,eax
 	}
 	else if ((spacesizep.value & 3) == DRCUML_SIZE_QWORD)
 	{
-		emit_call(&dst, (x86code *)drcbe->space[spacesizep.value / 16]->accessors.read_qword);
+		emit_call(&dst, (x86code *)drcbe->accessors[spacesizep.value / 16].read_qword);
 																						// call   read_qword
 		emit_mov_r32_r32(&dst, dstreg, REG_EAX);										// mov    dstreg,eax
 	}
@@ -4342,19 +4347,19 @@ static x86code *op_readm(drcbe_state *drcbe, x86code *dst, const drcuml_instruct
 	emit_mov_m32_imm(&dst, MBD(REG_ESP, 0), (UINT32)drcbe->space[spacesizep.value / 16]);// mov    [esp],space
 	if ((spacesizep.value & 3) == DRCUML_SIZE_WORD)
 	{
-		emit_call(&dst, (x86code *)drcbe->space[spacesizep.value / 16]->accessors.read_word_masked);
+		emit_call(&dst, (x86code *)drcbe->accessors[spacesizep.value / 16].read_word_masked);
 																						// call   read_word_masked
 		emit_movzx_r32_r16(&dst, dstreg, REG_AX);										// movzx  dstreg,ax
 	}
 	else if ((spacesizep.value & 3) == DRCUML_SIZE_DWORD)
 	{
-		emit_call(&dst, (x86code *)drcbe->space[spacesizep.value / 16]->accessors.read_dword_masked);
+		emit_call(&dst, (x86code *)drcbe->accessors[spacesizep.value / 16].read_dword_masked);
 																						// call   read_dword_masked
 		emit_mov_r32_r32(&dst, dstreg, REG_EAX);										// mov    dstreg,eax
 	}
 	else if ((spacesizep.value & 3) == DRCUML_SIZE_QWORD)
 	{
-		emit_call(&dst, (x86code *)drcbe->space[spacesizep.value / 16]->accessors.read_qword_masked);
+		emit_call(&dst, (x86code *)drcbe->accessors[spacesizep.value / 16].read_qword_masked);
 																						// call   read_qword_masked
 		emit_mov_r32_r32(&dst, dstreg, REG_EAX);										// mov    dstreg,eax
 	}
@@ -4411,16 +4416,16 @@ static x86code *op_write(drcbe_state *drcbe, x86code *dst, const drcuml_instruct
 	emit_mov_m32_p32(drcbe, &dst, MBD(REG_ESP, 4), &addrp);								// mov    [esp+4],addrp
 	emit_mov_m32_imm(&dst, MBD(REG_ESP, 0), (UINT32)drcbe->space[spacesizep.value / 16]);// mov    [esp],space
 	if ((spacesizep.value & 3) == DRCUML_SIZE_BYTE)
-		emit_call(&dst, (x86code *)drcbe->space[spacesizep.value / 16]->accessors.write_byte);
+		emit_call(&dst, (x86code *)drcbe->accessors[spacesizep.value / 16].write_byte);
 																						// call   write_byte
 	else if ((spacesizep.value & 3) == DRCUML_SIZE_WORD)
-		emit_call(&dst, (x86code *)drcbe->space[spacesizep.value / 16]->accessors.write_word);
+		emit_call(&dst, (x86code *)drcbe->accessors[spacesizep.value / 16].write_word);
 																						// call   write_word
 	else if ((spacesizep.value & 3) == DRCUML_SIZE_DWORD)
-		emit_call(&dst, (x86code *)drcbe->space[spacesizep.value / 16]->accessors.write_dword);
+		emit_call(&dst, (x86code *)drcbe->accessors[spacesizep.value / 16].write_dword);
 																						// call   write_dword
 	else if ((spacesizep.value & 3) == DRCUML_SIZE_QWORD)
-		emit_call(&dst, (x86code *)drcbe->space[spacesizep.value / 16]->accessors.write_qword);
+		emit_call(&dst, (x86code *)drcbe->accessors[spacesizep.value / 16].write_qword);
 																						// call   write_qword
 	return dst;
 }
@@ -4456,13 +4461,13 @@ static x86code *op_writem(drcbe_state *drcbe, x86code *dst, const drcuml_instruc
 	emit_mov_m32_p32(drcbe, &dst, MBD(REG_ESP, 4), &addrp);								// mov    [esp+4],addrp
 	emit_mov_m32_imm(&dst, MBD(REG_ESP, 0), (UINT32)drcbe->space[spacesizep.value / 16]);// mov    [esp],space
 	if ((spacesizep.value & 3) == DRCUML_SIZE_WORD)
-		emit_call(&dst, (x86code *)drcbe->space[spacesizep.value / 16]->accessors.write_word_masked);
+		emit_call(&dst, (x86code *)drcbe->accessors[spacesizep.value / 16].write_word_masked);
 																						// call   write_word_masked
 	else if ((spacesizep.value & 3) == DRCUML_SIZE_DWORD)
-		emit_call(&dst, (x86code *)drcbe->space[spacesizep.value / 16]->accessors.write_dword_masked);
+		emit_call(&dst, (x86code *)drcbe->accessors[spacesizep.value / 16].write_dword_masked);
 																						// call   write_dword_masked
 	else if ((spacesizep.value & 3) == DRCUML_SIZE_QWORD)
-		emit_call(&dst, (x86code *)drcbe->space[spacesizep.value / 16]->accessors.write_qword_masked);
+		emit_call(&dst, (x86code *)drcbe->accessors[spacesizep.value / 16].write_qword_masked);
 																						// call   write_qword_masked
 	return dst;
 }
@@ -6411,9 +6416,9 @@ static x86code *op_fread(drcbe_state *drcbe, x86code *dst, const drcuml_instruct
 	emit_mov_m32_p32(drcbe, &dst, MBD(REG_ESP, 4), &addrp);								// mov    [esp+4],addrp
 	emit_mov_m32_imm(&dst, MBD(REG_ESP, 0), (UINT32)drcbe->space[spacep.value]);		// mov    [esp],space
 	if (inst->size == 4)
-		emit_call(&dst, (x86code *)drcbe->space[spacep.value]->accessors.read_dword);	// call   read_dword
+		emit_call(&dst, (x86code *)drcbe->accessors[spacep.value].read_dword);	// call   read_dword
 	else if (inst->size == 8)
-		emit_call(&dst, (x86code *)drcbe->space[spacep.value]->accessors.read_qword);	// call   read_qword
+		emit_call(&dst, (x86code *)drcbe->accessors[spacep.value].read_qword);	// call   read_qword
 
 	/* store result */
 	if (inst->size == 4)
@@ -6449,9 +6454,9 @@ static x86code *op_fwrite(drcbe_state *drcbe, x86code *dst, const drcuml_instruc
 	emit_mov_m32_p32(drcbe, &dst, MBD(REG_ESP, 4), &addrp);								// mov    [esp+4],addrp
 	emit_mov_m32_imm(&dst, MBD(REG_ESP, 0), (UINT32)drcbe->space[spacep.value]);		// mov    [esp],space
 	if (inst->size == 4)
-		emit_call(&dst, (x86code *)drcbe->space[spacep.value]->accessors.write_dword);	// call   write_dword
+		emit_call(&dst, (x86code *)drcbe->accessors[spacep.value].write_dword);	// call   write_dword
 	else if (inst->size == 8)
-		emit_call(&dst, (x86code *)drcbe->space[spacep.value]->accessors.write_qword);	// call   write_qword
+		emit_call(&dst, (x86code *)drcbe->accessors[spacep.value].write_qword);	// call   write_qword
 
 	return dst;
 }

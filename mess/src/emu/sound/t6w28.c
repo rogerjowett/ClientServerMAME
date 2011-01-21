@@ -58,10 +58,10 @@ struct _t6w28_state
 };
 
 
-INLINE t6w28_state *get_safe_token(running_device *device)
+INLINE t6w28_state *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
-	assert(device->type() == SOUND_T6W28);
+	assert(device->type() == T6W28);
 	return (t6w28_state *)downcast<legacy_device_base *>(device)->token();
 }
 
@@ -305,7 +305,7 @@ static void t6w28_set_gain(t6w28_state *R,int gain)
 
 
 
-static int t6w28_init(running_device *device, t6w28_state *R)
+static int t6w28_init(device_t *device, t6w28_state *R)
 {
 	int sample_rate = device->clock()/16;
 	int i;

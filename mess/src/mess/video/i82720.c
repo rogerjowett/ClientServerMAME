@@ -668,9 +668,9 @@ INLINE void gdc_cmd_pitch(void)
 /*-------------------------------------------------------------------------*/
 INLINE void gdc_cmd_start(void)
 {
-  /*   MDRV_SCREEN_SIZE(gdc.registers.display.words_per_line*16, */
+  /*   MCFG_SCREEN_SIZE(gdc.registers.display.words_per_line*16, */
 /*                      gdc.registers.display.lines_per_field); */
-/*     MDRV_SCREEN_VISIBLE_AREA(0, */
+/*     MCFG_SCREEN_VISIBLE_AREA(0, */
 /*                       gdc.registers.display.words_per_line*16-1, */
 /*                       0, */
 /*                       gdc.registers.display.lines_per_field-1); */
@@ -1469,7 +1469,6 @@ static void compis_gdc_start(running_machine *machine, const compis_gdc_interfac
 
 	gdc_mess.tmpbmp = auto_bitmap_alloc (machine, 640, 400, BITMAP_FORMAT_INDEXED16);
 	gdc_fifo_reset(&gdc);
-	machine->generic.videoram_size = gdc_mess.vramsize;
 
 	VIDEO_START_CALL(generic_bitmapped);
 }

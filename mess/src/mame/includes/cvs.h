@@ -16,12 +16,11 @@ struct cvs_star
 	int x, y, code;
 };
 
-class cvs_state
+class cvs_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, cvs_state(machine)); }
-
-	cvs_state(running_machine &machine) { }
+	cvs_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *    video_ram;
@@ -58,14 +57,14 @@ public:
 	UINT8      page, io_page;	// quasar
 
 	/* devices */
-	running_device *maincpu;
-	running_device *audiocpu;
-	running_device *speech;
-	running_device *dac3;
-	running_device *tms;
-	running_device *s2636_0;
-	running_device *s2636_1;
-	running_device *s2636_2;
+	device_t *maincpu;
+	device_t *audiocpu;
+	device_t *speech;
+	device_t *dac3;
+	device_t *tms;
+	device_t *s2636_0;
+	device_t *s2636_1;
+	device_t *s2636_2;
 };
 
 /*----------- defined in drivers/cvs.c -----------*/

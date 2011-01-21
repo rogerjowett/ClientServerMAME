@@ -34,12 +34,11 @@ Notes:
 #include "cpu/z80/z80.h"
 #include "sound/dac.h"
 
-class go2000_state
+class go2000_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, go2000_state(machine)); }
-
-	go2000_state(running_machine &machine) { }
+	go2000_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT16 *  videoram;
@@ -47,13 +46,13 @@ public:
 //  UINT16 *  paletteram;   // currently this uses generic palette handling
 
 	/* devices */
-	running_device *soundcpu;
+	device_t *soundcpu;
 };
 
 
 static WRITE16_HANDLER( sound_cmd_w )
 {
-	go2000_state *state = (go2000_state *)space->machine->driver_data;
+	go2000_state *state = space->machine->driver_data<go2000_state>();
 	soundlatch_w(space, offset, data & 0xff);
 	cpu_set_input_line(state->soundcpu, 0, HOLD_LINE);
 }
@@ -172,7 +171,7 @@ static VIDEO_START(go2000)
 
 static VIDEO_UPDATE(go2000)
 {
-	go2000_state *state = (go2000_state *)screen->machine->driver_data;
+	go2000_state *state = screen->machine->driver_data<go2000_state>();
 	int x,y;
 	int count = 0;
 
@@ -307,8 +306,8 @@ static VIDEO_UPDATE(go2000)
 
 static MACHINE_START( go2000 )
 {
-	go2000_state *state = (go2000_state *)machine->driver_data;
-	UINT8 *SOUND = memory_region(machine, "soundcpu");
+	go2000_state *state = machine->driver_data<go2000_state>();
+	UINT8 *SOUND = machine->region("soundcpu")->base();
 	int i;
 
 	for (i = 0; i < 8; i++)
@@ -319,39 +318,38 @@ static MACHINE_START( go2000 )
 	state->soundcpu = machine->device("soundcpu");
 }
 
-static MACHINE_DRIVER_START( go2000 )
-	MDRV_DRIVER_DATA(go2000_state)
+static MACHINE_CONFIG_START( go2000, go2000_state )
 
-	MDRV_CPU_ADD("maincpu", M68000, 10000000)
-	MDRV_CPU_PROGRAM_MAP(go2000_map)
-	MDRV_CPU_VBLANK_INT("screen", irq1_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, 10000000)
+	MCFG_CPU_PROGRAM_MAP(go2000_map)
+	MCFG_CPU_VBLANK_INT("screen", irq1_line_hold)
 
-	MDRV_CPU_ADD("soundcpu", Z80, 4000000)
-	MDRV_CPU_PROGRAM_MAP(go2000_sound_map)
-	MDRV_CPU_IO_MAP(go2000_sound_io)
+	MCFG_CPU_ADD("soundcpu", Z80, 4000000)
+	MCFG_CPU_PROGRAM_MAP(go2000_sound_map)
+	MCFG_CPU_IO_MAP(go2000_sound_io)
 
-	MDRV_MACHINE_START(go2000)
+	MCFG_MACHINE_START(go2000)
 
-	MDRV_GFXDECODE(go2000)
+	MCFG_GFXDECODE(go2000)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 48*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 48*8-1, 2*8, 30*8-1)
 
-	MDRV_PALETTE_LENGTH(0x800)
+	MCFG_PALETTE_LENGTH(0x800)
 
-	MDRV_VIDEO_START(go2000)
-	MDRV_VIDEO_UPDATE(go2000)
+	MCFG_VIDEO_START(go2000)
+	MCFG_VIDEO_UPDATE(go2000)
 
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("dac1", DAC, 0)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.50)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("dac1", DAC, 0)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.50)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.50)
+MACHINE_CONFIG_END
 
 ROM_START( go2000 )
 	ROM_REGION( 0x80000, "maincpu", 0 ) /* 68000 Code */

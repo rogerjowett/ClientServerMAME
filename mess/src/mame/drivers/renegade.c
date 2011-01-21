@@ -108,16 +108,7 @@ $8000 - $ffff   ROM
 #include "cpu/m6805/m6805.h"
 #include "sound/3526intf.h"
 #include "sound/okim6295.h"
-
-extern VIDEO_UPDATE( renegade );
-extern VIDEO_START( renegade );
-WRITE8_HANDLER( renegade_scroll0_w );
-WRITE8_HANDLER( renegade_scroll1_w );
-WRITE8_HANDLER( renegade_videoram_w );
-WRITE8_HANDLER( renegade_videoram2_w );
-WRITE8_HANDLER( renegade_flipscreen_w );
-
-extern UINT8 *renegade_videoram2;
+#include "includes/renegade.h"
 
 static UINT8 bank;
 static int mcu_sim;
@@ -184,7 +175,7 @@ static DEVICE_START( renegade_adpcm )
 	struct renegade_adpcm_state *state = &renegade_adpcm;
 	state->playing = 0;
 	state->stream = stream_create(device, 0, 1, device->clock(), state, renegade_adpcm_callback);
-	state->base = memory_region(machine, "adpcm");
+	state->base = machine->region("adpcm")->base();
 	state->adpcm.reset();
 }
 
@@ -258,7 +249,7 @@ static const UINT8 kuniokun_xor_table[0x2a] =
 
 static void setbank(running_machine *machine)
 {
-	UINT8 *RAM = memory_region(machine, "maincpu");
+	UINT8 *RAM = machine->region("maincpu")->base();
 	memory_set_bankptr(machine, "bank1", &RAM[bank ? 0x10000 : 0x4000]);
 }
 
@@ -290,12 +281,12 @@ static DRIVER_INIT( kuniokun )
 	mcu_encrypt_table = kuniokun_xor_table;
 	mcu_encrypt_table_len = 0x2a;
 
-	cputag_suspend(machine, "mcu", SUSPEND_REASON_DISABLE, 1);
+	machine->device<cpu_device>("mcu")->suspend(SUSPEND_REASON_DISABLE, 1);
 }
 
 static DRIVER_INIT( kuniokunb )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	/* Remove the MCU handlers */
 	memory_unmap_readwrite(space, 0x3804, 0x3804, 0, 0);
@@ -677,7 +668,7 @@ static ADDRESS_MAP_START( renegade_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x17ff) AM_RAM
 	AM_RANGE(0x1800, 0x1fff) AM_RAM_WRITE(renegade_videoram2_w) AM_BASE(&renegade_videoram2)
 	AM_RANGE(0x2000, 0x27ff) AM_RAM AM_BASE_GENERIC(spriteram)
-	AM_RANGE(0x2800, 0x2fff) AM_RAM_WRITE(renegade_videoram_w) AM_BASE_GENERIC(videoram)
+	AM_RANGE(0x2800, 0x2fff) AM_RAM_WRITE(renegade_videoram_w) AM_BASE_MEMBER(renegade_state, videoram)
 	AM_RANGE(0x3000, 0x30ff) AM_RAM_WRITE(paletteram_xxxxBBBBGGGGRRRR_split1_w) AM_BASE_GENERIC(paletteram)
 	AM_RANGE(0x3100, 0x31ff) AM_RAM_WRITE(paletteram_xxxxBBBBGGGGRRRR_split2_w) AM_BASE_GENERIC(paletteram2)
 	AM_RANGE(0x3800, 0x3800) AM_READ_PORT("IN0") AM_WRITE(renegade_scroll0_w)		/* Player#1 controls, P1,P2 start */
@@ -909,7 +900,7 @@ GFXDECODE_END
 
 
 /* handler called by the 3526 emulator when the internal timers cause an IRQ */
-static void irqhandler(running_device *device, int linestate)
+static void irqhandler(device_t *device, int linestate)
 {
 	cputag_set_input_line(device->machine, "audiocpu", M6809_FIRQ_LINE, linestate);
 }
@@ -927,52 +918,51 @@ static MACHINE_RESET( renegade )
 }
 
 
-static MACHINE_DRIVER_START( renegade )
+static MACHINE_CONFIG_START( renegade, renegade_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6502, 12000000/8)	/* 1.5 MHz (measured) */
-	MDRV_CPU_PROGRAM_MAP(renegade_map)
-	MDRV_CPU_VBLANK_INT_HACK(renegade_interrupt,2)
+	MCFG_CPU_ADD("maincpu", M6502, 12000000/8)	/* 1.5 MHz (measured) */
+	MCFG_CPU_PROGRAM_MAP(renegade_map)
+	MCFG_CPU_VBLANK_INT_HACK(renegade_interrupt,2)
 
-	MDRV_CPU_ADD("audiocpu", M6809, 12000000/8)
-	MDRV_CPU_PROGRAM_MAP(renegade_sound_map)	/* IRQs are caused by the main CPU */
+	MCFG_CPU_ADD("audiocpu", M6809, 12000000/8)
+	MCFG_CPU_PROGRAM_MAP(renegade_sound_map)	/* IRQs are caused by the main CPU */
 
-	MDRV_CPU_ADD("mcu", M68705, 12000000/4) // ?
-	MDRV_CPU_PROGRAM_MAP(renegade_mcu_map)
+	MCFG_CPU_ADD("mcu", M68705, 12000000/4) // ?
+	MCFG_CPU_PROGRAM_MAP(renegade_mcu_map)
 
-	MDRV_MACHINE_START(renegade)
-	MDRV_MACHINE_RESET(renegade)
+	MCFG_MACHINE_START(renegade)
+	MCFG_MACHINE_RESET(renegade)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)*2)  /* not accurate */
-    MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-    MDRV_SCREEN_SIZE(32*8, 32*8)
-    MDRV_SCREEN_VISIBLE_AREA(1*8, 31*8-1, 0, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)*2)  /* not accurate */
+    MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+    MCFG_SCREEN_SIZE(32*8, 32*8)
+    MCFG_SCREEN_VISIBLE_AREA(1*8, 31*8-1, 0, 30*8-1)
 
-    MDRV_GFXDECODE(renegade)
-    MDRV_PALETTE_LENGTH(256)
+    MCFG_GFXDECODE(renegade)
+    MCFG_PALETTE_LENGTH(256)
 
-    MDRV_VIDEO_START(renegade)
-    MDRV_VIDEO_UPDATE(renegade)
+    MCFG_VIDEO_START(renegade)
+    MCFG_VIDEO_UPDATE(renegade)
 
     /* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM3526, 12000000/4)
-	MDRV_SOUND_CONFIG(ym3526_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM3526, 12000000/4)
+	MCFG_SOUND_CONFIG(ym3526_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-	MDRV_SOUND_ADD("adpcm", RENEGADE_ADPCM, 8000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("adpcm", RENEGADE_ADPCM, 8000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( kuniokunb )
-	MDRV_IMPORT_FROM(renegade)
-	MDRV_DEVICE_REMOVE("mcu")
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( kuniokunb, renegade )
+	MCFG_DEVICE_REMOVE("mcu")
+MACHINE_CONFIG_END
 
 
 ROM_START( renegade )

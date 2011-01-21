@@ -24,13 +24,13 @@
 
 static WRITE8_HANDLER( bogeyman_8910_latch_w )
 {
-	bogeyman_state *state = (bogeyman_state *)space->machine->driver_data;
+	bogeyman_state *state = space->machine->driver_data<bogeyman_state>();
 	state->psg_latch = data;
 }
 
 static WRITE8_HANDLER( bogeyman_8910_control_w )
 {
-	bogeyman_state *state = (bogeyman_state *)space->machine->driver_data;
+	bogeyman_state *state = space->machine->driver_data<bogeyman_state>();
 
 	// bit 0 is flipscreen
 	flip_screen_set(space->machine, data & 0x01);
@@ -207,7 +207,7 @@ GFXDECODE_END
 
 static MACHINE_START( bogeyman )
 {
-	bogeyman_state *state = (bogeyman_state *)machine->driver_data;
+	bogeyman_state *state = machine->driver_data<bogeyman_state>();
 
 	state_save_register_global(machine, state->psg_latch);
 	state_save_register_global(machine, state->last_write);
@@ -215,7 +215,7 @@ static MACHINE_START( bogeyman )
 
 static MACHINE_RESET( bogeyman )
 {
-	bogeyman_state *state = (bogeyman_state *)machine->driver_data;
+	bogeyman_state *state = machine->driver_data<bogeyman_state>();
 
 	state->psg_latch = 0;
 	state->last_write = 0;
@@ -223,7 +223,7 @@ static MACHINE_RESET( bogeyman )
 
 static WRITE8_DEVICE_HANDLER( bogeyman_colbank_w )
 {
-	bogeyman_state *state = (bogeyman_state *)device->machine->driver_data;
+	bogeyman_state *state = device->machine->driver_data<bogeyman_state>();
 
 	if((data & 1) != (state->colbank & 1))
 	{
@@ -242,46 +242,43 @@ static const ay8910_interface ay8910_config =
 	DEVCB_NULL
 };
 
-static MACHINE_DRIVER_START( bogeyman )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(bogeyman_state)
+static MACHINE_CONFIG_START( bogeyman, bogeyman_state )
 
 	// basic machine hardware
-	MDRV_CPU_ADD("maincpu", M6502, 1500000)	/* Verified */
-	MDRV_CPU_PROGRAM_MAP(bogeyman_map)
-	MDRV_CPU_VBLANK_INT_HACK(irq0_line_hold, 16) // Controls sound
+	MCFG_CPU_ADD("maincpu", M6502, 1500000)	/* Verified */
+	MCFG_CPU_PROGRAM_MAP(bogeyman_map)
+	MCFG_CPU_VBLANK_INT_HACK(irq0_line_hold, 16) // Controls sound
 
-	MDRV_MACHINE_START(bogeyman)
-	MDRV_MACHINE_RESET(bogeyman)
+	MCFG_MACHINE_START(bogeyman)
+	MCFG_MACHINE_RESET(bogeyman)
 
 	// video hardware
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 1*8, 31*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 1*8, 31*8-1)
 
-	MDRV_GFXDECODE(bogeyman)
-	MDRV_PALETTE_LENGTH(16+256)
+	MCFG_GFXDECODE(bogeyman)
+	MCFG_PALETTE_LENGTH(16+256)
 
-	MDRV_PALETTE_INIT(bogeyman)
-	MDRV_VIDEO_START(bogeyman)
-	MDRV_VIDEO_UPDATE(bogeyman)
+	MCFG_PALETTE_INIT(bogeyman)
+	MCFG_VIDEO_START(bogeyman)
+	MCFG_VIDEO_UPDATE(bogeyman)
 
 	// sound hardware
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ay1", AY8910, 1500000)	/* Verified */
-	MDRV_SOUND_CONFIG(ay8910_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
+	MCFG_SOUND_ADD("ay1", AY8910, 1500000)	/* Verified */
+	MCFG_SOUND_CONFIG(ay8910_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
 
-	MDRV_SOUND_ADD("ay2", AY8910, 1500000)	/* Verified */
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ay2", AY8910, 1500000)	/* Verified */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
+MACHINE_CONFIG_END
 
 /* ROMs */
 

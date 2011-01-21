@@ -233,7 +233,7 @@ DISCRETE_SOUND_END
 
 static READ8_HANDLER( osi600_keyboard_r )
 {
-	osi_state *state = (osi_state *)space->machine->driver_data;
+	osi_state *state = space->machine->driver_data<osi_state>();
 
 	static const char *const keynames[] = { "ROW0", "ROW1", "ROW2", "ROW3", "ROW4", "ROW5", "ROW6", "ROW7" };
 
@@ -250,8 +250,8 @@ static READ8_HANDLER( osi600_keyboard_r )
 
 static WRITE8_HANDLER( osi600_keyboard_w )
 {
-	running_device *discrete = space->machine->device("discrete");
-	osi_state *state = (osi_state *)space->machine->driver_data;
+	device_t *discrete = space->machine->device("discrete");
+	osi_state *state = space->machine->driver_data<osi_state>();
 
 	state->keylatch = data;
 
@@ -260,7 +260,7 @@ static WRITE8_HANDLER( osi600_keyboard_w )
 
 static WRITE8_HANDLER( uk101_keyboard_w )
 {
-	osi_state *state = (osi_state *)space->machine->driver_data;
+	osi_state *state = space->machine->driver_data<osi_state>();
 
 	state->keylatch = data;
 }
@@ -282,8 +282,8 @@ static WRITE8_HANDLER( osi600_ctrl_w )
 
     */
 
-	running_device *discrete = space->machine->device("discrete");
-	osi_state *state = (osi_state *)space->machine->driver_data;
+	device_t *discrete = space->machine->device("discrete");
+	osi_state *state = space->machine->driver_data<osi_state>();
 
 	state->_32 = BIT(data, 0);
 	state->coloren = BIT(data, 1);
@@ -293,7 +293,7 @@ static WRITE8_HANDLER( osi600_ctrl_w )
 
 static WRITE8_HANDLER( osi630_ctrl_w )
 {
-	running_device *speaker = space->machine->device("beep");
+	device_t *speaker = space->machine->device("beep");
 	/*
 
         bit     description
@@ -314,7 +314,7 @@ static WRITE8_HANDLER( osi630_ctrl_w )
 
 static WRITE8_HANDLER( osi630_sound_w )
 {
-	running_device *speaker = space->machine->device("beep");
+	device_t *speaker = space->machine->device("beep");
 	if (data) beep_set_frequency(speaker, 49152/data);
 }
 
@@ -354,9 +354,9 @@ static WRITE8_HANDLER( osi630_sound_w )
     C011 ACIAIO         DISK CONTROLLER ACIA I/O PORT
 */
 
-static void osi470_index_callback(running_device *controller, running_device *img, int state)
+static void osi470_index_callback(device_t *controller, device_t *img, int state)
 {
-	osi_state *driver_state = (osi_state *)img->machine->driver_data;
+	osi_state *driver_state = img->machine->driver_data<osi_state>();
 
 	driver_state->fdc_index = state;
 }
@@ -379,7 +379,7 @@ static READ8_DEVICE_HANDLER( osi470_pia_a_r )
 
     */
 
-	osi_state *state = (osi_state *)device->machine->driver_data;
+	osi_state *state = device->machine->driver_data<osi_state>();
 
 	return (state->fdc_index << 7);
 }
@@ -615,14 +615,14 @@ INPUT_PORTS_END
 
 static READ_LINE_DEVICE_HANDLER( cassette_rx )
 {
-	osi_state *driver_state = (osi_state *)device->machine->driver_data;
+	osi_state *driver_state = device->machine->driver_data<osi_state>();
 
 	return (cassette_input(driver_state->cassette) > 0.0) ? 1 : 0;
 }
 
 static WRITE_LINE_DEVICE_HANDLER( cassette_tx )
 {
-	osi_state *driver_state = (osi_state *)device->machine->driver_data;
+	osi_state *driver_state = device->machine->driver_data<osi_state>();
 
 	cassette_output(driver_state->cassette, state ? +1.0 : -1.0);
 }
@@ -665,15 +665,15 @@ static ACIA6850_INTERFACE( osi470_acia_intf )
 
 static MACHINE_START( osi600 )
 {
-	osi_state *state = (osi_state *)machine->driver_data;
+	osi_state *state = machine->driver_data<osi_state>();
 
-	const address_space *program = cputag_get_address_space(machine, M6502_TAG, ADDRESS_SPACE_PROGRAM);
+	address_space *program = cputag_get_address_space(machine, M6502_TAG, ADDRESS_SPACE_PROGRAM);
 
 	/* find devices */
 	state->cassette = machine->device(CASSETTE_TAG);
 
 	/* configure RAM banking */
-	memory_configure_bank(machine, "bank1", 0, 1, memory_region(machine, M6502_TAG), 0);
+	memory_configure_bank(machine, "bank1", 0, 1, machine->region(M6502_TAG)->base(), 0);
 	memory_set_bank(machine, "bank1", 0);
 
 	switch (messram_get_size(machine->device("messram")))
@@ -695,15 +695,15 @@ static MACHINE_START( osi600 )
 
 static MACHINE_START( c1p )
 {
-	osi_state *state = (osi_state *)machine->driver_data;
+	osi_state *state = machine->driver_data<osi_state>();
 
-	const address_space *program = cputag_get_address_space(machine, M6502_TAG, ADDRESS_SPACE_PROGRAM);
+	address_space *program = cputag_get_address_space(machine, M6502_TAG, ADDRESS_SPACE_PROGRAM);
 
 	/* find devices */
 	state->cassette = machine->device(CASSETTE_TAG);
 
 	/* configure RAM banking */
-	memory_configure_bank(machine, "bank1", 0, 1, memory_region(machine, M6502_TAG), 0);
+	memory_configure_bank(machine, "bank1", 0, 1, machine->region(M6502_TAG)->base(), 0);
 	memory_set_bank(machine, "bank1", 0);
 
 	switch (messram_get_size(machine->device("messram")))
@@ -776,118 +776,114 @@ GFXDECODE_END
 
 /* Machine Drivers */
 
-static MACHINE_DRIVER_START( osi600 )
-	MDRV_DRIVER_DATA(osi_state)
+static MACHINE_CONFIG_START( osi600, osi_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD(M6502_TAG, M6502, X1/4) // .98304 MHz
-	MDRV_CPU_PROGRAM_MAP(osi600_mem)
+	MCFG_CPU_ADD(M6502_TAG, M6502, X1/4) // .98304 MHz
+	MCFG_CPU_PROGRAM_MAP(osi600_mem)
 
-	MDRV_MACHINE_START(osi600)
+	MCFG_MACHINE_START(osi600)
 
 	/* video hardware */
-	MDRV_IMPORT_FROM(osi600_video)
-	MDRV_GFXDECODE(osi)
+	MCFG_FRAGMENT_ADD(osi600_video)
+	MCFG_GFXDECODE(osi)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("discrete", DISCRETE, 0)
-	MDRV_SOUND_CONFIG_DISCRETE(osi600_discrete_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("discrete", DISCRETE, 0)
+	MCFG_SOUND_CONFIG_DISCRETE(osi600_discrete_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
 
 	/* cassette ACIA */
-	MDRV_ACIA6850_ADD("acia_0", osi600_acia_intf)
+	MCFG_ACIA6850_ADD("acia_0", osi600_acia_intf)
 
 	/* cassette */
-	MDRV_CASSETTE_ADD("cassette", default_cassette_config)
+	MCFG_CASSETTE_ADD("cassette", default_cassette_config)
 
 	/* internal ram */
-	MDRV_RAM_ADD("messram")
-	MDRV_RAM_DEFAULT_SIZE("4K")
-	MDRV_RAM_EXTRA_OPTIONS("8K")
-MACHINE_DRIVER_END
+	MCFG_RAM_ADD("messram")
+	MCFG_RAM_DEFAULT_SIZE("4K")
+	MCFG_RAM_EXTRA_OPTIONS("8K")
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( uk101 )
-	MDRV_DRIVER_DATA(osi_state)
+static MACHINE_CONFIG_START( uk101, osi_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD(M6502_TAG, M6502, UK101_X1/8) // 1 MHz
-	MDRV_CPU_PROGRAM_MAP(uk101_mem)
+	MCFG_CPU_ADD(M6502_TAG, M6502, UK101_X1/8) // 1 MHz
+	MCFG_CPU_PROGRAM_MAP(uk101_mem)
 
-	MDRV_MACHINE_START(osi600)
+	MCFG_MACHINE_START(osi600)
 
 	/* video hardware */
-	MDRV_IMPORT_FROM(uk101_video)
-	MDRV_GFXDECODE(osi)
+	MCFG_FRAGMENT_ADD(uk101_video)
+	MCFG_GFXDECODE(osi)
 
 	/* cassette ACIA */
-	MDRV_ACIA6850_ADD("acia_0", uk101_acia_intf)
+	MCFG_ACIA6850_ADD("acia_0", uk101_acia_intf)
 
 	/* cassette */
-	MDRV_CASSETTE_ADD("cassette", default_cassette_config)
+	MCFG_CASSETTE_ADD("cassette", default_cassette_config)
 
 	/* internal ram */
-	MDRV_RAM_ADD("messram")
-	MDRV_RAM_DEFAULT_SIZE("4K")
-	MDRV_RAM_EXTRA_OPTIONS("8K")
-MACHINE_DRIVER_END
+	MCFG_RAM_ADD("messram")
+	MCFG_RAM_DEFAULT_SIZE("4K")
+	MCFG_RAM_EXTRA_OPTIONS("8K")
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( c1p )
-	MDRV_DRIVER_DATA(osi_state)
+static MACHINE_CONFIG_START( c1p, osi_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD(M6502_TAG, M6502, X1/4) // .98304 MHz
-	MDRV_CPU_PROGRAM_MAP(c1p_mem)
+	MCFG_CPU_ADD(M6502_TAG, M6502, X1/4) // .98304 MHz
+	MCFG_CPU_PROGRAM_MAP(c1p_mem)
 
-	MDRV_MACHINE_START(c1p)
+	MCFG_MACHINE_START(c1p)
 
 	/* video hardware */
-	MDRV_IMPORT_FROM(osi630_video)
-	MDRV_GFXDECODE(osi)
+	MCFG_FRAGMENT_ADD(osi630_video)
+	MCFG_GFXDECODE(osi)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("discrete", DISCRETE, 0)
-	MDRV_SOUND_CONFIG_DISCRETE(osi600c_discrete_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
-	MDRV_SOUND_ADD("beep", BEEP, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("discrete", DISCRETE, 0)
+	MCFG_SOUND_CONFIG_DISCRETE(osi600c_discrete_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
+	MCFG_SOUND_ADD("beep", BEEP, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
 
-	MDRV_PIA6821_ADD( "pia_1", pia_dummy_intf )
-	MDRV_PIA6821_ADD( "pia_2", pia_dummy_intf )
-	MDRV_PIA6821_ADD( "pia_3", pia_dummy_intf )
+	MCFG_PIA6821_ADD( "pia_1", pia_dummy_intf )
+	MCFG_PIA6821_ADD( "pia_2", pia_dummy_intf )
+	MCFG_PIA6821_ADD( "pia_3", pia_dummy_intf )
 
 	/* cassette ACIA */
-	MDRV_ACIA6850_ADD("acia_0", osi600_acia_intf)
+	MCFG_ACIA6850_ADD("acia_0", osi600_acia_intf)
 
 	/* cassette */
-	MDRV_CASSETTE_ADD("cassette", default_cassette_config)
+	MCFG_CASSETTE_ADD("cassette", default_cassette_config)
 
 	/* internal ram */
-	MDRV_RAM_ADD("messram")
-	MDRV_RAM_DEFAULT_SIZE("8K")
-	MDRV_RAM_EXTRA_OPTIONS("20K")
-MACHINE_DRIVER_END
+	MCFG_RAM_ADD("messram")
+	MCFG_RAM_DEFAULT_SIZE("8K")
+	MCFG_RAM_EXTRA_OPTIONS("20K")
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( c1pmf )
-	MDRV_IMPORT_FROM(c1p)
+static MACHINE_CONFIG_DERIVED( c1pmf, c1p )
 
-	MDRV_CPU_MODIFY(M6502_TAG)
-	MDRV_CPU_PROGRAM_MAP(c1pmf_mem)
+	MCFG_CPU_MODIFY(M6502_TAG)
+	MCFG_CPU_PROGRAM_MAP(c1pmf_mem)
 
-	MDRV_MACHINE_START(c1pmf)
+	MCFG_MACHINE_START(c1pmf)
 
-	MDRV_PIA6821_ADD( "pia_0", osi470_pia_intf )
+	MCFG_PIA6821_ADD( "pia_0", osi470_pia_intf )
 
 	/* floppy ACIA */
-	MDRV_ACIA6850_ADD("acia_1", osi470_acia_intf)
+	MCFG_ACIA6850_ADD("acia_1", osi470_acia_intf)
 
-	MDRV_FLOPPY_DRIVE_ADD(FLOPPY_0, osi_floppy_config)
+	MCFG_FLOPPY_DRIVE_ADD(FLOPPY_0, osi_floppy_config)
 
 	/* internal ram */
-	MDRV_RAM_MODIFY("messram")
-	MDRV_RAM_DEFAULT_SIZE("20K")
-MACHINE_DRIVER_END
+	MCFG_RAM_MODIFY("messram")
+	MCFG_RAM_DEFAULT_SIZE("20K")
+MACHINE_CONFIG_END
 
 /* ROMs */
 
@@ -922,7 +918,7 @@ ROM_END
 
 static TIMER_CALLBACK( setup_beep )
 {
-	running_device *speaker = machine->device("beep");
+	device_t *speaker = machine->device("beep");
 	beep_set_state(speaker, 0);
 	beep_set_frequency(speaker, 300);
 }

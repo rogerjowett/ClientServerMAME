@@ -283,6 +283,7 @@
 #include "emu.h"
 #include "cpu/mcs48/mcs48.h"
 #include "cpu/mcs51/mcs51.h"
+#include "machine/nvram.h"
 #include "sound/ay8910.h"
 #include "sound/dac.h"
 #include "videopkr.lh"
@@ -473,42 +474,6 @@ static VIDEO_UPDATE( videopkr )
 	tilemap_mark_all_tiles_dirty(bg_tilemap);
 	tilemap_draw(bitmap, cliprect, bg_tilemap, 0, 0);
 	return 0;
-}
-
-/********************
-*   NVRAM Handler   *
-********************/
-
-static NVRAM_HANDLER( videopkr )
-{
-	if (read_or_write)
-	{
-		mame_fwrite(file, data_ram, DATA_NVRAM_SIZE);
-		mame_fwrite(file, &count1, 8);
-		mame_fwrite(file, &count2, 8);
-		mame_fwrite(file, &count3, 8);
-		mame_fwrite(file, &count4, 8);
-
-	}
-	else
-	{
-		if (file)
-		{
-			mame_fread(file, data_ram, DATA_NVRAM_SIZE);
-			mame_fread(file, &count1, 8);
-			mame_fread(file, &count2, 8);
-			mame_fread(file, &count3, 8);
-			mame_fread(file, &count4, 8);
-		}
-		else
-		{
-			memset(data_ram, 0, DATA_NVRAM_SIZE);
-			memset(data_ram, count0, 8);
-			memset(data_ram, count0, 8);
-			memset(data_ram, count0, 8);
-			memset(data_ram, count0, 8);
-		}
-	}
 }
 
 
@@ -1191,6 +1156,8 @@ static MACHINE_START(videopkr)
 	p1 = 0xff;
 	ant_cio = 0;
 	count0 = 0;
+
+	machine->device<nvram_device>("nvram")->set_base(data_ram, sizeof(data_ram));
 }
 
 static const ay8910_interface ay8910_config =
@@ -1208,108 +1175,104 @@ static const ay8910_interface ay8910_config =
 *    Machine Drivers    *
 ************************/
 
-static MACHINE_DRIVER_START( videopkr )
+static MACHINE_CONFIG_START( videopkr, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", I8039, CPU_CLOCK)
-	MDRV_CPU_PROGRAM_MAP(i8039_map)
-	MDRV_CPU_IO_MAP(i8039_io_port)
+	MCFG_CPU_ADD("maincpu", I8039, CPU_CLOCK)
+	MCFG_CPU_PROGRAM_MAP(i8039_map)
+	MCFG_CPU_IO_MAP(i8039_io_port)
 
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_assert)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_assert)
 
-	MDRV_CPU_ADD("soundcpu", I8039, SOUND_CLOCK)
-	MDRV_CPU_PROGRAM_MAP(i8039_sound_mem)
-	MDRV_CPU_IO_MAP(i8039_sound_port)
-	MDRV_MACHINE_START(videopkr)
-	MDRV_NVRAM_HANDLER(videopkr)
+	MCFG_CPU_ADD("soundcpu", I8039, SOUND_CLOCK)
+	MCFG_CPU_PROGRAM_MAP(i8039_sound_mem)
+	MCFG_CPU_IO_MAP(i8039_sound_port)
+	MCFG_MACHINE_START(videopkr)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
-	MDRV_TIMER_ADD_PERIODIC("t1_timer", sound_t1_callback, HZ(50))
+	MCFG_TIMER_ADD_PERIODIC("t1_timer", sound_t1_callback, HZ(50))
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(5*8, 31*8-1, 3*8, 29*8-1)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(5*8, 31*8-1, 3*8, 29*8-1)
 
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(2080)
-	MDRV_GFXDECODE(videopkr)
-	MDRV_PALETTE_INIT(videopkr)
-	MDRV_PALETTE_LENGTH(256)
-	MDRV_VIDEO_START(videopkr)
-	MDRV_VIDEO_UPDATE(videopkr)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(2080)
+	MCFG_GFXDECODE(videopkr)
+	MCFG_PALETTE_INIT(videopkr)
+	MCFG_PALETTE_LENGTH(256)
+	MCFG_VIDEO_START(videopkr)
+	MCFG_VIDEO_UPDATE(videopkr)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("dac", DAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.55)
-MACHINE_DRIVER_END
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("dac", DAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.55)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( blckjack )
+static MACHINE_CONFIG_DERIVED( blckjack, videopkr )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(videopkr)
 
 	/* video hardware */
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(4*8, 31*8-1, 2*8, 30*8-1)
-MACHINE_DRIVER_END
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(4*8, 31*8-1, 2*8, 30*8-1)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( videodad )
+static MACHINE_CONFIG_DERIVED( videodad, videopkr )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(videopkr)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_CLOCK(CPU_CLOCK_ALT)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_CLOCK(CPU_CLOCK_ALT)
 
 	/* video hardware */
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_SIZE(32*16, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(4*16, 31*16-1, 2*8, 30*8-1)
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_SIZE(32*16, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(4*16, 31*16-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(videodad)
-	MDRV_VIDEO_START(vidadcba)
-MACHINE_DRIVER_END
+	MCFG_GFXDECODE(videodad)
+	MCFG_VIDEO_START(vidadcba)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( babypkr )
+static MACHINE_CONFIG_DERIVED( babypkr, videopkr )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(videopkr)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_CLOCK(CPU_CLOCK_ALT)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_CLOCK(CPU_CLOCK_ALT)
 	/* most likely romless or eprom */
-	MDRV_CPU_REPLACE("soundcpu", I8031, CPU_CLOCK )
-	MDRV_CPU_PROGRAM_MAP(i8051_sound_mem)
-	MDRV_CPU_IO_MAP(i8051_sound_port)
+	MCFG_CPU_REPLACE("soundcpu", I8031, CPU_CLOCK )
+	MCFG_CPU_PROGRAM_MAP(i8051_sound_mem)
+	MCFG_CPU_IO_MAP(i8051_sound_port)
 
 	/* video hardware */
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_SIZE(32*16, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(5*16, 31*16-1, 3*8, 29*8-1)
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_SIZE(32*16, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(5*16, 31*16-1, 3*8, 29*8-1)
 
-	MDRV_PALETTE_INIT(babypkr)
-	MDRV_GFXDECODE(videodad)
-	MDRV_VIDEO_START(vidadcba)
+	MCFG_PALETTE_INIT(babypkr)
+	MCFG_GFXDECODE(videodad)
+	MCFG_VIDEO_START(vidadcba)
 
-	MDRV_SOUND_ADD("aysnd", AY8910, CPU_CLOCK / 6)
-	MDRV_SOUND_CONFIG(ay8910_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("aysnd", AY8910, CPU_CLOCK / 6)
+	MCFG_SOUND_CONFIG(ay8910_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( fortune1 )
+static MACHINE_CONFIG_DERIVED( fortune1, videopkr )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(videopkr)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_CLOCK(CPU_CLOCK_ALT)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_CLOCK(CPU_CLOCK_ALT)
 
-	MDRV_PALETTE_INIT(fortune1)
-MACHINE_DRIVER_END
+	MCFG_PALETTE_INIT(fortune1)
+MACHINE_CONFIG_END
 
 /*************************
 *        Rom Load        *

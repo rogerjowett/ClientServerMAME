@@ -39,7 +39,7 @@ static INTERRUPT_GEN( fromanc2_interrupt )
 
 static WRITE16_HANDLER( fromanc2_sndcmd_w )
 {
-	fromanc2_state *state = (fromanc2_state *)space->machine->driver_data;
+	fromanc2_state *state = space->machine->driver_data<fromanc2_state>();
 
 	soundlatch_w(space, offset, (data >> 8) & 0xff);	// 1P (LEFT)
 	soundlatch2_w(space, offset, data & 0xff);			// 2P (RIGHT)
@@ -50,13 +50,13 @@ static WRITE16_HANDLER( fromanc2_sndcmd_w )
 
 static WRITE16_HANDLER( fromanc2_portselect_w )
 {
-	fromanc2_state *state = (fromanc2_state *)space->machine->driver_data;
+	fromanc2_state *state = space->machine->driver_data<fromanc2_state>();
 	state->portselect = data;
 }
 
 static READ16_HANDLER( fromanc2_keymatrix_r )
 {
-	fromanc2_state *state = (fromanc2_state *)space->machine->driver_data;
+	fromanc2_state *state = space->machine->driver_data<fromanc2_state>();
 	UINT16 ret;
 
 	switch (state->portselect)
@@ -75,19 +75,19 @@ static READ16_HANDLER( fromanc2_keymatrix_r )
 
 static CUSTOM_INPUT( subcpu_int_r )
 {
-	fromanc2_state *state = (fromanc2_state *)field->port->machine->driver_data;
+	fromanc2_state *state = field->port->machine->driver_data<fromanc2_state>();
 	return state->subcpu_int_flag & 0x01;
 }
 
 static CUSTOM_INPUT( sndcpu_nmi_r )
 {
-	fromanc2_state *state = (fromanc2_state *)field->port->machine->driver_data;
+	fromanc2_state *state = field->port->machine->driver_data<fromanc2_state>();
 	return state->sndcpu_nmi_flag & 0x01;
 }
 
 static CUSTOM_INPUT( subcpu_nmi_r )
 {
-	fromanc2_state *state = (fromanc2_state *)field->port->machine->driver_data;
+	fromanc2_state *state = field->port->machine->driver_data<fromanc2_state>();
 	return state->subcpu_nmi_flag & 0x01;
 }
 
@@ -114,7 +114,7 @@ static WRITE16_HANDLER( fromanc4_eeprom_w )
 
 static WRITE16_HANDLER( fromanc2_subcpu_w )
 {
-	fromanc2_state *state = (fromanc2_state *)space->machine->driver_data;
+	fromanc2_state *state = space->machine->driver_data<fromanc2_state>();
 	state->datalatch1 = data;
 
 	cpu_set_input_line(state->subcpu, 0, HOLD_LINE);
@@ -123,7 +123,7 @@ static WRITE16_HANDLER( fromanc2_subcpu_w )
 
 static READ16_HANDLER( fromanc2_subcpu_r )
 {
-	fromanc2_state *state = (fromanc2_state *)space->machine->driver_data;
+	fromanc2_state *state = space->machine->driver_data<fromanc2_state>();
 	cpu_set_input_line(state->subcpu, INPUT_LINE_NMI, PULSE_LINE);
 	state->subcpu_nmi_flag = 0;
 
@@ -132,13 +132,13 @@ static READ16_HANDLER( fromanc2_subcpu_r )
 
 static READ8_HANDLER( fromanc2_maincpu_r_l )
 {
-	fromanc2_state *state = (fromanc2_state *)space->machine->driver_data;
+	fromanc2_state *state = space->machine->driver_data<fromanc2_state>();
 	return state->datalatch1 & 0x00ff;
 }
 
 static READ8_HANDLER( fromanc2_maincpu_r_h )
 {
-	fromanc2_state *state = (fromanc2_state *)space->machine->driver_data;
+	fromanc2_state *state = space->machine->driver_data<fromanc2_state>();
 	state->subcpu_int_flag = 1;
 
 	return (state->datalatch1 & 0xff00) >> 8;
@@ -146,25 +146,25 @@ static READ8_HANDLER( fromanc2_maincpu_r_h )
 
 static WRITE8_HANDLER( fromanc2_maincpu_w_l )
 {
-	fromanc2_state *state = (fromanc2_state *)space->machine->driver_data;
+	fromanc2_state *state = space->machine->driver_data<fromanc2_state>();
 	state->datalatch_2l = data;
 }
 
 static WRITE8_HANDLER( fromanc2_maincpu_w_h )
 {
-	fromanc2_state *state = (fromanc2_state *)space->machine->driver_data;
+	fromanc2_state *state = space->machine->driver_data<fromanc2_state>();
 	state->datalatch_2h = data;
 }
 
 static WRITE8_HANDLER( fromanc2_subcpu_nmi_clr )
 {
-	fromanc2_state *state = (fromanc2_state *)space->machine->driver_data;
+	fromanc2_state *state = space->machine->driver_data<fromanc2_state>();
 	state->subcpu_nmi_flag = 1;
 }
 
 static READ8_HANDLER( fromanc2_sndcpu_nmi_clr )
 {
-	fromanc2_state *state = (fromanc2_state *)space->machine->driver_data;
+	fromanc2_state *state = space->machine->driver_data<fromanc2_state>();
 	state->sndcpu_nmi_flag = 1;
 
 	return 0xff;
@@ -495,9 +495,9 @@ GFXDECODE_END
  *
  *************************************/
 
-static void irqhandler(running_device *device, int irq)
+static void irqhandler(device_t *device, int irq)
 {
-	fromanc2_state *state = (fromanc2_state *)device->machine->driver_data;
+	fromanc2_state *state = device->machine->driver_data<fromanc2_state>();
 	cpu_set_input_line(state->audiocpu, 0, irq ? ASSERT_LINE : CLEAR_LINE);
 }
 
@@ -515,7 +515,7 @@ static const ym2610_interface ym2610_config =
 
 static MACHINE_START( fromanc4 )
 {
-	fromanc2_state *state = (fromanc2_state *)machine->driver_data;
+	fromanc2_state *state = machine->driver_data<fromanc2_state>();
 
 	state->audiocpu = machine->device("audiocpu");
 	state->subcpu = machine->device("sub");
@@ -534,11 +534,11 @@ static MACHINE_START( fromanc4 )
 
 static MACHINE_START( fromanc2 )
 {
-	fromanc2_state *state = (fromanc2_state *)machine->driver_data;
+	fromanc2_state *state = machine->driver_data<fromanc2_state>();
 
-	memory_configure_bank(machine, "bank1", 0, 4, memory_region(machine, "sub"), 0x4000);
-	memory_configure_bank(machine, "bank2", 0, 1, memory_region(machine, "sub") + 0x08000, 0x4000);
-	memory_configure_bank(machine, "bank2", 1, 3, memory_region(machine, "sub") + 0x14000, 0x4000);
+	memory_configure_bank(machine, "bank1", 0, 4, machine->region("sub")->base(), 0x4000);
+	memory_configure_bank(machine, "bank2", 0, 1, machine->region("sub")->base() + 0x08000, 0x4000);
+	memory_configure_bank(machine, "bank2", 1, 3, machine->region("sub")->base() + 0x14000, 0x4000);
 
 	MACHINE_START_CALL(fromanc4);
 
@@ -548,7 +548,7 @@ static MACHINE_START( fromanc2 )
 
 static MACHINE_RESET( fromanc2 )
 {
-	fromanc2_state *state = (fromanc2_state *)machine->driver_data;
+	fromanc2_state *state = machine->driver_data<fromanc2_state>();
 
 	state->portselect = 0;
 	state->datalatch1 = 0;
@@ -556,167 +556,158 @@ static MACHINE_RESET( fromanc2 )
 	state->datalatch_2l = 0;
 }
 
-static MACHINE_DRIVER_START( fromanc2 )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(fromanc2_state)
+static MACHINE_CONFIG_START( fromanc2, fromanc2_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000,32000000/2)		/* 16.00 MHz */
-	MDRV_CPU_PROGRAM_MAP(fromanc2_main_map)
-	MDRV_CPU_VBLANK_INT("lscreen", fromanc2_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000,32000000/2)		/* 16.00 MHz */
+	MCFG_CPU_PROGRAM_MAP(fromanc2_main_map)
+	MCFG_CPU_VBLANK_INT("lscreen", fromanc2_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z80,32000000/4)		/* 8.00 MHz */
-	MDRV_CPU_PROGRAM_MAP(fromanc2_sound_map)
-	MDRV_CPU_IO_MAP(fromanc2_sound_io_map)
+	MCFG_CPU_ADD("audiocpu", Z80,32000000/4)		/* 8.00 MHz */
+	MCFG_CPU_PROGRAM_MAP(fromanc2_sound_map)
+	MCFG_CPU_IO_MAP(fromanc2_sound_io_map)
 
-	MDRV_CPU_ADD("sub", Z80,32000000/4)		/* 8.00 MHz */
-	MDRV_CPU_PROGRAM_MAP(fromanc2_sub_map)
-	MDRV_CPU_IO_MAP(fromanc2_sub_io_map)
+	MCFG_CPU_ADD("sub", Z80,32000000/4)		/* 8.00 MHz */
+	MCFG_CPU_PROGRAM_MAP(fromanc2_sub_map)
+	MCFG_CPU_IO_MAP(fromanc2_sub_io_map)
 
-	MDRV_MACHINE_START(fromanc2)
-	MDRV_MACHINE_RESET(fromanc2)
+	MCFG_MACHINE_START(fromanc2)
+	MCFG_MACHINE_RESET(fromanc2)
 
-	MDRV_EEPROM_93C46_ADD("eeprom")
+	MCFG_EEPROM_93C46_ADD("eeprom")
 
 	/* video hardware */
-	MDRV_GFXDECODE(fromanc2)
-	MDRV_PALETTE_LENGTH(4096)
-	MDRV_DEFAULT_LAYOUT(layout_dualhsxs)
+	MCFG_GFXDECODE(fromanc2)
+	MCFG_PALETTE_LENGTH(4096)
+	MCFG_DEFAULT_LAYOUT(layout_dualhsxs)
 
-	MDRV_SCREEN_ADD("lscreen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_SIZE(512, 512)
-	MDRV_SCREEN_VISIBLE_AREA(0, 352-1, 0, 240-1)
+	MCFG_SCREEN_ADD("lscreen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_SIZE(512, 512)
+	MCFG_SCREEN_VISIBLE_AREA(0, 352-1, 0, 240-1)
 
-	MDRV_SCREEN_ADD("rscreen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_SIZE(512, 512)
-	MDRV_SCREEN_VISIBLE_AREA(0, 352-1, 0, 240-1)
+	MCFG_SCREEN_ADD("rscreen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_SIZE(512, 512)
+	MCFG_SCREEN_VISIBLE_AREA(0, 352-1, 0, 240-1)
 
-	MDRV_VIDEO_START(fromanc2)
-	MDRV_VIDEO_UPDATE(fromanc2)
+	MCFG_VIDEO_START(fromanc2)
+	MCFG_VIDEO_UPDATE(fromanc2)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM2610, 8000000)
-	MDRV_SOUND_CONFIG(ym2610_config)
-	MDRV_SOUND_ROUTE(0, "mono", 0.50)
-	MDRV_SOUND_ROUTE(1, "mono", 0.75)
-	MDRV_SOUND_ROUTE(2, "mono", 0.75)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2610, 8000000)
+	MCFG_SOUND_CONFIG(ym2610_config)
+	MCFG_SOUND_ROUTE(0, "mono", 0.50)
+	MCFG_SOUND_ROUTE(1, "mono", 0.75)
+	MCFG_SOUND_ROUTE(2, "mono", 0.75)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( fromancr )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(fromanc2_state)
+static MACHINE_CONFIG_START( fromancr, fromanc2_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000,32000000/2)		/* 16.00 MHz */
-	MDRV_CPU_PROGRAM_MAP(fromancr_main_map)
-	MDRV_CPU_VBLANK_INT("lscreen", fromanc2_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000,32000000/2)		/* 16.00 MHz */
+	MCFG_CPU_PROGRAM_MAP(fromancr_main_map)
+	MCFG_CPU_VBLANK_INT("lscreen", fromanc2_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z80,32000000/4)		/* 8.00 MHz */
-	MDRV_CPU_PROGRAM_MAP(fromanc2_sound_map)
-	MDRV_CPU_IO_MAP(fromanc2_sound_io_map)
+	MCFG_CPU_ADD("audiocpu", Z80,32000000/4)		/* 8.00 MHz */
+	MCFG_CPU_PROGRAM_MAP(fromanc2_sound_map)
+	MCFG_CPU_IO_MAP(fromanc2_sound_io_map)
 
-	MDRV_CPU_ADD("sub", Z80,32000000/4)		/* 8.00 MHz */
-	MDRV_CPU_PROGRAM_MAP(fromanc2_sub_map)
-	MDRV_CPU_IO_MAP(fromanc2_sub_io_map)
+	MCFG_CPU_ADD("sub", Z80,32000000/4)		/* 8.00 MHz */
+	MCFG_CPU_PROGRAM_MAP(fromanc2_sub_map)
+	MCFG_CPU_IO_MAP(fromanc2_sub_io_map)
 
-	MDRV_MACHINE_START(fromanc2)
-	MDRV_MACHINE_RESET(fromanc2)
+	MCFG_MACHINE_START(fromanc2)
+	MCFG_MACHINE_RESET(fromanc2)
 
-	MDRV_EEPROM_93C46_ADD("eeprom")
+	MCFG_EEPROM_93C46_ADD("eeprom")
 
 	/* video hardware */
-	MDRV_GFXDECODE(fromancr)
-	MDRV_PALETTE_LENGTH(4096)
-	MDRV_DEFAULT_LAYOUT(layout_dualhsxs)
+	MCFG_GFXDECODE(fromancr)
+	MCFG_PALETTE_LENGTH(4096)
+	MCFG_DEFAULT_LAYOUT(layout_dualhsxs)
 
-	MDRV_SCREEN_ADD("lscreen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_SIZE(512, 512)
-	MDRV_SCREEN_VISIBLE_AREA(0, 352-1, 0, 240-1)
+	MCFG_SCREEN_ADD("lscreen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_SIZE(512, 512)
+	MCFG_SCREEN_VISIBLE_AREA(0, 352-1, 0, 240-1)
 
-	MDRV_SCREEN_ADD("rscreen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_SIZE(512, 512)
-	MDRV_SCREEN_VISIBLE_AREA(0, 352-1, 0, 240-1)
+	MCFG_SCREEN_ADD("rscreen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_SIZE(512, 512)
+	MCFG_SCREEN_VISIBLE_AREA(0, 352-1, 0, 240-1)
 
-	MDRV_VIDEO_START(fromancr)
-	MDRV_VIDEO_UPDATE(fromanc2)
+	MCFG_VIDEO_START(fromancr)
+	MCFG_VIDEO_UPDATE(fromanc2)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM2610, 8000000)
-	MDRV_SOUND_CONFIG(ym2610_config)
-	MDRV_SOUND_ROUTE(0, "mono", 0.50)
-	MDRV_SOUND_ROUTE(1, "mono", 0.75)
-	MDRV_SOUND_ROUTE(2, "mono", 0.75)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2610, 8000000)
+	MCFG_SOUND_CONFIG(ym2610_config)
+	MCFG_SOUND_ROUTE(0, "mono", 0.50)
+	MCFG_SOUND_ROUTE(1, "mono", 0.75)
+	MCFG_SOUND_ROUTE(2, "mono", 0.75)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( fromanc4 )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(fromanc2_state)
+static MACHINE_CONFIG_START( fromanc4, fromanc2_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000,32000000/2)		/* 16.00 MHz */
-	MDRV_CPU_PROGRAM_MAP(fromanc4_main_map)
-	MDRV_CPU_VBLANK_INT("lscreen", fromanc2_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000,32000000/2)		/* 16.00 MHz */
+	MCFG_CPU_PROGRAM_MAP(fromanc4_main_map)
+	MCFG_CPU_VBLANK_INT("lscreen", fromanc2_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z80,32000000/4)		/* 8.00 MHz */
-	MDRV_CPU_PROGRAM_MAP(fromanc2_sound_map)
-	MDRV_CPU_IO_MAP(fromanc2_sound_io_map)
+	MCFG_CPU_ADD("audiocpu", Z80,32000000/4)		/* 8.00 MHz */
+	MCFG_CPU_PROGRAM_MAP(fromanc2_sound_map)
+	MCFG_CPU_IO_MAP(fromanc2_sound_io_map)
 
-	MDRV_MACHINE_START(fromanc4)
-	MDRV_MACHINE_RESET(fromanc2)
+	MCFG_MACHINE_START(fromanc4)
+	MCFG_MACHINE_RESET(fromanc2)
 
-	MDRV_EEPROM_93C46_ADD("eeprom")
+	MCFG_EEPROM_93C46_ADD("eeprom")
 
 	/* video hardware */
-	MDRV_GFXDECODE(fromancr)
-	MDRV_PALETTE_LENGTH(4096)
+	MCFG_GFXDECODE(fromancr)
+	MCFG_PALETTE_LENGTH(4096)
 
-	MDRV_DEFAULT_LAYOUT(layout_dualhsxs)
+	MCFG_DEFAULT_LAYOUT(layout_dualhsxs)
 
-	MDRV_SCREEN_ADD("lscreen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_SIZE(2048, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 352-1, 0, 240-1)
+	MCFG_SCREEN_ADD("lscreen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_SIZE(2048, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 352-1, 0, 240-1)
 
-	MDRV_SCREEN_ADD("rscreen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_SIZE(512, 512)
-	MDRV_SCREEN_VISIBLE_AREA(0, 352-1, 0, 240-1)
+	MCFG_SCREEN_ADD("rscreen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_SIZE(512, 512)
+	MCFG_SCREEN_VISIBLE_AREA(0, 352-1, 0, 240-1)
 
-	MDRV_VIDEO_START(fromanc4)
-	MDRV_VIDEO_UPDATE(fromanc2)
+	MCFG_VIDEO_START(fromanc4)
+	MCFG_VIDEO_UPDATE(fromanc2)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM2610, 8000000)
-	MDRV_SOUND_CONFIG(ym2610_config)
-	MDRV_SOUND_ROUTE(0, "mono", 0.50)
-	MDRV_SOUND_ROUTE(1, "mono", 0.75)
-	MDRV_SOUND_ROUTE(2, "mono", 0.75)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2610, 8000000)
+	MCFG_SOUND_CONFIG(ym2610_config)
+	MCFG_SOUND_ROUTE(0, "mono", 0.50)
+	MCFG_SOUND_ROUTE(1, "mono", 0.75)
+	MCFG_SOUND_ROUTE(2, "mono", 0.75)
+MACHINE_CONFIG_END
 
 
 /*************************************
@@ -834,7 +825,7 @@ ROM_END
 
 static DRIVER_INIT( fromanc2 )
 {
-	fromanc2_state *state = (fromanc2_state *)machine->driver_data;
+	fromanc2_state *state = machine->driver_data<fromanc2_state>();
 	state->subcpu_nmi_flag = 1;
 	state->subcpu_int_flag = 1;
 	state->sndcpu_nmi_flag = 1;
@@ -842,7 +833,7 @@ static DRIVER_INIT( fromanc2 )
 
 static DRIVER_INIT( fromanc4 )
 {
-	fromanc2_state *state = (fromanc2_state *)machine->driver_data;
+	fromanc2_state *state = machine->driver_data<fromanc2_state>();
 	state->sndcpu_nmi_flag = 1;
 }
 

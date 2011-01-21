@@ -50,65 +50,64 @@
 #include "formats/vg5k_cas.h"
 
 
-class vg5k_state
+class vg5k_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, vg5k_state(machine)); }
+	vg5k_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
-	vg5k_state(running_machine &machine) { }
+	ef9345_device *ef9345;
+	device_t *dac;
+	device_t *printer;
+	device_t *cassette;
 
-	running_device *ef9345;
-	running_device *dac;
-	running_device *printer;
-	running_device *cassette;
-
-	UINT8 ef9345_offset;
+	offs_t ef9345_offset;
 };
 
 
-READ8_HANDLER( printer_r )
+static READ8_HANDLER( printer_r )
 {
-	vg5k_state *vg5k = (vg5k_state *)space->machine->driver_data;
+	vg5k_state *vg5k = space->machine->driver_data<vg5k_state>();
 
 	return (printer_is_ready(vg5k->printer) ? 0x00 : 0xff);
 }
 
 
-WRITE8_HANDLER( printer_w )
+static WRITE8_HANDLER( printer_w )
 {
-	vg5k_state *vg5k = (vg5k_state *)space->machine->driver_data;
+	vg5k_state *vg5k = space->machine->driver_data<vg5k_state>();
 
 	printer_output(vg5k->printer, data);
 }
 
 
-WRITE8_HANDLER ( ef9345_offset_w )
+static WRITE8_HANDLER ( ef9345_offset_w )
 {
-	vg5k_state *vg5k = (vg5k_state *)space->machine->driver_data;
+	vg5k_state *vg5k = space->machine->driver_data<vg5k_state>();
 
 	vg5k->ef9345_offset = data;
 }
 
 
-READ8_HANDLER ( ef9345_io_r )
+static READ8_HANDLER ( ef9345_io_r )
 {
-	vg5k_state *vg5k = (vg5k_state *)space->machine->driver_data;
+	vg5k_state *vg5k = space->machine->driver_data<vg5k_state>();
 
-	return ef9345_r(vg5k->ef9345, vg5k->ef9345_offset);
+	return vg5k->ef9345->data_r(*space, vg5k->ef9345_offset, 0xff);
 }
 
 
-WRITE8_HANDLER ( ef9345_io_w )
+static WRITE8_HANDLER ( ef9345_io_w )
 {
-	vg5k_state *vg5k = (vg5k_state *)space->machine->driver_data;
+	vg5k_state *vg5k = space->machine->driver_data<vg5k_state>();
 
-	ef9345_w(vg5k->ef9345, vg5k->ef9345_offset, data);
+	vg5k->ef9345->data_w(*space, vg5k->ef9345_offset, data, 0xff);
 }
 
 
-READ8_HANDLER ( cassette_r )
+static READ8_HANDLER ( cassette_r )
 {
-	vg5k_state *vg5k = (vg5k_state *)space->machine->driver_data;
+	vg5k_state *vg5k = space->machine->driver_data<vg5k_state>();
 	double level;
 
 	level = cassette_input(vg5k->cassette);
@@ -117,9 +116,9 @@ READ8_HANDLER ( cassette_r )
 }
 
 
-WRITE8_HANDLER ( cassette_w )
+static WRITE8_HANDLER ( cassette_w )
 {
-	vg5k_state *vg5k = (vg5k_state *)space->machine->driver_data;
+	vg5k_state *vg5k = space->machine->driver_data<vg5k_state>();
 
 	dac_data_w(vg5k->dac, data <<2);
 
@@ -290,17 +289,17 @@ static TIMER_CALLBACK( z80_irq )
 
 static TIMER_DEVICE_CALLBACK( vg5k_scanline )
 {
-	vg5k_state *vg5k = (vg5k_state *)timer.machine->driver_data;
+	vg5k_state *vg5k = timer.machine->driver_data<vg5k_state>();
 
-	ef9345_scanline(vg5k->ef9345, (UINT16)param);
+	vg5k->ef9345->update_scanline((UINT16)param);
 }
 
 
 static MACHINE_START( vg5k )
 {
-	vg5k_state *vg5k = (vg5k_state *)machine->driver_data;
+	vg5k_state *vg5k = machine->driver_data<vg5k_state>();
 
-	vg5k->ef9345 = machine->device("ef9345");
+	vg5k->ef9345 = machine->device<ef9345_device>("ef9345");
 	vg5k->dac = machine->device("dac");
 	vg5k->printer = machine->device("printer");
 	vg5k->cassette = machine->device("cassette");
@@ -312,7 +311,7 @@ static MACHINE_START( vg5k )
 
 static MACHINE_RESET( vg5k )
 {
-	vg5k_state *vg5k = (vg5k_state *)machine->driver_data;
+	vg5k_state *vg5k = machine->driver_data<vg5k_state>();
 
 	vg5k->ef9345_offset = 0;
 }
@@ -323,9 +322,9 @@ static VIDEO_START( vg5k )
 
 static VIDEO_UPDATE( vg5k )
 {
-	vg5k_state *vg5k = (vg5k_state *)screen->machine->driver_data;
+	vg5k_state *vg5k = screen->machine->driver_data<vg5k_state>();
 
-	video_update_ef9345(vg5k->ef9345, bitmap, cliprect);
+	vg5k->ef9345->video_update(bitmap, cliprect);
 
 	return 0;
 }
@@ -345,12 +344,12 @@ static const gfx_layout vg5k_charlayout =
 };
 
 static GFXDECODE_START( vg5k )
-	GFXDECODE_ENTRY( "gfx1", 0x2000, vg5k_charlayout, 0, 4 )
+	GFXDECODE_ENTRY( "ef9345", 0x2000, vg5k_charlayout, 0, 4 )
 GFXDECODE_END
 
 static DRIVER_INIT( vg5k )
 {
-	UINT8 *FNT = memory_region(machine, "gfx1");
+	UINT8 *FNT = machine->region("ef9345")->base();
 	UINT16 a,b,c,d,dest=0x2000;
 
 	/* Unscramble the chargen rom as the format is too complex for gfxdecode to handle unaided */
@@ -362,7 +361,7 @@ static DRIVER_INIT( vg5k )
 
 
 	/* install expansion memory*/
-	const address_space *program = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *program = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 	UINT8 *ram = messram_get_ptr(machine->device("messram"));
 	UINT16 ram_size = messram_get_size(machine->device("messram"));
 
@@ -371,10 +370,9 @@ static DRIVER_INIT( vg5k )
 }
 
 
-static const ef9345_config vg5k_ef9345_config =
+static const ef9345_interface vg5k_ef9345_config =
 {
-	"screen",			/* screen we are acting on */
-	"gfx1"				/* charset */
+	"screen"			/* screen we are acting on */
 };
 
 static const struct CassetteOptions vg5k_cassette_options =
@@ -393,54 +391,53 @@ static const cassette_config vg5k_cassette_config =
 };
 
 
-static MACHINE_DRIVER_START( vg5k )
-	MDRV_DRIVER_DATA(vg5k_state)
+static MACHINE_CONFIG_START( vg5k, vg5k_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu",Z80, XTAL_4MHz)
-	MDRV_CPU_PROGRAM_MAP(vg5k_mem)
-	MDRV_CPU_IO_MAP(vg5k_io)
+	MCFG_CPU_ADD("maincpu",Z80, XTAL_4MHz)
+	MCFG_CPU_PROGRAM_MAP(vg5k_mem)
+	MCFG_CPU_IO_MAP(vg5k_io)
 
-	MDRV_TIMER_ADD_SCANLINE("vg5k_scanline", vg5k_scanline, "screen", 0, 10)
+	MCFG_TIMER_ADD_SCANLINE("vg5k_scanline", vg5k_scanline, "screen", 0, 10)
 
-	MDRV_EF9345_ADD("ef9345", vg5k_ef9345_config)
+	MCFG_EF9345_ADD("ef9345", vg5k_ef9345_config)
 
-	MDRV_MACHINE_START(vg5k)
-	MDRV_MACHINE_RESET(vg5k)
+	MCFG_MACHINE_START(vg5k)
+	MCFG_MACHINE_RESET(vg5k)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(50)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(336, 300)
-	MDRV_SCREEN_VISIBLE_AREA(00, 336-1, 00, 270-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(50)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(336, 300)
+	MCFG_SCREEN_VISIBLE_AREA(00, 336-1, 00, 270-1)
 
-	MDRV_GFXDECODE(vg5k)
-	MDRV_PALETTE_LENGTH(8)
+	MCFG_GFXDECODE(vg5k)
+	MCFG_PALETTE_LENGTH(8)
 
-	MDRV_VIDEO_START(vg5k)
-	MDRV_VIDEO_UPDATE(vg5k)
+	MCFG_VIDEO_START(vg5k)
+	MCFG_VIDEO_UPDATE(vg5k)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("dac", DAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("dac", DAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
 	/* cassette */
-	MDRV_SOUND_WAVE_ADD("wave", "cassette")
-	MDRV_SOUND_ROUTE(0, "mono", 0.1)
+	MCFG_SOUND_WAVE_ADD("wave", "cassette")
+	MCFG_SOUND_ROUTE(0, "mono", 0.1)
 
-	MDRV_CASSETTE_ADD( "cassette", vg5k_cassette_config )
+	MCFG_CASSETTE_ADD( "cassette", vg5k_cassette_config )
 
 	/* printer */
-	MDRV_PRINTER_ADD("printer")
+	MCFG_PRINTER_ADD("printer")
 
 	/* internal ram */
-	MDRV_RAM_ADD("messram")
-	MDRV_RAM_DEFAULT_SIZE("16K")
-	MDRV_RAM_EXTRA_OPTIONS("32K,48k")
-MACHINE_DRIVER_END
+	MCFG_RAM_ADD("messram")
+	MCFG_RAM_DEFAULT_SIZE("16K")
+	MCFG_RAM_EXTRA_OPTIONS("32K,48k")
+MACHINE_CONFIG_END
 
 /* ROM definition */
 ROM_START( vg5k )
@@ -450,7 +447,7 @@ ROM_START( vg5k )
 	ROM_SYSTEM_BIOS(1, "alt", "VG 5000 (alt)")
 	ROMX_LOAD( "vg5k.rom", 0x0000, 0x4000, BAD_DUMP CRC(a6f4a0ea) SHA1(58eccce33cc21fc17bc83921018f531b8001eda3), ROM_BIOS(2) )	// from dcvg5k
 
-	ROM_REGION( 0x4000, "gfx1", 0 )
+	ROM_REGION( 0x4000, "ef9345", 0 )
 	ROM_LOAD( "charset.rom", 0x0000, 0x2000, BAD_DUMP CRC(b2f49eb3) SHA1(d0ef530be33bfc296314e7152302d95fdf9520fc) )			// from dcvg5k
 ROM_END
 

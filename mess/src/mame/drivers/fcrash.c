@@ -42,7 +42,7 @@ from 2.bin to 9.bin program eproms
 
 static WRITE16_HANDLER( fcrash_soundlatch_w )
 {
-	cps_state *state = (cps_state *)space->machine->driver_data;
+	cps_state *state = space->machine->driver_data<cps_state>();
 
 	if (ACCESSING_BITS_0_7)
 	{
@@ -53,7 +53,7 @@ static WRITE16_HANDLER( fcrash_soundlatch_w )
 
 static WRITE8_HANDLER( fcrash_snd_bankswitch_w )
 {
-	cps_state *state = (cps_state *)space->machine->driver_data;
+	cps_state *state = space->machine->driver_data<cps_state>();
 
 	sound_set_output_gain(state->msm_1, 0, (data & 0x08) ? 0.0 : 1.0);
 	sound_set_output_gain(state->msm_2, 0, (data & 0x10) ? 0.0 : 1.0);
@@ -61,9 +61,9 @@ static WRITE8_HANDLER( fcrash_snd_bankswitch_w )
 	memory_set_bank(space->machine, "bank1", data & 0x07);
 }
 
-static void m5205_int1( running_device *device )
+static void m5205_int1( device_t *device )
 {
-	cps_state *state = (cps_state *)device->machine->driver_data;
+	cps_state *state = device->machine->driver_data<cps_state>();
 
 	msm5205_data_w(device, state->sample_buffer1 & 0x0f);
 	state->sample_buffer1 >>= 4;
@@ -72,9 +72,9 @@ static void m5205_int1( running_device *device )
 		cpu_set_input_line(state->audiocpu, INPUT_LINE_NMI, PULSE_LINE);
 }
 
-static void m5205_int2( running_device *device )
+static void m5205_int2( device_t *device )
 {
-	cps_state *state = (cps_state *)device->machine->driver_data;
+	cps_state *state = device->machine->driver_data<cps_state>();
 
 	msm5205_data_w(device, state->sample_buffer2 & 0x0f);
 	state->sample_buffer2 >>= 4;
@@ -84,13 +84,13 @@ static void m5205_int2( running_device *device )
 
 static WRITE8_HANDLER( fcrash_msm5205_0_data_w )
 {
-	cps_state *state = (cps_state *)space->machine->driver_data;
+	cps_state *state = space->machine->driver_data<cps_state>();
 	state->sample_buffer1 = data;
 }
 
 static WRITE8_HANDLER( fcrash_msm5205_1_data_w )
 {
-	cps_state *state = (cps_state *)space->machine->driver_data;
+	cps_state *state = space->machine->driver_data<cps_state>();
 	state->sample_buffer2 = data;
 }
 
@@ -101,7 +101,7 @@ static WRITE8_HANDLER( fcrash_msm5205_1_data_w )
 
 static void fcrash_update_transmasks( running_machine *machine )
 {
-	cps_state *state = (cps_state *)machine->driver_data;
+	cps_state *state = machine->driver_data<cps_state>();
 	int i;
 	int priority[4];
 
@@ -128,7 +128,7 @@ static void fcrash_update_transmasks( running_machine *machine )
 
 static void fcrash_render_sprites( running_machine *machine, bitmap_t *bitmap, const rectangle *cliprect )
 {
-	cps_state *state = (cps_state *)machine->driver_data;
+	cps_state *state = machine->driver_data<cps_state>();
 	int pos;
 	int base = 0x50c8 / 2;
 
@@ -161,7 +161,7 @@ static void fcrash_render_sprites( running_machine *machine, bitmap_t *bitmap, c
 
 static void fcrash_render_layer( running_machine *machine, bitmap_t *bitmap, const rectangle *cliprect, int layer, int primask )
 {
-	cps_state *state = (cps_state *)machine->driver_data;
+	cps_state *state = machine->driver_data<cps_state>();
 
 	switch (layer)
 	{
@@ -178,7 +178,7 @@ static void fcrash_render_layer( running_machine *machine, bitmap_t *bitmap, con
 
 static void fcrash_render_high_layer( running_machine *machine, bitmap_t *bitmap, const rectangle *cliprect, int layer )
 {
-	cps_state *state = (cps_state *)machine->driver_data;
+	cps_state *state = machine->driver_data<cps_state>();
 
 	switch (layer)
 	{
@@ -195,7 +195,7 @@ static void fcrash_render_high_layer( running_machine *machine, bitmap_t *bitmap
 
 static void fcrash_build_palette( running_machine *machine )
 {
-	cps_state *state = (cps_state *)machine->driver_data;
+	cps_state *state = machine->driver_data<cps_state>();
 	int offset;
 
 	for (offset = 0; offset < 32 * 6 * 16; offset++)
@@ -218,7 +218,7 @@ static void fcrash_build_palette( running_machine *machine )
 
 static VIDEO_UPDATE( fcrash )
 {
-	cps_state *state = (cps_state *)screen->machine->driver_data;
+	cps_state *state = screen->machine->driver_data<cps_state>();
 	int layercontrol, l0, l1, l2, l3;
 	int videocontrol = state->cps_a_regs[0x22 / 2];
 
@@ -299,7 +299,7 @@ static VIDEO_UPDATE( fcrash )
 // doesn't have the scroll offsets like fcrash
 static VIDEO_UPDATE( kodb )
 {
-	cps_state *state = (cps_state *)screen->machine->driver_data;
+	cps_state *state = screen->machine->driver_data<cps_state>();
 	int layercontrol, l0, l1, l2, l3;
 	int videocontrol = state->cps_a_regs[0x22 / 2];
 
@@ -691,8 +691,8 @@ static const msm5205_interface msm5205_interface2 =
 
 static MACHINE_START( fcrash )
 {
-	cps_state *state = (cps_state *)machine->driver_data;
-	UINT8 *ROM = memory_region(machine, "soundcpu");
+	cps_state *state = machine->driver_data<cps_state>();
+	UINT8 *ROM = machine->region("soundcpu")->base();
 
 	memory_configure_bank(machine, "bank1", 0, 8, &ROM[0x10000], 0x4000);
 
@@ -709,7 +709,7 @@ static MACHINE_START( fcrash )
 
 static MACHINE_START( kodb )
 {
-	cps_state *state = (cps_state *)machine->driver_data;
+	cps_state *state = machine->driver_data<cps_state>();
 
 	state->maincpu = machine->device("maincpu");
 	state->audiocpu = machine->device("soundcpu");
@@ -717,7 +717,7 @@ static MACHINE_START( kodb )
 
 static MACHINE_RESET( fcrash )
 {
-	cps_state *state = (cps_state *)machine->driver_data;
+	cps_state *state = machine->driver_data<cps_state>();
 
 	state->sample_buffer1 = 0;
 	state->sample_buffer2 = 0;
@@ -725,102 +725,96 @@ static MACHINE_RESET( fcrash )
 	state->sample_select2 = 0;
 }
 
-static MACHINE_DRIVER_START( fcrash )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(cps_state)
+static MACHINE_CONFIG_START( fcrash, cps_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 10000000)
-	MDRV_CPU_PROGRAM_MAP(fcrash_map)
-	MDRV_CPU_VBLANK_INT("screen", cps1_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, 10000000)
+	MCFG_CPU_PROGRAM_MAP(fcrash_map)
+	MCFG_CPU_VBLANK_INT("screen", cps1_interrupt)
 
-	MDRV_CPU_ADD("soundcpu", Z80, 24000000/6) /* ? */
-	MDRV_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_ADD("soundcpu", Z80, 24000000/6) /* ? */
+	MCFG_CPU_PROGRAM_MAP(sound_map)
 
-	MDRV_MACHINE_START(fcrash)
-	MDRV_MACHINE_RESET(fcrash)
+	MCFG_MACHINE_START(fcrash)
+	MCFG_MACHINE_RESET(fcrash)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(8*8, (64-8)*8-1, 2*8, 30*8-1 )
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(8*8, (64-8)*8-1, 2*8, 30*8-1 )
 
-	MDRV_GFXDECODE(cps1)
-	MDRV_PALETTE_LENGTH(4096)
+	MCFG_GFXDECODE(cps1)
+	MCFG_PALETTE_LENGTH(4096)
 
-	MDRV_VIDEO_START(cps1)
-	MDRV_VIDEO_EOF(cps1)
-	MDRV_VIDEO_UPDATE(fcrash)
+	MCFG_VIDEO_START(cps1)
+	MCFG_VIDEO_EOF(cps1)
+	MCFG_VIDEO_UPDATE(fcrash)
 
 	// sound hardware
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ym1", YM2203, 24000000/6)	/* ? */
-	MDRV_SOUND_ROUTE(0, "mono", 0.10)
-	MDRV_SOUND_ROUTE(1, "mono", 0.10)
-	MDRV_SOUND_ROUTE(2, "mono", 0.10)
-	MDRV_SOUND_ROUTE(3, "mono", 1.0)
+	MCFG_SOUND_ADD("ym1", YM2203, 24000000/6)	/* ? */
+	MCFG_SOUND_ROUTE(0, "mono", 0.10)
+	MCFG_SOUND_ROUTE(1, "mono", 0.10)
+	MCFG_SOUND_ROUTE(2, "mono", 0.10)
+	MCFG_SOUND_ROUTE(3, "mono", 1.0)
 
-	MDRV_SOUND_ADD("ym2", YM2203, 24000000/6)	/* ? */
-	MDRV_SOUND_ROUTE(0, "mono", 0.10)
-	MDRV_SOUND_ROUTE(1, "mono", 0.10)
-	MDRV_SOUND_ROUTE(2, "mono", 0.10)
-	MDRV_SOUND_ROUTE(3, "mono", 1.0)
+	MCFG_SOUND_ADD("ym2", YM2203, 24000000/6)	/* ? */
+	MCFG_SOUND_ROUTE(0, "mono", 0.10)
+	MCFG_SOUND_ROUTE(1, "mono", 0.10)
+	MCFG_SOUND_ROUTE(2, "mono", 0.10)
+	MCFG_SOUND_ROUTE(3, "mono", 1.0)
 
-	MDRV_SOUND_ADD("msm1", MSM5205, 24000000/64)	/* ? */
-	MDRV_SOUND_CONFIG(msm5205_interface1)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+	MCFG_SOUND_ADD("msm1", MSM5205, 24000000/64)	/* ? */
+	MCFG_SOUND_CONFIG(msm5205_interface1)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
-	MDRV_SOUND_ADD("msm2", MSM5205, 24000000/64)	/* ? */
-	MDRV_SOUND_CONFIG(msm5205_interface2)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("msm2", MSM5205, 24000000/64)	/* ? */
+	MCFG_SOUND_CONFIG(msm5205_interface2)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( kodb )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(cps_state)
+static MACHINE_CONFIG_START( kodb, cps_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 10000000)
-	MDRV_CPU_PROGRAM_MAP(kodb_map)
-	MDRV_CPU_VBLANK_INT("screen", cps1_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, 10000000)
+	MCFG_CPU_PROGRAM_MAP(kodb_map)
+	MCFG_CPU_VBLANK_INT("screen", cps1_interrupt)
 
-//  MDRV_CPU_ADD("soundcpu", Z80, 3579545)
-//  MDRV_CPU_PROGRAM_MAP(sub_map)
+//  MCFG_CPU_ADD("soundcpu", Z80, 3579545)
+//  MCFG_CPU_PROGRAM_MAP(sub_map)
 
-	MDRV_MACHINE_START(kodb)
+	MCFG_MACHINE_START(kodb)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(8*8, (64-8)*8-1, 2*8, 30*8-1 )
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(8*8, (64-8)*8-1, 2*8, 30*8-1 )
 
-	MDRV_GFXDECODE(cps1)
-	MDRV_PALETTE_LENGTH(0xc00)
+	MCFG_GFXDECODE(cps1)
+	MCFG_PALETTE_LENGTH(0xc00)
 
-	MDRV_VIDEO_START(cps1)
-	MDRV_VIDEO_EOF(cps1)
-	MDRV_VIDEO_UPDATE(kodb)
+	MCFG_VIDEO_START(cps1)
+	MCFG_VIDEO_EOF(cps1)
+	MCFG_VIDEO_UPDATE(kodb)
 
 	/* sound hardware */
-//  MDRV_SPEAKER_STANDARD_MONO("mono")
+//  MCFG_SPEAKER_STANDARD_MONO("mono")
 
-//  MDRV_SOUND_ADD("2151", YM2151, 3579545)
-//  MDRV_SOUND_CONFIG(ym2151_config)
-//  MDRV_SOUND_ROUTE(0, "mono", 0.35)
-//  MDRV_SOUND_ROUTE(1, "mono", 0.35)
+//  MCFG_SOUND_ADD("2151", YM2151, 3579545)
+//  MCFG_SOUND_CONFIG(ym2151_config)
+//  MCFG_SOUND_ROUTE(0, "mono", 0.35)
+//  MCFG_SOUND_ROUTE(1, "mono", 0.35)
 
-//  MDRV_OKIM6295_ADD("oki", 1000000, OKIM6295_PIN7_HIGH) // pin 7 can be changed by the game code, see f006 on z80
-//  MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
-MACHINE_DRIVER_END
+//  MCFG_OKIM6295_ADD("oki", 1000000, OKIM6295_PIN7_HIGH) // pin 7 can be changed by the game code, see f006 on z80
+//  MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
+MACHINE_CONFIG_END
 
 
 

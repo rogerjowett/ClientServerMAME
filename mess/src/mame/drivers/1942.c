@@ -65,7 +65,6 @@ correctly.
 
 #include "emu.h"
 #include "cpu/z80/z80.h"
-#include "deprecat.h"
 #include "sound/ay8910.h"
 #include "includes/1942.h"
 
@@ -75,12 +74,15 @@ static WRITE8_HANDLER( c1942_bankswitch_w )
 	memory_set_bank(space->machine, "bank1", data & 0x03);
 }
 
-static INTERRUPT_GEN( c1942_interrupt )
+static TIMER_DEVICE_CALLBACK( c1942_scanline )
 {
-	if (cpu_getiloops(device) != 0)
-		cpu_set_input_line_and_vector(device, 0, HOLD_LINE, 0xcf);	/* RST 08h */
-	else
-		cpu_set_input_line_and_vector(device, 0, HOLD_LINE, 0xd7);	/* RST 10h - vblank */
+	int scanline = param;
+
+	if(scanline == 240) // vblank-out irq
+		cputag_set_input_line_and_vector(timer.machine, "maincpu", 0, HOLD_LINE, 0xd7);	/* RST 10h - vblank */
+
+	if(scanline == 0) // unknown irq event, presumably vblank-in or a periodic one (writes to the soundlatch and drives freeze dip-switch)
+		cputag_set_input_line_and_vector(timer.machine, "maincpu", 0, HOLD_LINE, 0xcf);	/* RST 08h */
 }
 
 
@@ -236,7 +238,7 @@ GFXDECODE_END
 
 static MACHINE_START( 1942 )
 {
-	_1942_state *state = (_1942_state *)machine->driver_data;
+	_1942_state *state = machine->driver_data<_1942_state>();
 
 	state->audiocpu = machine->device("audiocpu");
 
@@ -246,52 +248,50 @@ static MACHINE_START( 1942 )
 
 static MACHINE_RESET( 1942 )
 {
-	_1942_state *state = (_1942_state *)machine->driver_data;
+	_1942_state *state = machine->driver_data<_1942_state>();
 
 	state->palette_bank = 0;
 	state->scroll[0] = 0;
 	state->scroll[1] = 0;
 }
 
-static MACHINE_DRIVER_START( 1942 )
-
-	MDRV_DRIVER_DATA(_1942_state)
+static MACHINE_CONFIG_START( 1942, _1942_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, MAIN_CPU_CLOCK)	/* 4 MHz ??? */
-	MDRV_CPU_PROGRAM_MAP(c1942_map)
-	MDRV_CPU_VBLANK_INT_HACK(c1942_interrupt,2)
+	MCFG_CPU_ADD("maincpu", Z80, MAIN_CPU_CLOCK)	/* 4 MHz ??? */
+	MCFG_CPU_PROGRAM_MAP(c1942_map)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", c1942_scanline, "screen", 0, 1)
 
-	MDRV_CPU_ADD("audiocpu", Z80, SOUND_CPU_CLOCK)	/* 3 MHz ??? */
-	MDRV_CPU_PROGRAM_MAP(sound_map)
-	MDRV_CPU_VBLANK_INT_HACK(irq0_line_hold,4)
+	MCFG_CPU_ADD("audiocpu", Z80, SOUND_CPU_CLOCK)	/* 3 MHz ??? */
+	MCFG_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_PERIODIC_INT(irq0_line_hold,4*60)
 
-	MDRV_MACHINE_START(1942)
-	MDRV_MACHINE_RESET(1942)
+	MCFG_MACHINE_START(1942)
+	MCFG_MACHINE_RESET(1942)
 
 	/* video hardware */
-	MDRV_GFXDECODE(1942)
-	MDRV_PALETTE_LENGTH(64*4+4*32*8+16*16)
+	MCFG_GFXDECODE(1942)
+	MCFG_PALETTE_LENGTH(64*4+4*32*8+16*16)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_PALETTE_INIT(1942)
-	MDRV_VIDEO_START(1942)
-	MDRV_VIDEO_UPDATE(1942)
+	MCFG_PALETTE_INIT(1942)
+	MCFG_VIDEO_START(1942)
+	MCFG_VIDEO_UPDATE(1942)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ay1", AY8910, AUDIO_CLOCK)	/* 1.5 MHz */
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
-	MDRV_SOUND_ADD("ay2", AY8910, AUDIO_CLOCK)	/* 1.5 MHz */
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ay1", AY8910, AUDIO_CLOCK)	/* 1.5 MHz */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+	MCFG_SOUND_ADD("ay2", AY8910, AUDIO_CLOCK)	/* 1.5 MHz */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+MACHINE_CONFIG_END
 
 
 
@@ -506,7 +506,7 @@ ROM_END
 
 static DRIVER_INIT( 1942 )
 {
-	UINT8 *ROM = memory_region(machine, "maincpu");
+	UINT8 *ROM = machine->region("maincpu")->base();
 	memory_configure_bank(machine, "bank1", 0, 3, &ROM[0x10000], 0x4000);
 }
 

@@ -603,6 +603,7 @@ ALL VROM ROMs are 16M MASK
 #include "cpu/powerpc/ppc.h"
 #include "machine/eeprom.h"
 #include "machine/53c810.h"
+#include "machine/nvram.h"
 #include "sound/scsp.h"
 #include "includes/model3.h"
 
@@ -614,7 +615,6 @@ int model3_step;
 UINT32 *model3_vrom;
 
 static UINT64 *work_ram;
-static UINT64 *model3_backup;
 static int model3_crom_bank = 0;
 static int model3_controls_bank;
 static UINT32 real3d_device_id;
@@ -1014,9 +1014,9 @@ static WRITE64_HANDLER(scsi_w)
 
 static UINT32 scsi_fetch(running_machine *machine, UINT32 dsp)
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 	UINT32 result;
-	result = memory_read_dword(space, dsp);
+	result = space->read_dword(dsp);
 	return FLIPENDIAN_INT32(result);
 }
 
@@ -1119,7 +1119,7 @@ static WRITE64_HANDLER( real3d_dma_w )
 
 static void real3d_dma_callback(running_machine *machine, UINT32 src, UINT32 dst, int length, int byteswap)
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 	switch(dst >> 24)
 	{
 		case 0x88:		/* Display List End Trigger */
@@ -1163,21 +1163,6 @@ static const eeprom_interface eeprom_intf =
 	1,				/* enable_multi_read */
 	5				/* reset_delay (Lost World needs this, very similar to wbeachvl in playmark.c) */
 };
-
-static NVRAM_HANDLER( model3 )
-{
-	if (read_or_write)
-	{
-		mame_fwrite(file, model3_backup, 0x1ffff);
-	}
-	else
-	{
-		if (file)
-		{
-			mame_fread(file, model3_backup, 0x1ffff);
-		}
-	}
-}
 
 static const SCSIConfigTable scsi_dev_table =
 {
@@ -1233,13 +1218,13 @@ static MACHINE_START(model3_21)
 static void model3_init(running_machine *machine, int step)
 {
 	model3_step = step;
-	memory_set_bankptr(machine,  "bank1", memory_region( machine, "user1" ) + 0x800000 ); /* banked CROM */
+	memory_set_bankptr(machine,  "bank1", machine->region( "user1" )->base() + 0x800000 ); /* banked CROM */
 
-	memory_set_bankptr(machine, "bank4", memory_region(machine, "samples") + 0x200000);
-	memory_set_bankptr(machine, "bank5", memory_region(machine, "samples") + 0x600000);
+	memory_set_bankptr(machine, "bank4", machine->region("samples")->base() + 0x200000);
+	memory_set_bankptr(machine, "bank5", machine->region("samples")->base() + 0x600000);
 
 	// copy the 68k vector table into RAM
-	memcpy(model3_soundram, memory_region(machine, "audiocpu")+0x80000, 16);
+	memcpy(model3_soundram, machine->region("audiocpu")->base()+0x80000, 16);
 	machine->device("audiocpu")->reset();
 
 	model3_machine_init(step);	// step 1.5
@@ -1369,7 +1354,7 @@ static WRITE64_HANDLER( model3_ctrl_w )
 		case 0:
 			if (ACCESSING_BITS_56_63)
 			{
-				running_device *device = space->machine->device("eeprom");
+				device_t *device = space->machine->device("eeprom");
 				int reg = (data >> 56) & 0xff;
 				eeprom_write_bit(device, (reg & 0x20) ? 1 : 0);
 				eeprom_set_clock_line(device, (reg & 0x80) ? ASSERT_LINE : CLEAR_LINE);
@@ -1551,7 +1536,7 @@ static WRITE64_HANDLER( model3_sys_w )
 				data >>= 56;
 				data = (~data) & 0x7;
 
-				memory_set_bankptr(space->machine,  "bank1", memory_region( space->machine, "user1" ) + 0x800000 + (data * 0x800000)); /* banked CROM */
+				memory_set_bankptr(space->machine,  "bank1", space->machine->region( "user1" )->base() + 0x800000 + (data * 0x800000)); /* banked CROM */
 			}
 			if (ACCESSING_BITS_24_31)
 			{
@@ -1780,7 +1765,7 @@ static WRITE64_HANDLER(daytona2_rombank_w)
 	{
 		data >>= 56;
 		data = (~data) & 0xf;
-		memory_set_bankptr(space->machine,  "bank1", memory_region( space->machine, "user1" ) + 0x800000 + (data * 0x800000)); /* banked CROM */
+		memory_set_bankptr(space->machine,  "bank1", space->machine->region( "user1" )->base() + 0x800000 + (data * 0x800000)); /* banked CROM */
 	}
 }
 
@@ -1792,25 +1777,18 @@ static ADDRESS_MAP_START( model3_mem, ADDRESS_SPACE_PROGRAM, 64)
 	AM_RANGE(0x8e000000, 0x8e0fffff) AM_WRITE( real3d_display_list_w )
 	AM_RANGE(0x98000000, 0x980fffff) AM_WRITE( real3d_polygon_ram_w )
 
-	AM_RANGE(0xf0040000, 0xf004003f) AM_READWRITE( model3_ctrl_r, model3_ctrl_w )
-	AM_RANGE(0xf0080000, 0xf0080007) AM_READWRITE( model3_sound_r, model3_sound_w )
-	AM_RANGE(0xf00c0000, 0xf00dffff) AM_RAM	AM_BASE(&model3_backup)	/* backup SRAM */
-	AM_RANGE(0xf0100000, 0xf010003f) AM_READWRITE( model3_sys_r, model3_sys_w )
-	AM_RANGE(0xf0140000, 0xf014003f) AM_READWRITE( model3_rtc_r, model3_rtc_w )
+	AM_RANGE(0xf0040000, 0xf004003f) AM_MIRROR(0x0e000000) AM_READWRITE( model3_ctrl_r, model3_ctrl_w )
+	AM_RANGE(0xf0080000, 0xf0080007) AM_MIRROR(0x0e000000) AM_READWRITE( model3_sound_r, model3_sound_w )
+	AM_RANGE(0xf00c0000, 0xf00dffff) AM_MIRROR(0x0e000000) AM_RAM AM_SHARE("backup")	/* backup SRAM */
+	AM_RANGE(0xf0100000, 0xf010003f) AM_MIRROR(0x0e000000) AM_READWRITE( model3_sys_r, model3_sys_w )
+	AM_RANGE(0xf0140000, 0xf014003f) AM_MIRROR(0x0e000000) AM_READWRITE( model3_rtc_r, model3_rtc_w )
+	AM_RANGE(0xf0180000, 0xf019ffff) AM_MIRROR(0x0e000000) AM_RAM							/* Security Board RAM */
+	AM_RANGE(0xf01a0000, 0xf01a003f) AM_MIRROR(0x0e000000) AM_READ( model3_security_r )	/* Security board */
 
 	AM_RANGE(0xf1000000, 0xf10f7fff) AM_READWRITE( model3_char_r, model3_char_w )	/* character RAM */
 	AM_RANGE(0xf10f8000, 0xf10fffff) AM_READWRITE( model3_tile_r, model3_tile_w )	/* tilemaps */
 	AM_RANGE(0xf1100000, 0xf111ffff) AM_READWRITE( model3_palette_r, model3_palette_w ) AM_BASE(&paletteram64) /* palette */
 	AM_RANGE(0xf1180000, 0xf11800ff) AM_READWRITE( model3_vid_reg_r, model3_vid_reg_w )
-
-	AM_RANGE(0xfe040000, 0xfe04003f) AM_READWRITE( model3_ctrl_r, model3_ctrl_w )
-	AM_RANGE(0xfe080000, 0xfe080007) AM_READWRITE( model3_sound_r, model3_sound_w )
-	AM_RANGE(0xfe0c0000, 0xfe0dffff) AM_RAM	AM_BASE(&model3_backup)	/* backup SRAM */
-	AM_RANGE(0xfe100000, 0xfe10003f) AM_READWRITE( model3_sys_r, model3_sys_w )
-	AM_RANGE(0xfe140000, 0xfe14003f) AM_READWRITE( model3_rtc_r, model3_rtc_w )
-
-	AM_RANGE(0xfe180000, 0xfe19ffff) AM_RAM							/* Security Board RAM */
-	AM_RANGE(0xfe1a0000, 0xfe1a003f) AM_READ( model3_security_r )	/* Security board */
 
 	AM_RANGE(0xff800000, 0xffffffff) AM_ROM AM_REGION("user1", 0)
 ADDRESS_MAP_END
@@ -4897,9 +4875,9 @@ ROM_END
 static WRITE16_HANDLER( model3snd_ctrl )
 {
 	// handle sample banking
-	if (memory_region_length(space->machine, "scsp2") > 0x800000)
+	if (space->machine->region("scsp2")->bytes() > 0x800000)
 	{
-		UINT8 *snd = memory_region(space->machine, "scsp2");
+		UINT8 *snd = space->machine->region("scsp2")->base();
 		if (data & 0x20)
 		{
 			memory_set_bankptr(space->machine, "bank4", snd + 0x200000);
@@ -4927,7 +4905,7 @@ ADDRESS_MAP_END
 
 static int scsp_last_line = 0;
 
-static void scsp_irq(running_device *device, int irq)
+static void scsp_irq(device_t *device, int irq)
 {
 	if (irq > 0)
 	{
@@ -4992,176 +4970,176 @@ static const powerpc_config model3_2x =
 	66000000		/* Multiplier 2.5, Bus = 66MHz, Core = 166MHz */
 };
 
-static MACHINE_DRIVER_START( model3_10 )
-	MDRV_CPU_ADD("maincpu", PPC603E, 66000000)
-	MDRV_CPU_CONFIG(model3_10)
-	MDRV_CPU_PROGRAM_MAP(model3_mem)
-	MDRV_CPU_VBLANK_INT_HACK(model3_interrupt,2)
+static MACHINE_CONFIG_START( model3_10, driver_device )
+	MCFG_CPU_ADD("maincpu", PPC603E, 66000000)
+	MCFG_CPU_CONFIG(model3_10)
+	MCFG_CPU_PROGRAM_MAP(model3_mem)
+	MCFG_CPU_VBLANK_INT_HACK(model3_interrupt,2)
 
-	MDRV_CPU_ADD("audiocpu", M68000, 12000000)
-	MDRV_CPU_PROGRAM_MAP(model3_snd)
+	MCFG_CPU_ADD("audiocpu", M68000, 12000000)
+	MCFG_CPU_PROGRAM_MAP(model3_snd)
 
-	MDRV_QUANTUM_TIME(HZ(600))
+	MCFG_QUANTUM_TIME(HZ(600))
 
-	MDRV_MACHINE_START(model3_10)
-	MDRV_MACHINE_RESET(model3_10)
+	MCFG_MACHINE_START(model3_10)
+	MCFG_MACHINE_RESET(model3_10)
 
-	MDRV_EEPROM_ADD("eeprom", eeprom_intf)
-	MDRV_NVRAM_HANDLER(model3)
-
-
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VISIBLE_AREA(0, 495, 0, 383)
-	MDRV_SCREEN_SIZE(512, 400)
-
-	MDRV_PALETTE_LENGTH(32768)
-	MDRV_PALETTE_INIT(RRRRR_GGGGG_BBBBB)
-
-	MDRV_VIDEO_START(model3)
-	MDRV_VIDEO_UPDATE(model3)
-
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
-	MDRV_SOUND_ADD("scsp1", SCSP, 0)
-	MDRV_SOUND_CONFIG(scsp_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 2.0)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 2.0)
-
-	MDRV_SOUND_ADD("scsp2", SCSP, 0)
-	MDRV_SOUND_CONFIG(scsp2_interface)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 2.0)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 2.0)
-MACHINE_DRIVER_END
-
-static MACHINE_DRIVER_START( model3_15 )
-	MDRV_CPU_ADD("maincpu", PPC603E, 100000000)
-	MDRV_CPU_CONFIG(model3_15)
-	MDRV_CPU_PROGRAM_MAP(model3_mem)
-	MDRV_CPU_VBLANK_INT_HACK(model3_interrupt,2)
-
-	MDRV_CPU_ADD("audiocpu", M68000, 12000000)
-	MDRV_CPU_PROGRAM_MAP(model3_snd)
-
-	MDRV_MACHINE_START(model3_15)
-	MDRV_MACHINE_RESET(model3_15)
-
-	MDRV_EEPROM_ADD("eeprom", eeprom_intf)
-	MDRV_NVRAM_HANDLER(model3)
+	MCFG_EEPROM_ADD("eeprom", eeprom_intf)
+	MCFG_NVRAM_ADD_1FILL("backup")
 
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VISIBLE_AREA(0, 495, 0, 383)
-	MDRV_SCREEN_SIZE(496, 400)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VISIBLE_AREA(0, 495, 0, 383)
+	MCFG_SCREEN_SIZE(512, 400)
 
-	MDRV_PALETTE_LENGTH(32768)
-	MDRV_PALETTE_INIT(RRRRR_GGGGG_BBBBB)
+	MCFG_PALETTE_LENGTH(32768)
+	MCFG_PALETTE_INIT(RRRRR_GGGGG_BBBBB)
 
-	MDRV_VIDEO_START(model3)
-	MDRV_VIDEO_UPDATE(model3)
+	MCFG_VIDEO_START(model3)
+	MCFG_VIDEO_UPDATE(model3)
 
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
-	MDRV_SOUND_ADD("scsp1", SCSP, 0)
-	MDRV_SOUND_CONFIG(scsp_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 2.0)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 2.0)
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SOUND_ADD("scsp1", SCSP, 0)
+	MCFG_SOUND_CONFIG(scsp_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 2.0)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 2.0)
 
-	MDRV_SOUND_ADD("scsp2", SCSP, 0)
-	MDRV_SOUND_CONFIG(scsp2_interface)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 2.0)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 2.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("scsp2", SCSP, 0)
+	MCFG_SOUND_CONFIG(scsp2_interface)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 2.0)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 2.0)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( model3_20 )
-	MDRV_CPU_ADD("maincpu", PPC603R, 166000000)
-	MDRV_CPU_CONFIG(model3_2x)
-	MDRV_CPU_PROGRAM_MAP(model3_mem)
-	MDRV_CPU_VBLANK_INT_HACK(model3_interrupt,2)
+static MACHINE_CONFIG_START( model3_15, driver_device )
+	MCFG_CPU_ADD("maincpu", PPC603E, 100000000)
+	MCFG_CPU_CONFIG(model3_15)
+	MCFG_CPU_PROGRAM_MAP(model3_mem)
+	MCFG_CPU_VBLANK_INT_HACK(model3_interrupt,2)
 
-	MDRV_CPU_ADD("audiocpu", M68000, 12000000)
-	MDRV_CPU_PROGRAM_MAP(model3_snd)
+	MCFG_CPU_ADD("audiocpu", M68000, 12000000)
+	MCFG_CPU_PROGRAM_MAP(model3_snd)
 
-	MDRV_MACHINE_START(model3_20)
-	MDRV_MACHINE_RESET(model3_20)
+	MCFG_MACHINE_START(model3_15)
+	MCFG_MACHINE_RESET(model3_15)
 
-	MDRV_EEPROM_ADD("eeprom", eeprom_intf)
-	MDRV_NVRAM_HANDLER(model3)
-
-
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VISIBLE_AREA(0, 495, 0, 383)
-	MDRV_SCREEN_SIZE(496, 400)
-
-	MDRV_PALETTE_LENGTH(32768)
-	MDRV_PALETTE_INIT(RRRRR_GGGGG_BBBBB)
-
-	MDRV_VIDEO_START(model3)
-	MDRV_VIDEO_UPDATE(model3)
-
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
-	MDRV_SOUND_ADD("scsp1", SCSP, 0)
-	MDRV_SOUND_CONFIG(scsp_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 2.0)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 2.0)
-
-	MDRV_SOUND_ADD("scsp2", SCSP, 0)
-	MDRV_SOUND_CONFIG(scsp2_interface)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 2.0)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 2.0)
-MACHINE_DRIVER_END
-
-static MACHINE_DRIVER_START( model3_21 )
-	MDRV_CPU_ADD("maincpu", PPC603R, 166000000)
-	MDRV_CPU_CONFIG(model3_2x)
-	MDRV_CPU_PROGRAM_MAP(model3_mem)
-	MDRV_CPU_VBLANK_INT_HACK(model3_interrupt,2)
-
-	MDRV_CPU_ADD("audiocpu", M68000, 12000000)
-	MDRV_CPU_PROGRAM_MAP(model3_snd)
-
-	MDRV_MACHINE_START(model3_21)
-	MDRV_MACHINE_RESET(model3_21)
-
-	MDRV_EEPROM_ADD("eeprom", eeprom_intf)
-	MDRV_NVRAM_HANDLER(model3)
+	MCFG_EEPROM_ADD("eeprom", eeprom_intf)
+	MCFG_NVRAM_ADD_1FILL("backup")
 
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_VISIBLE_AREA(0, 495, 0, 383)
-	MDRV_SCREEN_SIZE(496, 400)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VISIBLE_AREA(0, 495, 0, 383)
+	MCFG_SCREEN_SIZE(496, 400)
 
-	MDRV_PALETTE_LENGTH(32768)
-	MDRV_PALETTE_INIT(RRRRR_GGGGG_BBBBB)
+	MCFG_PALETTE_LENGTH(32768)
+	MCFG_PALETTE_INIT(RRRRR_GGGGG_BBBBB)
 
-	MDRV_VIDEO_START(model3)
-	MDRV_VIDEO_UPDATE(model3)
+	MCFG_VIDEO_START(model3)
+	MCFG_VIDEO_UPDATE(model3)
 
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
-	MDRV_SOUND_ADD("scsp1", SCSP, 0)
-	MDRV_SOUND_CONFIG(scsp_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 2.0)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 2.0)
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SOUND_ADD("scsp1", SCSP, 0)
+	MCFG_SOUND_CONFIG(scsp_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 2.0)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 2.0)
 
-	MDRV_SOUND_ADD("scsp2", SCSP, 0)
-	MDRV_SOUND_CONFIG(scsp2_interface)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 2.0)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 2.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("scsp2", SCSP, 0)
+	MCFG_SOUND_CONFIG(scsp2_interface)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 2.0)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 2.0)
+MACHINE_CONFIG_END
+
+static MACHINE_CONFIG_START( model3_20, driver_device )
+	MCFG_CPU_ADD("maincpu", PPC603R, 166000000)
+	MCFG_CPU_CONFIG(model3_2x)
+	MCFG_CPU_PROGRAM_MAP(model3_mem)
+	MCFG_CPU_VBLANK_INT_HACK(model3_interrupt,2)
+
+	MCFG_CPU_ADD("audiocpu", M68000, 12000000)
+	MCFG_CPU_PROGRAM_MAP(model3_snd)
+
+	MCFG_MACHINE_START(model3_20)
+	MCFG_MACHINE_RESET(model3_20)
+
+	MCFG_EEPROM_ADD("eeprom", eeprom_intf)
+	MCFG_NVRAM_ADD_1FILL("backup")
+
+
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VISIBLE_AREA(0, 495, 0, 383)
+	MCFG_SCREEN_SIZE(496, 400)
+
+	MCFG_PALETTE_LENGTH(32768)
+	MCFG_PALETTE_INIT(RRRRR_GGGGG_BBBBB)
+
+	MCFG_VIDEO_START(model3)
+	MCFG_VIDEO_UPDATE(model3)
+
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SOUND_ADD("scsp1", SCSP, 0)
+	MCFG_SOUND_CONFIG(scsp_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 2.0)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 2.0)
+
+	MCFG_SOUND_ADD("scsp2", SCSP, 0)
+	MCFG_SOUND_CONFIG(scsp2_interface)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 2.0)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 2.0)
+MACHINE_CONFIG_END
+
+static MACHINE_CONFIG_START( model3_21, driver_device )
+	MCFG_CPU_ADD("maincpu", PPC603R, 166000000)
+	MCFG_CPU_CONFIG(model3_2x)
+	MCFG_CPU_PROGRAM_MAP(model3_mem)
+	MCFG_CPU_VBLANK_INT_HACK(model3_interrupt,2)
+
+	MCFG_CPU_ADD("audiocpu", M68000, 12000000)
+	MCFG_CPU_PROGRAM_MAP(model3_snd)
+
+	MCFG_MACHINE_START(model3_21)
+	MCFG_MACHINE_RESET(model3_21)
+
+	MCFG_EEPROM_ADD("eeprom", eeprom_intf)
+	MCFG_NVRAM_ADD_1FILL("backup")
+
+
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_VISIBLE_AREA(0, 495, 0, 383)
+	MCFG_SCREEN_SIZE(496, 400)
+
+	MCFG_PALETTE_LENGTH(32768)
+	MCFG_PALETTE_INIT(RRRRR_GGGGG_BBBBB)
+
+	MCFG_VIDEO_START(model3)
+	MCFG_VIDEO_UPDATE(model3)
+
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SOUND_ADD("scsp1", SCSP, 0)
+	MCFG_SOUND_CONFIG(scsp_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 2.0)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 2.0)
+
+	MCFG_SOUND_ADD("scsp2", SCSP, 0)
+	MCFG_SOUND_CONFIG(scsp2_interface)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 2.0)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 2.0)
+MACHINE_CONFIG_END
 
 static void interleave_vroms(running_machine *machine)
 {
 	int start;
 	int i,j,x;
-	UINT16 *vrom1 = (UINT16*)memory_region(machine, "user3");
-	UINT16 *vrom2 = (UINT16*)memory_region(machine, "user4");
-	int vrom_length = memory_region_length(machine, "user3");
+	UINT16 *vrom1 = (UINT16*)machine->region("user3")->base();
+	UINT16 *vrom2 = (UINT16*)machine->region("user4")->base();
+	int vrom_length = machine->region("user3")->bytes();
 	UINT16 *vrom;
 
 	model3_vrom = auto_alloc_array(machine, UINT32, 0x4000000/4);
@@ -5222,7 +5200,7 @@ static DRIVER_INIT( model3_20 )
 
 static DRIVER_INIT( lostwsga )
 {
-	UINT32 *rom = (UINT32*)memory_region(machine, "user1");
+	UINT32 *rom = (UINT32*)machine->region("user1")->base();
 
 	DRIVER_INIT_CALL(model3_15);
 	/* TODO: there's an M68K device at 0xC0000000 - FF, maybe lightgun controls ? */
@@ -5233,7 +5211,7 @@ static DRIVER_INIT( lostwsga )
 
 static DRIVER_INIT( scud )
 {
-	UINT32 *rom = (UINT32*)memory_region(machine, "user1");
+	UINT32 *rom = (UINT32*)machine->region("user1")->base();
 
 	DRIVER_INIT_CALL(model3_15);
 	/* TODO: network device at 0xC0000000 - FF */
@@ -5245,7 +5223,7 @@ static DRIVER_INIT( scud )
 
 static DRIVER_INIT( scudp )
 {
-	UINT32 *rom = (UINT32*)memory_region(machine, "user1");
+	UINT32 *rom = (UINT32*)machine->region("user1")->base();
 
 	DRIVER_INIT_CALL(model3_15);
 	/* TODO: network device at 0xC0000000 - FF */
@@ -5262,7 +5240,7 @@ static DRIVER_INIT( scudp )
 
 static DRIVER_INIT( lemans24 )
 {
-	UINT32 *rom = (UINT32*)memory_region(machine, "user1");
+	UINT32 *rom = (UINT32*)machine->region("user1")->base();
 	DRIVER_INIT_CALL(model3_15);
 
 	memory_install_readwrite64_handler(cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM), 0xc1000000, 0xc10000ff, 0, 0, scsi_r, scsi_w );
@@ -5276,7 +5254,7 @@ static DRIVER_INIT( lemans24 )
 
 static DRIVER_INIT( vf3 )
 {
-	UINT32 *rom = (UINT32*)memory_region(machine, "user1");
+	UINT32 *rom = (UINT32*)machine->region("user1")->base();
 
 	DRIVER_INIT_CALL(model3_10);
 
@@ -5289,7 +5267,7 @@ static DRIVER_INIT( vf3 )
 
 static DRIVER_INIT( vs215 )
 {
-	UINT32 *rom = (UINT32*)memory_region(machine, "user1");
+	UINT32 *rom = (UINT32*)machine->region("user1")->base();
 
 	rom[(0x70dde0^4)/4] = 0x60000000;
 	rom[(0x70e6f0^4)/4] = 0x60000000;
@@ -5309,7 +5287,7 @@ static DRIVER_INIT( vs215 )
 
 static DRIVER_INIT( vs29815 )
 {
-	UINT32 *rom = (UINT32*)memory_region(machine, "user1");
+	UINT32 *rom = (UINT32*)machine->region("user1")->base();
 
 	rom[(0x6028ec^4)/4] = 0x60000000;
 	rom[(0x60290c^4)/4] = 0x60000000;
@@ -5328,7 +5306,7 @@ static DRIVER_INIT( vs29815 )
 
 static DRIVER_INIT( bass )
 {
-	UINT32 *rom = (UINT32*)memory_region(machine, "user1");
+	UINT32 *rom = (UINT32*)machine->region("user1")->base();
 
 	rom[(0x7999a8^4)/4] = 0x60000000;
 	rom[(0x7999c8^4)/4] = 0x60000000;
@@ -5359,7 +5337,7 @@ static DRIVER_INIT( getbass )
 
 static DRIVER_INIT( vs2 )
 {
-	UINT32 *rom = (UINT32*)memory_region(machine, "user1");
+	UINT32 *rom = (UINT32*)machine->region("user1")->base();
 
 	DRIVER_INIT_CALL(model3_20);
 
@@ -5369,7 +5347,7 @@ static DRIVER_INIT( vs2 )
 
 static DRIVER_INIT( vs298 )
 {
-	UINT32 *rom = (UINT32*)memory_region(machine, "user1");
+	UINT32 *rom = (UINT32*)machine->region("user1")->base();
 
 	DRIVER_INIT_CALL(model3_20);
 
@@ -5380,7 +5358,7 @@ static DRIVER_INIT( vs298 )
 
 static DRIVER_INIT( vs2v991 )
 {
-	UINT32 *rom = (UINT32*)memory_region(machine, "user1");
+	UINT32 *rom = (UINT32*)machine->region("user1")->base();
 
 	DRIVER_INIT_CALL(model3_20);
 
@@ -5390,7 +5368,7 @@ static DRIVER_INIT( vs2v991 )
 
 static DRIVER_INIT( vs299b )
 {
-	UINT32 *rom = (UINT32*)memory_region(machine, "user1");
+	UINT32 *rom = (UINT32*)machine->region("user1")->base();
 
 	DRIVER_INIT_CALL(model3_20);
 
@@ -5400,7 +5378,7 @@ static DRIVER_INIT( vs299b )
 
 static DRIVER_INIT( vs299a )
 {
-	UINT32 *rom = (UINT32*)memory_region(machine, "user1");
+	UINT32 *rom = (UINT32*)machine->region("user1")->base();
 
 	DRIVER_INIT_CALL(model3_20);
 
@@ -5410,7 +5388,7 @@ static DRIVER_INIT( vs299a )
 
 static DRIVER_INIT( vs299 )
 {
-	UINT32 *rom = (UINT32*)memory_region(machine, "user1");
+	UINT32 *rom = (UINT32*)machine->region("user1")->base();
 
 	DRIVER_INIT_CALL(model3_20);
 
@@ -5420,7 +5398,7 @@ static DRIVER_INIT( vs299 )
 
 static DRIVER_INIT( harley )
 {
-	UINT32 *rom = (UINT32*)memory_region(machine, "user1");
+	UINT32 *rom = (UINT32*)machine->region("user1")->base();
 	DRIVER_INIT_CALL(model3_20);
 
 	memory_install_readwrite64_handler(cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM), 0xc0000000, 0xc00fffff, 0, 0, network_r, network_w );
@@ -5434,7 +5412,7 @@ static DRIVER_INIT( harley )
 
 static DRIVER_INIT( srally2 )
 {
-	UINT32 *rom = (UINT32*)memory_region(machine, "user1");
+	UINT32 *rom = (UINT32*)machine->region("user1")->base();
 	DRIVER_INIT_CALL(model3_20);
 
 	rom[(0x7c0c4^4)/4] = 0x60000000;
@@ -5444,7 +5422,7 @@ static DRIVER_INIT( srally2 )
 
 static DRIVER_INIT( swtrilgy )
 {
-	UINT32 *rom = (UINT32*)memory_region(machine, "user1");
+	UINT32 *rom = (UINT32*)machine->region("user1")->base();
 	DRIVER_INIT_CALL(model3_20);
 
 	rom[(0xf0e48^4)/4] = 0x60000000;
@@ -5455,7 +5433,7 @@ static DRIVER_INIT( swtrilgy )
 
 static DRIVER_INIT( swtrilga )
 {
-	UINT32 *rom = (UINT32*)memory_region(machine, "user1");
+	UINT32 *rom = (UINT32*)machine->region("user1")->base();
 	DRIVER_INIT_CALL(model3_20);
 
 	rom[(0xf6dd0^4)/4] = 0x60000000;
@@ -5463,7 +5441,7 @@ static DRIVER_INIT( swtrilga )
 
 static DRIVER_INIT( von2 )
 {
-	UINT32 *rom = (UINT32*)memory_region(machine, "user1");
+	UINT32 *rom = (UINT32*)machine->region("user1")->base();
 	DRIVER_INIT_CALL(model3_20);
 
 	rom[(0x189168^4)/4] = 0x60000000;
@@ -5475,7 +5453,7 @@ static DRIVER_INIT( von2 )
 
 static DRIVER_INIT( dirtdvls )
 {
-	UINT32 *rom = (UINT32*)memory_region(machine, "user1");
+	UINT32 *rom = (UINT32*)machine->region("user1")->base();
 	DRIVER_INIT_CALL(model3_20);
 
 	rom[(0x0600a0^4)/4] = 0x60000000;
@@ -5488,7 +5466,7 @@ static DRIVER_INIT( dirtdvls )
 
 static DRIVER_INIT( daytona2 )
 {
-	UINT32 *rom = (UINT32*)memory_region(machine, "user1");
+	UINT32 *rom = (UINT32*)machine->region("user1")->base();
 	DRIVER_INIT_CALL(model3_20);
 
 	memory_install_write64_handler(cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM), 0xc3800000, 0xc3800007, 0, 0, daytona2_rombank_w );
@@ -5501,7 +5479,7 @@ static DRIVER_INIT( daytona2 )
 
 static DRIVER_INIT( dayto2pe )
 {
-	UINT32 *rom = (UINT32*)memory_region(machine, "user1");
+	UINT32 *rom = (UINT32*)machine->region("user1")->base();
 	DRIVER_INIT_CALL(model3_20);
 
 	memory_install_write64_handler(cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM), 0xc3800000, 0xc3800007, 0, 0, daytona2_rombank_w );
@@ -5515,7 +5493,7 @@ static DRIVER_INIT( dayto2pe )
 
 static DRIVER_INIT( spikeout )
 {
-	UINT32 *rom = (UINT32*)memory_region(machine, "user1");
+	UINT32 *rom = (UINT32*)machine->region("user1")->base();
 	DRIVER_INIT_CALL(model3_20);
 
 	rom[(0x6059cc^4)/4] = 0x60000000;
@@ -5524,7 +5502,7 @@ static DRIVER_INIT( spikeout )
 
 static DRIVER_INIT( spikeofe )
 {
-	UINT32 *rom = (UINT32*)memory_region(machine, "user1");
+	UINT32 *rom = (UINT32*)machine->region("user1")->base();
 	DRIVER_INIT_CALL(model3_20);
 
 	rom[(0x6059cc^4)/4] = 0x60000000;
@@ -5533,7 +5511,7 @@ static DRIVER_INIT( spikeofe )
 
 static DRIVER_INIT( eca )
 {
-	UINT32 *rom = (UINT32*)memory_region(machine, "user1");
+	UINT32 *rom = (UINT32*)machine->region("user1")->base();
 	DRIVER_INIT_CALL(model3_20);
 
 	rom[(0x535580^4)/4] = 0x60000000;
@@ -5543,7 +5521,7 @@ static DRIVER_INIT( eca )
 
 static DRIVER_INIT( skichamp )
 {
-	UINT32 *rom = (UINT32*)memory_region(machine, "user1");
+	UINT32 *rom = (UINT32*)machine->region("user1")->base();
 	DRIVER_INIT_CALL(model3_20);
 
 	rom[(0x5263c8^4)/4] = 0x60000000;

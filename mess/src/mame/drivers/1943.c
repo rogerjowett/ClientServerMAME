@@ -29,7 +29,6 @@
 */
 
 #include "emu.h"
-#include "deprecat.h"
 #include "cpu/z80/z80.h"
 #include "sound/2203intf.h"
 #include "includes/1943.h"
@@ -249,7 +248,7 @@ GFXDECODE_END
 
 static MACHINE_RESET( 1943 )
 {
-	_1943_state *state = (_1943_state *)machine->driver_data;
+	_1943_state *state = machine->driver_data<_1943_state>();
 
 	state->char_on = 0;
 	state->obj_on = 0;
@@ -257,50 +256,48 @@ static MACHINE_RESET( 1943 )
 	state->bg2_on = 0;
 }
 
-static MACHINE_DRIVER_START( 1943 )
-
-	MDRV_DRIVER_DATA(_1943_state)
+static MACHINE_CONFIG_START( 1943, _1943_state )
 
 	// basic machine hardware
-	MDRV_CPU_ADD("maincpu", Z80, XTAL_24MHz/4)	/* verified on pcb */
-	MDRV_CPU_PROGRAM_MAP(c1943_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80, XTAL_24MHz/4)	/* verified on pcb */
+	MCFG_CPU_PROGRAM_MAP(c1943_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80, XTAL_24MHz/8)	/* verified on pcb */
-	MDRV_CPU_PROGRAM_MAP(sound_map)
-	MDRV_CPU_VBLANK_INT_HACK(irq0_line_hold, 4)
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL_24MHz/8)	/* verified on pcb */
+	MCFG_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_PERIODIC_INT(irq0_line_hold, 4*60)
 
-	MDRV_MACHINE_RESET(1943)
+	MCFG_MACHINE_RESET(1943)
 
 	// video hardware
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
-	MDRV_GFXDECODE(1943)
-	MDRV_PALETTE_LENGTH(32*4+16*16+16*16+16*16)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_GFXDECODE(1943)
+	MCFG_PALETTE_LENGTH(32*4+16*16+16*16+16*16)
 
-	MDRV_PALETTE_INIT(1943)
-	MDRV_VIDEO_START(1943)
-	MDRV_VIDEO_UPDATE(1943)
+	MCFG_PALETTE_INIT(1943)
+	MCFG_VIDEO_START(1943)
+	MCFG_VIDEO_UPDATE(1943)
 
 	// sound hardware
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ym1", YM2203, XTAL_24MHz/16)	/* verified on pcb */
-	MDRV_SOUND_ROUTE(0, "mono", 0.15)
-	MDRV_SOUND_ROUTE(1, "mono", 0.15)
-	MDRV_SOUND_ROUTE(2, "mono", 0.15)
-	MDRV_SOUND_ROUTE(3, "mono", 0.10)
+	MCFG_SOUND_ADD("ym1", YM2203, XTAL_24MHz/16)	/* verified on pcb */
+	MCFG_SOUND_ROUTE(0, "mono", 0.15)
+	MCFG_SOUND_ROUTE(1, "mono", 0.15)
+	MCFG_SOUND_ROUTE(2, "mono", 0.15)
+	MCFG_SOUND_ROUTE(3, "mono", 0.10)
 
-	MDRV_SOUND_ADD("ym2", YM2203, XTAL_24MHz/16)	/* verified on pcb */
-	MDRV_SOUND_ROUTE(0, "mono", 0.15)
-	MDRV_SOUND_ROUTE(1, "mono", 0.15)
-	MDRV_SOUND_ROUTE(2, "mono", 0.15)
-	MDRV_SOUND_ROUTE(3, "mono", 0.10)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ym2", YM2203, XTAL_24MHz/16)	/* verified on pcb */
+	MCFG_SOUND_ROUTE(0, "mono", 0.15)
+	MCFG_SOUND_ROUTE(1, "mono", 0.15)
+	MCFG_SOUND_ROUTE(2, "mono", 0.15)
+	MCFG_SOUND_ROUTE(3, "mono", 0.10)
+MACHINE_CONFIG_END
 
 /* ROMs */
 
@@ -538,7 +535,7 @@ ROM_END
 
 static DRIVER_INIT( 1943 )
 {
-	UINT8 *ROM = memory_region(machine, "maincpu");
+	UINT8 *ROM = machine->region("maincpu")->base();
 	memory_configure_bank(machine, "bank1", 0, 29, &ROM[0x10000], 0x1000);
 	memory_configure_bank(machine, "bank2", 0, 29, &ROM[0x11000], 0x1000);
 	memory_configure_bank(machine, "bank3", 0, 29, &ROM[0x12000], 0x1000);

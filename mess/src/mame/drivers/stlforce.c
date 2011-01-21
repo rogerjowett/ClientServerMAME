@@ -109,7 +109,7 @@ static ADDRESS_MAP_START( stlforce_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x400010, 0x400011) AM_DEVWRITE("eeprom", eeprom_w)
 	AM_RANGE(0x400012, 0x400013) AM_DEVWRITE("oki", oki_bank_w)
 	AM_RANGE(0x40001e, 0x40001f) AM_WRITENOP // sprites buffer commands
-	AM_RANGE(0x410000, 0x410001) AM_DEVREADWRITE8("oki", okim6295_r, okim6295_w, 0x00ff)
+	AM_RANGE(0x410000, 0x410001) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0x00ff)
 ADDRESS_MAP_END
 
 static INPUT_PORTS_START( stlforce )
@@ -183,47 +183,45 @@ static GFXDECODE_START( stlforce )
 GFXDECODE_END
 
 
-static MACHINE_DRIVER_START( stlforce )
-
-	MDRV_DRIVER_DATA( stlforce_state )
+static MACHINE_CONFIG_START( stlforce, stlforce_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 15000000)
-	MDRV_CPU_PROGRAM_MAP(stlforce_map)
-	MDRV_CPU_VBLANK_INT("screen", irq4_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, 15000000)
+	MCFG_CPU_PROGRAM_MAP(stlforce_map)
+	MCFG_CPU_VBLANK_INT("screen", irq4_line_hold)
 
-	MDRV_EEPROM_93C46_ADD("eeprom")
+	MCFG_EEPROM_93C46_ADD("eeprom")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(58)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(1*8, 47*8-1, 0*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(58)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(1*8, 47*8-1, 0*8, 30*8-1)
 
-	MDRV_GFXDECODE(stlforce)
-	MDRV_PALETTE_LENGTH(0x800)
+	MCFG_GFXDECODE(stlforce)
+	MCFG_PALETTE_LENGTH(0x800)
 
-	MDRV_VIDEO_START(stlforce)
-	MDRV_VIDEO_UPDATE(stlforce)
+	MCFG_VIDEO_START(stlforce)
+	MCFG_VIDEO_UPDATE(stlforce)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_OKIM6295_ADD("oki", 937500 , OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 937500 , OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( twinbrat )
+static MACHINE_CONFIG_DERIVED( twinbrat, stlforce )
+
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(stlforce)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_CLOCK(14745600)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_CLOCK(14745600)
 
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_VISIBLE_AREA(3*8, 45*8-1, 0*8, 30*8-1)
-MACHINE_DRIVER_END
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_VISIBLE_AREA(3*8, 45*8-1, 0*8, 30*8-1)
+MACHINE_CONFIG_END
 
 ROM_START( stlforce )
 	ROM_REGION( 0x80000, "maincpu", 0 ) /* 68000 code */
@@ -364,14 +362,14 @@ ROM_END
 
 static DRIVER_INIT(stlforce)
 {
-	stlforce_state *state = (stlforce_state *)machine->driver_data;
+	stlforce_state *state = machine->driver_data<stlforce_state>();
 
 	state->sprxoffs = 0;
 }
 
 static DRIVER_INIT(twinbrat)
 {
-	stlforce_state *state = (stlforce_state *)machine->driver_data;
+	stlforce_state *state = machine->driver_data<stlforce_state>();
 
 	state->sprxoffs = 9;
 }

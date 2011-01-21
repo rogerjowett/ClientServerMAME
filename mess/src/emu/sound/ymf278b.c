@@ -116,8 +116,8 @@ typedef struct
 	int irq_line;
 
 	UINT8 port_A, port_B, port_C;
-	void (*irq_callback)(running_device *, int);
-	running_device *device;
+	void (*irq_callback)(device_t *, int);
+	device_t *device;
 
 	const UINT8 *rom;
 	int clock;
@@ -129,14 +129,12 @@ typedef struct
 	sound_stream * stream;
 } YMF278BChip;
 
-INLINE YMF278BChip *get_safe_token(running_device *device)
+INLINE YMF278BChip *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
-	assert(device->type() == SOUND_YMF278B);
+	assert(device->type() == YMF278B);
 	return (YMF278BChip *)downcast<legacy_device_base *>(device)->token();
 }
-
-static INT32 *mix;
 
 static int ymf278b_compute_rate(YMF278BSlot *slot, int val)
 {
@@ -269,6 +267,7 @@ static STREAM_UPDATE( ymf278b_pcm_update )
 	const UINT8 *rombase;
 	INT32 *mixp;
 	INT32 vl, vr;
+	INT32 mix[44100*2];
 
 	memset(mix, 0, sizeof(mix[0])*samples*2);
 
@@ -664,7 +663,7 @@ WRITE8_DEVICE_HANDLER( ymf278b_w )
 	}
 }
 
-static void ymf278b_init(running_device *device, YMF278BChip *chip, void (*cb)(running_device *, int))
+static void ymf278b_init(device_t *device, YMF278BChip *chip, void (*cb)(device_t *, int))
 {
 	chip->rom = *device->region();
 	chip->irq_callback = cb;
@@ -672,8 +671,64 @@ static void ymf278b_init(running_device *device, YMF278BChip *chip, void (*cb)(r
 	chip->timer_b = timer_alloc(device->machine, ymf278b_timer_b_tick, chip);
 	chip->irq_line = CLEAR_LINE;
 	chip->clock = device->clock();
+}
 
-	mix = auto_alloc_array(device->machine, INT32, 44100*2);
+static void ymf278b_register_save_state(device_t *device, YMF278BChip *chip)
+{
+	int i;
+
+	state_save_register_device_item(device, 0, chip->lsitest0);
+	state_save_register_device_item(device, 0, chip->lsitest1);
+	state_save_register_device_item(device, 0, chip->wavetblhdr);
+	state_save_register_device_item(device, 0, chip->memmode);
+	state_save_register_device_item(device, 0, chip->memadr);
+	state_save_register_device_item(device, 0, chip->fm_l);
+	state_save_register_device_item(device, 0, chip->fm_r);
+	state_save_register_device_item(device, 0, chip->pcm_l);
+	state_save_register_device_item(device, 0, chip->pcm_r);
+	state_save_register_device_item(device, 0, chip->timer_a_count);
+	state_save_register_device_item(device, 0, chip->timer_b_count);
+	state_save_register_device_item(device, 0, chip->enable);
+	state_save_register_device_item(device, 0, chip->current_irq);
+	state_save_register_device_item(device, 0, chip->irq_line);
+	state_save_register_device_item(device, 0, chip->port_A);
+	state_save_register_device_item(device, 0, chip->port_B);
+	state_save_register_device_item(device, 0, chip->port_C);
+
+	for (i = 0; i < 24; ++i)
+	{
+		state_save_register_device_item(device, i, chip->slots[i].wave);
+		state_save_register_device_item(device, i, chip->slots[i].FN);
+		state_save_register_device_item(device, i, chip->slots[i].OCT);
+		state_save_register_device_item(device, i, chip->slots[i].PRVB);
+		state_save_register_device_item(device, i, chip->slots[i].LD);
+		state_save_register_device_item(device, i, chip->slots[i].TL);
+		state_save_register_device_item(device, i, chip->slots[i].pan);
+		state_save_register_device_item(device, i, chip->slots[i].lfo);
+		state_save_register_device_item(device, i, chip->slots[i].vib);
+		state_save_register_device_item(device, i, chip->slots[i].AM);
+
+		state_save_register_device_item(device, i, chip->slots[i].AR);
+		state_save_register_device_item(device, i, chip->slots[i].D1R);
+		state_save_register_device_item(device, i, chip->slots[i].DL);
+		state_save_register_device_item(device, i, chip->slots[i].D2R);
+		state_save_register_device_item(device, i, chip->slots[i].RC);
+		state_save_register_device_item(device, i, chip->slots[i].RR);
+
+		state_save_register_device_item(device, i, chip->slots[i].step);
+		state_save_register_device_item(device, i, chip->slots[i].stepptr);
+
+		state_save_register_device_item(device, i, chip->slots[i].active);
+		state_save_register_device_item(device, i, chip->slots[i].bits);
+		state_save_register_device_item(device, i, chip->slots[i].startaddr);
+		state_save_register_device_item(device, i, chip->slots[i].loopaddr);
+		state_save_register_device_item(device, i, chip->slots[i].endaddr);
+
+		state_save_register_device_item(device, i, chip->slots[i].env_step);
+		state_save_register_device_item(device, i, chip->slots[i].env_vol);
+		state_save_register_device_item(device, i, chip->slots[i].env_vol_step);
+		state_save_register_device_item(device, i, chip->slots[i].env_vol_lim);
+	}
 }
 
 static DEVICE_START( ymf278b )
@@ -706,9 +761,10 @@ static DEVICE_START( ymf278b )
 	for(i=0; i<7; i++)
 		chip->mix_level[i] = chip->volume[8*i+8];
 	chip->mix_level[7] = 0;
+
+	// Register state for saving
+	ymf278b_register_save_state(device, chip);
 }
-
-
 
 
 /**************************************************************************

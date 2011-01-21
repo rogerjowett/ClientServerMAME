@@ -10,12 +10,11 @@
 #include "cpu/apexc/apexc.h"
 
 
-class apexc_state
+class apexc_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, apexc_state(machine)); }
-
-	apexc_state(running_machine &machine) { }
+	apexc_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	UINT32 panel_data_reg;	/* value of a data register on the control panel which can
                                 be edited - the existence of this register is a personnal
@@ -67,13 +66,13 @@ static DEVICE_IMAGE_LOAD( apexc_cylinder )
 	apexc_cylinder_t *cyl = (apexc_cylinder_t *)downcast<legacy_device_base *>(&image.device())->token();
 	cyl->writable = image.is_writable();
 
-	image.fread( memory_region(image.device().machine, "maincpu"), /*0x8000*/0x1000);
+	image.fread( image.device().machine->region("maincpu")->base(), /*0x8000*/0x1000);
 #ifdef LSB_FIRST
 	{	/* fix endianness */
 		UINT32 *RAM;
 		int i;
 
-		RAM = (UINT32 *) memory_region(image.device().machine, "maincpu");
+		RAM = (UINT32 *) image.device().machine->region("maincpu")->base();
 
 		for (i=0; i < /*0x2000*/0x0400; i++)
 			RAM[i] = BIG_ENDIANIZE_INT32(RAM[i]);
@@ -98,14 +97,14 @@ static DEVICE_IMAGE_UNLOAD( apexc_cylinder )
 			UINT32 *RAM;
 			int i;
 
-			RAM = (UINT32 *) memory_region(image.device().machine, "maincpu");
+			RAM = (UINT32 *) image.device().machine->region("maincpu")->base();
 
 			for (i=0; i < /*0x2000*/0x0400; i++)
 				RAM[i] = BIG_ENDIANIZE_INT32(RAM[i]);
 		}
 #endif
 		/* write */
-		image.fwrite(memory_region(image.device().machine, "maincpu"), /*0x8000*/0x1000);
+		image.fwrite(image.device().machine->region("maincpu")->base(), /*0x8000*/0x1000);
 	}
 }
 
@@ -146,8 +145,8 @@ DEVICE_GET_INFO( apexc_cylinder )
 DECLARE_LEGACY_IMAGE_DEVICE(APEXC_CYLINDER, apexc_cylinder);
 DEFINE_LEGACY_IMAGE_DEVICE(APEXC_CYLINDER, apexc_cylinder);
 
-#define MDRV_APEXC_CYLINDER_ADD(_tag) \
-	MDRV_DEVICE_ADD(_tag, APEXC_CYLINDER, 0)
+#define MCFG_APEXC_CYLINDER_ADD(_tag) \
+	MCFG_DEVICE_ADD(_tag, APEXC_CYLINDER, 0)
 
 
 /*
@@ -233,8 +232,8 @@ static DEVICE_GET_INFO(apexc_tape_puncher)
 DECLARE_LEGACY_IMAGE_DEVICE(APEXC_TAPE_PUNCHER, apexc_tape_puncher);
 DEFINE_LEGACY_IMAGE_DEVICE(APEXC_TAPE_PUNCHER, apexc_tape_puncher);
 
-#define MDRV_APEXC_TAPE_PUNCHER_ADD(_tag) \
-	MDRV_DEVICE_ADD(_tag, APEXC_TAPE_PUNCHER, 0)
+#define MCFG_APEXC_TAPE_PUNCHER_ADD(_tag) \
+	MCFG_DEVICE_ADD(_tag, APEXC_TAPE_PUNCHER, 0)
 
 static DEVICE_GET_INFO(apexc_tape_reader)
 {
@@ -251,8 +250,8 @@ static DEVICE_GET_INFO(apexc_tape_reader)
 DECLARE_LEGACY_IMAGE_DEVICE(APEXC_TAPE_READER, apexc_tape_reader);
 DEFINE_LEGACY_IMAGE_DEVICE(APEXC_TAPE_READER, apexc_tape_reader);
 
-#define MDRV_APEXC_TAPE_READER_ADD(_tag) \
-	MDRV_DEVICE_ADD(_tag, APEXC_TAPE_READER, 0)
+#define MCFG_APEXC_TAPE_READER_ADD(_tag) \
+	MCFG_DEVICE_ADD(_tag, APEXC_TAPE_READER, 0)
 
 /*
     Open a tape image
@@ -392,8 +391,8 @@ INPUT_PORTS_END
 */
 static INTERRUPT_GEN( apexc_interrupt )
 {
-	apexc_state *state = (apexc_state *)device->machine->driver_data;
-	const address_space* space = cputag_get_address_space(device->machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	apexc_state *state = device->machine->driver_data<apexc_state>();
+	address_space* space = cputag_get_address_space(device->machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 	UINT32 edit_keys;
 	int control_keys;
 
@@ -474,11 +473,11 @@ static INTERRUPT_GEN( apexc_interrupt )
 
 		if (control_keys & panel_write) {
 			/* write memory */
-			memory_write_dword_32be(space, cpu_get_reg(device, APEXC_ML_FULL)<<2, state->panel_data_reg);
+			space->write_dword(cpu_get_reg(device, APEXC_ML_FULL)<<2, state->panel_data_reg);
 		}
 		else {
 			/* read memory */
-			state->panel_data_reg = memory_read_dword_32be(space, cpu_get_reg(device, APEXC_ML_FULL)<<2);
+			state->panel_data_reg = space->read_dword(cpu_get_reg(device, APEXC_ML_FULL)<<2);
 		}
 	}
 
@@ -552,8 +551,8 @@ static PALETTE_INIT( apexc )
 
 static VIDEO_START( apexc )
 {
-	apexc_state *state = (apexc_state *)machine->driver_data;
-	screen_device *screen = screen_first(*machine);
+	apexc_state *state = machine->driver_data<apexc_state>();
+	screen_device *screen = machine->first_screen();
 	int width = screen->width();
 	int height = screen->height();
 
@@ -593,7 +592,7 @@ static void apexc_draw_string(running_machine *machine, bitmap_t *bitmap, const 
 
 static VIDEO_UPDATE( apexc )
 {
-	apexc_state *state = (apexc_state *)screen->machine->driver_data;
+	apexc_state *state = screen->machine->driver_data<apexc_state>();
 	int i;
 	char the_char;
 
@@ -625,7 +624,7 @@ static VIDEO_UPDATE( apexc )
 
 static void apexc_teletyper_init(running_machine *machine)
 {
-	apexc_state *state = (apexc_state *)machine->driver_data;
+	apexc_state *state = machine->driver_data<apexc_state>();
 
 	state->letters = FALSE;
 	state->pos = 0;
@@ -633,7 +632,7 @@ static void apexc_teletyper_init(running_machine *machine)
 
 static void apexc_teletyper_linefeed(running_machine *machine)
 {
-	apexc_state *state = (apexc_state *)machine->driver_data;
+	apexc_state *state = machine->driver_data<apexc_state>();
 	UINT8 buf[teletyper_window_width];
 	int y;
 
@@ -672,7 +671,7 @@ static void apexc_teletyper_putchar(running_machine *machine, int character)
 		}
 	};
 
-	apexc_state *state = (apexc_state *)machine->driver_data;
+	apexc_state *state = machine->driver_data<apexc_state>();
 	char buffer[2] = "x";
 
 	character &= 0x1f;
@@ -823,7 +822,7 @@ static DRIVER_INIT(apexc)
 		0x00
 	};
 
-	dst = memory_region(machine, "gfx1");
+	dst = machine->region("gfx1")->base();
 
 	memcpy(dst, fontdata6x8, apexcfontdata_size);
 }
@@ -860,41 +859,39 @@ static ADDRESS_MAP_START(apexc_io_map, ADDRESS_SPACE_IO, 8)
 ADDRESS_MAP_END
 
 
-static MACHINE_DRIVER_START(apexc)
-
-	MDRV_DRIVER_DATA( apexc_state )
+static MACHINE_CONFIG_START( apexc, apexc_state )
 
 	/* basic machine hardware */
 	/* APEXC CPU @ 2.0 kHz (memory word clock frequency) */
-	MDRV_CPU_ADD("maincpu", APEXC, 2000)
-	/*MDRV_CPU_CONFIG(NULL)*/
-	MDRV_CPU_PROGRAM_MAP(apexc_mem_map)
-	MDRV_CPU_IO_MAP(apexc_io_map)
+	MCFG_CPU_ADD("maincpu", APEXC, 2000)
+	/*MCFG_CPU_CONFIG(NULL)*/
+	MCFG_CPU_PROGRAM_MAP(apexc_mem_map)
+	MCFG_CPU_IO_MAP(apexc_io_map)
 	/* dummy interrupt: handles the control panel */
-	MDRV_CPU_VBLANK_INT("screen", apexc_interrupt)
-	/*MDRV_CPU_PERIODIC_INT(func, rate)*/
+	MCFG_CPU_VBLANK_INT("screen", apexc_interrupt)
+	/*MCFG_CPU_PERIODIC_INT(func, rate)*/
 
-	MDRV_MACHINE_START( apexc )
+	MCFG_MACHINE_START( apexc )
 
 	/* video hardware does not exist, but we display a control panel and the typewriter output */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(256, 192)
-	MDRV_SCREEN_VISIBLE_AREA(0, 256-1, 0, 192-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(256, 192)
+	MCFG_SCREEN_VISIBLE_AREA(0, 256-1, 0, 192-1)
 
-	MDRV_GFXDECODE(apexc)
-	MDRV_PALETTE_LENGTH(APEXC_PALETTE_SIZE)
+	MCFG_GFXDECODE(apexc)
+	MCFG_PALETTE_LENGTH(APEXC_PALETTE_SIZE)
 
-	MDRV_PALETTE_INIT(apexc)
-	MDRV_VIDEO_START(apexc)
-	MDRV_VIDEO_UPDATE(apexc)
+	MCFG_PALETTE_INIT(apexc)
+	MCFG_VIDEO_START(apexc)
+	MCFG_VIDEO_UPDATE(apexc)
 
-	MDRV_APEXC_CYLINDER_ADD("cylinder")
-	MDRV_APEXC_TAPE_PUNCHER_ADD("tape_puncher")
-	MDRV_APEXC_TAPE_READER_ADD("tape_reader")
-MACHINE_DRIVER_END
+	MCFG_APEXC_CYLINDER_ADD("cylinder")
+	MCFG_APEXC_TAPE_PUNCHER_ADD("tape_puncher")
+	MCFG_APEXC_TAPE_READER_ADD("tape_reader")
+MACHINE_CONFIG_END
 
 ROM_START(apexc)
 	/*CPU memory space*/
@@ -906,5 +903,5 @@ ROM_START(apexc)
 ROM_END
 
 /*         YEAR     NAME        PARENT          COMPAT  MACHINE     INPUT   INIT  COMPANY     FULLNAME */
-//COMP(      1951,    apexc53,    0,            0,      apexc53,    apexc,  apexc, "Booth", "All Purpose Electronic X-ray Computer (as described in 1953)" , GAME_NOT_WORKING | GAME_NO_SOUND)
-COMP(      1955,    apexc,	/*apexc53*/0,	0,	apexc,      apexc,  apexc, "Booth", "All Purpose Electronic X-ray Computer (as described in 1957)" , GAME_NO_SOUND)
+//COMP(      1951,    apexc53,    0,            0,      apexc53,    apexc,  apexc, "Andrew Donald Booth", "All Purpose Electronic X-ray Computer (as described in 1953)" , GAME_NOT_WORKING | GAME_NO_SOUND)
+COMP(      1955,    apexc,	/*apexc53*/0,	0,	apexc,      apexc,  apexc, "Andrew Donald Booth", "All Purpose Electronic X-ray Computer (as described in 1957)" , GAME_NO_SOUND)

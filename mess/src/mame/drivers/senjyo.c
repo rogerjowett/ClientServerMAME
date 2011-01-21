@@ -75,22 +75,23 @@ I/O read/write
 #include "machine/segacrpt.h"
 #include "includes/senjyo.h"
 
-extern UINT8 senjyo_sound_cmd;
-static int int_delay_kludge;
-
 static MACHINE_RESET( senjyo )
 {
+	senjyo_state *state = machine->driver_data<senjyo_state>();
+
 	/* we must avoid generating interrupts for the first few frames otherwise */
 	/* Senjyo locks up. There must be an interrupt enable port somewhere, */
 	/* or maybe interrupts are genenrated by the CTC. */
 	/* Maybe a write to port d002 clears the IRQ line, but I'm not sure. */
-	int_delay_kludge = 10;
+	state->int_delay_kludge = 10;
 }
 
 static INTERRUPT_GEN( senjyo_interrupt )
 {
-	if (int_delay_kludge == 0) cpu_set_input_line(device, 0, HOLD_LINE);
-	else int_delay_kludge--;
+	senjyo_state *state = device->machine->driver_data<senjyo_state>();
+
+	if (state->int_delay_kludge == 0) cpu_set_input_line(device, 0, HOLD_LINE);
+	else state->int_delay_kludge--;
 }
 
 static WRITE8_HANDLER( flip_screen_w )
@@ -100,7 +101,9 @@ static WRITE8_HANDLER( flip_screen_w )
 
 static WRITE8_DEVICE_HANDLER( sound_cmd_w )
 {
-	senjyo_sound_cmd = data;
+	senjyo_state *state = device->machine->driver_data<senjyo_state>();
+
+	state->sound_cmd = data;
 
 	z80pio_astb_w(device, 0);
 	z80pio_astb_w(device, 1);
@@ -109,28 +112,28 @@ static WRITE8_DEVICE_HANDLER( sound_cmd_w )
 static ADDRESS_MAP_START( senjyo_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x7fff) AM_ROM
 	AM_RANGE(0x8000, 0x8fff) AM_RAM
-	AM_RANGE(0x9000, 0x93ff) AM_RAM_WRITE(senjyo_fgvideoram_w) AM_BASE(&senjyo_fgvideoram)
-	AM_RANGE(0x9400, 0x97ff) AM_RAM_WRITE(senjyo_fgcolorram_w) AM_BASE(&senjyo_fgcolorram)
-	AM_RANGE(0x9800, 0x987f) AM_RAM AM_BASE_SIZE_GENERIC(spriteram)
+	AM_RANGE(0x9000, 0x93ff) AM_RAM_WRITE(senjyo_fgvideoram_w) AM_BASE_MEMBER(senjyo_state, fgvideoram)
+	AM_RANGE(0x9400, 0x97ff) AM_RAM_WRITE(senjyo_fgcolorram_w) AM_BASE_MEMBER(senjyo_state, fgcolorram)
+	AM_RANGE(0x9800, 0x987f) AM_RAM AM_BASE_SIZE_MEMBER(senjyo_state, spriteram, spriteram_size)
 	AM_RANGE(0x9c00, 0x9dff) AM_RAM_WRITE(paletteram_IIBBGGRR_w) AM_BASE_GENERIC(paletteram)
-	AM_RANGE(0x9e00, 0x9e1f) AM_RAM AM_BASE(&senjyo_fgscroll)
-	AM_RANGE(0x9e20, 0x9e21) AM_RAM AM_BASE(&senjyo_scrolly3)
+	AM_RANGE(0x9e00, 0x9e1f) AM_RAM AM_BASE_MEMBER(senjyo_state, fgscroll)
+	AM_RANGE(0x9e20, 0x9e21) AM_RAM AM_BASE_MEMBER(senjyo_state, scrolly3)
 /*  AM_RANGE(0x9e22, 0x9e23) height of the layer (Senjyo only, fixed at 0x380) */
-	AM_RANGE(0x9e25, 0x9e25) AM_RAM AM_BASE(&senjyo_scrollx3)
-	AM_RANGE(0x9e27, 0x9e27) AM_RAM_WRITE(senjyo_bgstripes_w) AM_BASE(&senjyo_bgstripesram)	/* controls width of background stripes */
-	AM_RANGE(0x9e28, 0x9e29) AM_RAM AM_BASE(&senjyo_scrolly2)
+	AM_RANGE(0x9e25, 0x9e25) AM_RAM AM_BASE_MEMBER(senjyo_state, scrollx3)
+	AM_RANGE(0x9e27, 0x9e27) AM_RAM_WRITE(senjyo_bgstripes_w) AM_BASE_MEMBER(senjyo_state, bgstripesram)	/* controls width of background stripes */
+	AM_RANGE(0x9e28, 0x9e29) AM_RAM AM_BASE_MEMBER(senjyo_state, scrolly2)
 /*  AM_RANGE(0x9e2a, 0x9e2b) height of the layer (Senjyo only, fixed at 0x200) */
-	AM_RANGE(0x9e2d, 0x9e2d) AM_RAM AM_BASE(&senjyo_scrollx2)
-	AM_RANGE(0x9e30, 0x9e31) AM_RAM AM_BASE(&senjyo_scrolly1)
+	AM_RANGE(0x9e2d, 0x9e2d) AM_RAM AM_BASE_MEMBER(senjyo_state, scrollx2)
+	AM_RANGE(0x9e30, 0x9e31) AM_RAM AM_BASE_MEMBER(senjyo_state, scrolly1)
 /*  AM_RANGE(0x9e32, 0x9e33) height of the layer (Senjyo only, fixed at 0x100) */
-	AM_RANGE(0x9e35, 0x9e35) AM_RAM AM_BASE(&senjyo_scrollx1)
+	AM_RANGE(0x9e35, 0x9e35) AM_RAM AM_BASE_MEMBER(senjyo_state, scrollx1)
 /*  AM_RANGE(0x9e38, 0x9e38) probably radar y position (Senjyo only, fixed at 0x61) */
 /*  AM_RANGE(0x9e3d, 0x9e3d) probably radar x position (Senjyo only, 0x00/0xc0 depending on screen flip) */
 	AM_RANGE(0x9e00, 0x9e3f) AM_RAM
-	AM_RANGE(0xa000, 0xa7ff) AM_RAM_WRITE(senjyo_bg3videoram_w) AM_BASE(&senjyo_bg3videoram)
-	AM_RANGE(0xa800, 0xafff) AM_RAM_WRITE(senjyo_bg2videoram_w) AM_BASE(&senjyo_bg2videoram)
-	AM_RANGE(0xb000, 0xb7ff) AM_RAM_WRITE(senjyo_bg1videoram_w) AM_BASE(&senjyo_bg1videoram)
-	AM_RANGE(0xb800, 0xbbff) AM_RAM AM_BASE(&senjyo_radarram)
+	AM_RANGE(0xa000, 0xa7ff) AM_RAM_WRITE(senjyo_bg3videoram_w) AM_BASE_MEMBER(senjyo_state, bg3videoram)
+	AM_RANGE(0xa800, 0xafff) AM_RAM_WRITE(senjyo_bg2videoram_w) AM_BASE_MEMBER(senjyo_state, bg2videoram)
+	AM_RANGE(0xb000, 0xb7ff) AM_RAM_WRITE(senjyo_bg1videoram_w) AM_BASE_MEMBER(senjyo_state, bg1videoram)
+	AM_RANGE(0xb800, 0xbbff) AM_RAM AM_BASE_MEMBER(senjyo_state, radarram)
 	AM_RANGE(0xd000, 0xd000) AM_READ_PORT("P1") AM_WRITE(flip_screen_w)
 	AM_RANGE(0xd001, 0xd001) AM_READ_PORT("P2")
 	AM_RANGE(0xd002, 0xd002) AM_READ_PORT("SYSTEM")
@@ -162,34 +165,38 @@ ADDRESS_MAP_END
 /* are scroll registers 1+2 linked on the bootleg?, only one copy is written */
 static WRITE8_HANDLER(starforb_scrolly2)
 {
-	senjyo_scrolly2[offset] = data;
-	senjyo_scrolly1[offset] = data;
+	senjyo_state *state = space->machine->driver_data<senjyo_state>();
+
+	state->scrolly2[offset] = data;
+	state->scrolly1[offset] = data;
 }
 
 static WRITE8_HANDLER(starforb_scrollx2)
 {
-	senjyo_scrollx2[offset] = data;
-	senjyo_scrollx1[offset] = data;
+	senjyo_state *state = space->machine->driver_data<senjyo_state>();
+
+	state->scrollx2[offset] = data;
+	state->scrollx1[offset] = data;
 }
 
 static ADDRESS_MAP_START( starforb_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x7fff) AM_ROM
 	AM_RANGE(0x8000, 0x8fff) AM_RAM
-	AM_RANGE(0x9000, 0x93ff) AM_RAM_WRITE(senjyo_fgvideoram_w) AM_BASE(&senjyo_fgvideoram)
-	AM_RANGE(0x9400, 0x97ff) AM_RAM_WRITE(senjyo_fgcolorram_w) AM_BASE(&senjyo_fgcolorram)
-	AM_RANGE(0x9800, 0x987f) AM_RAM AM_BASE_SIZE_GENERIC(spriteram)
+	AM_RANGE(0x9000, 0x93ff) AM_RAM_WRITE(senjyo_fgvideoram_w) AM_BASE_MEMBER(senjyo_state, fgvideoram)
+	AM_RANGE(0x9400, 0x97ff) AM_RAM_WRITE(senjyo_fgcolorram_w) AM_BASE_MEMBER(senjyo_state, fgcolorram)
+	AM_RANGE(0x9800, 0x987f) AM_RAM AM_BASE_SIZE_MEMBER(senjyo_state, spriteram, spriteram_size)
 	AM_RANGE(0x9c00, 0x9dff) AM_RAM_WRITE(paletteram_IIBBGGRR_w) AM_BASE_GENERIC(paletteram)
 	/* The format / use of the ram here is different on the bootleg */
-	AM_RANGE(0x9e20, 0x9e21) AM_RAM AM_BASE(&senjyo_scrolly3)
-	AM_RANGE(0x9e25, 0x9e25) AM_RAM AM_BASE(&senjyo_scrollx3)
-	AM_RANGE(0x9e30, 0x9e31) AM_RAM_WRITE(starforb_scrolly2) AM_BASE(&senjyo_scrolly2) // ok
-	AM_RANGE(0x9e35, 0x9e35) AM_RAM_WRITE(starforb_scrollx2) AM_BASE(&senjyo_scrollx2) // ok
+	AM_RANGE(0x9e20, 0x9e21) AM_RAM AM_BASE_MEMBER(senjyo_state, scrolly3)
+	AM_RANGE(0x9e25, 0x9e25) AM_RAM AM_BASE_MEMBER(senjyo_state, scrollx3)
+	AM_RANGE(0x9e30, 0x9e31) AM_RAM_WRITE(starforb_scrolly2) AM_BASE_MEMBER(senjyo_state, scrolly2) // ok
+	AM_RANGE(0x9e35, 0x9e35) AM_RAM_WRITE(starforb_scrollx2) AM_BASE_MEMBER(senjyo_state, scrollx2) // ok
 	AM_RANGE(0x9e00, 0x9e3f) AM_RAM
 
-	AM_RANGE(0xa000, 0xa7ff) AM_RAM_WRITE(senjyo_bg3videoram_w) AM_BASE(&senjyo_bg3videoram)
-	AM_RANGE(0xa800, 0xafff) AM_RAM_WRITE(senjyo_bg2videoram_w) AM_BASE(&senjyo_bg2videoram)
-	AM_RANGE(0xb000, 0xb7ff) AM_RAM_WRITE(senjyo_bg1videoram_w) AM_BASE(&senjyo_bg1videoram)
-	AM_RANGE(0xb800, 0xbbff) AM_RAM AM_BASE(&senjyo_radarram)
+	AM_RANGE(0xa000, 0xa7ff) AM_RAM_WRITE(senjyo_bg3videoram_w) AM_BASE_MEMBER(senjyo_state, bg3videoram)
+	AM_RANGE(0xa800, 0xafff) AM_RAM_WRITE(senjyo_bg2videoram_w) AM_BASE_MEMBER(senjyo_state, bg2videoram)
+	AM_RANGE(0xb000, 0xb7ff) AM_RAM_WRITE(senjyo_bg1videoram_w) AM_BASE_MEMBER(senjyo_state, bg1videoram)
+	AM_RANGE(0xb800, 0xbbff) AM_RAM AM_BASE_MEMBER(senjyo_state, radarram)
 	AM_RANGE(0xd000, 0xd000) AM_READ_PORT("P1") AM_WRITE(flip_screen_w)
 	AM_RANGE(0xd001, 0xd001) AM_READ_PORT("P2")
 	AM_RANGE(0xd002, 0xd002) AM_READ_PORT("SYSTEM")
@@ -197,10 +204,10 @@ static ADDRESS_MAP_START( starforb_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0xd005, 0xd005) AM_READ_PORT("DSW2")
 
 	/* these aren't used / written, left here to make sure memory is allocated */
-	AM_RANGE(0xfe00, 0xfe1f) AM_RAM AM_BASE(&senjyo_fgscroll)
-	AM_RANGE(0xfe27, 0xfe27) AM_RAM_WRITE(senjyo_bgstripes_w) AM_BASE(&senjyo_bgstripesram)	/* controls width of background stripes */
-	AM_RANGE(0xfe28, 0xfe29) AM_RAM AM_BASE(&senjyo_scrolly1)
-	AM_RANGE(0xfe2d, 0xfe2d) AM_RAM AM_BASE(&senjyo_scrollx1)
+	AM_RANGE(0xfe00, 0xfe1f) AM_RAM AM_BASE_MEMBER(senjyo_state, fgscroll)
+	AM_RANGE(0xfe27, 0xfe27) AM_RAM_WRITE(senjyo_bgstripes_w) AM_BASE_MEMBER(senjyo_state, bgstripesram)	/* controls width of background stripes */
+	AM_RANGE(0xfe28, 0xfe29) AM_RAM AM_BASE_MEMBER(senjyo_state, scrolly1)
+	AM_RANGE(0xfe2d, 0xfe2d) AM_RAM AM_BASE_MEMBER(senjyo_state, scrollx1)
 ADDRESS_MAP_END
 
 
@@ -537,65 +544,64 @@ static const samples_interface senjyo_samples_interface =
 };
 
 
-static MACHINE_DRIVER_START( senjyo )
+static MACHINE_CONFIG_START( senjyo, senjyo_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, 4000000)	/* 4 MHz? */
-	MDRV_CPU_PROGRAM_MAP(senjyo_map)
-	MDRV_CPU_VBLANK_INT("screen", senjyo_interrupt)
+	MCFG_CPU_ADD("maincpu", Z80, 4000000)	/* 4 MHz? */
+	MCFG_CPU_PROGRAM_MAP(senjyo_map)
+	MCFG_CPU_VBLANK_INT("screen", senjyo_interrupt)
 
-	MDRV_CPU_ADD("sub", Z80, 2000000)	/* 2 MHz? */
-	MDRV_CPU_CONFIG(senjyo_daisy_chain)
-	MDRV_CPU_PROGRAM_MAP(senjyo_sound_map)
-	MDRV_CPU_IO_MAP(senjyo_sound_io_map)
+	MCFG_CPU_ADD("sub", Z80, 2000000)	/* 2 MHz? */
+	MCFG_CPU_CONFIG(senjyo_daisy_chain)
+	MCFG_CPU_PROGRAM_MAP(senjyo_sound_map)
+	MCFG_CPU_IO_MAP(senjyo_sound_io_map)
 
-	MDRV_MACHINE_RESET(senjyo)
+	MCFG_MACHINE_RESET(senjyo)
 
-	MDRV_Z80PIO_ADD( "z80pio", 2000000, senjyo_pio_intf )
-	MDRV_Z80CTC_ADD( "z80ctc", 2000000 /* same as "sub" */, senjyo_ctc_intf )
+	MCFG_Z80PIO_ADD( "z80pio", 2000000, senjyo_pio_intf )
+	MCFG_Z80CTC_ADD( "z80ctc", 2000000 /* same as "sub" */, senjyo_ctc_intf )
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(senjyo)
-	MDRV_PALETTE_LENGTH(512+2)	/* 512 real palette + 2 for the radar */
+	MCFG_GFXDECODE(senjyo)
+	MCFG_PALETTE_LENGTH(512+2)	/* 512 real palette + 2 for the radar */
 
-	MDRV_VIDEO_START(senjyo)
-	MDRV_VIDEO_UPDATE(senjyo)
+	MCFG_VIDEO_START(senjyo)
+	MCFG_VIDEO_UPDATE(senjyo)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("sn1", SN76496, 2000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_SOUND_ADD("sn1", SN76496, 2000000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MDRV_SOUND_ADD("sn2", SN76496, 2000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_SOUND_ADD("sn2", SN76496, 2000000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MDRV_SOUND_ADD("sn3", SN76496, 2000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_SOUND_ADD("sn3", SN76496, 2000000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MDRV_SOUND_ADD("samples", SAMPLES, 0)
-	MDRV_SOUND_CONFIG(senjyo_samples_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("samples", SAMPLES, 0)
+	MCFG_SOUND_CONFIG(senjyo_samples_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( starforb )
+static MACHINE_CONFIG_DERIVED( starforb, senjyo )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(senjyo)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(starforb_map)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(starforb_map)
 
-	MDRV_CPU_MODIFY("sub")
-	MDRV_CPU_PROGRAM_MAP(starforb_sound_map)
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("sub")
+	MCFG_CPU_PROGRAM_MAP(starforb_sound_map)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************
@@ -642,7 +648,7 @@ ROM_START( senjyo )
 	ROM_LOAD( "08k_10b.bin", 0x0a000, 0x2000, CRC(a9f41ec9) SHA1(c24f9d54593e764a0b4530b1a2550b999916992c) )
 
 	ROM_REGION( 0x0020, "proms", 0 )	/* PROMs */
-    ROM_LOAD( "07b.bin",    0x0000, 0x0020, CRC(68db8300) SHA1(33cd6b5ed92d7b73a708f2e4b12b6e7f6496d0c6) )	/* unknown - timing? */
+	ROM_LOAD( "07b.bin",    0x0000, 0x0020, CRC(68db8300) SHA1(33cd6b5ed92d7b73a708f2e4b12b6e7f6496d0c6) )	/* unknown - timing? */
 ROM_END
 
 ROM_START( starforc )
@@ -679,7 +685,7 @@ ROM_START( starforc )
 	ROM_LOAD( "starforc.4",   0x08000, 0x4000, CRC(dd9d68a4) SHA1(34c60d2b34c7980bf65a5ebadb9c73f89128141f) )
 
 	ROM_REGION( 0x0020, "proms", 0 )	/* PROMs */
-    ROM_LOAD( "07b.bin",    0x0000, 0x0020, CRC(68db8300) SHA1(33cd6b5ed92d7b73a708f2e4b12b6e7f6496d0c6) )	/* unknown - timing? */
+	ROM_LOAD( "07b.bin",    0x0000, 0x0020, CRC(68db8300) SHA1(33cd6b5ed92d7b73a708f2e4b12b6e7f6496d0c6) )	/* unknown - timing? */
 ROM_END
 
 ROM_START( starforcb )
@@ -721,7 +727,7 @@ ROM_START( starforcb )
 	ROM_LOAD( "b10.8l",       0x0a000, 0x2000, CRC(6ea27bec) SHA1(30da81a99d5920107751afda359576e426c497c4) )
 
 	ROM_REGION( 0x0020, "proms", 0 )	/* PROMs */
-    ROM_LOAD( "a18s030.7b",    0x0000, 0x0020, CRC(68db8300) SHA1(33cd6b5ed92d7b73a708f2e4b12b6e7f6496d0c6) )	/* unknown - timing? */
+	ROM_LOAD( "a18s030.7b",    0x0000, 0x0020, CRC(68db8300) SHA1(33cd6b5ed92d7b73a708f2e4b12b6e7f6496d0c6) )	/* unknown - timing? */
 ROM_END
 
 
@@ -764,7 +770,7 @@ ROM_START( starforca )
 	ROM_LOAD( "10.bin",       0x0a000, 0x2000, CRC(6ea27bec) SHA1(30da81a99d5920107751afda359576e426c497c4) )
 
 	ROM_REGION( 0x0020, "proms", 0 )	/* PROMs */
-    ROM_LOAD( "prom.bin",    0x0000, 0x0020, CRC(68db8300) SHA1(33cd6b5ed92d7b73a708f2e4b12b6e7f6496d0c6) )	/* unknown - timing? */
+	ROM_LOAD( "prom.bin",    0x0000, 0x0020, CRC(68db8300) SHA1(33cd6b5ed92d7b73a708f2e4b12b6e7f6496d0c6) )	/* unknown - timing? */
 ROM_END
 
 
@@ -804,7 +810,7 @@ ROM_START( starforce )
 	ROM_LOAD( "starforc.4",   0x08000, 0x4000, CRC(dd9d68a4) SHA1(34c60d2b34c7980bf65a5ebadb9c73f89128141f) )
 
 	ROM_REGION( 0x0020, "proms", 0 )	/* PROMs */
-    ROM_LOAD( "07b.bin",    0x0000, 0x0020, CRC(68db8300) SHA1(33cd6b5ed92d7b73a708f2e4b12b6e7f6496d0c6) )	/* unknown - timing? */
+	ROM_LOAD( "07b.bin",    0x0000, 0x0020, CRC(68db8300) SHA1(33cd6b5ed92d7b73a708f2e4b12b6e7f6496d0c6) )	/* unknown - timing? */
 ROM_END
 
 ROM_START( megaforc )
@@ -841,7 +847,7 @@ ROM_START( megaforc )
 	ROM_LOAD( "starforc.4",   0x08000, 0x4000, CRC(dd9d68a4) SHA1(34c60d2b34c7980bf65a5ebadb9c73f89128141f) )
 
 	ROM_REGION( 0x0020, "proms", 0 )	/* PROMs */
-    ROM_LOAD( "07b.bin",    0x0000, 0x0020, CRC(68db8300) SHA1(33cd6b5ed92d7b73a708f2e4b12b6e7f6496d0c6) )	/* unknown - timing? */
+	ROM_LOAD( "07b.bin",    0x0000, 0x0020, CRC(68db8300) SHA1(33cd6b5ed92d7b73a708f2e4b12b6e7f6496d0c6) )	/* unknown - timing? */
 ROM_END
 
 ROM_START( baluba )
@@ -878,37 +884,45 @@ ROM_START( baluba )
 	ROM_LOAD( "3",  		  0x08000, 0x4000, CRC(7ac24983) SHA1(4ac32d95af3147af5b9b1af1f292bb629c5d4fb9) )
 
 	ROM_REGION( 0x0020, "proms", 0 )	/* PROMs */
-    ROM_LOAD( "07b.bin",    0x0000, 0x0020, CRC(68db8300) SHA1(33cd6b5ed92d7b73a708f2e4b12b6e7f6496d0c6) )	/* unknown - timing? */
+	ROM_LOAD( "07b.bin",    0x0000, 0x0020, CRC(68db8300) SHA1(33cd6b5ed92d7b73a708f2e4b12b6e7f6496d0c6) )	/* unknown - timing? */
 ROM_END
 
 
 static DRIVER_INIT( starforc )
 {
-	is_senjyo = 0;
-	senjyo_scrollhack = 1;
+	senjyo_state *state = machine->driver_data<senjyo_state>();
+
+	state->is_senjyo = 0;
+	state->scrollhack = 1;
 }
 static DRIVER_INIT( starfore )
 {
+	senjyo_state *state = machine->driver_data<senjyo_state>();
+
 	/* encrypted CPU */
 	suprloco_decode(machine, "maincpu");
 
-	is_senjyo = 0;
-	senjyo_scrollhack = 0;
+	state->is_senjyo = 0;
+	state->scrollhack = 0;
 }
 
 static DRIVER_INIT( starfora )
 {
+	senjyo_state *state = machine->driver_data<senjyo_state>();
+
 	/* encrypted CPU */
 	yamato_decode(machine, "maincpu");
 
-	is_senjyo = 0;
-	senjyo_scrollhack = 1;
+	state->is_senjyo = 0;
+	state->scrollhack = 1;
 }
 
 static DRIVER_INIT( senjyo )
 {
-	is_senjyo = 1;
-	senjyo_scrollhack = 0;
+	senjyo_state *state = machine->driver_data<senjyo_state>();
+
+	state->is_senjyo = 1;
+	state->scrollhack = 0;
 }
 
 

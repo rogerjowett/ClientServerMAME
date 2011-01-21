@@ -171,7 +171,7 @@ static const ay8910_interface spectrum_ay_interface =
 
 static WRITE8_HANDLER(spectrum_128_port_7ffd_w)
 {
-	spectrum_state *state = (spectrum_state *)space->machine->driver_data;
+	spectrum_state *state = space->machine->driver_data<spectrum_state>();
 
    /* D0-D2: RAM page located at 0x0c000-0x0ffff */
    /* D3 - Screen select (screen 0 in ram page 5, screen 1 in ram page 7 */
@@ -191,7 +191,7 @@ static WRITE8_HANDLER(spectrum_128_port_7ffd_w)
 
 void spectrum_128_update_memory(running_machine *machine)
 {
-	spectrum_state *state = (spectrum_state *)machine->driver_data;
+	spectrum_state *state = machine->driver_data<spectrum_state>();
 	UINT8 *messram = messram_get_ptr(machine->device("messram"));
 	unsigned char *ChosenROM;
 	int ROMSelection;
@@ -221,14 +221,14 @@ void spectrum_128_update_memory(running_machine *machine)
 
 	/* rom 0 is 128K rom, rom 1 is 48 BASIC */
 
-	ChosenROM = memory_region(machine, "maincpu") + 0x010000 + (ROMSelection<<14);
+	ChosenROM = machine->region("maincpu")->base() + 0x010000 + (ROMSelection<<14);
 
 	memory_set_bankptr(machine, "bank1", ChosenROM);
 }
 
 static  READ8_HANDLER ( spectrum_128_ula_r )
 {
-	spectrum_state *state = (spectrum_state *)space->machine->driver_data;
+	spectrum_state *state = space->machine->driver_data<spectrum_state>();
 	int vpos = space->machine->primary_screen->vpos();
 
 	return vpos<193 ? state->screen_location[0x1800|(vpos&0xf8)<<2]:0xff;
@@ -254,7 +254,7 @@ ADDRESS_MAP_END
 
 static MACHINE_RESET( spectrum_128 )
 {
-	spectrum_state *state = (spectrum_state *)machine->driver_data;
+	spectrum_state *state = machine->driver_data<spectrum_state>();
 	UINT8 *messram = messram_get_ptr(machine->device("messram"));
 
 	memset(messram,0,128*1024);
@@ -293,32 +293,31 @@ static GFXDECODE_START( spec128 )
 GFXDECODE_END
 
 
-MACHINE_DRIVER_START( spectrum_128 )
-	MDRV_IMPORT_FROM( spectrum )
+MACHINE_CONFIG_DERIVED( spectrum_128, spectrum )
 
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(spectrum_128_mem)
-	MDRV_CPU_IO_MAP(spectrum_128_io)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(spectrum_128_mem)
+	MCFG_CPU_IO_MAP(spectrum_128_io)
 
-	MDRV_MACHINE_RESET( spectrum_128 )
+	MCFG_MACHINE_RESET( spectrum_128 )
 
 	/* video hardware */
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_PALETTE_LENGTH(16)
-	MDRV_PALETTE_INIT( spectrum )
-	MDRV_SCREEN_REFRESH_RATE(50.021)
-	MDRV_VIDEO_START( spectrum_128 )
-	MDRV_GFXDECODE(spec128)
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_PALETTE_LENGTH(16)
+	MCFG_PALETTE_INIT( spectrum )
+	MCFG_SCREEN_REFRESH_RATE(50.021)
+	MCFG_VIDEO_START( spectrum_128 )
+	MCFG_GFXDECODE(spec128)
 
 	/* sound hardware */
-	MDRV_SOUND_ADD("ay8912", AY8912, 1773400)
-	MDRV_SOUND_CONFIG(spectrum_ay_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+	MCFG_SOUND_ADD("ay8912", AY8912, 1773400)
+	MCFG_SOUND_CONFIG(spectrum_ay_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
 	/* internal ram */
-	MDRV_RAM_MODIFY("messram")
-	MDRV_RAM_DEFAULT_SIZE("128K")
-MACHINE_DRIVER_END
+	MCFG_RAM_MODIFY("messram")
+	MCFG_RAM_DEFAULT_SIZE("128K")
+MACHINE_CONFIG_END
 
 
 
@@ -379,7 +378,7 @@ ROM_START(hc2000)
 ROM_END
 
 /*    YEAR  NAME      PARENT    COMPAT  MACHINE     INPUT       INIT    COMPANY     FULLNAME */
-COMP( 1986, spec128,  0,	   0,		spectrum_128,	spec_plus,	0,	"Sinclair Research",    "ZX Spectrum 128" , 0 )
-COMP( 1986, specpls2, spec128, 0,		spectrum_128,	spec_plus,	0,	"Amstrad plc",          "ZX Spectrum +2" , 0 )
-COMP( 1991, hc128,    spec128, 0,		spectrum_128,	spec_plus,	0,	"ICE-Felix",			"HC-128" , 0)
-COMP( 1992, hc2000,   spec128, 0,		spectrum_128,	spec_plus,	0,	"ICE-Felix",			"HC-2000" , GAME_NOT_WORKING)
+COMP( 1986, spec128,  0,	   0,		spectrum_128,	spec_plus,	0,	"Sinclair Research Ltd", "ZX Spectrum 128" , 0 )
+COMP( 1986, specpls2, spec128, 0,		spectrum_128,	spec_plus,	0,	"Amstrad plc",           "ZX Spectrum +2" , 0 )
+COMP( 1991, hc128,    spec128, 0,		spectrum_128,	spec_plus,	0,	"ICE-Felix",			 "HC-128" , 0 )
+COMP( 1992, hc2000,   spec128, 0,		spectrum_128,	spec_plus,	0,	"ICE-Felix",			 "HC-2000" , GAME_NOT_WORKING )

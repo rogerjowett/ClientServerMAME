@@ -4,12 +4,11 @@
 
 *************************************************************************/
 
-class karnov_state
+class karnov_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, karnov_state(machine)); }
-
-	karnov_state(running_machine &machine) { }
+	karnov_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT16 *    videoram;
@@ -30,16 +29,16 @@ public:
 	int         latch;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *audiocpu;
+	device_t *maincpu;
+	device_t *audiocpu;
 };
 
 enum {
 	KARNOV = 0,
 	KARNOVJ,
 	CHELNOV,
+	CHELNOVU,
 	CHELNOVJ,
-	CHELNOVW,
 	WNDRPLNT
 };
 

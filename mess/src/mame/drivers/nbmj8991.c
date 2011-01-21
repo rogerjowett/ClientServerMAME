@@ -35,6 +35,7 @@ Notes:
 #include "sound/3812intf.h"
 #include "sound/dac.h"
 #include "includes/nbmj8991.h"
+#include "machine/nvram.h"
 
 
 #define SIGNED_DAC	0		// 0:unsigned DAC, 1:signed DAC
@@ -69,7 +70,7 @@ static MACHINE_RESET( nbmj8991 )
 	device_t *audiocpu = machine->device("audiocpu");
 	if (audiocpu != NULL && audiocpu->type() == Z80)
 	{
-		memory_configure_bank(machine, "bank1", 0, 4, memory_region(machine, "audiocpu") + 0x8000, 0x8000);
+		memory_configure_bank(machine, "bank1", 0, 4, machine->region("audiocpu")->base() + 0x8000, 0x8000);
 		memory_set_bank(machine, "bank1", 0);
 	}
 	MACHINE_RESET_CALL(nb1413m3);
@@ -107,7 +108,7 @@ static DRIVER_INIT( vanilla )
 
 static DRIVER_INIT( finalbny )
 {
-	UINT8 *ROM = memory_region(machine, "maincpu");
+	UINT8 *ROM = machine->region("maincpu")->base();
 	int i;
 
 	for (i = 0xf800; i < 0x10000; i++) ROM[i] = 0x00;
@@ -133,7 +134,7 @@ static DRIVER_INIT( hyouban )
 static DRIVER_INIT( galkaika )
 {
 #if 1
-	UINT8 *ROM = memory_region(machine, "maincpu");
+	UINT8 *ROM = machine->region("maincpu")->base();
 
 	// Patch to IM2 -> IM1
 	ROM[0x0002] = 0x56;
@@ -144,7 +145,7 @@ static DRIVER_INIT( galkaika )
 static DRIVER_INIT( tokyogal )
 {
 #if 1
-	UINT8 *ROM = memory_region(machine, "maincpu");
+	UINT8 *ROM = machine->region("maincpu")->base();
 
 	// Patch to IM2 -> IM1
 	ROM[0x0002] = 0x56;
@@ -155,7 +156,7 @@ static DRIVER_INIT( tokyogal )
 static DRIVER_INIT( tokimbsj )
 {
 #if 1
-	UINT8 *ROM = memory_region(machine, "maincpu");
+	UINT8 *ROM = machine->region("maincpu")->base();
 
 	// Patch to IM2 -> IM1
 	ROM[0x0002] = 0x56;
@@ -193,14 +194,14 @@ static ADDRESS_MAP_START( pstadium_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0xefff) AM_ROM
 	AM_RANGE(0xf000, 0xf00f) AM_READWRITE(nbmj8991_clut_r,nbmj8991_clut_w)
 	AM_RANGE(0xf200, 0xf3ff) AM_RAM_WRITE(nbmj8991_palette_type3_w) AM_BASE_GENERIC(paletteram)
-	AM_RANGE(0xf800, 0xffff) AM_RAM AM_BASE(&nb1413m3_nvram) AM_SIZE(&nb1413m3_nvram_size)	// finalbny
+	AM_RANGE(0xf800, 0xffff) AM_RAM AM_SHARE("nvram")	// finalbny
 ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( triplew1_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0xefff) AM_ROM
 	AM_RANGE(0xf000, 0xf1ff) AM_RAM_WRITE(nbmj8991_palette_type3_w) AM_BASE_GENERIC(paletteram)
 	AM_RANGE(0xf200, 0xf20f) AM_READWRITE(nbmj8991_clut_r,nbmj8991_clut_w)
-	AM_RANGE(0xf800, 0xffff) AM_RAM AM_BASE(&nb1413m3_nvram) AM_SIZE(&nb1413m3_nvram_size)	// mjgottub
+	AM_RANGE(0xf800, 0xffff) AM_RAM AM_SHARE("nvram")	// mjgottub
 ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( triplew2_map, ADDRESS_SPACE_PROGRAM, 8 )
@@ -221,14 +222,14 @@ static ADDRESS_MAP_START( galkoku_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0xefff) AM_ROM
 	AM_RANGE(0xf000, 0xf00f) AM_READWRITE(nbmj8991_clut_r,nbmj8991_clut_w)
 	AM_RANGE(0xf400, 0xf5ff) AM_RAM_WRITE(nbmj8991_palette_type1_w) AM_BASE_GENERIC(paletteram)
-	AM_RANGE(0xf800, 0xffff) AM_RAM AM_BASE(&nb1413m3_nvram) AM_SIZE(&nb1413m3_nvram_size)	// hyouban
+	AM_RANGE(0xf800, 0xffff) AM_RAM AM_SHARE("nvram")	// hyouban
 ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( galkaika_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0xefff) AM_ROM
 	AM_RANGE(0xf000, 0xf00f) AM_READWRITE(nbmj8991_clut_r,nbmj8991_clut_w)
 	AM_RANGE(0xf400, 0xf5ff) AM_RAM_WRITE(nbmj8991_palette_type2_w) AM_BASE_GENERIC(paletteram)
-	AM_RANGE(0xf800, 0xffff) AM_RAM AM_BASE(&nb1413m3_nvram) AM_SIZE(&nb1413m3_nvram_size)	// tokimbsj
+	AM_RANGE(0xf800, 0xffff) AM_RAM AM_SHARE("nvram")	// tokimbsj
 ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( tokyogal_map, ADDRESS_SPACE_PROGRAM, 8 )
@@ -1474,248 +1475,229 @@ static const ay8910_interface ay8910_config =
 };
 
 
-static MACHINE_DRIVER_START( nbmjdrv1 )	// galkoku
+static MACHINE_CONFIG_START( nbmjdrv1, driver_device )	// galkoku
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, 25000000/5)		/* 5.00 MHz ? */
-	MDRV_CPU_PROGRAM_MAP(galkoku_map)
-	MDRV_CPU_IO_MAP(galkoku_io_map)
-	MDRV_CPU_VBLANK_INT("screen", nb1413m3_interrupt)
+	MCFG_CPU_ADD("maincpu", Z80, 25000000/5)		/* 5.00 MHz ? */
+	MCFG_CPU_PROGRAM_MAP(galkoku_map)
+	MCFG_CPU_IO_MAP(galkoku_io_map)
+	MCFG_CPU_VBLANK_INT("screen", nb1413m3_interrupt)
 
-	MDRV_MACHINE_RESET(nbmj8991)
+	MCFG_MACHINE_RESET(nbmj8991)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(1024, 512)
-	MDRV_SCREEN_VISIBLE_AREA(0, 640-1, 0, 240-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(1024, 512)
+	MCFG_SCREEN_VISIBLE_AREA(0, 640-1, 0, 240-1)
 
-	MDRV_PALETTE_LENGTH(256)
+	MCFG_PALETTE_LENGTH(256)
 
-	MDRV_VIDEO_START(nbmj8991)
-	MDRV_VIDEO_UPDATE(nbmj8991_type1)
+	MCFG_VIDEO_START(nbmj8991)
+	MCFG_VIDEO_UPDATE(nbmj8991_type1)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("fmsnd", YM3812, 25000000/10)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.70)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("fmsnd", YM3812, 25000000/10)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.70)
 
-	MDRV_SOUND_ADD("dac", DAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("dac", DAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( nbmjdrv2 )	// pstadium
+static MACHINE_CONFIG_START( nbmjdrv2, driver_device )	// pstadium
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, 6000000/2)	/* 3.00 MHz */
-	MDRV_CPU_PROGRAM_MAP(pstadium_map)
-	MDRV_CPU_IO_MAP(pstadium_io_map)
-	MDRV_CPU_VBLANK_INT("screen", nb1413m3_interrupt)
+	MCFG_CPU_ADD("maincpu", Z80, 6000000/2)	/* 3.00 MHz */
+	MCFG_CPU_PROGRAM_MAP(pstadium_map)
+	MCFG_CPU_IO_MAP(pstadium_io_map)
+	MCFG_CPU_VBLANK_INT("screen", nb1413m3_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 4000000)					/* 4.00 MHz */
-	MDRV_CPU_PROGRAM_MAP(nbmj8991_sound_map)
-	MDRV_CPU_IO_MAP(nbmj8991_sound_io_map)
-	MDRV_CPU_PERIODIC_INT(irq0_line_hold, 128*60) // ?
+	MCFG_CPU_ADD("audiocpu", Z80, 4000000)					/* 4.00 MHz */
+	MCFG_CPU_PROGRAM_MAP(nbmj8991_sound_map)
+	MCFG_CPU_IO_MAP(nbmj8991_sound_io_map)
+	MCFG_CPU_PERIODIC_INT(irq0_line_hold, 128*60) // ?
 
-	MDRV_MACHINE_RESET(nbmj8991)
+	MCFG_MACHINE_RESET(nbmj8991)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(1024, 512)
-	MDRV_SCREEN_VISIBLE_AREA(0, 640-1, 0, 240-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(1024, 512)
+	MCFG_SCREEN_VISIBLE_AREA(0, 640-1, 0, 240-1)
 
-	MDRV_PALETTE_LENGTH(256)
+	MCFG_PALETTE_LENGTH(256)
 
-	MDRV_VIDEO_START(nbmj8991)
-	MDRV_VIDEO_UPDATE(nbmj8991_type2)
+	MCFG_VIDEO_START(nbmj8991)
+	MCFG_VIDEO_UPDATE(nbmj8991_type2)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("fmsnd", YM3812, 25000000/6.25)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.70)
+	MCFG_SOUND_ADD("fmsnd", YM3812, 25000000/6.25)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.70)
 
-	MDRV_SOUND_ADD("dac1", DAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_SOUND_ADD("dac1", DAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MDRV_SOUND_ADD("dac2", DAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("dac2", DAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( nbmjdrv3 )
+static MACHINE_CONFIG_DERIVED( nbmjdrv3, nbmjdrv1 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(nbmjdrv1)
 
 	/* sound hardware */
-	MDRV_SOUND_REPLACE("fmsnd", AY8910, 1250000)
-	MDRV_SOUND_CONFIG(ay8910_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.35)
-MACHINE_DRIVER_END
+	MCFG_SOUND_REPLACE("fmsnd", AY8910, 1250000)
+	MCFG_SOUND_CONFIG(ay8910_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.35)
+MACHINE_CONFIG_END
 
 
 // ---------------------------------------------------------------------
 
-static MACHINE_DRIVER_START( galkoku )
+static MACHINE_CONFIG_DERIVED( galkoku, nbmjdrv1 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(nbmjdrv1)
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( galkaika )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM(nbmjdrv1)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(galkaika_map)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( tokyogal )
+static MACHINE_CONFIG_DERIVED( galkaika, nbmjdrv1 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(nbmjdrv1)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(tokyogal_map)
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(galkaika_map)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( tokimbsj )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM(nbmjdrv1)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(galkaika_map)
-
-	MDRV_NVRAM_HANDLER(nb1413m3)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( mcontest )
+static MACHINE_CONFIG_DERIVED( tokyogal, nbmjdrv1 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(nbmjdrv1)
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(tokyogal_map)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( uchuuai )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM(nbmjdrv1)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( hyouban )
+static MACHINE_CONFIG_DERIVED( tokimbsj, nbmjdrv1 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(nbmjdrv3)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_IO_MAP(hyouban_io_map)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(galkaika_map)
 
-	MDRV_NVRAM_HANDLER(nb1413m3)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( pstadium )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM(nbmjdrv2)
-MACHINE_DRIVER_END
+	MCFG_NVRAM_ADD_0FILL("nvram")
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( triplew1 )
+static MACHINE_CONFIG_DERIVED( mcontest, nbmjdrv1 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(nbmjdrv2)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(triplew1_map)
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( triplew2 )
+static MACHINE_CONFIG_DERIVED( uchuuai, nbmjdrv1 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(nbmjdrv2)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(triplew2_map)
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( ntopstar )
+static MACHINE_CONFIG_DERIVED( hyouban, nbmjdrv3 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(nbmjdrv2)
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_IO_MAP(hyouban_io_map)
+
+	MCFG_NVRAM_ADD_0FILL("nvram")
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( mjlstory )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM(nbmjdrv2)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(mjlstory_map)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( vanilla )
+static MACHINE_CONFIG_DERIVED( pstadium, nbmjdrv2 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(nbmjdrv2)
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( finalbny )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM(nbmjdrv2)
-	MDRV_NVRAM_HANDLER(nb1413m3)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( qmhayaku )
+static MACHINE_CONFIG_DERIVED( triplew1, nbmjdrv2 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(nbmjdrv2)
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(triplew1_map)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( mjgottub )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM(nbmjdrv2)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(triplew1_map)
-
-	MDRV_NVRAM_HANDLER(nb1413m3)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( av2mj1bb )
+static MACHINE_CONFIG_DERIVED( triplew2, nbmjdrv2 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(nbmjdrv2)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(av2mj1bb_map)
-	MDRV_CPU_IO_MAP(av2mj1bb_io_map)
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(triplew2_map)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( av2mj2rg )
+static MACHINE_CONFIG_DERIVED( ntopstar, nbmjdrv2 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(nbmjdrv2)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(av2mj2rg_map)
-	MDRV_CPU_IO_MAP(av2mj1bb_io_map)
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( mjlstory, nbmjdrv2 )
+
+	/* basic machine hardware */
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(mjlstory_map)
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( vanilla, nbmjdrv2 )
+
+	/* basic machine hardware */
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( finalbny, nbmjdrv2 )
+
+	/* basic machine hardware */
+	MCFG_NVRAM_ADD_0FILL("nvram")
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( qmhayaku, nbmjdrv2 )
+
+	/* basic machine hardware */
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( mjgottub, nbmjdrv2 )
+
+	/* basic machine hardware */
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(triplew1_map)
+
+	MCFG_NVRAM_ADD_0FILL("nvram")
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( av2mj1bb, nbmjdrv2 )
+
+	/* basic machine hardware */
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(av2mj1bb_map)
+	MCFG_CPU_IO_MAP(av2mj1bb_io_map)
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( av2mj2rg, nbmjdrv2 )
+
+	/* basic machine hardware */
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(av2mj2rg_map)
+	MCFG_CPU_IO_MAP(av2mj1bb_io_map)
+MACHINE_CONFIG_END
 
 
 

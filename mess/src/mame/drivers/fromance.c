@@ -55,14 +55,14 @@ Memo:
 
 static READ8_HANDLER( fromance_commanddata_r )
 {
-	fromance_state *state = (fromance_state *)space->machine->driver_data;
+	fromance_state *state = space->machine->driver_data<fromance_state>();
 	return state->commanddata;
 }
 
 
 static TIMER_CALLBACK( deferred_commanddata_w )
 {
-	fromance_state *state = (fromance_state *)machine->driver_data;
+	fromance_state *state = machine->driver_data<fromance_state>();
 	state->commanddata = param;
 	state->directionflag = 1;
 }
@@ -77,7 +77,7 @@ static WRITE8_HANDLER( fromance_commanddata_w )
 
 static READ8_HANDLER( fromance_busycheck_main_r )
 {
-	fromance_state *state = (fromance_state *)space->machine->driver_data;
+	fromance_state *state = space->machine->driver_data<fromance_state>();
 
 	/* set a timer to force synchronization after the read */
 	timer_call_after_resynch(space->machine, NULL, 0, NULL);
@@ -91,7 +91,7 @@ static READ8_HANDLER( fromance_busycheck_main_r )
 
 static READ8_HANDLER( fromance_busycheck_sub_r )
 {
-	fromance_state *state = (fromance_state *)space->machine->driver_data;
+	fromance_state *state = space->machine->driver_data<fromance_state>();
 
 	if (state->directionflag)
 		return 0xff;		// standby
@@ -102,7 +102,7 @@ static READ8_HANDLER( fromance_busycheck_sub_r )
 
 static WRITE8_HANDLER( fromance_busycheck_sub_w )
 {
-	fromance_state *state = (fromance_state *)space->machine->driver_data;
+	fromance_state *state = space->machine->driver_data<fromance_state>();
 	state->directionflag = 0;
 }
 
@@ -129,7 +129,7 @@ static WRITE8_HANDLER( fromance_rombank_w )
 
 static WRITE8_DEVICE_HANDLER( fromance_adpcm_reset_w )
 {
-	fromance_state *state = (fromance_state *)device->machine->driver_data;
+	fromance_state *state = device->machine->driver_data<fromance_state>();
 	state->adpcm_reset = (data & 0x01);
 	state->vclk_left = 0;
 
@@ -139,15 +139,15 @@ static WRITE8_DEVICE_HANDLER( fromance_adpcm_reset_w )
 
 static WRITE8_HANDLER( fromance_adpcm_w )
 {
-	fromance_state *state = (fromance_state *)space->machine->driver_data;
+	fromance_state *state = space->machine->driver_data<fromance_state>();
 	state->adpcm_data = data;
 	state->vclk_left = 2;
 }
 
 
-static void fromance_adpcm_int( running_device *device )
+static void fromance_adpcm_int( device_t *device )
 {
-	fromance_state *state = (fromance_state *)device->machine->driver_data;
+	fromance_state *state = device->machine->driver_data<fromance_state>();
 
 	/* skip if we're reset */
 	if (!state->adpcm_reset)
@@ -176,14 +176,14 @@ static void fromance_adpcm_int( running_device *device )
 
 static WRITE8_HANDLER( fromance_portselect_w )
 {
-	fromance_state *state = (fromance_state *)space->machine->driver_data;
+	fromance_state *state = space->machine->driver_data<fromance_state>();
 	state->portselect = data;
 }
 
 
 static READ8_HANDLER( fromance_keymatrix_r )
 {
-	fromance_state *state = (fromance_state *)space->machine->driver_data;
+	fromance_state *state = space->machine->driver_data<fromance_state>();
 	int ret = 0xff;
 
 	if (state->portselect & 0x01)
@@ -960,8 +960,8 @@ static const msm5205_interface msm5205_config =
 
 static MACHINE_START( fromance )
 {
-	fromance_state *state = (fromance_state *)machine->driver_data;
-	UINT8 *ROM = memory_region(machine, "sub");
+	fromance_state *state = machine->driver_data<fromance_state>();
+	UINT8 *ROM = machine->region("sub")->base();
 
 	memory_configure_bank(machine, "bank1", 0, 0x100, &ROM[0x10000], 0x4000);
 
@@ -980,7 +980,7 @@ static MACHINE_START( fromance )
 
 static MACHINE_RESET( fromance )
 {
-	fromance_state *state = (fromance_state *)machine->driver_data;
+	fromance_state *state = machine->driver_data<fromance_state>();
 	int i;
 
 	state->directionflag = 0;
@@ -1008,130 +1008,121 @@ static MACHINE_RESET( fromance )
 		state->crtc_data[i] = 0;
 }
 
-static MACHINE_DRIVER_START( nekkyoku )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(fromance_state)
+static MACHINE_CONFIG_START( nekkyoku, fromance_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80,12000000/2)		/* 6.00 Mhz ? */
-	MDRV_CPU_PROGRAM_MAP(nekkyoku_main_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80,12000000/2)		/* 6.00 Mhz ? */
+	MCFG_CPU_PROGRAM_MAP(nekkyoku_main_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("sub", Z80,12000000/2)		/* 6.00 Mhz ? */
-	MDRV_CPU_PROGRAM_MAP(nekkyoku_sub_map)
-	MDRV_CPU_IO_MAP(nekkyoku_sub_io_map)
+	MCFG_CPU_ADD("sub", Z80,12000000/2)		/* 6.00 Mhz ? */
+	MCFG_CPU_PROGRAM_MAP(nekkyoku_sub_map)
+	MCFG_CPU_IO_MAP(nekkyoku_sub_io_map)
 
-	MDRV_MACHINE_START(fromance)
-	MDRV_MACHINE_RESET(fromance)
+	MCFG_MACHINE_START(fromance)
+	MCFG_MACHINE_RESET(fromance)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(512, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 352-1, 0, 240-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(512, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 352-1, 0, 240-1)
 
-	MDRV_GFXDECODE(fromance)
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_GFXDECODE(fromance)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_VIDEO_START(nekkyoku)
-	MDRV_VIDEO_UPDATE(fromance)
+	MCFG_VIDEO_START(nekkyoku)
+	MCFG_VIDEO_UPDATE(fromance)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("aysnd", AY8910, 12000000/6)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
+	MCFG_SOUND_ADD("aysnd", AY8910, 12000000/6)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
 
-	MDRV_SOUND_ADD("msm", MSM5205, 384000)
-	MDRV_SOUND_CONFIG(msm5205_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("msm", MSM5205, 384000)
+	MCFG_SOUND_CONFIG(msm5205_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( idolmj )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(fromance_state)
+static MACHINE_CONFIG_START( idolmj, fromance_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80,12000000/2)		/* 6.00 Mhz ? */
-	MDRV_CPU_PROGRAM_MAP(fromance_main_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80,12000000/2)		/* 6.00 Mhz ? */
+	MCFG_CPU_PROGRAM_MAP(fromance_main_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("sub", Z80,12000000/2)		/* 6.00 Mhz ? */
-	MDRV_CPU_PROGRAM_MAP(fromance_sub_map)
-	MDRV_CPU_IO_MAP(idolmj_sub_io_map)
+	MCFG_CPU_ADD("sub", Z80,12000000/2)		/* 6.00 Mhz ? */
+	MCFG_CPU_PROGRAM_MAP(fromance_sub_map)
+	MCFG_CPU_IO_MAP(idolmj_sub_io_map)
 
-	MDRV_MACHINE_START(fromance)
-	MDRV_MACHINE_RESET(fromance)
+	MCFG_MACHINE_START(fromance)
+	MCFG_MACHINE_RESET(fromance)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(512, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 352-1, 0, 240-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(512, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 352-1, 0, 240-1)
 
-	MDRV_GFXDECODE(fromance)
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_GFXDECODE(fromance)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(fromance)
-	MDRV_VIDEO_UPDATE(fromance)
+	MCFG_VIDEO_START(fromance)
+	MCFG_VIDEO_UPDATE(fromance)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("aysnd", AY8910, 12000000/6)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
+	MCFG_SOUND_ADD("aysnd", AY8910, 12000000/6)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
 
-	MDRV_SOUND_ADD("msm", MSM5205, 384000)
-	MDRV_SOUND_CONFIG(msm5205_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("msm", MSM5205, 384000)
+	MCFG_SOUND_CONFIG(msm5205_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( fromance )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(fromance_state)
+static MACHINE_CONFIG_START( fromance, fromance_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80,12000000/2)		/* 6.00 Mhz ? */
-	MDRV_CPU_PROGRAM_MAP(fromance_main_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80,12000000/2)		/* 6.00 Mhz ? */
+	MCFG_CPU_PROGRAM_MAP(fromance_main_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("sub", Z80,12000000/2)		/* 6.00 Mhz ? */
-	MDRV_CPU_PROGRAM_MAP(fromance_sub_map)
-	MDRV_CPU_IO_MAP(fromance_sub_io_map)
+	MCFG_CPU_ADD("sub", Z80,12000000/2)		/* 6.00 Mhz ? */
+	MCFG_CPU_PROGRAM_MAP(fromance_sub_map)
+	MCFG_CPU_IO_MAP(fromance_sub_io_map)
 
-	MDRV_MACHINE_START(fromance)
-	MDRV_MACHINE_RESET(fromance)
+	MCFG_MACHINE_START(fromance)
+	MCFG_MACHINE_RESET(fromance)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(512, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 352-1, 0, 240-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(512, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 352-1, 0, 240-1)
 
-	MDRV_GFXDECODE(fromance)
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_GFXDECODE(fromance)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(fromance)
-	MDRV_VIDEO_UPDATE(fromance)
+	MCFG_VIDEO_START(fromance)
+	MCFG_VIDEO_UPDATE(fromance)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM2413, 3579545)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.90)
+	MCFG_SOUND_ADD("ymsnd", YM2413, 3579545)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.90)
 
-	MDRV_SOUND_ADD("msm", MSM5205, 384000)
-	MDRV_SOUND_CONFIG(msm5205_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.10)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("msm", MSM5205, 384000)
+	MCFG_SOUND_CONFIG(msm5205_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.10)
+MACHINE_CONFIG_END
 
 
 

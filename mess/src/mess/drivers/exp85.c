@@ -9,7 +9,7 @@
 /*
 
     TODO:
-
+	
     - needs a terminal, or a dump of the hexadecimal keyboard monitor ROM
     - serial input/output at SID/SOD pins
     - disable ROM mirror after boot
@@ -38,8 +38,8 @@ ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( exp85_io, ADDRESS_SPACE_IO, 8 )
 	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0xf0, 0xf3) AM_DEVREADWRITE(I8355_TAG, i8355_r, i8355_w)
-	AM_RANGE(0xf8, 0xfd) AM_DEVREADWRITE(I8155_TAG, i8155_r, i8155_w)
+	AM_RANGE(0xf0, 0xf3) AM_DEVREADWRITE_MODERN(I8355_TAG, i8355_device, io_r, io_w)
+	AM_RANGE(0xf8, 0xfd) AM_DEVREADWRITE_MODERN(I8155_TAG, i8155_device, io_r, io_w)
 //  AM_RANGE(0xfe, 0xff) AM_DEVREADWRITE(I8279_TAG, i8279_r, i8279_w)
 ADDRESS_MAP_END
 
@@ -77,10 +77,10 @@ static VIDEO_UPDATE( exp85 )
 static I8155_INTERFACE( i8155_intf )
 {
 	DEVCB_NULL,	/* port A read */
-	DEVCB_NULL,	/* port B read */
-	DEVCB_NULL,	/* port C read */
 	DEVCB_NULL,	/* port A write */
+	DEVCB_NULL,	/* port B read */
 	DEVCB_NULL,	/* port B write */
+	DEVCB_NULL,	/* port C read */
 	DEVCB_NULL,	/* port C write */
 	DEVCB_NULL	/* timer output */
 };
@@ -124,7 +124,7 @@ static WRITE8_DEVICE_HANDLER( i8355_a_w )
 
     */
 
-	exp85_state *state = (exp85_state *)device->machine->driver_data;
+	exp85_state *state = device->machine->driver_data<exp85_state>();
 
 	/* tape control */
 	state->tape_control = BIT(data, 0);
@@ -136,8 +136,8 @@ static WRITE8_DEVICE_HANDLER( i8355_a_w )
 static I8355_INTERFACE( i8355_intf )
 {
 	DEVCB_HANDLER(i8355_a_r),	/* port A read */
-	DEVCB_NULL,					/* port B read */
 	DEVCB_HANDLER(i8355_a_w),	/* port A write */
+	DEVCB_NULL,					/* port B read */
 	DEVCB_NULL,					/* port B write */
 };
 
@@ -145,14 +145,14 @@ static I8355_INTERFACE( i8355_intf )
 
 static WRITE_LINE_DEVICE_HANDLER( exp85_sod_w )
 {
-	exp85_state *driver_state = (exp85_state *)device->machine->driver_data;
+	exp85_state *driver_state = device->machine->driver_data<exp85_state>();
 
 	cassette_output(driver_state->cassette, state ? -1.0 : +1.0);
 }
 
 static READ_LINE_DEVICE_HANDLER( exp85_sid_r )
 {
-	exp85_state *driver_state = (exp85_state *)device->machine->driver_data;
+	exp85_state *driver_state = device->machine->driver_data<exp85_state>();
 
 	int data = 1;
 
@@ -176,14 +176,14 @@ static I8085_CONFIG( exp85_i8085_config )
 
 static MACHINE_START( exp85 )
 {
-	exp85_state *state = (exp85_state *)machine->driver_data;
-	const address_space *program = cputag_get_address_space(machine, I8085A_TAG, ADDRESS_SPACE_PROGRAM);
+	exp85_state *state = machine->driver_data<exp85_state>();
+	address_space *program = cputag_get_address_space(machine, I8085A_TAG, ADDRESS_SPACE_PROGRAM);
 
 	/* setup memory banking */
 	memory_install_read_bank(program, 0x0000, 0x07ff, 0, 0, "bank1");
 	memory_unmap_write(program, 0x0000, 0x07ff, 0, 0 );
-	memory_configure_bank(machine, "bank1", 0, 1, memory_region(machine, I8085A_TAG) + 0xf000, 0);
-	memory_configure_bank(machine, "bank1", 1, 1, memory_region(machine, I8085A_TAG), 0);
+	memory_configure_bank(machine, "bank1", 0, 1, machine->region(I8085A_TAG)->base() + 0xf000, 0);
+	memory_configure_bank(machine, "bank1", 1, 1, machine->region(I8085A_TAG)->base(), 0);
 	memory_set_bank(machine, "bank1", 0);
 
 	/* find devices */
@@ -201,47 +201,45 @@ static const cassette_config exp85_cassette_config =
 	NULL
 };
 
-static MACHINE_DRIVER_START( exp85 )
-	MDRV_DRIVER_DATA(exp85_state)
-
+static MACHINE_CONFIG_START( exp85, exp85_state )
     /* basic machine hardware */
-    MDRV_CPU_ADD(I8085A_TAG, I8085A, XTAL_6_144MHz)
-    MDRV_CPU_PROGRAM_MAP(exp85_mem)
-    MDRV_CPU_IO_MAP(exp85_io)
-	MDRV_CPU_CONFIG(exp85_i8085_config)
+    MCFG_CPU_ADD(I8085A_TAG, I8085A, XTAL_6_144MHz)
+    MCFG_CPU_PROGRAM_MAP(exp85_mem)
+    MCFG_CPU_IO_MAP(exp85_io)
+	MCFG_CPU_CONFIG(exp85_i8085_config)
 
-    MDRV_MACHINE_START(exp85)
+    MCFG_MACHINE_START(exp85)
 
     /* video hardware */
-    MDRV_SCREEN_ADD(SCREEN_TAG, RASTER)
-    MDRV_SCREEN_REFRESH_RATE(50)
-    MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
-    MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-    MDRV_SCREEN_SIZE(640, 480)
-    MDRV_SCREEN_VISIBLE_AREA(0, 640-1, 0, 480-1)
+    MCFG_SCREEN_ADD(SCREEN_TAG, RASTER)
+    MCFG_SCREEN_REFRESH_RATE(50)
+    MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
+    MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+    MCFG_SCREEN_SIZE(640, 480)
+    MCFG_SCREEN_VISIBLE_AREA(0, 640-1, 0, 480-1)
 
-	MDRV_PALETTE_LENGTH(2)
-    MDRV_PALETTE_INIT(black_and_white)
+	MCFG_PALETTE_LENGTH(2)
+    MCFG_PALETTE_INIT(black_and_white)
 
-	MDRV_VIDEO_START(exp85)
-    MDRV_VIDEO_UPDATE(exp85)
+	MCFG_VIDEO_START(exp85)
+    MCFG_VIDEO_UPDATE(exp85)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD(SPEAKER_TAG, SPEAKER, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD(SPEAKER_TAG, SPEAKER_SOUND, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
 	/* devices */
-	MDRV_I8155_ADD(I8155_TAG, XTAL_6_144MHz/2, i8155_intf)
-	MDRV_I8355_ADD(I8355_TAG, XTAL_6_144MHz/2, i8355_intf)
+	MCFG_I8155_ADD(I8155_TAG, XTAL_6_144MHz/2, i8155_intf)
+	MCFG_I8355_ADD(I8355_TAG, XTAL_6_144MHz/2, i8355_intf)
 
-	MDRV_CASSETTE_ADD(CASSETTE_TAG, exp85_cassette_config)
+	MCFG_CASSETTE_ADD(CASSETTE_TAG, exp85_cassette_config)
 
 	/* internal ram */
-	MDRV_RAM_ADD("messram")
-	MDRV_RAM_DEFAULT_SIZE("256")
-	MDRV_RAM_EXTRA_OPTIONS("4K")
-MACHINE_DRIVER_END
+	MCFG_RAM_ADD("messram")
+	MCFG_RAM_DEFAULT_SIZE("256")
+	MCFG_RAM_EXTRA_OPTIONS("4K")
+MACHINE_CONFIG_END
 
 /* ROMs */
 

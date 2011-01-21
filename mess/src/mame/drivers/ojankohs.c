@@ -36,6 +36,7 @@ Memo:
 #include "includes/ojankohs.h"
 #include "sound/ay8910.h"
 #include "sound/msm5205.h"
+#include "machine/nvram.h"
 
 
 static WRITE8_HANDLER( ojankohs_rombank_w )
@@ -45,7 +46,7 @@ static WRITE8_HANDLER( ojankohs_rombank_w )
 
 static WRITE8_HANDLER( ojankoy_rombank_w )
 {
-	ojankohs_state *state = (ojankohs_state *)space->machine->driver_data;
+	ojankohs_state *state = space->machine->driver_data<ojankohs_state>();
 
 	memory_set_bank(space->machine, "bank1", data & 0x1f);
 
@@ -58,7 +59,7 @@ static WRITE8_HANDLER( ojankoy_rombank_w )
 
 static WRITE8_DEVICE_HANDLER( ojankohs_adpcm_reset_w )
 {
-	ojankohs_state *state = (ojankohs_state *)device->machine->driver_data;
+	ojankohs_state *state = device->machine->driver_data<ojankohs_state>();
 	state->adpcm_reset = BIT(data, 0);
 	state->vclk_left = 0;
 
@@ -67,14 +68,14 @@ static WRITE8_DEVICE_HANDLER( ojankohs_adpcm_reset_w )
 
 static WRITE8_HANDLER( ojankohs_msm5205_w )
 {
-	ojankohs_state *state = (ojankohs_state *)space->machine->driver_data;
+	ojankohs_state *state = space->machine->driver_data<ojankohs_state>();
 	state->adpcm_data = data;
 	state->vclk_left = 2;
 }
 
-static void ojankohs_adpcm_int( running_device *device )
+static void ojankohs_adpcm_int( device_t *device )
 {
-	ojankohs_state *state = (ojankohs_state *)device->machine->driver_data;
+	ojankohs_state *state = device->machine->driver_data<ojankohs_state>();
 
 	/* skip if we're reset */
 	if (!state->adpcm_reset)
@@ -95,7 +96,7 @@ static void ojankohs_adpcm_int( running_device *device )
 
 static WRITE8_HANDLER( ojankoc_ctrl_w )
 {
-	ojankohs_state *state = (ojankohs_state *)space->machine->driver_data;
+	ojankohs_state *state = space->machine->driver_data<ojankohs_state>();
 
 	memory_set_bank(space->machine, "bank1", data & 0x0f);
 
@@ -106,13 +107,13 @@ static WRITE8_HANDLER( ojankoc_ctrl_w )
 
 static WRITE8_HANDLER( ojankohs_portselect_w )
 {
-	ojankohs_state *state = (ojankohs_state *)space->machine->driver_data;
+	ojankohs_state *state = space->machine->driver_data<ojankohs_state>();
 	state->portselect = data;
 }
 
 static READ8_HANDLER( ojankohs_keymatrix_r )
 {
-	ojankohs_state *state = (ojankohs_state *)space->machine->driver_data;
+	ojankohs_state *state = space->machine->driver_data<ojankohs_state>();
 	int ret;
 
 	switch (state->portselect)
@@ -140,7 +141,7 @@ static READ8_HANDLER( ojankohs_keymatrix_r )
 
 static READ8_HANDLER( ojankoc_keymatrix_r )
 {
-	ojankohs_state *state = (ojankohs_state *)space->machine->driver_data;
+	ojankohs_state *state = space->machine->driver_data<ojankohs_state>();
 	int i;
 	int ret = 0;
 	static const char *const keynames[2][5] =
@@ -201,7 +202,7 @@ static ADDRESS_MAP_START( ojankohs_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x7fff) AM_ROM
 	AM_RANGE(0x8000, 0x8fff) AM_RAM_WRITE(ojankohs_videoram_w)
 	AM_RANGE(0x9000, 0x9fff) AM_RAM_WRITE(ojankohs_colorram_w)
-	AM_RANGE(0xa000, 0xb7ff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0xa000, 0xb7ff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0xb800, 0xbfff) AM_RAM_WRITE(ojankohs_palette_w)
 	AM_RANGE(0xc000, 0xffff) AM_ROMBANK("bank1")
 ADDRESS_MAP_END
@@ -211,14 +212,14 @@ static ADDRESS_MAP_START( ojankoy_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x7fff) AM_ROM
 	AM_RANGE(0x8000, 0x9fff) AM_RAM_WRITE(ojankohs_videoram_w)
 	AM_RANGE(0xa000, 0xafff) AM_RAM_WRITE(ojankohs_colorram_w)
-	AM_RANGE(0xb000, 0xbfff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0xb000, 0xbfff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0xc000, 0xffff) AM_ROMBANK("bank1")
 ADDRESS_MAP_END
 
 
 static ADDRESS_MAP_START( ojankoc_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x77ff) AM_ROM
-	AM_RANGE(0x7800, 0x7fff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0x7800, 0x7fff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0x8000, 0xffff) AM_ROMBANK("bank1") AM_WRITE(ojankoc_videoram_w)
 ADDRESS_MAP_END
 
@@ -794,7 +795,7 @@ static const msm5205_interface msm5205_config =
 
 static MACHINE_START( common )
 {
-	ojankohs_state *state = (ojankohs_state *)machine->driver_data;
+	ojankohs_state *state = machine->driver_data<ojankohs_state>();
 
 	state->maincpu = machine->device("maincpu");
 	state->msm = machine->device("msm");
@@ -813,7 +814,7 @@ static MACHINE_START( common )
 
 static MACHINE_START( ojankohs )
 {
-	UINT8 *ROM = memory_region(machine, "maincpu");
+	UINT8 *ROM = machine->region("maincpu")->base();
 
 	memory_configure_bank(machine, "bank1", 0, 0x40, &ROM[0x10000], 0x4000);
 
@@ -822,7 +823,7 @@ static MACHINE_START( ojankohs )
 
 static MACHINE_START( ojankoy )
 {
-	UINT8 *ROM = memory_region(machine, "maincpu");
+	UINT8 *ROM = machine->region("maincpu")->base();
 
 	memory_configure_bank(machine, "bank1", 0, 0x20, &ROM[0x10000], 0x4000);
 
@@ -831,7 +832,7 @@ static MACHINE_START( ojankoy )
 
 static MACHINE_START( ojankoc )
 {
-	UINT8 *ROM = memory_region(machine, "user1");
+	UINT8 *ROM = machine->region("user1")->base();
 
 	memory_configure_bank(machine, "bank1", 0, 0x10, &ROM[0x0000], 0x8000);
 
@@ -840,7 +841,7 @@ static MACHINE_START( ojankoc )
 
 static MACHINE_RESET( ojankohs )
 {
-	ojankohs_state *state = (ojankohs_state *)machine->driver_data;
+	ojankohs_state *state = machine->driver_data<ojankohs_state>();
 
 	state->portselect = 0;
 
@@ -856,169 +857,157 @@ static MACHINE_RESET( ojankohs )
 	state->screen_refresh = 0;
 }
 
-static MACHINE_DRIVER_START( ojankohs )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(ojankohs_state)
+static MACHINE_CONFIG_START( ojankohs, ojankohs_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80,12000000/2)		/* 6.00 MHz ? */
-	MDRV_CPU_PROGRAM_MAP(ojankohs_map)
-	MDRV_CPU_IO_MAP(ojankohs_io_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80,12000000/2)		/* 6.00 MHz ? */
+	MCFG_CPU_PROGRAM_MAP(ojankohs_map)
+	MCFG_CPU_IO_MAP(ojankohs_io_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_MACHINE_START(ojankohs)
-	MDRV_MACHINE_RESET(ojankohs)
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_MACHINE_START(ojankohs)
+	MCFG_MACHINE_RESET(ojankohs)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(512, 512)
-	MDRV_SCREEN_VISIBLE_AREA(0, 288-1, 0, 224-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(512, 512)
+	MCFG_SCREEN_VISIBLE_AREA(0, 288-1, 0, 224-1)
 
-	MDRV_GFXDECODE(ojankohs)
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_GFXDECODE(ojankohs)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_VIDEO_START(ojankohs)
-	MDRV_VIDEO_UPDATE(ojankohs)
+	MCFG_VIDEO_START(ojankohs)
+	MCFG_VIDEO_UPDATE(ojankohs)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("aysnd", AY8910, 12000000/6)
-	MDRV_SOUND_CONFIG(ojankohs_ay8910_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
+	MCFG_SOUND_ADD("aysnd", AY8910, 12000000/6)
+	MCFG_SOUND_CONFIG(ojankohs_ay8910_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
 
-	MDRV_SOUND_ADD("msm", MSM5205, 384000)
-	MDRV_SOUND_CONFIG(msm5205_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("msm", MSM5205, 384000)
+	MCFG_SOUND_CONFIG(msm5205_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( ojankoy )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(ojankohs_state)
+static MACHINE_CONFIG_START( ojankoy, ojankohs_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80,12000000/2)		/* 6.00 MHz ? */
-	MDRV_CPU_PROGRAM_MAP(ojankoy_map)
-	MDRV_CPU_IO_MAP(ojankoy_io_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80,12000000/2)		/* 6.00 MHz ? */
+	MCFG_CPU_PROGRAM_MAP(ojankoy_map)
+	MCFG_CPU_IO_MAP(ojankoy_io_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_MACHINE_START(ojankoy)
-	MDRV_MACHINE_RESET(ojankohs)
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_MACHINE_START(ojankoy)
+	MCFG_MACHINE_RESET(ojankohs)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(512, 512)
-	MDRV_SCREEN_VISIBLE_AREA(0, 288-1, 0, 224-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(512, 512)
+	MCFG_SCREEN_VISIBLE_AREA(0, 288-1, 0, 224-1)
 
-	MDRV_GFXDECODE(ojankohs)
-	MDRV_PALETTE_LENGTH(1024)
-	MDRV_PALETTE_INIT(ojankoy)
+	MCFG_GFXDECODE(ojankohs)
+	MCFG_PALETTE_LENGTH(1024)
+	MCFG_PALETTE_INIT(ojankoy)
 
-	MDRV_VIDEO_START(ojankoy)
-	MDRV_VIDEO_UPDATE(ojankohs)
+	MCFG_VIDEO_START(ojankoy)
+	MCFG_VIDEO_UPDATE(ojankohs)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("aysnd", AY8910, 12000000/8)
-	MDRV_SOUND_CONFIG(ojankoy_ay8910_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
+	MCFG_SOUND_ADD("aysnd", AY8910, 12000000/8)
+	MCFG_SOUND_CONFIG(ojankoy_ay8910_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
 
-	MDRV_SOUND_ADD("msm", MSM5205, 384000)
-	MDRV_SOUND_CONFIG(msm5205_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("msm", MSM5205, 384000)
+	MCFG_SOUND_CONFIG(msm5205_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( ccasino )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(ojankohs_state)
+static MACHINE_CONFIG_START( ccasino, ojankohs_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80,12000000/2)		/* 6.00 MHz ? */
-	MDRV_CPU_PROGRAM_MAP(ojankoy_map)
-	MDRV_CPU_IO_MAP(ccasino_io_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80,12000000/2)		/* 6.00 MHz ? */
+	MCFG_CPU_PROGRAM_MAP(ojankoy_map)
+	MCFG_CPU_IO_MAP(ccasino_io_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_MACHINE_START(ojankohs)
-	MDRV_MACHINE_RESET(ojankohs)
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_MACHINE_START(ojankohs)
+	MCFG_MACHINE_RESET(ojankohs)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(512, 512)
-	MDRV_SCREEN_VISIBLE_AREA(0, 288-1, 0, 224-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(512, 512)
+	MCFG_SCREEN_VISIBLE_AREA(0, 288-1, 0, 224-1)
 
-	MDRV_GFXDECODE(ojankohs)
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_GFXDECODE(ojankohs)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_VIDEO_START(ojankoy)
-	MDRV_VIDEO_UPDATE(ojankohs)
+	MCFG_VIDEO_START(ojankoy)
+	MCFG_VIDEO_UPDATE(ojankohs)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("aysnd", AY8910, 12000000/8)
-	MDRV_SOUND_CONFIG(ojankoy_ay8910_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
+	MCFG_SOUND_ADD("aysnd", AY8910, 12000000/8)
+	MCFG_SOUND_CONFIG(ojankoy_ay8910_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
 
-	MDRV_SOUND_ADD("msm", MSM5205, 384000)
-	MDRV_SOUND_CONFIG(msm5205_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("msm", MSM5205, 384000)
+	MCFG_SOUND_CONFIG(msm5205_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( ojankoc )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(ojankohs_state)
+static MACHINE_CONFIG_START( ojankoc, ojankohs_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80,8000000/2)			/* 4.00 MHz */
-	MDRV_CPU_PROGRAM_MAP(ojankoc_map)
-	MDRV_CPU_IO_MAP(ojankoc_io_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80,8000000/2)			/* 4.00 MHz */
+	MCFG_CPU_PROGRAM_MAP(ojankoc_map)
+	MCFG_CPU_IO_MAP(ojankoc_io_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_MACHINE_START(ojankoc)
-	MDRV_MACHINE_RESET(ojankohs)
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_MACHINE_START(ojankoc)
+	MCFG_MACHINE_RESET(ojankohs)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0, 256-1, 8, 248-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0, 256-1, 8, 248-1)
 
-	MDRV_PALETTE_LENGTH(16)
+	MCFG_PALETTE_LENGTH(16)
 
-	MDRV_VIDEO_START(ojankoc)
-	MDRV_VIDEO_UPDATE(ojankoc)
+	MCFG_VIDEO_START(ojankoc)
+	MCFG_VIDEO_UPDATE(ojankoc)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("aysnd", AY8910, 8000000/4)
-	MDRV_SOUND_CONFIG(ojankoc_ay8910_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
+	MCFG_SOUND_ADD("aysnd", AY8910, 8000000/4)
+	MCFG_SOUND_CONFIG(ojankoc_ay8910_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
 
-	MDRV_SOUND_ADD("msm", MSM5205, 8000000/22)
-	MDRV_SOUND_CONFIG(msm5205_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("msm", MSM5205, 8000000/22)
+	MCFG_SOUND_CONFIG(msm5205_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 
 ROM_START( ojankohs )

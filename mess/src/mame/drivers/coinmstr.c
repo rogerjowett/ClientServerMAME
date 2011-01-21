@@ -29,6 +29,17 @@ x
 #include "sound/ay8910.h"
 
 
+class coinmstr_state : public driver_device
+{
+public:
+	coinmstr_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
+
+	UINT8 *videoram;
+};
+
+
+
 static UINT8 *attr_ram1, *attr_ram2, *attr_ram3;
 static tilemap_t *bg_tilemap;
 
@@ -36,7 +47,9 @@ static UINT8 question_adr[4];
 
 static WRITE8_HANDLER( quizmstr_bg_w )
 {
-	space->machine->generic.videoram.u8[offset] = data;
+	coinmstr_state *state = space->machine->driver_data<coinmstr_state>();
+	UINT8 *videoram = state->videoram;
+	videoram[offset] = data;
 
 	if(offset >= 0x0240)
 		tilemap_mark_tile_dirty(bg_tilemap,offset - 0x0240);
@@ -119,7 +132,7 @@ static WRITE8_HANDLER( quizmstr_attr3_w )
 static READ8_HANDLER( question_r )
 {
 	int address;
-	UINT8 *questions = memory_region(space->machine, "user1");
+	UINT8 *questions = space->machine->region("user1")->base();
 
 	switch(question_adr[2])
 	{
@@ -184,7 +197,7 @@ static READ8_HANDLER( ff_r )
 static ADDRESS_MAP_START( coinmstr_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0xbfff) AM_ROM
 	AM_RANGE(0xc000, 0xdfff) AM_RAM
-	AM_RANGE(0xe000, 0xe7ff) AM_RAM_WRITE(quizmstr_bg_w) AM_BASE_GENERIC(videoram)
+	AM_RANGE(0xe000, 0xe7ff) AM_RAM_WRITE(quizmstr_bg_w) AM_BASE_MEMBER(coinmstr_state, videoram)
 	AM_RANGE(0xe800, 0xefff) AM_RAM_WRITE(quizmstr_attr1_w) AM_BASE(&attr_ram1)
 	AM_RANGE(0xf000, 0xf7ff) AM_RAM_WRITE(quizmstr_attr2_w) AM_BASE(&attr_ram2)
 	AM_RANGE(0xf800, 0xffff) AM_RAM_WRITE(quizmstr_attr3_w) AM_BASE(&attr_ram3)
@@ -878,7 +891,9 @@ GFXDECODE_END
 
 static TILE_GET_INFO( get_bg_tile_info )
 {
-	int tile = machine->generic.videoram.u8[tile_index + 0x0240];
+	coinmstr_state *state = machine->driver_data<coinmstr_state>();
+	UINT8 *videoram = state->videoram;
+	int tile = videoram[tile_index + 0x0240];
 	int color = tile_index;
 
 	tile |= (attr_ram1[tile_index + 0x0240] & 0x80) << 1;
@@ -980,62 +995,58 @@ static const mc6845_interface h46505_intf =
 };
 
 
-static MACHINE_DRIVER_START( coinmstr )
-	MDRV_CPU_ADD("maincpu",Z80,8000000) // ?
-	MDRV_CPU_PROGRAM_MAP(coinmstr_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+static MACHINE_CONFIG_START( coinmstr, coinmstr_state )
+	MCFG_CPU_ADD("maincpu",Z80,8000000) // ?
+	MCFG_CPU_PROGRAM_MAP(coinmstr_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_PIA6821_ADD("pia0", pia_0_intf)
-	MDRV_PIA6821_ADD("pia1", pia_1_intf)
-	MDRV_PIA6821_ADD("pia2", pia_2_intf)
+	MCFG_PIA6821_ADD("pia0", pia_0_intf)
+	MCFG_PIA6821_ADD("pia1", pia_1_intf)
+	MCFG_PIA6821_ADD("pia2", pia_2_intf)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 64*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 46*8-1, 0*8, 32*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 64*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 46*8-1, 0*8, 32*8-1)
 
-	MDRV_GFXDECODE(coinmstr)
-	MDRV_PALETTE_LENGTH(46*32*4)
+	MCFG_GFXDECODE(coinmstr)
+	MCFG_PALETTE_LENGTH(46*32*4)
 
-	MDRV_VIDEO_START(coinmstr)
-	MDRV_VIDEO_UPDATE(coinmstr)
+	MCFG_VIDEO_START(coinmstr)
+	MCFG_VIDEO_UPDATE(coinmstr)
 
-	MDRV_MC6845_ADD("crtc", H46505, 14000000 / 16, h46505_intf)
+	MCFG_MC6845_ADD("crtc", H46505, 14000000 / 16, h46505_intf)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("aysnd", AY8910, 1500000)
-	MDRV_SOUND_CONFIG(ay8912_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("aysnd", AY8910, 1500000)
+	MCFG_SOUND_CONFIG(ay8912_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( quizmstr )
-	MDRV_IMPORT_FROM(coinmstr)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_IO_MAP(quizmstr_io_map)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( quizmstr, coinmstr )
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_IO_MAP(quizmstr_io_map)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( trailblz )
-	MDRV_IMPORT_FROM(coinmstr)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_IO_MAP(trailblz_io_map)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( trailblz, coinmstr )
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_IO_MAP(trailblz_io_map)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( supnudg2 )
-	MDRV_IMPORT_FROM(coinmstr)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_IO_MAP(supnudg2_io_map)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( supnudg2, coinmstr )
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_IO_MAP(supnudg2_io_map)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( pokeroul )
-	MDRV_IMPORT_FROM(coinmstr)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_IO_MAP(pokeroul_io_map)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( pokeroul, coinmstr )
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_IO_MAP(pokeroul_io_map)
+MACHINE_CONFIG_END
 
 /*
 
@@ -1194,8 +1205,8 @@ ROM_END
 
 static DRIVER_INIT( coinmstr )
 {
-	UINT8 *rom = memory_region(machine, "user1");
-	int length = memory_region_length(machine, "user1");
+	UINT8 *rom = machine->region("user1")->base();
+	int length = machine->region("user1")->bytes();
 	UINT8 *buf = auto_alloc_array(machine, UINT8, length);
 	int i;
 

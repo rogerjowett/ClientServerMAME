@@ -30,7 +30,7 @@
 
 static VIDEO_START( jedi )
 {
-	jedi_state *state = (jedi_state *)machine->driver_data;
+	jedi_state *state = machine->driver_data<jedi_state>();
 
 	/* register for saving */
 	state_save_register_global(machine, state->vscroll);
@@ -110,7 +110,7 @@ static void do_pen_lookup(jedi_state *state, bitmap_t *bitmap, const rectangle *
 
 WRITE8_HANDLER( jedi_vscroll_w )
 {
-	jedi_state *state = (jedi_state *)space->machine->driver_data;
+	jedi_state *state = space->machine->driver_data<jedi_state>();
 
 	state->vscroll = data | (offset << 8);
 }
@@ -118,7 +118,7 @@ WRITE8_HANDLER( jedi_vscroll_w )
 
 WRITE8_HANDLER( jedi_hscroll_w )
 {
-	jedi_state *state = (jedi_state *)space->machine->driver_data;
+	jedi_state *state = space->machine->driver_data<jedi_state>();
 
 	state->hscroll = data | (offset << 8);
 }
@@ -137,10 +137,10 @@ static void draw_background_and_text(running_machine *machine, jedi_state *state
 	int y;
 	int background_line_buffer[0x200];	/* RAM chip at 2A */
 
-	UINT8 *tx_gfx = memory_region(machine, "gfx1");
-	UINT8 *bg_gfx = memory_region(machine, "gfx2");
-	UINT8 *prom1 = &memory_region(machine, "proms")[0x0000 | ((*state->smoothing_table & 0x03) << 8)];
-	UINT8 *prom2 = &memory_region(machine, "proms")[0x0800 | ((*state->smoothing_table & 0x03) << 8)];
+	UINT8 *tx_gfx = machine->region("gfx1")->base();
+	UINT8 *bg_gfx = machine->region("gfx2")->base();
+	UINT8 *prom1 = &machine->region("proms")->base()[0x0000 | ((*state->smoothing_table & 0x03) << 8)];
+	UINT8 *prom2 = &machine->region("proms")->base()[0x0800 | ((*state->smoothing_table & 0x03) << 8)];
 	int vscroll = state->vscroll;
 	int hscroll = state->hscroll;
 	int tx_bank = *state->foreground_bank;
@@ -236,7 +236,7 @@ static void draw_sprites(running_machine *machine, jedi_state *state, bitmap_t *
 {
 	offs_t offs;
 	UINT8 *spriteram = state->spriteram;
-	UINT8 *gfx3 = memory_region(machine, "gfx3");
+	UINT8 *gfx3 = machine->region("gfx3")->base();
 
 	for (offs = 0x00; offs < 0x30; offs++)
 	{
@@ -329,7 +329,7 @@ static void draw_sprites(running_machine *machine, jedi_state *state, bitmap_t *
 
 static VIDEO_UPDATE( jedi )
 {
-	jedi_state *state = (jedi_state *)screen->machine->driver_data;
+	jedi_state *state = screen->machine->driver_data<jedi_state>();
 
 	/* if no video, clear it all to black */
 	if (*state->video_off & 0x01)
@@ -354,15 +354,15 @@ static VIDEO_UPDATE( jedi )
  *
  *************************************/
 
-MACHINE_DRIVER_START( jedi_video )
+MACHINE_CONFIG_FRAGMENT( jedi_video )
 
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_SIZE(64*8, 262) /* verify vert size */
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 37*8-1, 0*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_SIZE(64*8, 262) /* verify vert size */
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 37*8-1, 0*8, 30*8-1)
 
-	MDRV_VIDEO_START(jedi)
-	MDRV_VIDEO_UPDATE(jedi)
-MACHINE_DRIVER_END
+	MCFG_VIDEO_START(jedi)
+	MCFG_VIDEO_UPDATE(jedi)
+MACHINE_CONFIG_END

@@ -6,12 +6,11 @@
 
 ***************************************************************************/
 
-class arabian_state
+class arabian_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, arabian_state(machine)); }
-
-	arabian_state(running_machine &machine) { }
+	arabian_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *  blitter;
@@ -24,9 +23,10 @@ public:
 	UINT8    video_control;
 	UINT8    flip_screen;
 
-	/* misc */
-	UINT8    custom_cpu_reset;
-	UINT8    custom_cpu_busy;
+	/* MCU */
+	UINT8    mcu_port_o;
+	UINT8    mcu_port_p;
+	UINT8    mcu_port_r[4];
 };
 
 

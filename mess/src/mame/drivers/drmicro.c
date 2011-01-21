@@ -25,7 +25,7 @@ Quite similar to Appoooh
 
 static INTERRUPT_GEN( drmicro_interrupt )
 {
-	drmicro_state *state = (drmicro_state *)device->machine->driver_data;
+	drmicro_state *state = device->machine->driver_data<drmicro_state>();
 
 	if (state->nmi_enable)
 		 cpu_set_input_line(device, INPUT_LINE_NMI, PULSE_LINE);
@@ -33,7 +33,7 @@ static INTERRUPT_GEN( drmicro_interrupt )
 
 static WRITE8_HANDLER( nmi_enable_w )
 {
-	drmicro_state *state = (drmicro_state *)space->machine->driver_data;
+	drmicro_state *state = space->machine->driver_data<drmicro_state>();
 
 	state->nmi_enable = data & 1;
 	state->flipscreen = (data & 2) ? 1 : 0;
@@ -43,10 +43,10 @@ static WRITE8_HANDLER( nmi_enable_w )
 }
 
 
-static void pcm_w(running_device *device)
+static void pcm_w(device_t *device)
 {
-	drmicro_state *state = (drmicro_state *)device->machine->driver_data;
-	UINT8 *PCM = memory_region(device->machine, "adpcm");
+	drmicro_state *state = device->machine->driver_data<drmicro_state>();
+	UINT8 *PCM = device->machine->region("adpcm")->base();
 
 	int data = PCM[state->pcm_adr / 2];
 
@@ -66,7 +66,7 @@ static void pcm_w(running_device *device)
 
 static WRITE8_HANDLER( pcm_set_w )
 {
-	drmicro_state *state = (drmicro_state *)space->machine->driver_data;
+	drmicro_state *state = space->machine->driver_data<drmicro_state>();
 	state->pcm_adr = ((data & 0x3f) << 9);
 	pcm_w(state->msm);
 }
@@ -228,7 +228,7 @@ static const msm5205_interface msm5205_config =
 
 static MACHINE_START( drmicro )
 {
-	drmicro_state *state = (drmicro_state *)machine->driver_data;
+	drmicro_state *state = machine->driver_data<drmicro_state>();
 
 	state->msm = machine->device("msm");
 
@@ -239,7 +239,7 @@ static MACHINE_START( drmicro )
 
 static MACHINE_RESET( drmicro )
 {
-	drmicro_state *state = (drmicro_state *)machine->driver_data;
+	drmicro_state *state = machine->driver_data<drmicro_state>();
 
 	state->nmi_enable = 0;
 	state->pcm_adr = 0;
@@ -247,53 +247,50 @@ static MACHINE_RESET( drmicro )
 }
 
 
-static MACHINE_DRIVER_START( drmicro )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(drmicro_state)
+static MACHINE_CONFIG_START( drmicro, drmicro_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80,MCLK/6)	/* 3.072MHz? */
-	MDRV_CPU_PROGRAM_MAP(drmicro_map)
-	MDRV_CPU_IO_MAP(io_map)
-	MDRV_CPU_VBLANK_INT("screen", drmicro_interrupt)
+	MCFG_CPU_ADD("maincpu", Z80,MCLK/6)	/* 3.072MHz? */
+	MCFG_CPU_PROGRAM_MAP(drmicro_map)
+	MCFG_CPU_IO_MAP(io_map)
+	MCFG_CPU_VBLANK_INT("screen", drmicro_interrupt)
 
-	MDRV_QUANTUM_TIME(HZ(60))
+	MCFG_QUANTUM_TIME(HZ(60))
 
-	MDRV_MACHINE_START(drmicro)
-	MDRV_MACHINE_RESET(drmicro)
+	MCFG_MACHINE_START(drmicro)
+	MCFG_MACHINE_RESET(drmicro)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(drmicro)
-	MDRV_PALETTE_LENGTH(512)
+	MCFG_GFXDECODE(drmicro)
+	MCFG_PALETTE_LENGTH(512)
 
-	MDRV_PALETTE_INIT(drmicro)
-	MDRV_VIDEO_START(drmicro)
-	MDRV_VIDEO_UPDATE(drmicro)
+	MCFG_PALETTE_INIT(drmicro)
+	MCFG_VIDEO_START(drmicro)
+	MCFG_VIDEO_UPDATE(drmicro)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("sn1", SN76496, MCLK/4)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_SOUND_ADD("sn1", SN76496, MCLK/4)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MDRV_SOUND_ADD("sn2", SN76496, MCLK/4)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_SOUND_ADD("sn2", SN76496, MCLK/4)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MDRV_SOUND_ADD("sn3", SN76496, MCLK/4)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_SOUND_ADD("sn3", SN76496, MCLK/4)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MDRV_SOUND_ADD("msm", MSM5205, 384000)
-	MDRV_SOUND_CONFIG(msm5205_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.75)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("msm", MSM5205, 384000)
+	MCFG_SOUND_CONFIG(msm5205_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.75)
+MACHINE_CONFIG_END
 
 /*************************************
  *

@@ -11,12 +11,11 @@
 #define OSI600_VIDEORAM_SIZE	0x400
 #define OSI630_COLORRAM_SIZE	0x400
 
-class osi_state
+class osi_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, osi_state(machine)); }
-
-	osi_state(running_machine &machine) { }
+	osi_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* keyboard state */
 	UINT8 keylatch;
@@ -31,13 +30,13 @@ public:
 	int fdc_index;
 
 	/* devices */
-	running_device *cassette;
+	device_t *cassette;
 };
 
 /* ---------- defined in video/osi.c ---------- */
 
-MACHINE_DRIVER_EXTERN( osi600_video );
-MACHINE_DRIVER_EXTERN( uk101_video );
-MACHINE_DRIVER_EXTERN( osi630_video );
+MACHINE_CONFIG_EXTERN( osi600_video );
+MACHINE_CONFIG_EXTERN( uk101_video );
+MACHINE_CONFIG_EXTERN( osi630_video );
 
 #endif

@@ -14,7 +14,7 @@
 
 static INPUT_CHANGED( coin_inserted )
 {
-	cheekyms_state *state = (cheekyms_state *)field->port->machine->driver_data;
+	cheekyms_state *state = field->port->machine->driver_data<cheekyms_state>();
 
 	/* this starts a 556 one-shot timer (and triggers a sound effect) */
 	if (newval)
@@ -111,46 +111,43 @@ GFXDECODE_END
 
 static MACHINE_START( cheekyms )
 {
-	cheekyms_state *state = (cheekyms_state *)machine->driver_data;
+	cheekyms_state *state = machine->driver_data<cheekyms_state>();
 
 	state->maincpu = machine->device("maincpu");
 	state->dac = machine->device("dac");
 }
 
-static MACHINE_DRIVER_START( cheekyms )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(cheekyms_state)
+static MACHINE_CONFIG_START( cheekyms, cheekyms_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80,5000000/2)  /* 2.5 MHz */
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_IO_MAP(io_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80,5000000/2)  /* 2.5 MHz */
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_IO_MAP(io_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_MACHINE_START(cheekyms)
+	MCFG_MACHINE_START(cheekyms)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 4*8, 28*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 4*8, 28*8-1)
 
-	MDRV_GFXDECODE(cheekyms)
-	MDRV_PALETTE_LENGTH(0xc0)
+	MCFG_GFXDECODE(cheekyms)
+	MCFG_PALETTE_LENGTH(0xc0)
 
-	MDRV_PALETTE_INIT(cheekyms)
-	MDRV_VIDEO_START(cheekyms)
-	MDRV_VIDEO_UPDATE(cheekyms)
+	MCFG_PALETTE_INIT(cheekyms)
+	MCFG_VIDEO_START(cheekyms)
+	MCFG_VIDEO_UPDATE(cheekyms)
 
 	/* audio hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("dac", DAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("dac", DAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 

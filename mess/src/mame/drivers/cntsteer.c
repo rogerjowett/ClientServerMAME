@@ -29,12 +29,11 @@
 #include "sound/dac.h"
 
 
-class cntsteer_state
+class cntsteer_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, cntsteer_state(machine)); }
-
-	cntsteer_state(running_machine &machine) { }
+	cntsteer_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *  videoram;
@@ -55,9 +54,9 @@ public:
 	int      nmimask;	// zerotrgt only
 
 	/* devices */
-	running_device *maincpu;
-	running_device *audiocpu;
-	running_device *subcpu;
+	device_t *maincpu;
+	device_t *audiocpu;
+	device_t *subcpu;
 };
 
 
@@ -90,7 +89,7 @@ static PALETTE_INIT( zerotrgt )
 
 static TILE_GET_INFO( get_bg_tile_info )
 {
-	cntsteer_state *state = (cntsteer_state *)machine->driver_data;
+	cntsteer_state *state = machine->driver_data<cntsteer_state>();
 	int code = state->videoram2[tile_index];
 
 	SET_TILE_INFO(2, code + state->bg_bank, state->bg_color_bank, 0);
@@ -98,7 +97,7 @@ static TILE_GET_INFO( get_bg_tile_info )
 
 static TILE_GET_INFO( get_fg_tile_info )
 {
-	cntsteer_state *state = (cntsteer_state *)machine->driver_data;
+	cntsteer_state *state = machine->driver_data<cntsteer_state>();
 	int code = state->videoram[tile_index];
 	int attr = state->colorram[tile_index];
 
@@ -109,7 +108,7 @@ static TILE_GET_INFO( get_fg_tile_info )
 
 static VIDEO_START( cntsteer )
 {
-	cntsteer_state *state = (cntsteer_state *)machine->driver_data;
+	cntsteer_state *state = machine->driver_data<cntsteer_state>();
 	state->bg_tilemap = tilemap_create(machine, get_bg_tile_info, tilemap_scan_cols, 16, 16, 64, 64);
 	state->fg_tilemap = tilemap_create(machine, get_fg_tile_info, tilemap_scan_rows_flip_x, 8, 8, 32, 32);
 
@@ -120,7 +119,7 @@ static VIDEO_START( cntsteer )
 
 static VIDEO_START( zerotrgt )
 {
-	cntsteer_state *state = (cntsteer_state *)machine->driver_data;
+	cntsteer_state *state = machine->driver_data<cntsteer_state>();
 	state->bg_tilemap = tilemap_create(machine, get_bg_tile_info, tilemap_scan_rows, 16, 16, 64, 64);
 	state->fg_tilemap = tilemap_create(machine, get_fg_tile_info, tilemap_scan_rows_flip_x, 8, 8, 32, 32);
 
@@ -144,7 +143,7 @@ Sprite list:
 */
 static void zerotrgt_draw_sprites( running_machine *machine, bitmap_t *bitmap, const rectangle *cliprect )
 {
-	cntsteer_state *state = (cntsteer_state *)machine->driver_data;
+	cntsteer_state *state = machine->driver_data<cntsteer_state>();
 	int offs;
 
 	for (offs = 0; offs < 0x200; offs += 4)
@@ -202,7 +201,7 @@ static void zerotrgt_draw_sprites( running_machine *machine, bitmap_t *bitmap, c
 
 static void cntsteer_draw_sprites( running_machine *machine, bitmap_t *bitmap, const rectangle *cliprect )
 {
-	cntsteer_state *state = (cntsteer_state *)machine->driver_data;
+	cntsteer_state *state = machine->driver_data<cntsteer_state>();
 	int offs;
 
 	for (offs = 0; offs < 0x80; offs += 4)
@@ -251,7 +250,7 @@ static void cntsteer_draw_sprites( running_machine *machine, bitmap_t *bitmap, c
 
 static VIDEO_UPDATE( zerotrgt )
 {
-	cntsteer_state *state = (cntsteer_state *)screen->machine->driver_data;
+	cntsteer_state *state = screen->machine->driver_data<cntsteer_state>();
 
 	if (state->disable_roz)
 		bitmap_fill(bitmap, cliprect, screen->machine->pens[8 * state->bg_color_bank]);
@@ -302,7 +301,7 @@ static VIDEO_UPDATE( zerotrgt )
 
 static VIDEO_UPDATE( cntsteer )
 {
-	cntsteer_state *state = (cntsteer_state *)screen->machine->driver_data;
+	cntsteer_state *state = screen->machine->driver_data<cntsteer_state>();
 
 	if (state->disable_roz)
 		bitmap_fill(bitmap, cliprect, screen->machine->pens[8 * state->bg_color_bank]);
@@ -363,7 +362,7 @@ static VIDEO_UPDATE( cntsteer )
 */
 static WRITE8_HANDLER(zerotrgt_vregs_w)
 {
-	cntsteer_state *state = (cntsteer_state *)space->machine->driver_data;
+	cntsteer_state *state = space->machine->driver_data<cntsteer_state>();
 //  static UINT8 test[5];
 
 //  test[offset] = data;
@@ -389,7 +388,7 @@ static WRITE8_HANDLER(zerotrgt_vregs_w)
 
 static WRITE8_HANDLER(cntsteer_vregs_w)
 {
-	cntsteer_state *state = (cntsteer_state *)space->machine->driver_data;
+	cntsteer_state *state = space->machine->driver_data<cntsteer_state>();
 //  static UINT8 test[5];
 
 //  test[offset] = data;
@@ -414,21 +413,21 @@ static WRITE8_HANDLER(cntsteer_vregs_w)
 
 static WRITE8_HANDLER( cntsteer_foreground_vram_w )
 {
-	cntsteer_state *state = (cntsteer_state *)space->machine->driver_data;
+	cntsteer_state *state = space->machine->driver_data<cntsteer_state>();
 	state->videoram[offset] = data;
 	tilemap_mark_tile_dirty(state->fg_tilemap, offset);
 }
 
 static WRITE8_HANDLER( cntsteer_foreground_attr_w )
 {
-	cntsteer_state *state = (cntsteer_state *)space->machine->driver_data;
+	cntsteer_state *state = space->machine->driver_data<cntsteer_state>();
 	state->colorram[offset] = data;
 	tilemap_mark_tile_dirty(state->fg_tilemap, offset);
 }
 
 static WRITE8_HANDLER( cntsteer_background_w )
 {
-	cntsteer_state *state = (cntsteer_state *)space->machine->driver_data;
+	cntsteer_state *state = space->machine->driver_data<cntsteer_state>();
 	state->videoram2[offset] = data;
 	tilemap_mark_tile_dirty(state->bg_tilemap, offset);
 }
@@ -441,20 +440,20 @@ static WRITE8_HANDLER( cntsteer_background_w )
 
 static WRITE8_HANDLER( gekitsui_sub_irq_ack )
 {
-	cntsteer_state *state = (cntsteer_state *)space->machine->driver_data;
+	cntsteer_state *state = space->machine->driver_data<cntsteer_state>();
 	cpu_set_input_line(state->subcpu, M6809_IRQ_LINE, CLEAR_LINE);
 }
 
 static WRITE8_HANDLER( cntsteer_sound_w )
 {
-	cntsteer_state *state = (cntsteer_state *)space->machine->driver_data;
+	cntsteer_state *state = space->machine->driver_data<cntsteer_state>();
 	soundlatch_w(space, 0, data);
 	cpu_set_input_line(state->audiocpu, 0, HOLD_LINE);
 }
 
 static WRITE8_HANDLER( zerotrgt_ctrl_w )
 {
-	cntsteer_state *state = (cntsteer_state *)space->machine->driver_data;
+	cntsteer_state *state = space->machine->driver_data<cntsteer_state>();
 	/*TODO: check this.*/
 	logerror("CTRL: %04x: %04x: %04x\n", cpu_get_pc(space->cpu), offset, data);
 //  if (offset == 0) cpu_set_input_line(state->subcpu, INPUT_LINE_RESET, ASSERT_LINE);
@@ -466,7 +465,7 @@ static WRITE8_HANDLER( zerotrgt_ctrl_w )
 
 static WRITE8_HANDLER( cntsteer_sub_irq_w )
 {
-	cntsteer_state *state = (cntsteer_state *)space->machine->driver_data;
+	cntsteer_state *state = space->machine->driver_data<cntsteer_state>();
 	cpu_set_input_line(state->subcpu, M6809_IRQ_LINE, ASSERT_LINE);
 //  printf("%02x IRQ\n", data);
 }
@@ -480,7 +479,7 @@ static WRITE8_HANDLER( cntsteer_sub_nmi_w )
 
 static WRITE8_HANDLER( cntsteer_main_irq_w )
 {
-	cntsteer_state *state = (cntsteer_state *)space->machine->driver_data;
+	cntsteer_state *state = space->machine->driver_data<cntsteer_state>();
 	cpu_set_input_line(state->maincpu, M6809_IRQ_LINE, HOLD_LINE);
 }
 
@@ -573,13 +572,13 @@ ADDRESS_MAP_END
 
 static WRITE8_HANDLER( nmimask_w )
 {
-	cntsteer_state *state = (cntsteer_state *)space->machine->driver_data;
+	cntsteer_state *state = space->machine->driver_data<cntsteer_state>();
 	state->nmimask = data & 0x80;
 }
 
 static INTERRUPT_GEN ( sound_interrupt )
 {
-	cntsteer_state *state = (cntsteer_state *)device->machine->driver_data;
+	cntsteer_state *state = device->machine->driver_data<cntsteer_state>();
 	if (!state->nmimask)
 		cpu_set_input_line(device, INPUT_LINE_NMI, PULSE_LINE);
 }
@@ -652,7 +651,7 @@ INPUT_PORTS_END
 
 static INPUT_CHANGED( coin_inserted )
 {
-	cntsteer_state *state = (cntsteer_state *)field->port->machine->driver_data;
+	cntsteer_state *state = field->port->machine->driver_data<cntsteer_state>();
 	cpu_set_input_line(state->subcpu, INPUT_LINE_NMI, newval ? CLEAR_LINE : ASSERT_LINE);
 }
 
@@ -785,7 +784,7 @@ GFXDECODE_END
 
 static MACHINE_START( cntsteer )
 {
-	cntsteer_state *state = (cntsteer_state *)machine->driver_data;
+	cntsteer_state *state = machine->driver_data<cntsteer_state>();
 
 	state->maincpu = machine->device("maincpu");
 	state->audiocpu = machine->device("audiocpu");
@@ -806,7 +805,7 @@ static MACHINE_START( cntsteer )
 
 static MACHINE_START( zerotrgt )
 {
-	cntsteer_state *state = (cntsteer_state *)machine->driver_data;
+	cntsteer_state *state = machine->driver_data<cntsteer_state>();
 
 	state_save_register_global(machine, state->nmimask);
 	MACHINE_START_CALL(cntsteer);
@@ -815,7 +814,7 @@ static MACHINE_START( zerotrgt )
 
 static MACHINE_RESET( cntsteer )
 {
-	cntsteer_state *state = (cntsteer_state *)machine->driver_data;
+	cntsteer_state *state = machine->driver_data<cntsteer_state>();
 
 	state->flipscreen = 0;
 	state->bg_bank = 0;
@@ -833,7 +832,7 @@ static MACHINE_RESET( cntsteer )
 
 static MACHINE_RESET( zerotrgt )
 {
-	cntsteer_state *state = (cntsteer_state *)machine->driver_data;
+	cntsteer_state *state = machine->driver_data<cntsteer_state>();
 
 	state->nmimask = 0;
 	MACHINE_RESET_CALL(cntsteer);
@@ -849,104 +848,98 @@ static const ay8910_interface ay8910_config =
 	DEVCB_NULL
 };
 
-static MACHINE_DRIVER_START( cntsteer )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(cntsteer_state)
+static MACHINE_CONFIG_START( cntsteer, cntsteer_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6809, 2000000)		 /* ? */
-	MDRV_CPU_PROGRAM_MAP(cntsteer_cpu1_map)
-	MDRV_CPU_VBLANK_INT("screen", nmi_line_pulse) /* ? */
+	MCFG_CPU_ADD("maincpu", M6809, 2000000)		 /* ? */
+	MCFG_CPU_PROGRAM_MAP(cntsteer_cpu1_map)
+	MCFG_CPU_VBLANK_INT("screen", nmi_line_pulse) /* ? */
 
-	MDRV_CPU_ADD("subcpu", M6809, 2000000)		 /* ? */
-	MDRV_CPU_PROGRAM_MAP(cntsteer_cpu2_map)
-//  MDRV_CPU_VBLANK_INT("screen", nmi_line_pulse) /* ? */
+	MCFG_CPU_ADD("subcpu", M6809, 2000000)		 /* ? */
+	MCFG_CPU_PROGRAM_MAP(cntsteer_cpu2_map)
+//  MCFG_CPU_VBLANK_INT("screen", nmi_line_pulse) /* ? */
 
-	MDRV_CPU_ADD("audiocpu", M6502, 1500000)        /* ? */
-	MDRV_CPU_PROGRAM_MAP(sound_map)
-	MDRV_CPU_PERIODIC_INT(sound_interrupt, 480)
+	MCFG_CPU_ADD("audiocpu", M6502, 1500000)        /* ? */
+	MCFG_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_PERIODIC_INT(sound_interrupt, 480)
 
-	MDRV_MACHINE_START(cntsteer)
-	MDRV_MACHINE_RESET(cntsteer)
+	MCFG_MACHINE_START(cntsteer)
+	MCFG_MACHINE_RESET(cntsteer)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(256, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 1*8, 31*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(256, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 1*8, 31*8-1)
 
-	MDRV_QUANTUM_TIME(HZ(6000))
+	MCFG_QUANTUM_TIME(HZ(6000))
 
-	MDRV_GFXDECODE(cntsteer)
-	MDRV_PALETTE_LENGTH(256)
-//  MDRV_PALETTE_INIT(zerotrgt)
+	MCFG_GFXDECODE(cntsteer)
+	MCFG_PALETTE_LENGTH(256)
+//  MCFG_PALETTE_INIT(zerotrgt)
 
-	MDRV_VIDEO_START(cntsteer)
-	MDRV_VIDEO_UPDATE(cntsteer)
+	MCFG_VIDEO_START(cntsteer)
+	MCFG_VIDEO_UPDATE(cntsteer)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("ay1", AY8910, 1500000)
-	MDRV_SOUND_CONFIG(ay8910_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("ay1", AY8910, 1500000)
+	MCFG_SOUND_CONFIG(ay8910_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MDRV_SOUND_ADD("ay2", AY8910, 1500000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_SOUND_ADD("ay2", AY8910, 1500000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MDRV_SOUND_ADD("dac", DAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("dac", DAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( zerotrgt )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(cntsteer_state)
+static MACHINE_CONFIG_START( zerotrgt, cntsteer_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6809, 2000000)		 /* ? */
-	MDRV_CPU_PROGRAM_MAP(gekitsui_cpu1_map)
-	MDRV_CPU_VBLANK_INT("screen", nmi_line_pulse) /* ? */
+	MCFG_CPU_ADD("maincpu", M6809, 2000000)		 /* ? */
+	MCFG_CPU_PROGRAM_MAP(gekitsui_cpu1_map)
+	MCFG_CPU_VBLANK_INT("screen", nmi_line_pulse) /* ? */
 
-	MDRV_CPU_ADD("subcpu", M6809, 2000000)		 /* ? */
-	MDRV_CPU_PROGRAM_MAP(gekitsui_cpu2_map)
-//  MDRV_CPU_VBLANK_INT("screen", nmi_line_pulse) /* ? */
+	MCFG_CPU_ADD("subcpu", M6809, 2000000)		 /* ? */
+	MCFG_CPU_PROGRAM_MAP(gekitsui_cpu2_map)
+//  MCFG_CPU_VBLANK_INT("screen", nmi_line_pulse) /* ? */
 
-	MDRV_CPU_ADD("audiocpu", M6502, 1500000)		/* ? */
-	MDRV_CPU_PROGRAM_MAP(sound_map)
-	MDRV_CPU_PERIODIC_INT(sound_interrupt, 480)
+	MCFG_CPU_ADD("audiocpu", M6502, 1500000)		/* ? */
+	MCFG_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_PERIODIC_INT(sound_interrupt, 480)
 
-	MDRV_QUANTUM_TIME(HZ(6000))
+	MCFG_QUANTUM_TIME(HZ(6000))
 
-	MDRV_MACHINE_START(zerotrgt)
-	MDRV_MACHINE_RESET(zerotrgt)
+	MCFG_MACHINE_START(zerotrgt)
+	MCFG_MACHINE_RESET(zerotrgt)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(256, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 1*8, 31*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(256, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 1*8, 31*8-1)
 
-	MDRV_GFXDECODE(zerotrgt)
-	MDRV_PALETTE_LENGTH(256)
+	MCFG_GFXDECODE(zerotrgt)
+	MCFG_PALETTE_LENGTH(256)
 
-	MDRV_PALETTE_INIT(zerotrgt)
-	MDRV_VIDEO_START(zerotrgt)
-	MDRV_VIDEO_UPDATE(zerotrgt)
+	MCFG_PALETTE_INIT(zerotrgt)
+	MCFG_VIDEO_START(zerotrgt)
+	MCFG_VIDEO_UPDATE(zerotrgt)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ay1", AY8910, 1500000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_SOUND_ADD("ay1", AY8910, 1500000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MDRV_SOUND_ADD("ay2", AY8910, 1500000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ay2", AY8910, 1500000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 /***************************************************************************/
 
@@ -1083,8 +1076,8 @@ ROM_END
 
 static void zerotrgt_rearrange_gfx( running_machine *machine, int romsize, int romarea )
 {
-	UINT8 *src = memory_region(machine, "gfx4");
-	UINT8 *dst = memory_region(machine, "gfx3");
+	UINT8 *src = machine->region("gfx4")->base();
+	UINT8 *dst = machine->region("gfx3")->base();
 	int rm;
 	int cnt1;
 
@@ -1103,7 +1096,7 @@ static void zerotrgt_rearrange_gfx( running_machine *machine, int romsize, int r
 #if 0
 static DRIVER_INIT( cntsteer )
 {
-	UINT8 *RAM = memory_region(machine, "subcpu");
+	UINT8 *RAM = machine->region("subcpu")->base();
 
 	RAM[0xc2cf] = 0x43; /* Patch out Cpu 1 ram test - it never ends..?! */
 	RAM[0xc2d0] = 0x43;

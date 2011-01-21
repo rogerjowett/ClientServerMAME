@@ -14,12 +14,11 @@ struct slapshot_tempsprite
 	int primask;
 };
 
-class slapshot_state
+class slapshot_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, slapshot_state(machine)); }
-
-	slapshot_state(running_machine &machine) { }
+	slapshot_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT16 *    color_ram;
@@ -42,12 +41,12 @@ public:
 	INT32      banknum;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *audiocpu;
-	running_device *tc0140syt;
-	running_device *tc0480scp;
-	running_device *tc0360pri;
-	running_device *tc0640fio;
+	device_t *maincpu;
+	device_t *audiocpu;
+	device_t *tc0140syt;
+	device_t *tc0480scp;
+	device_t *tc0360pri;
+	device_t *tc0640fio;
 };
 
 

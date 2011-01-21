@@ -123,21 +123,11 @@ The current set of Super Model is an example of type C
 #include "includes/kaneko16.h"
 #include "sound/okim6295.h"
 #include "video/kan_pand.h"
-
-extern UINT16 *galpanic_bgvideoram,*galpanic_fgvideoram;
-extern size_t galpanic_fgvideoram_size;
-
-PALETTE_INIT( galpanic );
-WRITE16_HANDLER( galpanic_bgvideoram_w );
-WRITE16_HANDLER( galpanic_paletteram_w );
-VIDEO_START( galpanic );
-VIDEO_UPDATE( galpanic );
-VIDEO_UPDATE( comad );
-
+#include "includes/galpanic.h"
 
 static VIDEO_EOF( galpanic )
 {
-	running_device *pandora = machine->device("pandora");
+	device_t *pandora = machine->device("pandora");
 	pandora_eof(pandora);
 }
 
@@ -163,11 +153,11 @@ static INTERRUPT_GEN( galhustl_interrupt )
 
 static WRITE16_HANDLER( galpanic_6295_bankswitch_w )
 {
-	running_device *pandora = space->machine->device("pandora");
+	device_t *pandora = space->machine->device("pandora");
 
 	if (ACCESSING_BITS_8_15)
 	{
-		UINT8 *rom = memory_region(space->machine, "oki");
+		UINT8 *rom = space->machine->region("oki")->base();
 
 		memcpy(&rom[0x30000],&rom[0x40000 + ((data >> 8) & 0x0f) * 0x10000],0x10000);
 
@@ -180,7 +170,7 @@ static WRITE16_HANDLER( galpanica_6295_bankswitch_w )
 {
 	if (ACCESSING_BITS_8_15)
 	{
-		UINT8 *rom = memory_region(space->machine, "oki");
+		UINT8 *rom = space->machine->region("oki")->base();
 
 		memcpy(&rom[0x30000],&rom[0x40000 + ((data >> 8) & 0x0f) * 0x10000],0x10000);
 	}
@@ -189,7 +179,7 @@ static WRITE16_HANDLER( galpanica_6295_bankswitch_w )
 #ifdef UNUSED_FUNCTION
 static WRITE16_HANDLER( galpanica_misc_w )
 {
-	running_device *pandora = machine->device("pandora");
+	device_t *pandora = machine->device("pandora");
 
 	if (ACCESSING_BITS_0_7)
 	{
@@ -224,7 +214,7 @@ static WRITE16_HANDLER( galpanic_bgvideoram_mirror_w )
 
 static ADDRESS_MAP_START( galpanic_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x000000, 0x3fffff) AM_ROM
-	AM_RANGE(0x400000, 0x400001) AM_DEVREADWRITE8("oki", okim6295_r, okim6295_w, 0x00ff)
+	AM_RANGE(0x400000, 0x400001) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0x00ff)
 	AM_RANGE(0x500000, 0x51ffff) AM_RAM AM_BASE(&galpanic_fgvideoram) AM_SIZE(&galpanic_fgvideoram_size)
 	AM_RANGE(0x520000, 0x53ffff) AM_RAM_WRITE(galpanic_bgvideoram_w) AM_BASE(&galpanic_bgvideoram)	/* + work RAM */
 	AM_RANGE(0x600000, 0x6007ff) AM_RAM_WRITE(galpanic_paletteram_w) AM_BASE_GENERIC(paletteram)	/* 1024 colors, but only 512 seem to be used */
@@ -243,7 +233,7 @@ ADDRESS_MAP_END
 
 static READ16_HANDLER( kludge )
 {
-	return mame_rand(space->machine) & 0x0700;
+	return space->machine->rand() & 0x0700;
 }
 
 /* a kludge! */
@@ -252,7 +242,7 @@ static READ8_DEVICE_HANDLER( comad_okim6295_r )
 	UINT16 retvalue;
 
 //  retvalue = okim6295_r(offset,mem_mask) << 8; // doesn't work, causes lockups when girls change..
-	retvalue = mame_rand(device->machine);
+	retvalue = device->machine->rand();
 
 	return retvalue;
 }
@@ -272,8 +262,8 @@ static ADDRESS_MAP_START( comad_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x900000, 0x900001) AM_WRITE(galpanica_6295_bankswitch_w)	/* not sure */
 	AM_RANGE(0xc00000, 0xc0ffff) AM_RAM				/* missw96 */
 	AM_RANGE(0xc80000, 0xc8ffff) AM_RAM				/* fantasia, newfant */
-	AM_RANGE(0xf00000, 0xf00001) AM_DEVREADWRITE8("oki", comad_okim6295_r, okim6295_w, 0xff00)	/* fantasia, missw96 */
-	AM_RANGE(0xf80000, 0xf80001) AM_DEVREADWRITE8("oki", comad_okim6295_r, okim6295_w, 0xff00)	/* newfant */
+	AM_RANGE(0xf00000, 0xf00001) AM_DEVREAD8("oki", comad_okim6295_r, 0xff00) AM_DEVWRITE8_MODERN("oki", okim6295_device, write, 0xff00)	/* fantasia, missw96 */
+	AM_RANGE(0xf80000, 0xf80001) AM_DEVREAD8("oki", comad_okim6295_r, 0xff00) AM_DEVWRITE8_MODERN("oki", okim6295_device, write, 0xff00)	/* newfant */
 ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( fantsia2_map, ADDRESS_SPACE_PROGRAM, 16 )
@@ -289,7 +279,7 @@ static ADDRESS_MAP_START( fantsia2_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x800008, 0x800009) AM_READ(kludge)	/* bits 8-a = timer? palette update code waits for them to be 111 */
 	AM_RANGE(0x900000, 0x900001) AM_WRITE(galpanica_6295_bankswitch_w)	/* not sure */
 	AM_RANGE(0xa00000, 0xa00001) AM_WRITENOP	/* coin counters, + ? */
-	AM_RANGE(0xc80000, 0xc80001) AM_DEVREADWRITE8("oki", comad_okim6295_r, okim6295_w, 0xff00)
+	AM_RANGE(0xc80000, 0xc80001) AM_DEVREAD8("oki", comad_okim6295_r, 0xff00) AM_DEVWRITE8_MODERN("oki", okim6295_device, write, 0xff00)
 	AM_RANGE(0xf80000, 0xf8ffff) AM_RAM
 ADDRESS_MAP_END
 
@@ -309,14 +299,14 @@ static ADDRESS_MAP_START( galhustl_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x800004, 0x800005) AM_READ_PORT("SYSTEM")
 	AM_RANGE(0x900000, 0x900001) AM_WRITE(galpanica_6295_bankswitch_w)
 	AM_RANGE(0xa00000, 0xa00001) AM_WRITENOP // ?
-	AM_RANGE(0xd00000, 0xd00001) AM_DEVREADWRITE8("oki", okim6295_r, okim6295_w, 0xff00)
+	AM_RANGE(0xd00000, 0xd00001) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0xff00)
 	AM_RANGE(0xe80000, 0xe8ffff) AM_RAM
 ADDRESS_MAP_END
 
 #ifdef UNUSED_FUNCTION
 READ16_HANDLER( zipzap_random_read )
 {
-    return mame_rand(space->machine);
+    return space->machine->rand();
 }
 #endif
 
@@ -336,7 +326,7 @@ static ADDRESS_MAP_START( zipzap_map, ADDRESS_SPACE_PROGRAM, 16 )
 
 	AM_RANGE(0x900000, 0x900001) AM_WRITE(galpanica_6295_bankswitch_w)
 
-	AM_RANGE(0xc00000, 0xc00001) AM_DEVREADWRITE8("oki", comad_okim6295_r, okim6295_w, 0xff00)
+	AM_RANGE(0xc00000, 0xc00001) AM_DEVREAD8("oki", comad_okim6295_r, 0xff00) AM_DEVWRITE8_MODERN("oki", okim6295_device, write, 0xff00)	/* fantasia, missw96 */
 
 	AM_RANGE(0xc80000, 0xc8ffff) AM_RAM		// main ram
 ADDRESS_MAP_END
@@ -361,7 +351,7 @@ static ADDRESS_MAP_START( supmodel_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0xd80000, 0xd80001) AM_WRITENOP
 	AM_RANGE(0xe00012, 0xe00013) AM_WRITENOP
 	AM_RANGE(0xe80000, 0xe80001) AM_WRITENOP
-	AM_RANGE(0xf80000, 0xf80001) AM_DEVREADWRITE8("oki", comad_okim6295_r, okim6295_w, 0xff00)
+	AM_RANGE(0xf80000, 0xf80001) AM_DEVREAD8("oki", comad_okim6295_r, 0xff00) AM_DEVWRITE8_MODERN("oki", okim6295_device, write, 0xff00)	/* fantasia, missw96 */
 ADDRESS_MAP_END
 
 #define COMMON_COIN0\
@@ -881,129 +871,123 @@ static const kaneko_pandora_interface galpanic_pandora_config =
 };
 
 
-static MACHINE_DRIVER_START( galpanic )
+static MACHINE_CONFIG_START( galpanic, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, XTAL_12MHz) /* verified on pcb */
-	MDRV_CPU_PROGRAM_MAP(galpanic_map)
-	MDRV_CPU_VBLANK_INT_HACK(galpanic_interrupt,2)
+	MCFG_CPU_ADD("maincpu", M68000, XTAL_12MHz) /* verified on pcb */
+	MCFG_CPU_PROGRAM_MAP(galpanic_map)
+	MCFG_CPU_VBLANK_INT_HACK(galpanic_interrupt,2)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0)	/* frames per second, vblank duration */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(256, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 256-1, 0, 224-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0)	/* frames per second, vblank duration */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(256, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 256-1, 0, 224-1)
 
-	MDRV_GFXDECODE(galpanic)
-	MDRV_PALETTE_LENGTH(1024 + 32768)
+	MCFG_GFXDECODE(galpanic)
+	MCFG_PALETTE_LENGTH(1024 + 32768)
 
-	MDRV_KANEKO_PANDORA_ADD("pandora", galpanic_pandora_config)
+	MCFG_KANEKO_PANDORA_ADD("pandora", galpanic_pandora_config)
 
-	MDRV_PALETTE_INIT(galpanic)
-	MDRV_VIDEO_START(galpanic)
-	MDRV_VIDEO_UPDATE(galpanic)
-	MDRV_VIDEO_EOF( galpanic )
+	MCFG_PALETTE_INIT(galpanic)
+	MCFG_VIDEO_START(galpanic)
+	MCFG_VIDEO_UPDATE(galpanic)
+	MCFG_VIDEO_EOF( galpanic )
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_OKIM6295_ADD("oki", XTAL_12MHz/6, OKIM6295_PIN7_LOW) /* verified on pcb */
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", XTAL_12MHz/6, OKIM6295_PIN7_LOW) /* verified on pcb */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( galpanica )
+static MACHINE_CONFIG_DERIVED( galpanica, galpanic )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(galpanic)
 
 	/* arm watchdog */
-	MDRV_WATCHDOG_TIME_INIT(SEC(3))	/* a guess, and certainly wrong */
-MACHINE_DRIVER_END
+	MCFG_WATCHDOG_TIME_INIT(SEC(3))	/* a guess, and certainly wrong */
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( comad )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM(galpanic)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_CLOCK(10000000)
-	MDRV_CPU_PROGRAM_MAP(comad_map)
-
-	MDRV_DEVICE_REMOVE("pandora")
-
-	/* video hardware */
-	MDRV_VIDEO_UPDATE(comad)
-	MDRV_VIDEO_EOF(0)
-MACHINE_DRIVER_END
-
-static MACHINE_DRIVER_START( supmodel )
+static MACHINE_CONFIG_DERIVED( comad, galpanic )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(comad)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_CLOCK(12000000)	/* ? */
-	MDRV_CPU_PROGRAM_MAP(supmodel_map)
-	MDRV_CPU_VBLANK_INT_HACK(galpanic_interrupt,2)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_CLOCK(10000000)
+	MCFG_CPU_PROGRAM_MAP(comad_map)
+
+	MCFG_DEVICE_REMOVE("pandora")
 
 	/* video hardware */
-	MDRV_VIDEO_UPDATE(comad)
-	MDRV_VIDEO_EOF(0)
+	MCFG_VIDEO_UPDATE(comad)
+	MCFG_VIDEO_EOF(0)
+MACHINE_CONFIG_END
+
+static MACHINE_CONFIG_DERIVED( supmodel, comad )
+
+	/* basic machine hardware */
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_CLOCK(12000000)	/* ? */
+	MCFG_CPU_PROGRAM_MAP(supmodel_map)
+	MCFG_CPU_VBLANK_INT_HACK(galpanic_interrupt,2)
+
+	/* video hardware */
+	MCFG_VIDEO_UPDATE(comad)
+	MCFG_VIDEO_EOF(0)
 
 	/* sound hardware */
-	MDRV_OKIM6295_REPLACE("oki", 1584000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_REPLACE("oki", 1584000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( fantsia2 )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM(comad)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_CLOCK(12000000)	/* ? */
-	MDRV_CPU_PROGRAM_MAP(fantsia2_map)
-
-	/* video hardware */
-	MDRV_VIDEO_UPDATE(comad)
-	MDRV_VIDEO_EOF(0)
-MACHINE_DRIVER_END
-
-static MACHINE_DRIVER_START( galhustl )
+static MACHINE_CONFIG_DERIVED( fantsia2, comad )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(comad)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_CLOCK(12000000)	/* ? */
-	MDRV_CPU_PROGRAM_MAP(galhustl_map)
-	MDRV_CPU_VBLANK_INT_HACK(galhustl_interrupt,3)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_CLOCK(12000000)	/* ? */
+	MCFG_CPU_PROGRAM_MAP(fantsia2_map)
 
 	/* video hardware */
-	MDRV_VIDEO_UPDATE(comad)
-	MDRV_VIDEO_EOF(0)
+	MCFG_VIDEO_UPDATE(comad)
+	MCFG_VIDEO_EOF(0)
+MACHINE_CONFIG_END
+
+static MACHINE_CONFIG_DERIVED( galhustl, comad )
+
+	/* basic machine hardware */
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_CLOCK(12000000)	/* ? */
+	MCFG_CPU_PROGRAM_MAP(galhustl_map)
+	MCFG_CPU_VBLANK_INT_HACK(galhustl_interrupt,3)
+
+	/* video hardware */
+	MCFG_VIDEO_UPDATE(comad)
+	MCFG_VIDEO_EOF(0)
 
 	/* sound hardware */
-	MDRV_OKIM6295_REPLACE("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_REPLACE("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( zipzap )
+static MACHINE_CONFIG_DERIVED( zipzap, comad )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(comad)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_CLOCK(12000000)	/* ? */
-	MDRV_CPU_PROGRAM_MAP(zipzap_map)
-	MDRV_CPU_VBLANK_INT_HACK(galhustl_interrupt,3)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_CLOCK(12000000)	/* ? */
+	MCFG_CPU_PROGRAM_MAP(zipzap_map)
+	MCFG_CPU_VBLANK_INT_HACK(galhustl_interrupt,3)
 
 	/* video hardware */
-	MDRV_VIDEO_UPDATE(comad)
+	MCFG_VIDEO_UPDATE(comad)
 
 	/* sound hardware */
-	MDRV_OKIM6295_REPLACE("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_REPLACE("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************

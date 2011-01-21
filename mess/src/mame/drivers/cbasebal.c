@@ -29,7 +29,7 @@
 
 static WRITE8_HANDLER( cbasebal_bankswitch_w )
 {
-	cbasebal_state *state = (cbasebal_state *)space->machine->driver_data;
+	cbasebal_state *state = space->machine->driver_data<cbasebal_state>();
 
 	/* bits 0-4 select ROM bank */
 	//logerror("%04x: bankswitch %02x\n", cpu_get_pc(space->cpu), data);
@@ -44,7 +44,7 @@ static WRITE8_HANDLER( cbasebal_bankswitch_w )
 
 static READ8_HANDLER( bankedram_r )
 {
-	cbasebal_state *state = (cbasebal_state *)space->machine->driver_data;
+	cbasebal_state *state = space->machine->driver_data<cbasebal_state>();
 
 	switch (state->rambank)
 	{
@@ -63,7 +63,7 @@ static READ8_HANDLER( bankedram_r )
 
 static WRITE8_HANDLER( bankedram_w )
 {
-	cbasebal_state *state = (cbasebal_state *)space->machine->driver_data;
+	cbasebal_state *state = space->machine->driver_data<cbasebal_state>();
 
 	switch (state->rambank)
 	{
@@ -125,7 +125,7 @@ static ADDRESS_MAP_START( cbasebal_portmap, ADDRESS_SPACE_IO, 8 )
 	AM_RANGE(0x01, 0x01) AM_WRITE_PORT("IO_01")
 	AM_RANGE(0x02, 0x02) AM_WRITE_PORT("IO_02")
 	AM_RANGE(0x03, 0x03) AM_WRITE_PORT("IO_03")
-	AM_RANGE(0x05, 0x05) AM_DEVWRITE("oki", okim6295_w)
+	AM_RANGE(0x05, 0x05) AM_DEVWRITE_MODERN("oki", okim6295_device, write)
 	AM_RANGE(0x06, 0x07) AM_DEVWRITE("ymsnd", ym2413_w)
 	AM_RANGE(0x08, 0x09) AM_WRITE(cbasebal_scrollx_w)
 	AM_RANGE(0x0a, 0x0b) AM_WRITE(cbasebal_scrolly_w)
@@ -244,9 +244,9 @@ GFXDECODE_END
 
 static MACHINE_START( cbasebal )
 {
-	cbasebal_state *state = (cbasebal_state *)machine->driver_data;
+	cbasebal_state *state = machine->driver_data<cbasebal_state>();
 
-	memory_configure_bank(machine, "bank1", 0, 32, memory_region(machine, "maincpu") + 0x10000, 0x4000);
+	memory_configure_bank(machine, "bank1", 0, 32, machine->region("maincpu")->base() + 0x10000, 0x4000);
 
 	state_save_register_global(machine, state->rambank);
 	state_save_register_global(machine, state->tilebank);
@@ -261,7 +261,7 @@ static MACHINE_START( cbasebal )
 
 static MACHINE_RESET( cbasebal )
 {
-	cbasebal_state *state = (cbasebal_state *)machine->driver_data;
+	cbasebal_state *state = machine->driver_data<cbasebal_state>();
 
 	state->rambank = 0;
 	state->tilebank = 0;
@@ -276,47 +276,44 @@ static MACHINE_RESET( cbasebal )
 	state->scroll_y[1] = 0;
 }
 
-static MACHINE_DRIVER_START( cbasebal )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(cbasebal_state)
+static MACHINE_CONFIG_START( cbasebal, cbasebal_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, 6000000)	/* ??? */
-	MDRV_CPU_PROGRAM_MAP(cbasebal_map)
-	MDRV_CPU_IO_MAP(cbasebal_portmap)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)	/* ??? */
+	MCFG_CPU_ADD("maincpu", Z80, 6000000)	/* ??? */
+	MCFG_CPU_PROGRAM_MAP(cbasebal_map)
+	MCFG_CPU_IO_MAP(cbasebal_portmap)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)	/* ??? */
 
-	MDRV_MACHINE_START(cbasebal)
-	MDRV_MACHINE_RESET(cbasebal)
+	MCFG_MACHINE_START(cbasebal)
+	MCFG_MACHINE_RESET(cbasebal)
 
-	MDRV_EEPROM_ADD("eeprom", cbasebal_eeprom_intf)
+	MCFG_EEPROM_ADD("eeprom", cbasebal_eeprom_intf)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(8*8, (64-8)*8-1, 2*8, 30*8-1 )
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(8*8, (64-8)*8-1, 2*8, 30*8-1 )
 
-	MDRV_GFXDECODE(cbasebal)
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_GFXDECODE(cbasebal)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_VIDEO_START(cbasebal)
-	MDRV_VIDEO_UPDATE(cbasebal)
+	MCFG_VIDEO_START(cbasebal)
+	MCFG_VIDEO_UPDATE(cbasebal)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MDRV_SOUND_ADD("ymsnd", YM2413, 3579545)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2413, 3579545)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 

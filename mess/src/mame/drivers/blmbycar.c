@@ -43,7 +43,7 @@ static WRITE16_HANDLER( blmbycar_okibank_w )
 {
 	if (ACCESSING_BITS_0_7)
 	{
-		UINT8 *RAM = memory_region(space->machine, "oki");
+		UINT8 *RAM = space->machine->region("oki")->base();
 		memcpy(&RAM[0x30000], &RAM[0x40000 + 0x10000 * (data & 0xf)], 0x10000);
 	}
 }
@@ -60,7 +60,7 @@ static WRITE16_HANDLER( blmbycar_okibank_w )
 
 static WRITE16_HANDLER( blmbycar_pot_wheel_reset_w )
 {
-	blmbycar_state *state = (blmbycar_state *)space->machine->driver_data;
+	blmbycar_state *state = space->machine->driver_data<blmbycar_state>();
 
 	if (ACCESSING_BITS_0_7)
 		state->pot_wheel = ~input_port_read(space->machine, "WHEEL") & 0xff;
@@ -68,7 +68,7 @@ static WRITE16_HANDLER( blmbycar_pot_wheel_reset_w )
 
 static WRITE16_HANDLER( blmbycar_pot_wheel_shift_w )
 {
-	blmbycar_state *state = (blmbycar_state *)space->machine->driver_data;
+	blmbycar_state *state = space->machine->driver_data<blmbycar_state>();
 
 	if (ACCESSING_BITS_0_7)
 	{
@@ -80,8 +80,8 @@ static WRITE16_HANDLER( blmbycar_pot_wheel_shift_w )
 
 static READ16_HANDLER( blmbycar_pot_wheel_r )
 {
-	blmbycar_state *state = (blmbycar_state *)space->machine->driver_data;
-	return ((state->pot_wheel & 0x80) ? 0x04 : 0) | (mame_rand(space->machine) & 0x08);
+	blmbycar_state *state = space->machine->driver_data<blmbycar_state>();
+	return ((state->pot_wheel & 0x80) ? 0x04 : 0) | (space->machine->rand() & 0x08);
 }
 
 
@@ -123,14 +123,14 @@ static ADDRESS_MAP_START( blmbycar_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x700008, 0x700009) AM_READ(blmbycar_pot_wheel_r)								// Wheel (potentiometer)
 	AM_RANGE(0x70000a, 0x70000b) AM_WRITENOP												// ? Wheel
 	AM_RANGE(0x70000c, 0x70000d) AM_WRITE(blmbycar_okibank_w)								// Sound
-	AM_RANGE(0x70000e, 0x70000f) AM_DEVREADWRITE8("oki", okim6295_r, okim6295_w, 0x00ff)	// Sound
+	AM_RANGE(0x70000e, 0x70000f) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0x00ff)	// Sound
 	AM_RANGE(0x70006a, 0x70006b) AM_WRITE(blmbycar_pot_wheel_reset_w)						// Wheel (potentiometer)
 	AM_RANGE(0x70007a, 0x70007b) AM_WRITE(blmbycar_pot_wheel_shift_w)						//
 ADDRESS_MAP_END
 
 static READ16_HANDLER( waterball_unk_r )
 {
-	blmbycar_state *state = (blmbycar_state *)space->machine->driver_data;
+	blmbycar_state *state = space->machine->driver_data<blmbycar_state>();
 
 	state->retvalue ^= 0x0008; // must toggle.. but not vblank?
 	return state->retvalue;
@@ -157,7 +157,7 @@ static ADDRESS_MAP_START( watrball_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x700008, 0x700009) AM_READ(waterball_unk_r)   								// 0x0008 must toggle
 	AM_RANGE(0x70000a, 0x70000b) AM_WRITEONLY												// ?? busy
 	AM_RANGE(0x70000c, 0x70000d) AM_WRITE(blmbycar_okibank_w)								// Sound
-	AM_RANGE(0x70000e, 0x70000f) AM_DEVREADWRITE8("oki", okim6295_r, okim6295_w, 0x00ff)	//
+	AM_RANGE(0x70000e, 0x70000f) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0x00ff)	//
 ADDRESS_MAP_END
 
 /***************************************************************************
@@ -341,7 +341,7 @@ GFXDECODE_END
 
 static MACHINE_START( blmbycar )
 {
-	blmbycar_state *state = (blmbycar_state *)machine->driver_data;
+	blmbycar_state *state = machine->driver_data<blmbycar_state>();
 
 	state_save_register_global(machine, state->pot_wheel);
 	state_save_register_global(machine, state->old_val);
@@ -349,97 +349,91 @@ static MACHINE_START( blmbycar )
 
 static MACHINE_RESET( blmbycar )
 {
-	blmbycar_state *state = (blmbycar_state *)machine->driver_data;
+	blmbycar_state *state = machine->driver_data<blmbycar_state>();
 
 	state->pot_wheel = 0;
 	state->old_val = 0;
 }
 
 
-static MACHINE_DRIVER_START( blmbycar )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(blmbycar_state)
+static MACHINE_CONFIG_START( blmbycar, blmbycar_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 10000000)	/* ? */
-	MDRV_CPU_PROGRAM_MAP(blmbycar_map)
-	MDRV_CPU_VBLANK_INT("screen", irq1_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, 10000000)	/* ? */
+	MCFG_CPU_PROGRAM_MAP(blmbycar_map)
+	MCFG_CPU_VBLANK_INT("screen", irq1_line_hold)
 
-	MDRV_MACHINE_START(blmbycar)
-	MDRV_MACHINE_RESET(blmbycar)
+	MCFG_MACHINE_START(blmbycar)
+	MCFG_MACHINE_RESET(blmbycar)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(0x180, 0x100)
-	MDRV_SCREEN_VISIBLE_AREA(0, 0x180-1, 0, 0x100-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(0x180, 0x100)
+	MCFG_SCREEN_VISIBLE_AREA(0, 0x180-1, 0, 0x100-1)
 
-	MDRV_GFXDECODE(blmbycar)
-	MDRV_PALETTE_LENGTH(0x300)
+	MCFG_GFXDECODE(blmbycar)
+	MCFG_PALETTE_LENGTH(0x300)
 
-	MDRV_VIDEO_START(blmbycar)
-	MDRV_VIDEO_UPDATE(blmbycar)
+	MCFG_VIDEO_START(blmbycar)
+	MCFG_VIDEO_UPDATE(blmbycar)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 
 static MACHINE_START( watrball )
 {
-	blmbycar_state *state = (blmbycar_state *)machine->driver_data;
+	blmbycar_state *state = machine->driver_data<blmbycar_state>();
 
 	state_save_register_global(machine, state->retvalue);
 }
 
 static MACHINE_RESET( watrball )
 {
-	blmbycar_state *state = (blmbycar_state *)machine->driver_data;
+	blmbycar_state *state = machine->driver_data<blmbycar_state>();
 
 	state->retvalue = 0;
 }
 
-static MACHINE_DRIVER_START( watrball )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(blmbycar_state)
+static MACHINE_CONFIG_START( watrball, blmbycar_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 10000000)	/* ? */
-	MDRV_CPU_PROGRAM_MAP(watrball_map)
-	MDRV_CPU_VBLANK_INT("screen", irq1_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, 10000000)	/* ? */
+	MCFG_CPU_PROGRAM_MAP(watrball_map)
+	MCFG_CPU_VBLANK_INT("screen", irq1_line_hold)
 
-	MDRV_MACHINE_START(watrball)
-	MDRV_MACHINE_RESET(watrball)
+	MCFG_MACHINE_START(watrball)
+	MCFG_MACHINE_RESET(watrball)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(0x180, 0x100)
-	MDRV_SCREEN_VISIBLE_AREA(0, 0x180-1, 16, 0x100-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(0x180, 0x100)
+	MCFG_SCREEN_VISIBLE_AREA(0, 0x180-1, 16, 0x100-1)
 
-	MDRV_GFXDECODE(blmbycar)
-	MDRV_PALETTE_LENGTH(0x300)
+	MCFG_GFXDECODE(blmbycar)
+	MCFG_PALETTE_LENGTH(0x300)
 
-	MDRV_VIDEO_START(blmbycar)
-	MDRV_VIDEO_UPDATE(blmbycar)
+	MCFG_VIDEO_START(blmbycar)
+	MCFG_VIDEO_UPDATE(blmbycar)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************
@@ -533,8 +527,8 @@ ROM_END
 
 static DRIVER_INIT( blmbycar )
 {
-	UINT16 *RAM  = (UINT16 *) memory_region(machine, "maincpu");
-	size_t size = memory_region_length(machine, "maincpu") / 2;
+	UINT16 *RAM  = (UINT16 *) machine->region("maincpu")->base();
+	size_t size = machine->region("maincpu")->bytes() / 2;
 	int i;
 
 	for (i = 0; i < size; i++)

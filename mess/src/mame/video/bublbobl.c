@@ -12,7 +12,7 @@
 
 VIDEO_UPDATE( bublbobl )
 {
-	bublbobl_state *state = (bublbobl_state *)screen->machine->driver_data;
+	bublbobl_state *state = screen->machine->driver_data<bublbobl_state>();
 	int offs;
 	int sx, sy, xc, yc;
 	int gfx_num, gfx_attr, gfx_offs;
@@ -32,7 +32,7 @@ VIDEO_UPDATE( bublbobl )
 
 	sx = 0;
 
-	prom = memory_region(screen->machine, "proms");
+	prom = screen->machine->region("proms")->base();
 	for (offs = 0; offs < state->objectram_size; offs += 4)
 	{
 		/* skip empty sprites */

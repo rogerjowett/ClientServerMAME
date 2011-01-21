@@ -4,12 +4,11 @@
 
 *************************************************************************/
 
-class metlclsh_state
+class metlclsh_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, metlclsh_state(machine)); }
-
-	metlclsh_state(running_machine &machine) { }
+	metlclsh_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *        bgram;
@@ -26,8 +25,8 @@ public:
 	UINT8          write_mask, gfxbank;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *subcpu;
+	device_t *maincpu;
+	device_t *subcpu;
 };
 
 

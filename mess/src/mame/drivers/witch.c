@@ -193,6 +193,7 @@ TODO :
 #include "cpu/z80/z80.h"
 #include "sound/es8712.h"
 #include "sound/2203intf.h"
+#include "machine/nvram.h"
 
 #define UNBANKED_SIZE 0x800
 
@@ -354,7 +355,7 @@ static WRITE8_HANDLER(write_a00x)
 
 			if(newbank != bank)
 			{
-				UINT8 *ROM = memory_region(space->machine, "maincpu");
+				UINT8 *ROM = space->machine->region("maincpu")->base();
 				bank = newbank;
 				ROM = &ROM[0x10000+0x8000 * newbank + UNBANKED_SIZE];
 				memory_set_bankptr(space->machine, "bank1",ROM);
@@ -393,7 +394,7 @@ static READ8_HANDLER(prot_read_700x)
 	case 0x25e:
 		return offset;//enough to pass...
   }
-  return memory_region(space->machine, "sub")[0x7000+offset];
+  return space->machine->region("sub")->base()[0x7000+offset];
 }
 
 /*
@@ -451,7 +452,7 @@ static ADDRESS_MAP_START( map_main, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0xe000, 0xe7ff) AM_RAM_WRITE(paletteram_xBBBBBGGGGGRRRRR_split1_w) AM_BASE_GENERIC(paletteram)
 	AM_RANGE(0xe800, 0xefff) AM_RAM_WRITE(paletteram_xBBBBBGGGGGRRRRR_split2_w) AM_BASE_GENERIC(paletteram2)
 	AM_RANGE(0xf000, 0xf0ff) AM_RAM AM_SHARE("share1")
-	AM_RANGE(0xf100, 0xf17f) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0xf100, 0xf17f) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0xf180, 0xffff) AM_RAM AM_SHARE("share2")
 ADDRESS_MAP_END
 
@@ -756,48 +757,48 @@ static INTERRUPT_GEN( witch_sub_interrupt )
 	cpu_set_input_line(device,0,ASSERT_LINE);
 }
 
-static MACHINE_DRIVER_START( witch )
+static MACHINE_CONFIG_START( witch, driver_device )
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80,8000000)		 /* ? MHz */
-	MDRV_CPU_PROGRAM_MAP(map_main)
-	MDRV_CPU_VBLANK_INT("screen", witch_main_interrupt)
+	MCFG_CPU_ADD("maincpu", Z80,8000000)		 /* ? MHz */
+	MCFG_CPU_PROGRAM_MAP(map_main)
+	MCFG_CPU_VBLANK_INT("screen", witch_main_interrupt)
 
 	/* 2nd z80 */
-	MDRV_CPU_ADD("sub", Z80,8000000)		 /* ? MHz */
-	MDRV_CPU_PROGRAM_MAP(map_sub)
-	MDRV_CPU_VBLANK_INT("screen", witch_sub_interrupt)
+	MCFG_CPU_ADD("sub", Z80,8000000)		 /* ? MHz */
+	MCFG_CPU_PROGRAM_MAP(map_sub)
+	MCFG_CPU_VBLANK_INT("screen", witch_sub_interrupt)
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(256, 256)
-	MDRV_SCREEN_VISIBLE_AREA(8, 256-1-8, 8*4, 256-8*4-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(256, 256)
+	MCFG_SCREEN_VISIBLE_AREA(8, 256-1-8, 8*4, 256-8*4-1)
 
-	MDRV_GFXDECODE(witch)
-	MDRV_PALETTE_LENGTH(0x800)
+	MCFG_GFXDECODE(witch)
+	MCFG_PALETTE_LENGTH(0x800)
 
-	MDRV_VIDEO_START(witch)
-	MDRV_VIDEO_UPDATE(witch)
+	MCFG_VIDEO_START(witch)
+	MCFG_VIDEO_UPDATE(witch)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("essnd", ES8712, 8000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SOUND_ADD("essnd", ES8712, 8000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-	MDRV_SOUND_ADD("ym1", YM2203, 1500000)
-	MDRV_SOUND_CONFIG(ym2203_interface_0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.5)
+	MCFG_SOUND_ADD("ym1", YM2203, 1500000)
+	MCFG_SOUND_CONFIG(ym2203_interface_0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.5)
 
-	MDRV_SOUND_ADD("ym2", YM2203, 1500000)
-	MDRV_SOUND_CONFIG(ym2203_interface_1)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.5)
+	MCFG_SOUND_ADD("ym2", YM2203, 1500000)
+	MCFG_SOUND_CONFIG(ym2203_interface_1)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.5)
 
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
 /* this set has (c)1992 Sega / Vic Tokai in the roms? */
 ROM_START( witch )
@@ -839,7 +840,7 @@ ROM_END
 
 static DRIVER_INIT(witch)
 {
-	UINT8 *ROM = (UINT8 *)memory_region(machine, "maincpu");
+	UINT8 *ROM = (UINT8 *)machine->region("maincpu")->base();
 	memory_set_bankptr(machine, "bank1", &ROM[0x10000+UNBANKED_SIZE]);
 
 	memory_install_read8_handler(cputag_get_address_space(machine, "sub", ADDRESS_SPACE_PROGRAM), 0x7000, 0x700f, 0, 0, prot_read_700x);

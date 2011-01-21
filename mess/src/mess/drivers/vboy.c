@@ -7,6 +7,10 @@
     Great info at http://www.goliathindustries.com/vb/
     and http://www.vr32.de/modules/dokuwiki/doku.php?
 
+    TODO:
+    - finish V810 irq support;
+    - understand irqs on this HW;
+
 ****************************************************************************/
 
 #include "emu.h"
@@ -46,12 +50,11 @@ struct _vip_regs_t
 	UINT16 BKCOL;
 };
 
-class vboy_state
+class vboy_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, vboy_state(machine)); }
-
-	vboy_state(running_machine &machine) { }
+	vboy_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	UINT16 *font;
 	UINT16 *bgmap;
@@ -71,7 +74,7 @@ public:
 
 static READ32_HANDLER( port_02_read )
 {
-	vboy_state *state = (vboy_state *)space->machine->driver_data;
+	vboy_state *state = space->machine->driver_data<vboy_state>();
 	UINT32 value = 0x00;
 
 	switch ((offset << 2))
@@ -106,7 +109,7 @@ static READ32_HANDLER( port_02_read )
 
 static WRITE32_HANDLER( port_02_write )
 {
-	vboy_state *state = (vboy_state *)space->machine->driver_data;
+	vboy_state *state = space->machine->driver_data<vboy_state>();
 
 	switch (offset<<2)
 	{
@@ -147,11 +150,11 @@ static WRITE32_HANDLER( port_02_write )
 
 static READ16_HANDLER( vip_r )
 {
-	vboy_state *state = (vboy_state *)space->machine->driver_data;
+	vboy_state *state = space->machine->driver_data<vboy_state>();
 
 	switch(offset << 1) {
 		case 0x00:	//INTPND
-					return state->vip_regs.INTPND;
+					return state->vip_regs.INTPND & state->vip_regs.INTENB;
 		case 0x02:	//INTENB
 					return state->vip_regs.INTENB;
 		case 0x04:	//INTCLR
@@ -214,7 +217,7 @@ static READ16_HANDLER( vip_r )
 
 static WRITE16_HANDLER( vip_w )
 {
-	vboy_state *state = (vboy_state *)space->machine->driver_data;
+	vboy_state *state = space->machine->driver_data<vboy_state>();
 
 	switch(offset << 1) {
 		case 0x00:	//INTPND
@@ -222,9 +225,12 @@ static WRITE16_HANDLER( vip_w )
 					break;
 		case 0x02:	//INTENB
 					state->vip_regs.INTENB = data;
+					//printf("%04x ENB\n",data);
 					break;
 		case 0x04:	//INTCLR
 					state->vip_regs.INTPND &= ~data;
+					cputag_set_input_line(space->machine, "maincpu", 4, CLEAR_LINE);
+					//printf("%04x ACK\n",data);
 					break;
 		case 0x20:	//DPSTTS
 					logerror("Error writing DPSTTS\n");
@@ -309,56 +315,56 @@ static WRITE16_HANDLER( vip_w )
 
 static WRITE16_HANDLER( vboy_font0_w )
 {
-	vboy_state *state = (vboy_state *)space->machine->driver_data;
+	vboy_state *state = space->machine->driver_data<vboy_state>();
 
 	state->font[offset] = data | (state->font[offset] & (mem_mask ^ 0xffff));
 }
 
 static WRITE16_HANDLER( vboy_font1_w )
 {
-	vboy_state *state = (vboy_state *)space->machine->driver_data;
+	vboy_state *state = space->machine->driver_data<vboy_state>();
 
 	state->font[offset + 0x1000] = data | (state->font[offset + 0x1000] & (mem_mask ^ 0xffff));
 }
 
 static WRITE16_HANDLER( vboy_font2_w )
 {
-	vboy_state *state = (vboy_state *)space->machine->driver_data;
+	vboy_state *state = space->machine->driver_data<vboy_state>();
 
 	state->font[offset + 0x2000] = data | (state->font[offset + 0x2000] & (mem_mask ^ 0xffff));
 }
 
 static WRITE16_HANDLER( vboy_font3_w )
 {
-	vboy_state *state = (vboy_state *)space->machine->driver_data;
+	vboy_state *state = space->machine->driver_data<vboy_state>();
 
 	state->font[offset + 0x3000] = data | (state->font[offset + 0x3000] & (mem_mask ^ 0xffff));
 }
 
 static READ16_HANDLER( vboy_font0_r )
 {
-	vboy_state *state = (vboy_state *)space->machine->driver_data;
+	vboy_state *state = space->machine->driver_data<vboy_state>();
 
 	return state->font[offset];
 }
 
 static READ16_HANDLER( vboy_font1_r )
 {
-	vboy_state *state = (vboy_state *)space->machine->driver_data;
+	vboy_state *state = space->machine->driver_data<vboy_state>();
 
 	return state->font[offset + 0x1000];
 }
 
 static READ16_HANDLER( vboy_font2_r )
 {
-	vboy_state *state = (vboy_state *)space->machine->driver_data;
+	vboy_state *state = space->machine->driver_data<vboy_state>();
 
 	return state->font[offset + 0x2000];
 }
 
 static READ16_HANDLER( vboy_font3_r )
 {
-	vboy_state *state = (vboy_state *)space->machine->driver_data;
+	vboy_state *state = space->machine->driver_data<vboy_state>();
 
 	return state->font[offset + 0x3000];
 }
@@ -397,14 +403,14 @@ static void put_char(vboy_state *state, bitmap_t *bitmap, int x, int y, UINT16 c
 
 static WRITE16_HANDLER( vboy_bgmap_w )
 {
-	vboy_state *state = (vboy_state *)space->machine->driver_data;
+	vboy_state *state = space->machine->driver_data<vboy_state>();
 
 	state->bgmap[offset] = data | (state->bgmap[offset] & (mem_mask ^ 0xffff));
 }
 
 static READ16_HANDLER( vboy_bgmap_r )
 {
-	vboy_state *state = (vboy_state *)space->machine->driver_data;
+	vboy_state *state = space->machine->driver_data<vboy_state>();
 
 	return state->bgmap[offset];
 }
@@ -491,7 +497,7 @@ INPUT_PORTS_END
 
 static MACHINE_RESET(vboy)
 {
-	vboy_state *state = (vboy_state *)machine->driver_data;
+	vboy_state *state = machine->driver_data<vboy_state>();
 
 	/* Initial values taken from Reality Boy, to be verified when emulation improves */
 	state->vboy_regs.lpc = 0x6d;
@@ -510,7 +516,7 @@ static MACHINE_RESET(vboy)
 
 static VIDEO_START( vboy )
 {
-	vboy_state *state = (vboy_state *)machine->driver_data;
+	vboy_state *state = machine->driver_data<vboy_state>();
 	int i;
 
 	// Allocate memory for temporary screens
@@ -632,10 +638,10 @@ static UINT8 display_world(vboy_state *state, int num, bitmap_t *bitmap, UINT8 r
 
 static VIDEO_UPDATE( vboy )
 {
-	vboy_state *state = (vboy_state *)screen->machine->driver_data;
+	vboy_state *state = screen->machine->driver_data<vboy_state>();
 	int i;
 	UINT8 right = 0;
-	running_device *_3d_right_screen = screen->machine->device("3dright");
+	device_t *_3d_right_screen = screen->machine->device("3dright");
 
 	bitmap_fill(state->screen_output, cliprect, state->vip_regs.BKCOL);
 
@@ -652,7 +658,7 @@ static VIDEO_UPDATE( vboy )
 
 static TIMER_DEVICE_CALLBACK( video_tick )
 {
-	vboy_state *state = (vboy_state *)timer.machine->driver_data;
+	vboy_state *state = timer.machine->driver_data<vboy_state>();
 
 	state->vip_regs.XPSTTS = (state->vip_regs.XPSTTS==0) ? 0x0c : 0x00;
 }
@@ -672,13 +678,24 @@ static PALETTE_INIT( vboy )
 static DEVICE_IMAGE_LOAD( vboy_cart )
 {
 	UINT32 size;
-	UINT8 *ptr = memory_region(image.device().machine, "user1");
+	UINT8 *ptr = image.device().machine->region("user1")->base();
 
 	if (image.software_entry() == NULL)
 	{
 		size = image.length();
-		if (image.fread( ptr, size) != size)
+
+		if (image.fread(ptr, size) != size)
 			return IMAGE_INIT_FAIL;
+
+		int pos = size;
+		int read_length = size;
+		// if size < 0x200000, then mirror the image up to 0x200000
+		while(pos < 0x200000)
+		{
+			int len = MIN(read_length, 0x200000 - pos);
+			memcpy(ptr + pos, ptr, len);
+			pos += len;
+		}
 	}
 	else
 	{
@@ -689,54 +706,64 @@ static DEVICE_IMAGE_LOAD( vboy_cart )
 	return IMAGE_INIT_PASS;
 }
 
-static MACHINE_DRIVER_START( vboy )
+INTERRUPT_GEN( vboy_interrupt )
+{
+	vboy_state *state = device->machine->driver_data<vboy_state>();
 
-	MDRV_DRIVER_DATA( vboy_state )
+	if(state->vip_regs.INTENB)
+	{
+		cputag_set_input_line(device->machine, "maincpu", 4, HOLD_LINE);
+		state->vip_regs.INTPND |= 0x4000;
+	}
+}
+
+static MACHINE_CONFIG_START( vboy, vboy_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD( "maincpu", V810, XTAL_20MHz )
-	MDRV_CPU_PROGRAM_MAP(vboy_mem)
-	MDRV_CPU_IO_MAP(vboy_io)
+	MCFG_CPU_ADD( "maincpu", V810, XTAL_20MHz )
+	MCFG_CPU_PROGRAM_MAP(vboy_mem)
+	MCFG_CPU_IO_MAP(vboy_io)
+	MCFG_CPU_VBLANK_INT("3dleft", vboy_interrupt)
 
-	MDRV_MACHINE_RESET(vboy)
+	MCFG_MACHINE_RESET(vboy)
 
-	MDRV_TIMER_ADD_PERIODIC("video", video_tick, HZ(100))
+	MCFG_TIMER_ADD_PERIODIC("video", video_tick, HZ(100))
 
 	/* video hardware */
-	MDRV_DEFAULT_LAYOUT(layout_vboy)
+	MCFG_DEFAULT_LAYOUT(layout_vboy)
 
-	MDRV_PALETTE_LENGTH(4)
-	MDRV_PALETTE_INIT(vboy)
+	MCFG_PALETTE_LENGTH(4)
+	MCFG_PALETTE_INIT(vboy)
 
-	MDRV_VIDEO_START(vboy)
-	MDRV_VIDEO_UPDATE(vboy)
+	MCFG_VIDEO_START(vboy)
+	MCFG_VIDEO_UPDATE(vboy)
 
 	/* Left screen */
-	MDRV_SCREEN_ADD("3dleft", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(50.2)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500))
-	MDRV_SCREEN_SIZE(384, 224)
-	MDRV_SCREEN_VISIBLE_AREA(0, 384-1, 0, 224-1)
+	MCFG_SCREEN_ADD("3dleft", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(50.2)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500))
+	MCFG_SCREEN_SIZE(384, 224)
+	MCFG_SCREEN_VISIBLE_AREA(0, 384-1, 0, 224-1)
 
 	/* Right screen */
-	MDRV_SCREEN_ADD("3dright", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(50.2)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500))
-	MDRV_SCREEN_SIZE(384, 224)
-	MDRV_SCREEN_VISIBLE_AREA(0, 384-1, 0, 224-1)
+	MCFG_SCREEN_ADD("3dright", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(50.2)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500))
+	MCFG_SCREEN_SIZE(384, 224)
+	MCFG_SCREEN_VISIBLE_AREA(0, 384-1, 0, 224-1)
 
 	/* cartridge */
-	MDRV_CARTSLOT_ADD("cart")
-	MDRV_CARTSLOT_EXTENSION_LIST("vb,bin")
-	MDRV_CARTSLOT_MANDATORY
-	MDRV_CARTSLOT_INTERFACE("vboy_cart")
-	MDRV_CARTSLOT_LOAD(vboy_cart)
+	MCFG_CARTSLOT_ADD("cart")
+	MCFG_CARTSLOT_EXTENSION_LIST("vb,bin")
+	MCFG_CARTSLOT_MANDATORY
+	MCFG_CARTSLOT_INTERFACE("vboy_cart")
+	MCFG_CARTSLOT_LOAD(vboy_cart)
 
 	/* software lists */
-	MDRV_SOFTWARE_LIST_ADD("cart_list","vboy")
-MACHINE_DRIVER_END
+	MCFG_SOFTWARE_LIST_ADD("cart_list","vboy")
+MACHINE_CONFIG_END
 
 /* ROM definition */
 ROM_START( vboy )

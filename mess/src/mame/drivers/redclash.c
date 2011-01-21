@@ -27,7 +27,7 @@ TODO:
 
 static WRITE8_HANDLER( irqack_w )
 {
-	ladybug_state *state = (ladybug_state *)space->machine->driver_data;
+	ladybug_state *state = space->machine->driver_data<ladybug_state>();
 	cpu_set_input_line(state->maincpu, 0, CLEAR_LINE);
 }
 
@@ -78,7 +78,7 @@ ADDRESS_MAP_END
 */
 static INPUT_CHANGED( left_coin_inserted )
 {
-	ladybug_state *state = (ladybug_state *)field->port->machine->driver_data;
+	ladybug_state *state = field->port->machine->driver_data<ladybug_state>();
 
 	if(newval)
 		cpu_set_input_line(state->maincpu, 0, ASSERT_LINE);
@@ -86,7 +86,7 @@ static INPUT_CHANGED( left_coin_inserted )
 
 static INPUT_CHANGED( right_coin_inserted )
 {
-	ladybug_state *state = (ladybug_state *)field->port->machine->driver_data;
+	ladybug_state *state = field->port->machine->driver_data<ladybug_state>();
 
 	if(newval)
 		cpu_set_input_line(state->maincpu, INPUT_LINE_NMI, PULSE_LINE);
@@ -328,7 +328,7 @@ GFXDECODE_END
 
 static MACHINE_START( redclash )
 {
-	ladybug_state *state = (ladybug_state *)machine->driver_data;
+	ladybug_state *state = machine->driver_data<ladybug_state>();
 
 	state->maincpu = machine->device("maincpu");
 
@@ -343,7 +343,7 @@ static MACHINE_START( redclash )
 
 static MACHINE_RESET( redclash )
 {
-	ladybug_state *state = (ladybug_state *)machine->driver_data;
+	ladybug_state *state = machine->driver_data<ladybug_state>();
 
 	state->star_speed = 0;
 	state->gfxbank = 0;
@@ -354,68 +354,62 @@ static MACHINE_RESET( redclash )
 	state->stars_count = 0;
 }
 
-static MACHINE_DRIVER_START( zerohour )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(ladybug_state)
+static MACHINE_CONFIG_START( zerohour, ladybug_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, 4000000)  /* 4 MHz */
-	MDRV_CPU_PROGRAM_MAP(zerohour_map)
+	MCFG_CPU_ADD("maincpu", Z80, 4000000)  /* 4 MHz */
+	MCFG_CPU_PROGRAM_MAP(zerohour_map)
 
-	MDRV_MACHINE_START(redclash)
-	MDRV_MACHINE_RESET(redclash)
+	MCFG_MACHINE_START(redclash)
+	MCFG_MACHINE_RESET(redclash)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(1*8, 31*8-1, 4*8, 28*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(1*8, 31*8-1, 4*8, 28*8-1)
 
-	MDRV_GFXDECODE(redclash)
-	MDRV_PALETTE_LENGTH(4*8+4*16+32)
+	MCFG_GFXDECODE(redclash)
+	MCFG_PALETTE_LENGTH(4*8+4*16+32)
 
-	MDRV_PALETTE_INIT(redclash)
-	MDRV_VIDEO_START(redclash)
-	MDRV_VIDEO_UPDATE(redclash)
-	MDRV_VIDEO_EOF(redclash)
+	MCFG_PALETTE_INIT(redclash)
+	MCFG_VIDEO_START(redclash)
+	MCFG_VIDEO_UPDATE(redclash)
+	MCFG_VIDEO_EOF(redclash)
 
 	/* sound hardware */
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( redclash )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(ladybug_state)
+static MACHINE_CONFIG_START( redclash, ladybug_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, 4000000)  /* 4 MHz */
-	MDRV_CPU_PROGRAM_MAP(redclash_map)
+	MCFG_CPU_ADD("maincpu", Z80, 4000000)  /* 4 MHz */
+	MCFG_CPU_PROGRAM_MAP(redclash_map)
 
-	MDRV_MACHINE_START(redclash)
-	MDRV_MACHINE_RESET(redclash)
+	MCFG_MACHINE_START(redclash)
+	MCFG_MACHINE_RESET(redclash)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(1*8, 31*8-1, 4*8, 28*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(1*8, 31*8-1, 4*8, 28*8-1)
 
-	MDRV_GFXDECODE(redclash)
-	MDRV_PALETTE_LENGTH(4*8+4*16+32)
+	MCFG_GFXDECODE(redclash)
+	MCFG_PALETTE_LENGTH(4*8+4*16+32)
 
-	MDRV_PALETTE_INIT(redclash)
-	MDRV_VIDEO_START(redclash)
-	MDRV_VIDEO_UPDATE(redclash)
-	MDRV_VIDEO_EOF(redclash)
+	MCFG_PALETTE_INIT(redclash)
+	MCFG_VIDEO_START(redclash)
+	MCFG_VIDEO_UPDATE(redclash)
+	MCFG_VIDEO_EOF(redclash)
 
 	/* sound hardware */
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
 /***************************************************************************
 
@@ -526,9 +520,9 @@ ROM_END
 static DRIVER_INIT( redclash )
 {
 	int i,j;
-	const UINT8 *src = memory_region(machine, "gfx2");
-	UINT8 *dst = memory_region(machine, "gfx3");
-	int len = memory_region_length(machine, "gfx3");
+	const UINT8 *src = machine->region("gfx2")->base();
+	UINT8 *dst = machine->region("gfx3")->base();
+	int len = machine->region("gfx3")->bytes();
 
 	/* rearrange the sprite graphics */
 	for (i = 0;i < len;i++)

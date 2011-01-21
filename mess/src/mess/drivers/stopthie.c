@@ -5,6 +5,16 @@
 #include "stopthie.lh"
 
 
+class stopthie_state : public driver_device
+{
+public:
+	stopthie_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
+
+};
+
+
+
 #define LOG 1
 
 static INPUT_PORTS_START( stopthie )
@@ -52,12 +62,12 @@ static const tms0980_config stopthie_tms0980_config =
 };
 
 
-static MACHINE_DRIVER_START( stopthie )
-	MDRV_CPU_ADD( "maincpu", TMS0980, 5000000 )	/* Clock is wrong */
-	MDRV_CPU_CONFIG( stopthie_tms0980_config )
+static MACHINE_CONFIG_START( stopthie, stopthie_state )
+	MCFG_CPU_ADD( "maincpu", TMS0980, 5000000 )	/* Clock is wrong */
+	MCFG_CPU_CONFIG( stopthie_tms0980_config )
 
-	MDRV_DEFAULT_LAYOUT(layout_stopthie)
-MACHINE_DRIVER_END
+	MCFG_DEFAULT_LAYOUT(layout_stopthie)
+MACHINE_CONFIG_END
 
 ROM_START( stopthie )
 	ROM_REGION( 0x1000, "maincpu", 0 )

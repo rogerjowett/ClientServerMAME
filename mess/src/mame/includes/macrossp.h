@@ -4,12 +4,11 @@
 
 *************************************************************************/
 
-class macrossp_state
+class macrossp_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, macrossp_state(machine)); }
-
-	macrossp_state(running_machine &machine) { }
+	macrossp_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT32 *         mainram;
@@ -36,8 +35,8 @@ public:
 	INT32            fade_effect, old_fade;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *audiocpu;
+	device_t *maincpu;
+	device_t *audiocpu;
 };
 
 /*----------- defined in video/macrossp.c -----------*/

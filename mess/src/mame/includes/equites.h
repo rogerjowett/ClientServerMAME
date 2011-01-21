@@ -2,12 +2,11 @@
 #define POPDRUMKIT 0
 
 
-class equites_state
+class equites_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, equites_state(machine)); }
-
-	equites_state(running_machine &machine) { }
+	equites_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT16 *  bg_videoram;
@@ -38,11 +37,11 @@ public:
 #endif
 
 	/* devices */
-	running_device *mcu;
-	running_device *audio_cpu;
-	running_device *msm;
-	running_device *dac_1;
-	running_device *dac_2;
+	device_t *mcu;
+	device_t *audio_cpu;
+	device_t *msm;
+	device_t *dac_1;
+	device_t *dac_2;
 };
 
 

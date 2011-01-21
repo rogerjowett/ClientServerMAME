@@ -328,14 +328,14 @@ static void parse_control( running_machine *machine )	/* assumes Z80 sandwiched 
 	/* bit 0 enables cpu B */
 	/* however this fails when recovering from a save state
        if cpu B is disabled !! */
-	ninjaw_state *state = (ninjaw_state *)machine->driver_data;
+	ninjaw_state *state = machine->driver_data<ninjaw_state>();
 	cpu_set_input_line(state->subcpu, INPUT_LINE_RESET, (state->cpua_ctrl & 0x1) ? CLEAR_LINE : ASSERT_LINE);
 
 }
 
 static WRITE16_HANDLER( cpua_ctrl_w )
 {
-	ninjaw_state *state = (ninjaw_state *)space->machine->driver_data;
+	ninjaw_state *state = space->machine->driver_data<ninjaw_state>();
 
 	if ((data &0xff00) && ((data &0xff) == 0))
 		data = data >> 8;
@@ -353,13 +353,13 @@ static WRITE16_HANDLER( cpua_ctrl_w )
 
 static void reset_sound_region( running_machine *machine )
 {
-	ninjaw_state *state = (ninjaw_state *)machine->driver_data;
+	ninjaw_state *state = machine->driver_data<ninjaw_state>();
 	memory_set_bank(machine, "bank10", state->banknum);
 }
 
 static WRITE8_HANDLER( sound_bankswitch_w )
 {
-	ninjaw_state *state = (ninjaw_state *)space->machine->driver_data;
+	ninjaw_state *state = space->machine->driver_data<ninjaw_state>();
 
 	state->banknum = data & 7;
 	reset_sound_region(space->machine);
@@ -367,7 +367,7 @@ static WRITE8_HANDLER( sound_bankswitch_w )
 
 static WRITE16_HANDLER( ninjaw_sound_w )
 {
-	ninjaw_state *state = (ninjaw_state *)space->machine->driver_data;
+	ninjaw_state *state = space->machine->driver_data<ninjaw_state>();
 
 	if (offset == 0)
 		tc0140syt_port_w(state->tc0140syt, 0, data & 0xff);
@@ -382,7 +382,7 @@ static WRITE16_HANDLER( ninjaw_sound_w )
 
 static READ16_HANDLER( ninjaw_sound_r )
 {
-	ninjaw_state *state = (ninjaw_state *)space->machine->driver_data;
+	ninjaw_state *state = space->machine->driver_data<ninjaw_state>();
 
 	if (offset == 1)
 		return ((tc0140syt_comm_r(state->tc0140syt, 0) & 0xff));
@@ -395,8 +395,8 @@ static READ16_HANDLER( ninjaw_sound_r )
 
 static WRITE8_HANDLER( ninjaw_pancontrol )
 {
-	ninjaw_state *state = (ninjaw_state *)space->machine->driver_data;
-	running_device *flt = NULL;
+	ninjaw_state *state = space->machine->driver_data<ninjaw_state>();
+	device_t *flt = NULL;
 	offset &= 3;
 
 	switch (offset)
@@ -415,7 +415,7 @@ static WRITE8_HANDLER( ninjaw_pancontrol )
 
 static WRITE16_HANDLER( tc0100scn_triple_screen_w )
 {
-	ninjaw_state *state = (ninjaw_state *)space->machine->driver_data;
+	ninjaw_state *state = space->machine->driver_data<ninjaw_state>();
 
 	tc0100scn_word_w(state->tc0100scn_1, offset, data, mem_mask);
 	tc0100scn_word_w(state->tc0100scn_2, offset, data, mem_mask);
@@ -646,9 +646,9 @@ GFXDECODE_END
 **************************************************************/
 
 /* handler called by the YM2610 emulator when the internal timers cause an IRQ */
-static void irqhandler( running_device *device, int irq )
+static void irqhandler( device_t *device, int irq )
 {
-	ninjaw_state *state = (ninjaw_state *)device->machine->driver_data;
+	ninjaw_state *state = device->machine->driver_data<ninjaw_state>();
 	cpu_set_input_line(state->audiocpu, 0, irq ? ASSERT_LINE : CLEAR_LINE);
 }
 
@@ -759,9 +759,9 @@ static STATE_POSTLOAD( ninjaw_postload )
 
 static MACHINE_START( ninjaw )
 {
-	ninjaw_state *state = (ninjaw_state *)machine->driver_data;
+	ninjaw_state *state = machine->driver_data<ninjaw_state>();
 
-	memory_configure_bank(machine, "bank10", 0, 8, memory_region(machine, "audiocpu") + 0xc000, 0x4000);
+	memory_configure_bank(machine, "bank10", 0, 8, machine->region("audiocpu")->base() + 0xc000, 0x4000);
 
 	state->maincpu = machine->device("maincpu");
 	state->audiocpu = machine->device("audiocpu");
@@ -788,7 +788,7 @@ static MACHINE_START( ninjaw )
 
 static MACHINE_RESET( ninjaw )
 {
-	ninjaw_state *state = (ninjaw_state *)machine->driver_data;
+	ninjaw_state *state = machine->driver_data<ninjaw_state>();
 	state->cpua_ctrl = 0xff;
 	state->banknum = 0;
 	memset(state->pandata, 0, sizeof(state->pandata));
@@ -797,178 +797,172 @@ static MACHINE_RESET( ninjaw )
 	sound_global_enable(machine, 1);	/* mixer enabled */
 }
 
-static MACHINE_DRIVER_START( ninjaw )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(ninjaw_state)
+static MACHINE_CONFIG_START( ninjaw, ninjaw_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000,16000000/2)	/* 8 MHz ? */
-	MDRV_CPU_PROGRAM_MAP(ninjaw_master_map)
-	MDRV_CPU_VBLANK_INT("lscreen", irq4_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000,16000000/2)	/* 8 MHz ? */
+	MCFG_CPU_PROGRAM_MAP(ninjaw_master_map)
+	MCFG_CPU_VBLANK_INT("lscreen", irq4_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80,16000000/4)	/* 16/4 MHz ? */
-	MDRV_CPU_PROGRAM_MAP(ninjaw_sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80,16000000/4)	/* 16/4 MHz ? */
+	MCFG_CPU_PROGRAM_MAP(ninjaw_sound_map)
 
-	MDRV_CPU_ADD("sub", M68000,16000000/2)	/* 8 MHz ? */
-	MDRV_CPU_PROGRAM_MAP(ninjaw_slave_map)
-	MDRV_CPU_VBLANK_INT("lscreen", irq4_line_hold)
+	MCFG_CPU_ADD("sub", M68000,16000000/2)	/* 8 MHz ? */
+	MCFG_CPU_PROGRAM_MAP(ninjaw_slave_map)
+	MCFG_CPU_VBLANK_INT("lscreen", irq4_line_hold)
 
-	MDRV_QUANTUM_TIME(HZ(6000))	/* CPU slices */
+	MCFG_QUANTUM_TIME(HZ(6000))	/* CPU slices */
 
-	MDRV_MACHINE_START(ninjaw)
-	MDRV_MACHINE_RESET(ninjaw)
+	MCFG_MACHINE_START(ninjaw)
+	MCFG_MACHINE_RESET(ninjaw)
 
-	MDRV_TC0220IOC_ADD("tc0220ioc", ninjaw_io_intf)
+	MCFG_TC0220IOC_ADD("tc0220ioc", ninjaw_io_intf)
 
 	/* video hardware */
-	MDRV_GFXDECODE(ninjaw)
-	MDRV_PALETTE_LENGTH(4096*3)
-	MDRV_DEFAULT_LAYOUT(layout_darius)
+	MCFG_GFXDECODE(ninjaw)
+	MCFG_PALETTE_LENGTH(4096*3)
+	MCFG_DEFAULT_LAYOUT(layout_darius)
 
-	MDRV_SCREEN_ADD("lscreen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_SIZE(36*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 36*8-1, 3*8, 31*8-1)
+	MCFG_SCREEN_ADD("lscreen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_SIZE(36*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 36*8-1, 3*8, 31*8-1)
 
-	MDRV_SCREEN_ADD("mscreen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_SIZE(36*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 36*8-1, 3*8, 31*8-1)
+	MCFG_SCREEN_ADD("mscreen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_SIZE(36*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 36*8-1, 3*8, 31*8-1)
 
-	MDRV_SCREEN_ADD("rscreen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_SIZE(36*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 36*8-1, 3*8, 31*8-1)
+	MCFG_SCREEN_ADD("rscreen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_SIZE(36*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 36*8-1, 3*8, 31*8-1)
 
-	MDRV_VIDEO_START(ninjaw)
-	MDRV_VIDEO_UPDATE(ninjaw)
+	MCFG_VIDEO_START(ninjaw)
+	MCFG_VIDEO_UPDATE(ninjaw)
 
-	MDRV_TC0100SCN_ADD("tc0100scn_1", darius2_tc0100scn_intf_l)
-	MDRV_TC0100SCN_ADD("tc0100scn_2", darius2_tc0100scn_intf_m)
-	MDRV_TC0100SCN_ADD("tc0100scn_3", darius2_tc0100scn_intf_r)
-	MDRV_TC0110PCR_ADD("tc0110pcr_1", darius2_tc0110pcr_intf_l)
-	MDRV_TC0110PCR_ADD("tc0110pcr_2", darius2_tc0110pcr_intf_m)
-	MDRV_TC0110PCR_ADD("tc0110pcr_3", darius2_tc0110pcr_intf_r)
+	MCFG_TC0100SCN_ADD("tc0100scn_1", darius2_tc0100scn_intf_l)
+	MCFG_TC0100SCN_ADD("tc0100scn_2", darius2_tc0100scn_intf_m)
+	MCFG_TC0100SCN_ADD("tc0100scn_3", darius2_tc0100scn_intf_r)
+	MCFG_TC0110PCR_ADD("tc0110pcr_1", darius2_tc0110pcr_intf_l)
+	MCFG_TC0110PCR_ADD("tc0110pcr_2", darius2_tc0110pcr_intf_m)
+	MCFG_TC0110PCR_ADD("tc0110pcr_3", darius2_tc0110pcr_intf_r)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2610, 16000000/2)
-	MDRV_SOUND_CONFIG(ym2610_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker",  0.25)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.25)
-	MDRV_SOUND_ROUTE(1, "2610.1.l", 1.0)
-	MDRV_SOUND_ROUTE(1, "2610.1.r", 1.0)
-	MDRV_SOUND_ROUTE(2, "2610.2.l", 1.0)
-	MDRV_SOUND_ROUTE(2, "2610.2.r", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM2610, 16000000/2)
+	MCFG_SOUND_CONFIG(ym2610_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker",  0.25)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.25)
+	MCFG_SOUND_ROUTE(1, "2610.1.l", 1.0)
+	MCFG_SOUND_ROUTE(1, "2610.1.r", 1.0)
+	MCFG_SOUND_ROUTE(2, "2610.2.l", 1.0)
+	MCFG_SOUND_ROUTE(2, "2610.2.r", 1.0)
 
-	MDRV_SOUND_ADD("2610.1.l", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ADD("2610.1.r", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
-	MDRV_SOUND_ADD("2610.2.l", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ADD("2610.2.r", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("2610.1.l", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ADD("2610.1.r", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("2610.2.l", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ADD("2610.2.r", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
 
-//  MDRV_SOUND_ADD("subwoofer", SUBWOOFER, 0)
+//  MCFG_SOUND_ADD("subwoofer", SUBWOOFER, 0)
 
-	MDRV_TC0140SYT_ADD("tc0140syt", ninjaw_tc0140syt_intf)
-MACHINE_DRIVER_END
+	MCFG_TC0140SYT_ADD("tc0140syt", ninjaw_tc0140syt_intf)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( darius2 )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(ninjaw_state)
+static MACHINE_CONFIG_START( darius2, ninjaw_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000,16000000/2)	/* 8 MHz ? */
-	MDRV_CPU_PROGRAM_MAP(darius2_master_map)
-	MDRV_CPU_VBLANK_INT("lscreen", irq4_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000,16000000/2)	/* 8 MHz ? */
+	MCFG_CPU_PROGRAM_MAP(darius2_master_map)
+	MCFG_CPU_VBLANK_INT("lscreen", irq4_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80,16000000/4)	/* 4 MHz ? */
-	MDRV_CPU_PROGRAM_MAP(ninjaw_sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80,16000000/4)	/* 4 MHz ? */
+	MCFG_CPU_PROGRAM_MAP(ninjaw_sound_map)
 
-	MDRV_CPU_ADD("sub", M68000,16000000/2)	/* 8 MHz ? */
-	MDRV_CPU_PROGRAM_MAP(darius2_slave_map)
-	MDRV_CPU_VBLANK_INT("lscreen", irq4_line_hold)
+	MCFG_CPU_ADD("sub", M68000,16000000/2)	/* 8 MHz ? */
+	MCFG_CPU_PROGRAM_MAP(darius2_slave_map)
+	MCFG_CPU_VBLANK_INT("lscreen", irq4_line_hold)
 
-	MDRV_QUANTUM_TIME(HZ(6000))	/* CPU slices */
+	MCFG_QUANTUM_TIME(HZ(6000))	/* CPU slices */
 
-	MDRV_MACHINE_START(ninjaw)
-	MDRV_MACHINE_RESET(ninjaw)
+	MCFG_MACHINE_START(ninjaw)
+	MCFG_MACHINE_RESET(ninjaw)
 
-	MDRV_TC0220IOC_ADD("tc0220ioc", ninjaw_io_intf)
+	MCFG_TC0220IOC_ADD("tc0220ioc", ninjaw_io_intf)
 
 	/* video hardware */
-	MDRV_GFXDECODE(ninjaw)
-	MDRV_PALETTE_LENGTH(4096*3)
-	MDRV_DEFAULT_LAYOUT(layout_darius)
+	MCFG_GFXDECODE(ninjaw)
+	MCFG_PALETTE_LENGTH(4096*3)
+	MCFG_DEFAULT_LAYOUT(layout_darius)
 
-	MDRV_SCREEN_ADD("lscreen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_SIZE(36*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 36*8-1, 3*8, 31*8-1)
+	MCFG_SCREEN_ADD("lscreen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_SIZE(36*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 36*8-1, 3*8, 31*8-1)
 
-	MDRV_SCREEN_ADD("mscreen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_SIZE(36*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 36*8-1, 3*8, 31*8-1)
+	MCFG_SCREEN_ADD("mscreen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_SIZE(36*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 36*8-1, 3*8, 31*8-1)
 
-	MDRV_SCREEN_ADD("rscreen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_SIZE(36*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 36*8-1, 3*8, 31*8-1)
+	MCFG_SCREEN_ADD("rscreen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_SIZE(36*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 36*8-1, 3*8, 31*8-1)
 
-	MDRV_VIDEO_START(ninjaw)
-	MDRV_VIDEO_UPDATE(ninjaw)
+	MCFG_VIDEO_START(ninjaw)
+	MCFG_VIDEO_UPDATE(ninjaw)
 
-	MDRV_TC0100SCN_ADD("tc0100scn_1", darius2_tc0100scn_intf_l)
-	MDRV_TC0100SCN_ADD("tc0100scn_2", darius2_tc0100scn_intf_m)
-	MDRV_TC0100SCN_ADD("tc0100scn_3", darius2_tc0100scn_intf_r)
-	MDRV_TC0110PCR_ADD("tc0110pcr_1", darius2_tc0110pcr_intf_l)
-	MDRV_TC0110PCR_ADD("tc0110pcr_2", darius2_tc0110pcr_intf_m)
-	MDRV_TC0110PCR_ADD("tc0110pcr_3", darius2_tc0110pcr_intf_r)
+	MCFG_TC0100SCN_ADD("tc0100scn_1", darius2_tc0100scn_intf_l)
+	MCFG_TC0100SCN_ADD("tc0100scn_2", darius2_tc0100scn_intf_m)
+	MCFG_TC0100SCN_ADD("tc0100scn_3", darius2_tc0100scn_intf_r)
+	MCFG_TC0110PCR_ADD("tc0110pcr_1", darius2_tc0110pcr_intf_l)
+	MCFG_TC0110PCR_ADD("tc0110pcr_2", darius2_tc0110pcr_intf_m)
+	MCFG_TC0110PCR_ADD("tc0110pcr_3", darius2_tc0110pcr_intf_r)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2610, 16000000/2)
-	MDRV_SOUND_CONFIG(ym2610_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker",  0.25)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.25)
-	MDRV_SOUND_ROUTE(1, "2610.1.l", 1.0)
-	MDRV_SOUND_ROUTE(1, "2610.1.r", 1.0)
-	MDRV_SOUND_ROUTE(2, "2610.2.l", 1.0)
-	MDRV_SOUND_ROUTE(2, "2610.2.r", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM2610, 16000000/2)
+	MCFG_SOUND_CONFIG(ym2610_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker",  0.25)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.25)
+	MCFG_SOUND_ROUTE(1, "2610.1.l", 1.0)
+	MCFG_SOUND_ROUTE(1, "2610.1.r", 1.0)
+	MCFG_SOUND_ROUTE(2, "2610.2.l", 1.0)
+	MCFG_SOUND_ROUTE(2, "2610.2.r", 1.0)
 
-	MDRV_SOUND_ADD("2610.1.l", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ADD("2610.1.r", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
-	MDRV_SOUND_ADD("2610.2.l", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ADD("2610.2.r", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("2610.1.l", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ADD("2610.1.r", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("2610.2.l", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ADD("2610.2.r", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
 
-//  MDRV_SOUND_ADD("subwoofer", SUBWOOFER, 0)
+//  MCFG_SOUND_ADD("subwoofer", SUBWOOFER, 0)
 
-	MDRV_TC0140SYT_ADD("tc0140syt", ninjaw_tc0140syt_intf)
-MACHINE_DRIVER_END
+	MCFG_TC0140SYT_ADD("tc0140syt", ninjaw_tc0140syt_intf)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************

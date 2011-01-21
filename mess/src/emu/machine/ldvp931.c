@@ -49,7 +49,7 @@
 struct _ldplayer_data
 {
 	/* low-level emulation data */
-	running_device *cpu;					/* CPU index of the 8049 */
+	device_t *cpu;					/* CPU index of the 8049 */
 	timer_device *		tracktimer;				/* timer device */
 	vp931_data_ready_func data_ready_cb;		/* data ready callback */
 
@@ -133,11 +133,11 @@ static ADDRESS_MAP_START( vp931_portmap, ADDRESS_SPACE_IO, 8 )
 ADDRESS_MAP_END
 
 
-static MACHINE_DRIVER_START( vp931 )
-	MDRV_CPU_ADD("vp931", I8049, XTAL_11MHz)
-	MDRV_CPU_IO_MAP(vp931_portmap)
-	MDRV_TIMER_ADD("tracktimer", track_timer)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_FRAGMENT( vp931 )
+	MCFG_CPU_ADD("vp931", I8049, XTAL_11MHz)
+	MCFG_CPU_IO_MAP(vp931_portmap)
+	MCFG_TIMER_ADD("tracktimer", track_timer)
+MACHINE_CONFIG_END
 
 
 ROM_START( vp931 )
@@ -157,7 +157,7 @@ const ldplayer_interface vp931_interface =
 	sizeof(ldplayer_data),						/* size of the state */
 	"Phillips 22VP931",							/* name of the player */
 	ROM_NAME(vp931),							/* pointer to ROM region information */
-	MACHINE_DRIVER_NAME(vp931),					/* pointer to machine configuration */
+	MACHINE_CONFIG_NAME(vp931),					/* pointer to machine configuration */
 	vp931_init,									/* initialization callback */
 	vp931_vsync,								/* vsync callback */
 	vp931_update,								/* update callback */
@@ -187,7 +187,7 @@ const ldplayer_interface vp931_interface =
     ready callback
 -------------------------------------------------*/
 
-void vp931_set_data_ready_callback(running_device *device, vp931_data_ready_func callback)
+void vp931_set_data_ready_callback(device_t *device, vp931_data_ready_func callback)
 {
 	laserdisc_state *ld = ldcore_get_safe_token(device);
 	ld->player->data_ready_cb = callback;

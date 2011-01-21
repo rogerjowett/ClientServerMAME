@@ -1,10 +1,9 @@
 
-class mexico86_state
+class mexico86_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, mexico86_state(machine)); }
-
-	mexico86_state(running_machine &machine) { }
+	mexico86_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *     protection_ram;
@@ -25,10 +24,10 @@ public:
 	int      coin_last;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *audiocpu;
-	running_device *subcpu;
-	running_device *mcu;
+	device_t *maincpu;
+	device_t *audiocpu;
+	device_t *subcpu;
+	device_t *mcu;
 };
 
 

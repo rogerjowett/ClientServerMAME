@@ -4,12 +4,11 @@
 
 *************************************************************************/
 
-class vendetta_state
+class vendetta_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, vendetta_state(machine)); }
-
-	vendetta_state(running_machine &machine) { }
+	vendetta_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *    ram;
@@ -24,13 +23,13 @@ public:
 	offs_t     video_banking_base;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *audiocpu;
-	running_device *k053260;
-	running_device *k052109;
-	running_device *k053246;
-	running_device *k053251;
-	running_device *k054000;
+	device_t *maincpu;
+	device_t *audiocpu;
+	device_t *k053260;
+	device_t *k052109;
+	device_t *k053246;
+	device_t *k053251;
+	device_t *k054000;
 };
 
 /*----------- defined in video/vendetta.c -----------*/

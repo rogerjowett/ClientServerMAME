@@ -35,13 +35,13 @@
 
 static WRITE8_HANDLER( triothep_control_select_w )
 {
-	actfancr_state *state = (actfancr_state *)space->machine->driver_data;
+	actfancr_state *state = space->machine->driver_data<actfancr_state>();
 	state->trio_control_select = data;
 }
 
 static READ8_HANDLER( triothep_control_r )
 {
-	actfancr_state *state = (actfancr_state *)space->machine->driver_data;
+	actfancr_state *state = space->machine->driver_data<actfancr_state>();
 	switch (state->trio_control_select)
 	{
 		case 0: return input_port_read(space->machine, "P1");
@@ -56,7 +56,7 @@ static READ8_HANDLER( triothep_control_r )
 
 static WRITE8_HANDLER( actfancr_sound_w )
 {
-	actfancr_state *state = (actfancr_state *)space->machine->driver_data;
+	actfancr_state *state = space->machine->driver_data<actfancr_state>();
 	soundlatch_w(space, 0, data & 0xff);
 	cpu_set_input_line(state->audiocpu, INPUT_LINE_NMI, PULSE_LINE);
 }
@@ -106,7 +106,7 @@ static ADDRESS_MAP_START( dec0_s_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0800, 0x0801) AM_DEVWRITE("ym1", ym2203_w)
 	AM_RANGE(0x1000, 0x1001) AM_DEVWRITE("ym2", ym3812_w)
 	AM_RANGE(0x3000, 0x3000) AM_READ(soundlatch_r)
-	AM_RANGE(0x3800, 0x3800) AM_DEVREADWRITE("oki", okim6295_r, okim6295_w)
+	AM_RANGE(0x3800, 0x3800) AM_DEVREADWRITE_MODERN("oki", okim6295_device, read, write)
 	AM_RANGE(0x4000, 0xffff) AM_ROM
 ADDRESS_MAP_END
 
@@ -263,9 +263,9 @@ GFXDECODE_END
 
 /******************************************************************************/
 
-static void sound_irq(running_device *device, int linestate)
+static void sound_irq(device_t *device, int linestate)
 {
-	actfancr_state *state = (actfancr_state *)device->machine->driver_data;
+	actfancr_state *state = device->machine->driver_data<actfancr_state>();
 	cpu_set_input_line(state->audiocpu, 0, linestate); /* IRQ */
 }
 
@@ -278,7 +278,7 @@ static const ym3812_interface ym3812_config =
 
 static MACHINE_START( actfancr )
 {
-	actfancr_state *state = (actfancr_state *)machine->driver_data;
+	actfancr_state *state = machine->driver_data<actfancr_state>();
 
 	state->maincpu = machine->device("maincpu");
 	state->audiocpu = machine->device("audiocpu");
@@ -286,7 +286,7 @@ static MACHINE_START( actfancr )
 
 static MACHINE_START( triothep )
 {
-	actfancr_state *state = (actfancr_state *)machine->driver_data;
+	actfancr_state *state = machine->driver_data<actfancr_state>();
 
 	MACHINE_START_CALL(actfancr);
 
@@ -295,7 +295,7 @@ static MACHINE_START( triothep )
 
 static MACHINE_RESET( actfancr )
 {
-	actfancr_state *state = (actfancr_state *)machine->driver_data;
+	actfancr_state *state = machine->driver_data<actfancr_state>();
 	int i;
 
 	state->flipscreen = 0;
@@ -308,7 +308,7 @@ static MACHINE_RESET( actfancr )
 
 static MACHINE_RESET( triothep )
 {
-	actfancr_state *state = (actfancr_state *)machine->driver_data;
+	actfancr_state *state = machine->driver_data<actfancr_state>();
 
 	MACHINE_RESET_CALL(actfancr);
 	state->trio_control_select = 0;
@@ -316,101 +316,95 @@ static MACHINE_RESET( triothep )
 
 /******************************************************************************/
 
-static MACHINE_DRIVER_START( actfancr )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(actfancr_state)
+static MACHINE_CONFIG_START( actfancr, actfancr_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu",H6280,21477200/3) /* Should be accurate */
-	MDRV_CPU_PROGRAM_MAP(actfan_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold) /* VBL */
+	MCFG_CPU_ADD("maincpu",H6280,21477200/3) /* Should be accurate */
+	MCFG_CPU_PROGRAM_MAP(actfan_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold) /* VBL */
 
-	MDRV_CPU_ADD("audiocpu",M6502, 1500000) /* Should be accurate */
-	MDRV_CPU_PROGRAM_MAP(dec0_s_map)
+	MCFG_CPU_ADD("audiocpu",M6502, 1500000) /* Should be accurate */
+	MCFG_CPU_PROGRAM_MAP(dec0_s_map)
 
-	MDRV_MACHINE_START(actfancr)
-	MDRV_MACHINE_RESET(actfancr)
+	MCFG_MACHINE_START(actfancr)
+	MCFG_MACHINE_RESET(actfancr)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_BUFFERS_SPRITERAM)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_BUFFERS_SPRITERAM)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(529))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 1*8, 31*8-1)
-	MDRV_GFXDECODE(actfan)
-	MDRV_PALETTE_LENGTH(768)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(529))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 1*8, 31*8-1)
+	MCFG_GFXDECODE(actfan)
+	MCFG_PALETTE_LENGTH(768)
 
-	MDRV_VIDEO_START(actfancr)
-	MDRV_VIDEO_UPDATE(actfancr)
+	MCFG_VIDEO_START(actfancr)
+	MCFG_VIDEO_UPDATE(actfancr)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ym1", YM2203, 1500000)
-	MDRV_SOUND_ROUTE(0, "mono", 0.90)
-	MDRV_SOUND_ROUTE(1, "mono", 0.90)
-	MDRV_SOUND_ROUTE(2, "mono", 0.90)
-	MDRV_SOUND_ROUTE(3, "mono", 0.50)
+	MCFG_SOUND_ADD("ym1", YM2203, 1500000)
+	MCFG_SOUND_ROUTE(0, "mono", 0.90)
+	MCFG_SOUND_ROUTE(1, "mono", 0.90)
+	MCFG_SOUND_ROUTE(2, "mono", 0.90)
+	MCFG_SOUND_ROUTE(3, "mono", 0.50)
 
-	MDRV_SOUND_ADD("ym2", YM3812, 3000000)
-	MDRV_SOUND_CONFIG(ym3812_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.90)
+	MCFG_SOUND_ADD("ym2", YM3812, 3000000)
+	MCFG_SOUND_CONFIG(ym3812_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.90)
 
-	MDRV_OKIM6295_ADD("oki", 1024188, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.85)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 1024188, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.85)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( triothep )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(actfancr_state)
+static MACHINE_CONFIG_START( triothep, actfancr_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu",H6280,XTAL_21_4772MHz/3) /* XIN=21.4772Mhz, verified on pcb */
-	MDRV_CPU_PROGRAM_MAP(triothep_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold) /* VBL */
+	MCFG_CPU_ADD("maincpu",H6280,XTAL_21_4772MHz/3) /* XIN=21.4772Mhz, verified on pcb */
+	MCFG_CPU_PROGRAM_MAP(triothep_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold) /* VBL */
 
-	MDRV_CPU_ADD("audiocpu",M6502, XTAL_12MHz/8) /* verified on pcb */
-	MDRV_CPU_PROGRAM_MAP(dec0_s_map)
+	MCFG_CPU_ADD("audiocpu",M6502, XTAL_12MHz/8) /* verified on pcb */
+	MCFG_CPU_PROGRAM_MAP(dec0_s_map)
 
-	MDRV_MACHINE_START(triothep)
-	MDRV_MACHINE_RESET(triothep)
+	MCFG_MACHINE_START(triothep)
+	MCFG_MACHINE_RESET(triothep)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_BUFFERS_SPRITERAM)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_BUFFERS_SPRITERAM)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(529))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 1*8, 31*8-1)
-	MDRV_GFXDECODE(triothep)
-	MDRV_PALETTE_LENGTH(768)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(529))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 1*8, 31*8-1)
+	MCFG_GFXDECODE(triothep)
+	MCFG_PALETTE_LENGTH(768)
 
-	MDRV_VIDEO_START(triothep)
-	MDRV_VIDEO_UPDATE(triothep)
+	MCFG_VIDEO_START(triothep)
+	MCFG_VIDEO_UPDATE(triothep)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ym1", YM2203, XTAL_12MHz/8) /* verified on pcb */
-	MDRV_SOUND_ROUTE(0, "mono", 0.90)
-	MDRV_SOUND_ROUTE(1, "mono", 0.90)
-	MDRV_SOUND_ROUTE(2, "mono", 0.90)
-	MDRV_SOUND_ROUTE(3, "mono", 0.50)
+	MCFG_SOUND_ADD("ym1", YM2203, XTAL_12MHz/8) /* verified on pcb */
+	MCFG_SOUND_ROUTE(0, "mono", 0.90)
+	MCFG_SOUND_ROUTE(1, "mono", 0.90)
+	MCFG_SOUND_ROUTE(2, "mono", 0.90)
+	MCFG_SOUND_ROUTE(3, "mono", 0.50)
 
-	MDRV_SOUND_ADD("ym2", YM3812, XTAL_12MHz/4) /* verified on pcb */
-	MDRV_SOUND_CONFIG(ym3812_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.90)
+	MCFG_SOUND_ADD("ym2", YM3812, XTAL_12MHz/4) /* verified on pcb */
+	MCFG_SOUND_CONFIG(ym3812_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.90)
 
-	MDRV_OKIM6295_ADD("oki", XTAL_1_056MHz, OKIM6295_PIN7_HIGH) /* verified on pcb */
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.85)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", XTAL_1_056MHz, OKIM6295_PIN7_HIGH) /* verified on pcb */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.85)
+MACHINE_CONFIG_END
 
 /******************************************************************************/
 
@@ -584,7 +578,7 @@ ROM_END
 
 static READ8_HANDLER( cycle_r )
 {
-	actfancr_state *state = (actfancr_state *)space->machine->driver_data;
+	actfancr_state *state = space->machine->driver_data<actfancr_state>();
 	int pc = cpu_get_pc(space->cpu);
 	int ret = state->main_ram[0x26];
 
@@ -602,7 +596,7 @@ static READ8_HANDLER( cycle_r )
 
 static READ8_HANDLER( cyclej_r )
 {
-	actfancr_state *state = (actfancr_state *)space->machine->driver_data;
+	actfancr_state *state = space->machine->driver_data<actfancr_state>();
 	int pc = cpu_get_pc(space->cpu);
 	int ret = state->main_ram[0x26];
 

@@ -145,7 +145,6 @@ LDFLAGS += ${SRC}/../../../Libraries/RakNet32/Lib/RakNetLibStatic.lib ws2_32.lib
 endif
 endif
 
-
 # turn on link-time codegen if the MAXOPT flag is also set
 ifdef MAXOPT
 CCOMFLAGS += /GL
@@ -170,6 +169,9 @@ CPPONLYFLAGS += /wd4290 /wd4355
 
 # disable performance warnings about casting ints to bools
 CPPONLYFLAGS += /wd4800
+
+# disable better packing warning
+CPPONLYFLAGS += /wd4371
 
 # explicitly set the entry point for UNICODE builds
 LDFLAGS += /ENTRY:wmainCRTStartup
@@ -224,8 +226,10 @@ DEFS += -DX64_WINDOWS_ABI
 DEFS += -DUNICODE -D_UNICODE
 LDFLAGS += -municode
 
+ifdef MSVC_BUILD
 # map all instances of "main" to "utf8_main"
 DEFS += -Dmain=utf8_main
+endif
 
 # debug build: enable guard pages on all memory allocations
 ifdef DEBUG
@@ -247,7 +251,11 @@ LIBS += -lunicows
 endif
 
 # ensure we statically link the gcc runtime lib
+ifdef MSVC_BUILD
 LDFLAGS += -static-libgcc /LIBPATH:"C:\DirectXSDK\Lib\x86"
+else
+LDFLAGS += -static-libgcc -L/c/DirectXSDK/Lib/x86
+endif
 
 # add the windows libraries
 LIBS += -luser32 -lgdi32 -lddraw -ldsound -ldxguid -lwinmm -ladvapi32 -lcomctl32 -lshlwapi -ldinput8

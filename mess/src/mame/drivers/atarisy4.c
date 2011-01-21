@@ -694,37 +694,36 @@ INPUT_PORTS_END
  *
  *************************************/
 
-static MACHINE_DRIVER_START( atarisy4 )
-	MDRV_CPU_ADD("maincpu", M68000, 8000000)
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_VBLANK_INT("screen", vblank_int)
+static MACHINE_CONFIG_START( atarisy4, driver_device )
+	MCFG_CPU_ADD("maincpu", M68000, 8000000)
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_VBLANK_INT("screen", vblank_int)
 
-	MDRV_CPU_ADD("dsp0", TMS32010, 16000000)
-	MDRV_CPU_PROGRAM_MAP(dsp0_map)
-	MDRV_CPU_IO_MAP(dsp0_io_map)
+	MCFG_CPU_ADD("dsp0", TMS32010, 16000000)
+	MCFG_CPU_PROGRAM_MAP(dsp0_map)
+	MCFG_CPU_IO_MAP(dsp0_io_map)
 
-	MDRV_VIDEO_RESET(atarisy4)
-	MDRV_MACHINE_RESET(atarisy4)
+	MCFG_VIDEO_RESET(atarisy4)
+	MCFG_MACHINE_RESET(atarisy4)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_RAW_PARAMS(32000000/2, 660, 0, 512, 404, 0, 384)
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_UPDATE_AFTER_VBLANK)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_PALETTE_LENGTH(256)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_RAW_PARAMS(32000000/2, 660, 0, 512, 404, 0, 384)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_AFTER_VBLANK)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_PALETTE_LENGTH(256)
 
-	MDRV_VIDEO_START(atarisy4)
-	MDRV_VIDEO_UPDATE(atarisy4)
-MACHINE_DRIVER_END
+	MCFG_VIDEO_START(atarisy4)
+	MCFG_VIDEO_UPDATE(atarisy4)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( airrace )
-	MDRV_IMPORT_FROM(atarisy4)
+static MACHINE_CONFIG_DERIVED( airrace, atarisy4 )
 
-	MDRV_CPU_ADD("dsp1", TMS32010, 16000000)
-	MDRV_CPU_PROGRAM_MAP(dsp1_map)
-	MDRV_CPU_IO_MAP(dsp1_io_map)
+	MCFG_CPU_ADD("dsp1", TMS32010, 16000000)
+	MCFG_CPU_PROGRAM_MAP(dsp1_map)
+	MCFG_CPU_IO_MAP(dsp1_io_map)
 
-	MDRV_MACHINE_RESET(airrace)
-MACHINE_DRIVER_END
+	MCFG_MACHINE_RESET(airrace)
+MACHINE_CONFIG_END
 
 
 /*************************************
@@ -776,7 +775,7 @@ static inline UINT8 hex_to_ascii(UINT8 in)
 		return in;
 }
 
-void load_ldafile(const address_space *space, const UINT8 *file)
+void load_ldafile(address_space *space, const UINT8 *file)
 {
 #define READ_CHAR()		file[i++]
 	int i = 0;
@@ -819,7 +818,7 @@ void load_ldafile(const address_space *space, const UINT8 *file)
 		{
 			UINT8 data = READ_CHAR();
 			sum += data;
-			memory_write_byte(space, addr++, data);
+			space->write_byte(addr++, data);
 		} while (--len);
 
 		sum += READ_CHAR();
@@ -830,7 +829,7 @@ void load_ldafile(const address_space *space, const UINT8 *file)
 }
 
 /* Load memory space with data from a Tektronix-Extended HEX file */
-void load_hexfile(const address_space *space, const UINT8 *file)
+void load_hexfile(address_space *space, const UINT8 *file)
 {
 #define READ_HEX_CHAR()		hex_to_ascii(file[i++])
 
@@ -914,7 +913,7 @@ void load_hexfile(const address_space *space, const UINT8 *file)
 			sum += data & 0xf;
 
 			if (record == 6)
-				memory_write_byte(space, addr++, data);
+				space->write_byte(addr++, data);
 
 			len -= 2;
 		}
@@ -935,19 +934,19 @@ next_line:
 
 static DRIVER_INIT( laststar )
 {
-	const address_space *main = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *main = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	/* Allocate 16kB of shared RAM */
 	shared_ram[0] = auto_alloc_array_clear(machine, UINT16, 0x2000);
 
 	/* Populate the 68000 address space with data from the HEX files */
-	load_hexfile(main, memory_region(machine, "code"));
-	load_hexfile(main, memory_region(machine, "data"));
+	load_hexfile(main, machine->region("code")->base());
+	load_hexfile(main, machine->region("data")->base());
 
 	/* Set up the DSP */
 	memory_set_bankptr(machine, "dsp0_bank0", shared_ram[0]);
 	memory_set_bankptr(machine, "dsp0_bank1", &shared_ram[0][0x800]);
-	load_ldafile(cputag_get_address_space(machine, "dsp0", ADDRESS_SPACE_PROGRAM), memory_region(machine, "dsp"));
+	load_ldafile(cputag_get_address_space(machine, "dsp0", ADDRESS_SPACE_PROGRAM), machine->region("dsp")->base());
 }
 
 static DRIVER_INIT( airrace )
@@ -957,17 +956,17 @@ static DRIVER_INIT( airrace )
 	shared_ram[1] = auto_alloc_array_clear(machine, UINT16, 0x4000);
 
 	/* Populate RAM with data from the HEX files */
-	load_hexfile(cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM), memory_region(machine, "code"));
+	load_hexfile(cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM), machine->region("code")->base());
 
 	/* Set up the first DSP */
 	memory_set_bankptr(machine, "dsp0_bank0", shared_ram[0]);
 	memory_set_bankptr(machine, "dsp0_bank1", &shared_ram[0][0x800]);
-	load_ldafile(cputag_get_address_space(machine, "dsp0", ADDRESS_SPACE_PROGRAM), memory_region(machine, "dsp"));
+	load_ldafile(cputag_get_address_space(machine, "dsp0", ADDRESS_SPACE_PROGRAM), machine->region("dsp")->base());
 
 	/* Set up the second DSP */
 	memory_set_bankptr(machine, "dsp1_bank0", shared_ram[1]);
 	memory_set_bankptr(machine, "dsp1_bank1", &shared_ram[1][0x800]);
-	load_ldafile(cputag_get_address_space(machine, "dsp1", ADDRESS_SPACE_PROGRAM), memory_region(machine, "dsp"));
+	load_ldafile(cputag_get_address_space(machine, "dsp1", ADDRESS_SPACE_PROGRAM), machine->region("dsp")->base());
 }
 
 static MACHINE_RESET( atarisy4 )

@@ -11,17 +11,16 @@
 #include "machine/i8255a.h"
 #include "machine/8237dma.h"
 
-class pc_state
+class pc_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, pc_state(machine)); }
+	pc_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
-	pc_state(running_machine &machine) { }
-
-	running_device *maincpu;
-	running_device *pic8259;
-	running_device *dma8237;
-	running_device *pit8253;
+	device_t *maincpu;
+	device_t *pic8259;
+	device_t *dma8237;
+	device_t *pit8253;
 	/* U73 is an LS74 - dual flip flop */
 	/* Q2 is set by OUT1 from the 8253 and goes to DRQ1 on the 8237 */
 	UINT8	u73_q2;

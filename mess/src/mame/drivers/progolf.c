@@ -55,6 +55,17 @@ Twenty four 8116 rams.
 #include "sound/ay8910.h"
 #include "video/mc6845.h"
 
+
+class progolf_state : public driver_device
+{
+public:
+	progolf_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
+
+	UINT8 *videoram;
+};
+
+
 static UINT8 char_pen,char_pen_vreg;
 static UINT8 *progolf_fg_fb;
 static UINT8 *progolf_fbram;
@@ -66,16 +77,19 @@ static UINT8 sound_cmd;
 
 static VIDEO_START( progolf )
 {
+	progolf_state *state = machine->driver_data<progolf_state>();
 	scrollx_hi = 0;
 	scrollx_lo = 0;
 
 	progolf_fg_fb = auto_alloc_array(machine, UINT8, 0x2000*8);
-	machine->generic.videoram.u8 = auto_alloc_array(machine, UINT8, 0x1000);
+	state->videoram = auto_alloc_array(machine, UINT8, 0x1000);
 }
 
 
 static VIDEO_UPDATE( progolf )
 {
+	progolf_state *state = screen->machine->driver_data<progolf_state>();
+	UINT8 *videoram = state->videoram;
 	int count,color,x,y,xi,yi;
 
 	{
@@ -87,7 +101,7 @@ static VIDEO_UPDATE( progolf )
 		{
 			for(y=0;y<32;y++)
 			{
-				int tile = screen->machine->generic.videoram.u8[count];
+				int tile = videoram[count];
 
 				drawgfx_opaque(bitmap,cliprect,screen->machine->gfx[0],tile,1,0,0,(256-x*8)+scroll,y*8);
 				/* wrap-around */
@@ -185,7 +199,9 @@ static READ8_HANDLER( audio_command_r )
 
 static READ8_HANDLER( progolf_videoram_r )
 {
-	UINT8 *gfx_rom = memory_region(space->machine, "gfx1");
+	progolf_state *state = space->machine->driver_data<progolf_state>();
+	UINT8 *videoram = state->videoram;
+	UINT8 *gfx_rom = space->machine->region("gfx1")->base();
 
 	if (offset >= 0x0800)
 	{
@@ -196,7 +212,7 @@ static READ8_HANDLER( progolf_videoram_r )
 		else if (progolf_gfx_switch == 0x70)
 			return gfx_rom[offset + 0x2000];
 		else
-			return space->machine->generic.videoram.u8[offset];
+			return videoram[offset];
 	} else {
 		if      (progolf_gfx_switch == 0x10)
 			return gfx_rom[offset];
@@ -205,14 +221,16 @@ static READ8_HANDLER( progolf_videoram_r )
 		else if (progolf_gfx_switch == 0x30)
 			return gfx_rom[offset + 0x2000];
 		else
-			return space->machine->generic.videoram.u8[offset];
+			return videoram[offset];
 	}
 }
 
 static WRITE8_HANDLER( progolf_videoram_w )
 {
+	progolf_state *state = space->machine->driver_data<progolf_state>();
+	UINT8 *videoram = state->videoram;
 	//if(progolf_gfx_switch & 0x40)
-	space->machine->generic.videoram.u8[offset] = data;
+	videoram[offset] = data;
 }
 
 static ADDRESS_MAP_START( main_cpu, ADDRESS_SPACE_PROGRAM, 8 )
@@ -425,42 +443,42 @@ static PALETTE_INIT( progolf )
 	}
 }
 
-static MACHINE_DRIVER_START( progolf )
+static MACHINE_CONFIG_START( progolf, progolf_state )
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6502, 3000000/2) /* guess, 3 Mhz makes the game to behave worse? */
-	MDRV_CPU_PROGRAM_MAP(main_cpu)
-	MDRV_CPU_VBLANK_INT("screen", progolf_interrupt)
+	MCFG_CPU_ADD("maincpu", M6502, 3000000/2) /* guess, 3 Mhz makes the game to behave worse? */
+	MCFG_CPU_PROGRAM_MAP(main_cpu)
+	MCFG_CPU_VBLANK_INT("screen", progolf_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", M6502, 500000)
-	MDRV_CPU_PROGRAM_MAP(sound_cpu)
+	MCFG_CPU_ADD("audiocpu", M6502, 500000)
+	MCFG_CPU_PROGRAM_MAP(sound_cpu)
 
-	MDRV_QUANTUM_PERFECT_CPU("maincpu")
+	MCFG_QUANTUM_PERFECT_CPU("maincpu")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(57)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(3072))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(256, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 0*8, 32*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(57)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(3072))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(256, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 0*8, 32*8-1)
 
-	MDRV_GFXDECODE(progolf)
-	MDRV_PALETTE_LENGTH(32*3)
-	MDRV_PALETTE_INIT(progolf)
+	MCFG_GFXDECODE(progolf)
+	MCFG_PALETTE_LENGTH(32*3)
+	MCFG_PALETTE_INIT(progolf)
 
-	MDRV_MC6845_ADD("crtc", MC6845, 3000000/4, mc6845_intf)	/* hand tuned to get ~57 fps */
-	MDRV_VIDEO_START(progolf)
-	MDRV_VIDEO_UPDATE(progolf)
+	MCFG_MC6845_ADD("crtc", MC6845, 3000000/4, mc6845_intf)	/* hand tuned to get ~57 fps */
+	MCFG_VIDEO_START(progolf)
+	MCFG_VIDEO_UPDATE(progolf)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ay1", AY8910, 12000000/8)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.23)
+	MCFG_SOUND_ADD("ay1", AY8910, 12000000/8)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.23)
 
-	MDRV_SOUND_ADD("ay2", AY8910, 12000000/8)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.23)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ay2", AY8910, 12000000/8)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.23)
+MACHINE_CONFIG_END
 
 
 ROM_START( progolf )
@@ -511,11 +529,11 @@ ROM_END
 static DRIVER_INIT( progolf )
 {
 	int A;
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
-	UINT8 *rom = memory_region(machine, "maincpu");
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	UINT8 *rom = machine->region("maincpu")->base();
 	UINT8* decrypted = auto_alloc_array(machine, UINT8, 0x10000);
 
-	memory_set_decrypted_region(space,0x0000,0xffff, decrypted);
+	space->set_decrypted_region(0x0000,0xffff, decrypted);
 
 	/* Swap bits 5 & 6 for opcodes */
 	for (A = 0xb000 ; A < 0x10000 ; A++)
@@ -525,11 +543,11 @@ static DRIVER_INIT( progolf )
 static DRIVER_INIT( progolfa )
 {
 	int A;
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
-	UINT8 *rom = memory_region(machine, "maincpu");
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	UINT8 *rom = machine->region("maincpu")->base();
 	UINT8* decrypted = auto_alloc_array(machine, UINT8, 0x10000);
 
-	memory_set_decrypted_region(space,0x0000,0xffff, decrypted);
+	space->set_decrypted_region(0x0000,0xffff, decrypted);
 
 	/* data is likely to not be encrypted, just the opcodes are. */
 	for (A = 0x0000 ; A < 0x10000 ; A++)

@@ -418,31 +418,30 @@ static VIDEO_UPDATE(triforce)
 static INPUT_PORTS_START( triforce )
 INPUT_PORTS_END
 
-static MACHINE_DRIVER_START( triforce_base )
+static MACHINE_CONFIG_START( triforce_base, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", PPC403GA, 64000000) /* Wrong! */
-	MDRV_CPU_PROGRAM_MAP(gc_map)
+	MCFG_CPU_ADD("maincpu", PPC403GA, 64000000) /* Wrong! */
+	MCFG_CPU_PROGRAM_MAP(gc_map)
 
-	MDRV_QUANTUM_TIME(HZ(6000))
+	MCFG_QUANTUM_TIME(HZ(6000))
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(640, 480)
-	MDRV_SCREEN_VISIBLE_AREA(0, 639, 0, 479)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(640, 480)
+	MCFG_SCREEN_VISIBLE_AREA(0, 639, 0, 479)
 
-	MDRV_PALETTE_LENGTH(65536)
+	MCFG_PALETTE_LENGTH(65536)
 
-	MDRV_VIDEO_START(triforce)
-	MDRV_VIDEO_UPDATE(triforce)
-MACHINE_DRIVER_END
+	MCFG_VIDEO_START(triforce)
+	MCFG_VIDEO_UPDATE(triforce)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( triforcegd )
-	MDRV_IMPORT_FROM(triforce_base)
-	MDRV_NAOMI_DIMM_BOARD_ADD("rom_board", "gdrom", "user1", "picreturn")
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( triforcegd, triforce_base )
+	MCFG_NAOMI_DIMM_BOARD_ADD("rom_board", "gdrom", "user1", "picreturn")
+MACHINE_CONFIG_END
 
 #define ROM_LOAD16_WORD_SWAP_BIOS(bios,name,offset,length,hash) \
 		ROMX_LOAD(name, offset, length, hash, ROM_GROUPWORD | ROM_BIOS(bios+1)) /* Note '+1' */

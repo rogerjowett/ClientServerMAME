@@ -144,6 +144,7 @@
 #include "includes/tatsumi.h"
 #include "sound/2151intf.h"
 #include "sound/okim6295.h"
+#include "machine/nvram.h"
 
 #include "roundup5.lh"
 
@@ -194,9 +195,9 @@ static WRITE16_HANDLER(cyclwarr_sound_w)
 
 static ADDRESS_MAP_START( apache3_v30_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x00000, 0x03fff) AM_RAM
-	AM_RANGE(0x04000, 0x07fff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0x04000, 0x07fff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0x08000, 0x08fff) AM_RAM_WRITE(apache3_palette_w) AM_BASE_GENERIC(paletteram)
-	AM_RANGE(0x0c000, 0x0dfff) AM_RAM_WRITE(roundup5_text_w) AM_BASE_GENERIC(videoram)
+	AM_RANGE(0x0c000, 0x0dfff) AM_RAM_WRITE(roundup5_text_w) AM_BASE_MEMBER(tatsumi_state, videoram)
 	AM_RANGE(0x0e800, 0x0e803) AM_WRITENOP // CRT
 	AM_RANGE(0x0f000, 0x0f001) AM_READ_PORT("DSW")
 	AM_RANGE(0x0f000, 0x0f001) AM_WRITENOP // todo
@@ -223,7 +224,7 @@ static ADDRESS_MAP_START( apache3_v20_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x04000, 0x04003) AM_NOP // piu select .. ?
 	AM_RANGE(0x06000, 0x06001) AM_READ_PORT("IN0") // esw
 	AM_RANGE(0x08000, 0x08001) AM_DEVREADWRITE("ymsnd", tatsumi_hack_ym2151_r, ym2151_w)
-	AM_RANGE(0x0a000, 0x0a000) AM_DEVREADWRITE("oki", tatsumi_hack_oki_r, okim6295_w)
+	AM_RANGE(0x0a000, 0x0a000) AM_DEVREAD("oki", tatsumi_hack_oki_r) AM_DEVWRITE_MODERN("oki", okim6295_device, write)
 	AM_RANGE(0x0e000, 0x0e007) AM_READWRITE(apache3_adc_r, apache3_adc_w) //adc select
 	AM_RANGE(0xf0000, 0xfffff) AM_ROM
 ADDRESS_MAP_END
@@ -237,7 +238,7 @@ ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( roundup5_v30_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x00000, 0x07fff) AM_RAM
-	AM_RANGE(0x08000, 0x0bfff) AM_RAM_WRITE(roundup5_text_w) AM_BASE_GENERIC(videoram)
+	AM_RANGE(0x08000, 0x0bfff) AM_RAM_WRITE(roundup5_text_w) AM_BASE_MEMBER(tatsumi_state, videoram)
 	AM_RANGE(0x0c000, 0x0c003) AM_WRITE(roundup5_crt_w)
 	AM_RANGE(0x0d000, 0x0d001) AM_READ_PORT("DSW")
 	AM_RANGE(0x0d400, 0x0d40f) AM_WRITEONLY AM_BASE(&roundup5_unknown0)
@@ -267,7 +268,7 @@ static ADDRESS_MAP_START( roundup5_z80_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0xdfff) AM_ROM
 	AM_RANGE(0xe000, 0xffef) AM_RAM
 	AM_RANGE(0xfff0, 0xfff1) AM_DEVREADWRITE("ymsnd", tatsumi_hack_ym2151_r, ym2151_w)
-	AM_RANGE(0xfff4, 0xfff4) AM_DEVREADWRITE("oki", tatsumi_hack_oki_r, okim6295_w)
+	AM_RANGE(0xfff4, 0xfff4) AM_DEVREAD("oki", tatsumi_hack_oki_r) AM_DEVWRITE_MODERN("oki", okim6295_device, write)
 	AM_RANGE(0xfff8, 0xfff8) AM_READ_PORT("IN0")
 	AM_RANGE(0xfff9, 0xfff9) AM_READ_PORT("IN1")
 	AM_RANGE(0xfffc, 0xfffc) AM_READ_PORT("STICKX")
@@ -324,7 +325,7 @@ static ADDRESS_MAP_START( cyclwarr_z80_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0xdfff) AM_ROM
 	AM_RANGE(0xe000, 0xffef) AM_RAM
 	AM_RANGE(0xfff0, 0xfff1) AM_DEVREADWRITE("ymsnd", tatsumi_hack_ym2151_r, ym2151_w)
-	AM_RANGE(0xfff4, 0xfff4) AM_DEVREADWRITE("oki", tatsumi_hack_oki_r, okim6295_w)
+	AM_RANGE(0xfff4, 0xfff4) AM_DEVREAD("oki", tatsumi_hack_oki_r) AM_DEVWRITE_MODERN("oki", okim6295_device, write)
 	AM_RANGE(0xfffc, 0xfffc) AM_READ(soundlatch_r)
 	AM_RANGE(0xfffe, 0xfffe) AM_WRITENOP
 ADDRESS_MAP_END
@@ -826,7 +827,7 @@ GFXDECODE_END
 
 /******************************************************************************/
 
-static void sound_irq(running_device *device, int state)
+static void sound_irq(device_t *device, int state)
 {
 	cputag_set_input_line(device->machine, "audiocpu", INPUT_LINE_IRQ0, state);
 }
@@ -841,7 +842,7 @@ static INTERRUPT_GEN( roundup5_interrupt )
 	cpu_set_input_line_and_vector(device, 0, HOLD_LINE, 0xc8/4);	/* VBL */
 }
 
-static void apache3_68000_reset(running_device *device)
+static void apache3_68000_reset(device_t *device)
 {
 	cputag_set_input_line(device->machine, "sub2", INPUT_LINE_RESET, PULSE_LINE);
 }
@@ -855,179 +856,179 @@ static MACHINE_RESET( apache3 )
 }
 
 
-static MACHINE_DRIVER_START( apache3 )
+static MACHINE_CONFIG_START( apache3, tatsumi_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", V30, CLOCK_1 / 2)
-	MDRV_CPU_PROGRAM_MAP(apache3_v30_map)
-	MDRV_CPU_VBLANK_INT("screen", roundup5_interrupt)
+	MCFG_CPU_ADD("maincpu", V30, CLOCK_1 / 2)
+	MCFG_CPU_PROGRAM_MAP(apache3_v30_map)
+	MCFG_CPU_VBLANK_INT("screen", roundup5_interrupt)
 
-	MDRV_CPU_ADD("sub", M68000, CLOCK_2 / 4)
-	MDRV_CPU_PROGRAM_MAP(apache3_68000_map)
-	MDRV_CPU_VBLANK_INT("screen", irq4_line_hold)
+	MCFG_CPU_ADD("sub", M68000, CLOCK_2 / 4)
+	MCFG_CPU_PROGRAM_MAP(apache3_68000_map)
+	MCFG_CPU_VBLANK_INT("screen", irq4_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", V20, CLOCK_1 / 2)
-	MDRV_CPU_PROGRAM_MAP(apache3_v20_map)
+	MCFG_CPU_ADD("audiocpu", V20, CLOCK_1 / 2)
+	MCFG_CPU_PROGRAM_MAP(apache3_v20_map)
 
-	MDRV_CPU_ADD("sub2", Z80, CLOCK_2 / 8)
-	MDRV_CPU_PROGRAM_MAP(apache3_z80_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("sub2", Z80, CLOCK_2 / 8)
+	MCFG_CPU_PROGRAM_MAP(apache3_z80_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_QUANTUM_TIME(HZ(6000))
-	MDRV_NVRAM_HANDLER(generic_0fill)
-	MDRV_MACHINE_RESET(apache3)
+	MCFG_QUANTUM_TIME(HZ(6000))
+	MCFG_NVRAM_ADD_0FILL("nvram")
+	MCFG_MACHINE_RESET(apache3)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_RAW_PARAMS(CLOCK_2 / 8, 400, 0, 320, 280, 0, 240) // TODO: Hook up CRTC
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_RAW_PARAMS(CLOCK_2 / 8, 400, 0, 320, 280, 0, 240) // TODO: Hook up CRTC
 
-	MDRV_GFXDECODE(apache3)
-	MDRV_PALETTE_LENGTH(1024 + 4096) /* 1024 real colours, and 4096 arranged as series of cluts */
+	MCFG_GFXDECODE(apache3)
+	MCFG_PALETTE_LENGTH(1024 + 4096) /* 1024 real colours, and 4096 arranged as series of cluts */
 
-	MDRV_VIDEO_START(apache3)
-	MDRV_VIDEO_UPDATE(apache3)
+	MCFG_VIDEO_START(apache3)
+	MCFG_VIDEO_UPDATE(apache3)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, CLOCK_1 / 4)
-	MDRV_SOUND_CONFIG(ym2151_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.45)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.45)
+	MCFG_SOUND_ADD("ymsnd", YM2151, CLOCK_1 / 4)
+	MCFG_SOUND_CONFIG(ym2151_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.45)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.45)
 
-	MDRV_OKIM6295_ADD("oki", CLOCK_1 / 4 / 2, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.75)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.75)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", CLOCK_1 / 4 / 2, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.75)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.75)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( roundup5 )
+static MACHINE_CONFIG_START( roundup5, tatsumi_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", V30, CLOCK_1 / 2)
-	MDRV_CPU_PROGRAM_MAP(roundup5_v30_map)
-	MDRV_CPU_VBLANK_INT("screen", roundup5_interrupt)
+	MCFG_CPU_ADD("maincpu", V30, CLOCK_1 / 2)
+	MCFG_CPU_PROGRAM_MAP(roundup5_v30_map)
+	MCFG_CPU_VBLANK_INT("screen", roundup5_interrupt)
 
-	MDRV_CPU_ADD("sub", M68000, CLOCK_2 / 4)
-	MDRV_CPU_PROGRAM_MAP(roundup5_68000_map)
+	MCFG_CPU_ADD("sub", M68000, CLOCK_2 / 4)
+	MCFG_CPU_PROGRAM_MAP(roundup5_68000_map)
 
-	MDRV_CPU_ADD("audiocpu", Z80, CLOCK_1 / 4)
-	MDRV_CPU_PROGRAM_MAP(roundup5_z80_map)
+	MCFG_CPU_ADD("audiocpu", Z80, CLOCK_1 / 4)
+	MCFG_CPU_PROGRAM_MAP(roundup5_z80_map)
 
-	MDRV_QUANTUM_TIME(HZ(6000))
+	MCFG_QUANTUM_TIME(HZ(6000))
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(40*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 0*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(40*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 0*8, 30*8-1)
 
-	MDRV_GFXDECODE(roundup5)
-	MDRV_PALETTE_LENGTH(1024 + 4096) /* 1024 real colours, and 4096 arranged as series of cluts */
+	MCFG_GFXDECODE(roundup5)
+	MCFG_PALETTE_LENGTH(1024 + 4096) /* 1024 real colours, and 4096 arranged as series of cluts */
 
-	MDRV_VIDEO_START(roundup5)
-	MDRV_VIDEO_UPDATE(roundup5)
+	MCFG_VIDEO_START(roundup5)
+	MCFG_VIDEO_UPDATE(roundup5)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, CLOCK_1 / 4)
-	MDRV_SOUND_CONFIG(ym2151_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.45)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.45)
+	MCFG_SOUND_ADD("ymsnd", YM2151, CLOCK_1 / 4)
+	MCFG_SOUND_CONFIG(ym2151_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.45)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.45)
 
-	MDRV_OKIM6295_ADD("oki", CLOCK_1 / 4 / 2, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.75)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.75)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", CLOCK_1 / 4 / 2, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.75)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.75)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( cyclwarr )
+static MACHINE_CONFIG_START( cyclwarr, tatsumi_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, CLOCK_2 / 4)
-	MDRV_CPU_PROGRAM_MAP(cyclwarr_68000a_map)
-	MDRV_CPU_VBLANK_INT("screen", irq5_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, CLOCK_2 / 4)
+	MCFG_CPU_PROGRAM_MAP(cyclwarr_68000a_map)
+	MCFG_CPU_VBLANK_INT("screen", irq5_line_hold)
 
-	MDRV_CPU_ADD("sub", M68000, CLOCK_2 / 4)
-	MDRV_CPU_PROGRAM_MAP(cyclwarr_68000b_map)
-	MDRV_CPU_VBLANK_INT("screen", irq5_line_hold)
+	MCFG_CPU_ADD("sub", M68000, CLOCK_2 / 4)
+	MCFG_CPU_PROGRAM_MAP(cyclwarr_68000b_map)
+	MCFG_CPU_VBLANK_INT("screen", irq5_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80, CLOCK_1 / 4)
-	MDRV_CPU_PROGRAM_MAP(cyclwarr_z80_map)
+	MCFG_CPU_ADD("audiocpu", Z80, CLOCK_1 / 4)
+	MCFG_CPU_PROGRAM_MAP(cyclwarr_z80_map)
 
-	MDRV_QUANTUM_TIME(HZ(12000))
+	MCFG_QUANTUM_TIME(HZ(12000))
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(40*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 0*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(40*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 0*8, 30*8-1)
 
-	MDRV_GFXDECODE(cyclwarr)
-	MDRV_PALETTE_LENGTH(8192 + 8192)
+	MCFG_GFXDECODE(cyclwarr)
+	MCFG_PALETTE_LENGTH(8192 + 8192)
 
-	MDRV_VIDEO_START(cyclwarr)
-	MDRV_VIDEO_UPDATE(cyclwarr)
+	MCFG_VIDEO_START(cyclwarr)
+	MCFG_VIDEO_UPDATE(cyclwarr)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, CLOCK_1 / 4)
-	MDRV_SOUND_CONFIG(ym2151_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.45)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.45)
+	MCFG_SOUND_ADD("ymsnd", YM2151, CLOCK_1 / 4)
+	MCFG_SOUND_CONFIG(ym2151_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.45)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.45)
 
-	MDRV_OKIM6295_ADD("oki", CLOCK_1 / 8, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.75)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.75)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", CLOCK_1 / 8, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.75)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.75)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( bigfight )
+static MACHINE_CONFIG_START( bigfight, tatsumi_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, CLOCK_2 / 4)
-	MDRV_CPU_PROGRAM_MAP(bigfight_68000a_map)
-	MDRV_CPU_VBLANK_INT("screen", irq5_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, CLOCK_2 / 4)
+	MCFG_CPU_PROGRAM_MAP(bigfight_68000a_map)
+	MCFG_CPU_VBLANK_INT("screen", irq5_line_hold)
 
-	MDRV_CPU_ADD("sub", M68000, CLOCK_2 / 4)
-	MDRV_CPU_PROGRAM_MAP(bigfight_68000b_map)
-	MDRV_CPU_VBLANK_INT("screen", irq5_line_hold)
+	MCFG_CPU_ADD("sub", M68000, CLOCK_2 / 4)
+	MCFG_CPU_PROGRAM_MAP(bigfight_68000b_map)
+	MCFG_CPU_VBLANK_INT("screen", irq5_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80, CLOCK_1 / 4)
-	MDRV_CPU_PROGRAM_MAP(cyclwarr_z80_map)
+	MCFG_CPU_ADD("audiocpu", Z80, CLOCK_1 / 4)
+	MCFG_CPU_PROGRAM_MAP(cyclwarr_z80_map)
 
-	MDRV_QUANTUM_TIME(HZ(12000))
+	MCFG_QUANTUM_TIME(HZ(12000))
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(40*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 0*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(40*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 0*8, 30*8-1)
 
-	MDRV_GFXDECODE(cyclwarr)
-	MDRV_PALETTE_LENGTH(8192 + 8192)
+	MCFG_GFXDECODE(cyclwarr)
+	MCFG_PALETTE_LENGTH(8192 + 8192)
 
-	MDRV_VIDEO_START(bigfight)
-	MDRV_VIDEO_UPDATE(bigfight)
+	MCFG_VIDEO_START(bigfight)
+	MCFG_VIDEO_UPDATE(bigfight)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, CLOCK_1 / 4)
-	MDRV_SOUND_CONFIG(ym2151_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.45)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.45)
+	MCFG_SOUND_ADD("ymsnd", YM2151, CLOCK_1 / 4)
+	MCFG_SOUND_CONFIG(ym2151_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.45)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.45)
 
-	MDRV_OKIM6295_ADD("oki", CLOCK_1 / 8 / 2, OKIM6295_PIN7_HIGH) /* 2MHz was too fast. Can the clock be software controlled? */
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.75)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.75)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", CLOCK_1 / 8 / 2, OKIM6295_PIN7_HIGH) /* 2MHz was too fast. Can the clock be software controlled? */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.75)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.75)
+MACHINE_CONFIG_END
 
 /***************************************************************************/
 
@@ -1274,9 +1275,9 @@ ROM_END
 
 static DRIVER_INIT( apache3 )
 {
-	UINT8 *dst = memory_region(machine, "gfx1");
-	UINT8 *src1 = memory_region(machine, "gfx2");
-	UINT8 *src2 = memory_region(machine, "gfx3");
+	UINT8 *dst = machine->region("gfx1")->base();
+	UINT8 *src1 = machine->region("gfx2")->base();
+	UINT8 *src2 = machine->region("gfx3")->base();
 	int i;
 
 	for (i=0; i<0x100000; i+=32) {
@@ -1289,10 +1290,10 @@ static DRIVER_INIT( apache3 )
 	}
 
 	// Copy sprite & palette data out of GFX rom area
-	tatsumi_rom_sprite_lookup1 = memory_region(machine, "gfx2");
-	tatsumi_rom_sprite_lookup2 = memory_region(machine, "gfx3");
-	tatsumi_rom_clut0 = memory_region(machine, "gfx2")+ 0x100000 - 0x800;
-	tatsumi_rom_clut1 = memory_region(machine, "gfx3")+ 0x100000 - 0x800;
+	tatsumi_rom_sprite_lookup1 = machine->region("gfx2")->base();
+	tatsumi_rom_sprite_lookup2 = machine->region("gfx3")->base();
+	tatsumi_rom_clut0 = machine->region("gfx2")->base()+ 0x100000 - 0x800;
+	tatsumi_rom_clut1 = machine->region("gfx3")->base()+ 0x100000 - 0x800;
 
 	tatsumi_reset(machine);
 
@@ -1301,9 +1302,9 @@ static DRIVER_INIT( apache3 )
 
 static DRIVER_INIT( roundup5 )
 {
-	UINT8 *dst = memory_region(machine, "gfx1");
-	UINT8 *src1 = memory_region(machine, "gfx2");
-	UINT8 *src2 = memory_region(machine, "gfx3");
+	UINT8 *dst = machine->region("gfx1")->base();
+	UINT8 *src1 = machine->region("gfx2")->base();
+	UINT8 *src2 = machine->region("gfx3")->base();
 	int i;
 
 	for (i=0; i<0xc0000; i+=32) {
@@ -1316,21 +1317,21 @@ static DRIVER_INIT( roundup5 )
 	}
 
 	// Copy sprite & palette data out of GFX rom area
-	tatsumi_rom_sprite_lookup1 = memory_region(machine, "gfx2");
-	tatsumi_rom_sprite_lookup2 = memory_region(machine, "gfx3");
-	tatsumi_rom_clut0 = memory_region(machine, "gfx2")+ 0xc0000 - 0x800;
-	tatsumi_rom_clut1 = memory_region(machine, "gfx3")+ 0xc0000 - 0x800;
+	tatsumi_rom_sprite_lookup1 = machine->region("gfx2")->base();
+	tatsumi_rom_sprite_lookup2 = machine->region("gfx3")->base();
+	tatsumi_rom_clut0 = machine->region("gfx2")->base()+ 0xc0000 - 0x800;
+	tatsumi_rom_clut1 = machine->region("gfx3")->base()+ 0xc0000 - 0x800;
 
 	tatsumi_reset(machine);
 }
 
 static DRIVER_INIT( cyclwarr )
 {
-	UINT8 *dst = memory_region(machine, "gfx1");
-	UINT8 *src1 = memory_region(machine, "gfx2");
-	int len1 = memory_region_length(machine, "gfx2");
-	UINT8 *src2 = memory_region(machine, "gfx3");
-	int len2 = memory_region_length(machine, "gfx3");
+	UINT8 *dst = machine->region("gfx1")->base();
+	UINT8 *src1 = machine->region("gfx2")->base();
+	int len1 = machine->region("gfx2")->bytes();
+	UINT8 *src2 = machine->region("gfx3")->base();
+	int len2 = machine->region("gfx3")->bytes();
 	int i;
 	for (i=0; i<len1; i+=32) {
 		memcpy(dst,src1,32);
@@ -1341,19 +1342,19 @@ static DRIVER_INIT( cyclwarr )
 		src2+=32;
 	}
 
-	dst = memory_region(machine, "maincpu");
+	dst = machine->region("maincpu")->base();
 	memcpy(cyclwarr_cpua_ram,dst,8);
 	memory_set_bankptr(machine, "bank1", dst);
 
-	dst = memory_region(machine, "sub");
+	dst = machine->region("sub")->base();
 	memcpy(cyclwarr_cpub_ram,dst,8);
 	memory_set_bankptr(machine, "bank2", dst);
 
 	// Copy sprite & palette data out of GFX rom area
-	tatsumi_rom_sprite_lookup1 = memory_region(machine, "gfx2");
-	tatsumi_rom_sprite_lookup2 = memory_region(machine, "gfx3");
-	tatsumi_rom_clut0 = memory_region(machine, "gfx2") + len1 - 0x1000;
-	tatsumi_rom_clut1 = memory_region(machine, "gfx3") + len2 - 0x1000;
+	tatsumi_rom_sprite_lookup1 = machine->region("gfx2")->base();
+	tatsumi_rom_sprite_lookup2 = machine->region("gfx3")->base();
+	tatsumi_rom_clut0 = machine->region("gfx2")->base() + len1 - 0x1000;
+	tatsumi_rom_clut1 = machine->region("gfx3")->base() + len2 - 0x1000;
 
 	tatsumi_reset(machine);
 }

@@ -33,7 +33,7 @@
 
 static WRITE8_HANDLER( ajax_bankswitch_w )
 {
-	ajax_state *state = (ajax_state *)space->machine->driver_data;
+	ajax_state *state = space->machine->driver_data<ajax_state>();
 	int bank = 0;
 
 	/* rom select */
@@ -113,7 +113,7 @@ READ8_HANDLER( ajax_ls138_f10_r )
 	switch ((offset & 0x01c0) >> 6)
 	{
 		case 0x00:	/* ??? */
-			data = mame_rand(space->machine);
+			data = space->machine->rand();
 			break;
 		case 0x04:	/* 2P inputs */
 			data = input_port_read(space->machine, "P2");
@@ -135,7 +135,7 @@ READ8_HANDLER( ajax_ls138_f10_r )
 
 WRITE8_HANDLER( ajax_ls138_f10_w )
 {
-	ajax_state *state = (ajax_state *)space->machine->driver_data;
+	ajax_state *state = space->machine->driver_data<ajax_state>();
 
 	switch ((offset & 0x01c0) >> 6)
 	{
@@ -182,7 +182,7 @@ WRITE8_HANDLER( ajax_ls138_f10_w )
 
 WRITE8_HANDLER( ajax_bankswitch_2_w )
 {
-	ajax_state *state = (ajax_state *)space->machine->driver_data;
+	ajax_state *state = space->machine->driver_data<ajax_state>();
 
 	/* enable char ROM reading through the video RAM */
 	k052109_set_rmrd_line(state->k052109, (data & 0x40) ? ASSERT_LINE : CLEAR_LINE);
@@ -199,9 +199,9 @@ WRITE8_HANDLER( ajax_bankswitch_2_w )
 
 MACHINE_START( ajax )
 {
-	ajax_state *state = (ajax_state *)machine->driver_data;
-	UINT8 *MAIN = memory_region(machine, "maincpu");
-	UINT8 *SUB  = memory_region(machine, "sub");
+	ajax_state *state = machine->driver_data<ajax_state>();
+	UINT8 *MAIN = machine->region("maincpu")->base();
+	UINT8 *SUB  = machine->region("sub")->base();
 
 	memory_configure_bank(machine, "bank1", 0,  9,  &SUB[0x10000], 0x2000);
 	memory_configure_bank(machine, "bank2", 0, 12, &MAIN[0x10000], 0x2000);
@@ -224,7 +224,7 @@ MACHINE_START( ajax )
 
 MACHINE_RESET( ajax )
 {
-	ajax_state *state = (ajax_state *)machine->driver_data;
+	ajax_state *state = machine->driver_data<ajax_state>();
 
 	state->priority = 0;
 	state->firq_enable = 0;
@@ -232,7 +232,7 @@ MACHINE_RESET( ajax )
 
 INTERRUPT_GEN( ajax_interrupt )
 {
-	ajax_state *state = (ajax_state *)device->machine->driver_data;
+	ajax_state *state = device->machine->driver_data<ajax_state>();
 
 	if (k051960_is_irq_enabled(state->k051960))
 		cpu_set_input_line(device, KONAMI_IRQ_LINE, HOLD_LINE);

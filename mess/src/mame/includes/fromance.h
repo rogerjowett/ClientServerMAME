@@ -7,12 +7,11 @@
 
 ***************************************************************************/
 
-class fromance_state
+class fromance_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, fromance_state(machine)); }
-
-	fromance_state(running_machine &machine) { }
+	fromance_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers (used by pipedrm) */
 	UINT8 *  videoram;
@@ -41,7 +40,7 @@ public:
 	UINT8    pending_command, sound_command;
 
 	/* devices */
-	running_device *subcpu;
+	device_t *subcpu;
 };
 
 

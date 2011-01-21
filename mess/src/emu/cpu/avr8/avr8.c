@@ -27,8 +27,8 @@ struct _avr8_state
     UINT32 pc;
 
     legacy_cpu_device *device;
-    const address_space *program;
-    const address_space *io;
+    address_space *program;
+    address_space *io;
     int icount;
 };
 
@@ -75,7 +75,7 @@ enum
 #define ZREG            ((READ_IO_8(cpustate, 31) << 8) | READ_IO_8(cpustate, 30))
 #define SPREG           ((READ_IO_8(cpustate, AVR8_IO_SPH) << 8) | READ_IO_8(cpustate, AVR8_IO_SPL))
 
-INLINE avr8_state *get_safe_token(running_device *device)
+INLINE avr8_state *get_safe_token(device_t *device)
 {
     assert(device != NULL);
     assert(device->type() == AVR8);
@@ -115,32 +115,32 @@ INLINE bool avr8_is_long_opcode(UINT16 op)
 
 INLINE UINT8 READ_PRG_8(avr8_state *cpustate, UINT32 address)
 {
-    return memory_read_byte_16le(cpustate->program, address);
+    return cpustate->program->read_byte(address);
 }
 
 INLINE UINT16 READ_PRG_16(avr8_state *cpustate, UINT32 address)
 {
-    return memory_read_word_16le(cpustate->program, address << 1);
+    return cpustate->program->read_word(address << 1);
 }
 
 INLINE void WRITE_PRG_8(avr8_state *cpustate, UINT32 address, UINT8 data)
 {
-    memory_write_byte_16le(cpustate->program, address, data);
+    cpustate->program->write_byte(address, data);
 }
 
 INLINE void WRITE_PRG_16(avr8_state *cpustate, UINT32 address, UINT16 data)
 {
-    memory_write_word_16le(cpustate->program, address, data);
+    cpustate->program->write_word(address, data);
 }
 
 INLINE UINT8 READ_IO_8(avr8_state *cpustate, UINT16 address)
 {
-    return memory_read_byte(cpustate->io, address);
+    return cpustate->io->read_byte(address);
 }
 
 INLINE void WRITE_IO_8(avr8_state *cpustate, UINT16 address, UINT8 data)
 {
-    memory_write_byte(cpustate->io, address, data);
+    cpustate->io->write_byte(address, data);
 }
 
 INLINE void PUSH(avr8_state *cpustate, UINT8 val)

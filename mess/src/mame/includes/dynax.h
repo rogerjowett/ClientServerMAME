@@ -6,12 +6,11 @@
 
 #include "sound/okim6295.h"
 
-class dynax_state
+class dynax_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, dynax_state(machine)); }
-
-	dynax_state(running_machine &machine) { }
+	dynax_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	// up to 8 layers, 2 images per layer (interleaved on screen)
 	UINT8 *  pixmap[8][2];
@@ -119,13 +118,13 @@ public:
 
 
 	/* devices */
-	running_device *maincpu;
-	running_device *soundcpu;
-	running_device *rtc;
-	running_device *ymsnd;
+	device_t *maincpu;
+	device_t *soundcpu;
+	device_t *rtc;
+	device_t *ymsnd;
 	okim6295_device *oki;
-	running_device *top_scr;
-	running_device *bot_scr;
+	device_t *top_scr;
+	device_t *bot_scr;
 };
 
 //----------- defined in drivers/dynax.c -----------

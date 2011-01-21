@@ -293,6 +293,7 @@ Notes:
 #include "cpu/mips/r3000.h"
 #include "cpu/jaguar/jaguar.h"
 #include "machine/idectrl.h"
+#include "machine/nvram.h"
 #include "sound/dac.h"
 #include "includes/jaguar.h"
 
@@ -300,6 +301,17 @@ Notes:
 #define JAGUAR_CLOCK		XTAL_52MHz
 #define R3000_CLOCK			XTAL_40MHz
 #define M68K_CLOCK			XTAL_50MHz
+
+
+class cojag_state : public driver_device
+{
+public:
+	cojag_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config),
+		  m_nvram(*this, "nvram") { }
+
+	required_shared_ptr<UINT32>	m_nvram;
+};
 
 
 
@@ -341,7 +353,7 @@ static UINT32 *rom_base;
 
 static MACHINE_RESET( cojag )
 {
-	UINT8 *rom = memory_region(machine, "user2");
+	UINT8 *rom = machine->region("user2")->base();
 
 	/* 68020 only: copy the interrupt vectors into RAM */
 	if (!cojag_is_r3000)
@@ -423,7 +435,7 @@ static WRITE32_HANDLER( misc_control_w )
 	}
 
 	/* adjust banking */
-	if (memory_region(space->machine, "user2"))
+	if (space->machine->region("user2")->base())
 	{
 		memory_set_bank(space->machine, "bank2", (data >> 1) & 7);
 		memory_set_bank(space->machine, "bank9", (data >> 1) & 7);
@@ -489,7 +501,7 @@ static WRITE32_HANDLER( latch_w )
 	logerror("%08X:latch_w(%X)\n", cpu_get_previouspc(space->cpu), data);
 
 	/* adjust banking */
-	if (memory_region(space->machine, "user2"))
+	if (space->machine->region("user2")->base())
 	{
 		if (cojag_is_r3000)
 			memory_set_bank(space->machine, "bank1", data & 1);
@@ -507,10 +519,11 @@ static WRITE32_HANDLER( latch_w )
 
 static READ32_HANDLER( eeprom_data_r )
 {
+	cojag_state *state = space->machine->driver_data<cojag_state>();
 	if (cojag_is_r3000)
-		return space->machine->generic.nvram.u32[offset] | 0xffffff00;
+		return state->m_nvram[offset] | 0xffffff00;
 	else
-		return space->machine->generic.nvram.u32[offset] | 0x00ffffff;
+		return state->m_nvram[offset] | 0x00ffffff;
 }
 
 
@@ -524,10 +537,11 @@ static WRITE32_HANDLER( eeprom_data_w )
 {
 //  if (eeprom_enable)
 	{
+		cojag_state *state = space->machine->driver_data<cojag_state>();
 		if (cojag_is_r3000)
-			space->machine->generic.nvram.u32[offset] = data & 0x000000ff;
+			state->m_nvram[offset] = data & 0x000000ff;
 		else
-			space->machine->generic.nvram.u32[offset] = data & 0xff000000;
+			state->m_nvram[offset] = data & 0xff000000;
 	}
 //  else
 //      logerror("%08X:error writing to disabled EEPROM\n", cpu_get_previouspc(space->cpu));
@@ -804,7 +818,7 @@ static ADDRESS_MAP_START( r3000_map, ADDRESS_SPACE_PROGRAM, 32 )
 	AM_RANGE(0x12000000, 0x120fffff) AM_RAM		// tested in self-test only?
 	AM_RANGE(0x14000004, 0x14000007) AM_WRITE(watchdog_reset32_w)
 	AM_RANGE(0x16000000, 0x16000003) AM_WRITE(eeprom_enable_w)
-	AM_RANGE(0x18000000, 0x18001fff) AM_READWRITE(eeprom_data_r, eeprom_data_w) AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0x18000000, 0x18001fff) AM_READWRITE(eeprom_data_r, eeprom_data_w) AM_SHARE("nvram")
 	AM_RANGE(0x1fc00000, 0x1fdfffff) AM_ROM AM_REGION("user1", 0) AM_BASE(&rom_base)
 ADDRESS_MAP_END
 
@@ -813,7 +827,7 @@ static ADDRESS_MAP_START( m68020_map, ADDRESS_SPACE_PROGRAM, 32 )
 	AM_RANGE(0x000000, 0x7fffff) AM_RAM AM_BASE(&jaguar_shared_ram) AM_SHARE("share1")
 	AM_RANGE(0x800000, 0x9fffff) AM_ROM AM_REGION("user1", 0) AM_BASE(&rom_base)
 	AM_RANGE(0xa00000, 0xa1ffff) AM_RAM
-	AM_RANGE(0xa20000, 0xa21fff) AM_READWRITE(eeprom_data_r, eeprom_data_w) AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0xa20000, 0xa21fff) AM_READWRITE(eeprom_data_r, eeprom_data_w) AM_SHARE("nvram")
 	AM_RANGE(0xa30000, 0xa30003) AM_WRITE(watchdog_reset32_w)
 	AM_RANGE(0xa40000, 0xa40003) AM_WRITE(eeprom_enable_w)
 	AM_RANGE(0xb70000, 0xb70003) AM_READWRITE(misc_control_r, misc_control_w)
@@ -1082,7 +1096,7 @@ INPUT_PORTS_END
  *
  *************************************/
 
-static const r3000_cpu_core config =
+static const r3000_cpu_core r3000_config =
 {
 	0,		/* 1 if we have an FPU, 0 otherwise */
 	4096,	/* code cache size */
@@ -1102,56 +1116,55 @@ static const jaguar_cpu_config dsp_config =
 };
 
 
-static MACHINE_DRIVER_START( cojagr3k )
+static MACHINE_CONFIG_START( cojagr3k, cojag_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", R3041BE, R3000_CLOCK)
-	MDRV_CPU_CONFIG(config)
-	MDRV_CPU_PROGRAM_MAP(r3000_map)
+	MCFG_CPU_ADD("maincpu", R3041BE, R3000_CLOCK)
+	MCFG_CPU_CONFIG(r3000_config)
+	MCFG_CPU_PROGRAM_MAP(r3000_map)
 
-	MDRV_CPU_ADD("gpu", JAGUARGPU, JAGUAR_CLOCK/2)
-	MDRV_CPU_CONFIG(gpu_config)
-	MDRV_CPU_PROGRAM_MAP(gpu_map)
+	MCFG_CPU_ADD("gpu", JAGUARGPU, JAGUAR_CLOCK/2)
+	MCFG_CPU_CONFIG(gpu_config)
+	MCFG_CPU_PROGRAM_MAP(gpu_map)
 
-	MDRV_CPU_ADD("audiocpu", JAGUARDSP, JAGUAR_CLOCK/2)
-	MDRV_CPU_CONFIG(dsp_config)
-	MDRV_CPU_PROGRAM_MAP(dsp_map)
+	MCFG_CPU_ADD("audiocpu", JAGUARDSP, JAGUAR_CLOCK/2)
+	MCFG_CPU_CONFIG(dsp_config)
+	MCFG_CPU_PROGRAM_MAP(dsp_map)
 
-	MDRV_MACHINE_RESET(cojag)
-	MDRV_NVRAM_HANDLER(generic_1fill)
+	MCFG_MACHINE_RESET(cojag)
+	MCFG_NVRAM_ADD_1FILL("nvram")
 
-	MDRV_IDE_CONTROLLER_ADD("ide", jaguar_external_int)
+	MCFG_IDE_CONTROLLER_ADD("ide", jaguar_external_int)
 
-	MDRV_TIMER_ADD("serial_timer", jaguar_serial_callback)
+	MCFG_TIMER_ADD("serial_timer", jaguar_serial_callback)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_RAW_PARAMS(COJAG_PIXEL_CLOCK/2, 456, 42, 402, 262, 17, 257)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_RAW_PARAMS(COJAG_PIXEL_CLOCK/2, 456, 42, 402, 262, 17, 257)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
 
-	MDRV_VIDEO_START(cojag)
-	MDRV_VIDEO_UPDATE(cojag)
+	MCFG_VIDEO_START(cojag)
+	MCFG_VIDEO_UPDATE(cojag)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("dac1", DAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ADD("dac1", DAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
 
-	MDRV_SOUND_ADD("dac2", DAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("dac2", DAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( cojag68k )
-	MDRV_IMPORT_FROM(cojagr3k)
+static MACHINE_CONFIG_DERIVED( cojag68k, cojagr3k )
 
 	/* basic machine hardware */
-	MDRV_CPU_REPLACE("maincpu", M68EC020, M68K_CLOCK/2)
-	MDRV_CPU_PROGRAM_MAP(m68020_map)
-MACHINE_DRIVER_END
+	MCFG_CPU_REPLACE("maincpu", M68EC020, M68K_CLOCK/2)
+	MCFG_CPU_PROGRAM_MAP(m68020_map)
+MACHINE_CONFIG_END
 
 
 
@@ -1184,10 +1197,10 @@ ROM_END
 
 ROM_START( area51a ) /* 68020 based, Area51 Atari Games License  Date: Oct 25, 1995 */
 	ROM_REGION32_BE( 0x200000, "user1", 0 )	/* 2MB for 68020 code */
-	ROM_LOAD32_BYTE( "3h", 0x00000, 0x80000, CRC(116d37e6) SHA1(5d36cae792dd349faa77cd2d8018722a28ee55c1) )
-	ROM_LOAD32_BYTE( "3p", 0x00001, 0x80000, CRC(eb10f539) SHA1(dadc4be5a442dd4bd17385033056555e528ed994) )
-	ROM_LOAD32_BYTE( "3m", 0x00002, 0x80000, CRC(c6d8322b) SHA1(90cf848a4195c51b505653cc2c74a3b9e3c851b8) )
-	ROM_LOAD32_BYTE( "3k", 0x00003, 0x80000, CRC(729eb1b7) SHA1(21864b4281b1ad17b2903e3aa294e4be74161e80) )
+	ROM_LOAD32_BYTE( "136105-0003a.3h", 0x00000, 0x80000, CRC(116d37e6) SHA1(5d36cae792dd349faa77cd2d8018722a28ee55c1) )
+	ROM_LOAD32_BYTE( "136105-0002a.3p", 0x00001, 0x80000, CRC(eb10f539) SHA1(dadc4be5a442dd4bd17385033056555e528ed994) )
+	ROM_LOAD32_BYTE( "136105-0001a.3m", 0x00002, 0x80000, CRC(c6d8322b) SHA1(90cf848a4195c51b505653cc2c74a3b9e3c851b8) )
+	ROM_LOAD32_BYTE( "136105-0000a.3k", 0x00003, 0x80000, CRC(729eb1b7) SHA1(21864b4281b1ad17b2903e3aa294e4be74161e80) )
 
 	DISK_REGION( "ide" )
 	DISK_IMAGE( "area51", 0, SHA1(3b303bc37e206a6d7339352c869f050d04186f11) )

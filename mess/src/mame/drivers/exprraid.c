@@ -219,7 +219,7 @@ Stephh's notes (based on the games M6502 code and some tests) :
 
 static READ8_HANDLER( exprraid_protection_r )
 {
-	exprraid_state *state = (exprraid_state *)space->machine->driver_data;
+	exprraid_state *state = space->machine->driver_data<exprraid_state>();
 	switch (offset)
 	{
 	case 0:
@@ -233,7 +233,7 @@ static READ8_HANDLER( exprraid_protection_r )
 
 static WRITE8_HANDLER( sound_cpu_command_w )
 {
-	exprraid_state *state = (exprraid_state *)space->machine->driver_data;
+	exprraid_state *state = space->machine->driver_data<exprraid_state>();
 	soundlatch_w(space, 0, data);
 	cpu_set_input_line(state->slave, INPUT_LINE_NMI, PULSE_LINE);
 }
@@ -280,13 +280,13 @@ ADDRESS_MAP_END
 
 static INPUT_CHANGED( coin_inserted_deco16 )
 {
-	exprraid_state *state = (exprraid_state *)field->port->machine->driver_data;
+	exprraid_state *state = field->port->machine->driver_data<exprraid_state>();
 	cpu_set_input_line(state->maincpu, DECO16_IRQ_LINE, newval ? CLEAR_LINE : ASSERT_LINE);
 }
 
 static INPUT_CHANGED( coin_inserted_nmi )
 {
-	exprraid_state *state = (exprraid_state *)field->port->machine->driver_data;
+	exprraid_state *state = field->port->machine->driver_data<exprraid_state>();
 	cpu_set_input_line(state->maincpu, INPUT_LINE_NMI, newval ? CLEAR_LINE : ASSERT_LINE);
 }
 
@@ -439,9 +439,9 @@ GFXDECODE_END
 
 
 /* handler called by the 3812 emulator when the internal timers cause an IRQ */
-static void irqhandler( running_device *device, int linestate )
+static void irqhandler( device_t *device, int linestate )
 {
-	exprraid_state *state = (exprraid_state *)device->machine->driver_data;
+	exprraid_state *state = device->machine->driver_data<exprraid_state>();
 	cpu_set_input_line_and_vector(state->slave, 0, linestate, 0xff);
 }
 
@@ -453,7 +453,7 @@ static const ym3526_interface ym3526_config =
 #if 0
 static INTERRUPT_GEN( exprraid_interrupt )
 {
-	exprraid_state *state = (exprraid_state *)device->machine->driver_data;
+	exprraid_state *state = device->machine->driver_data<exprraid_state>();
 
 	if ((~input_port_read(device->machine, "IN2")) & 0xc0)
 	{
@@ -475,7 +475,7 @@ static INTERRUPT_GEN( exprraid_interrupt )
 
 static MACHINE_START( exprraid )
 {
-	exprraid_state *state = (exprraid_state *)machine->driver_data;
+	exprraid_state *state = machine->driver_data<exprraid_state>();
 
 	state->maincpu = machine->device("maincpu");
 	state->slave = machine->device("slave");
@@ -485,7 +485,7 @@ static MACHINE_START( exprraid )
 
 static MACHINE_RESET( exprraid )
 {
-	exprraid_state *state = (exprraid_state *)machine->driver_data;
+	exprraid_state *state = machine->driver_data<exprraid_state>();
 
 	state->bg_index[0] = 0;
 	state->bg_index[1] = 0;
@@ -493,54 +493,50 @@ static MACHINE_RESET( exprraid )
 	state->bg_index[3] = 0;
 }
 
-static MACHINE_DRIVER_START( exprraid )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(exprraid_state)
+static MACHINE_CONFIG_START( exprraid, exprraid_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", DECO16, 4000000)        /* 4 MHz ??? */
-	MDRV_CPU_PROGRAM_MAP(master_map)
-	MDRV_CPU_IO_MAP(master_io_map)
+	MCFG_CPU_ADD("maincpu", DECO16, 4000000)        /* 4 MHz ??? */
+	MCFG_CPU_PROGRAM_MAP(master_map)
+	MCFG_CPU_IO_MAP(master_io_map)
 
-	MDRV_CPU_ADD("slave", M6809, 2000000)        /* 2 MHz ??? */
-	MDRV_CPU_PROGRAM_MAP(slave_map)
+	MCFG_CPU_ADD("slave", M6809, 2000000)        /* 2 MHz ??? */
+	MCFG_CPU_PROGRAM_MAP(slave_map)
 								/* IRQs are caused by the YM3526 */
-	MDRV_MACHINE_START(exprraid)
-	MDRV_MACHINE_RESET(exprraid)
+	MCFG_MACHINE_START(exprraid)
+	MCFG_MACHINE_RESET(exprraid)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(1*8, 31*8-1, 1*8, 31*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(1*8, 31*8-1, 1*8, 31*8-1)
 
-	MDRV_GFXDECODE(exprraid)
-	MDRV_PALETTE_LENGTH(256)
+	MCFG_GFXDECODE(exprraid)
+	MCFG_PALETTE_LENGTH(256)
 
-	MDRV_PALETTE_INIT(RRRR_GGGG_BBBB)
-	MDRV_VIDEO_START(exprraid)
-	MDRV_VIDEO_UPDATE(exprraid)
+	MCFG_PALETTE_INIT(RRRR_GGGG_BBBB)
+	MCFG_VIDEO_START(exprraid)
+	MCFG_VIDEO_UPDATE(exprraid)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ym1", YM2203, 1500000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
+	MCFG_SOUND_ADD("ym1", YM2203, 1500000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
 
-	MDRV_SOUND_ADD("ym2", YM3526, 3600000)
-	MDRV_SOUND_CONFIG(ym3526_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.60)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ym2", YM3526, 3600000)
+	MCFG_SOUND_CONFIG(ym3526_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.60)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( exprboot )
-	MDRV_IMPORT_FROM(exprraid)
+static MACHINE_CONFIG_DERIVED( exprboot, exprraid )
 
-	MDRV_CPU_REPLACE("maincpu", M6502, 4000000)        /* 4 MHz ??? */
-	MDRV_CPU_PROGRAM_MAP(master_map)
-MACHINE_DRIVER_END
+	MCFG_CPU_REPLACE("maincpu", M6502, 4000000)        /* 4 MHz ??? */
+	MCFG_CPU_PROGRAM_MAP(master_map)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************
@@ -741,7 +737,7 @@ static void exprraid_gfx_expand(running_machine *machine)
 {
 	/* Expand the background rom so we can use regular decode routines */
 
-	UINT8	*gfx = memory_region(machine, "gfx3");
+	UINT8	*gfx = machine->region("gfx3")->base();
 	int offs = 0x10000 - 0x1000;
 	int i;
 
@@ -760,7 +756,7 @@ static void exprraid_gfx_expand(running_machine *machine)
 
 static DRIVER_INIT( wexpress )
 {
-	UINT8 *rom = memory_region(machine, "maincpu");
+	UINT8 *rom = machine->region("maincpu")->base();
 
 	/* HACK: this set uses M6502 irq vectors but DECO CPU-16 opcodes??? */
 	rom[0xfff7] = rom[0xfffa];

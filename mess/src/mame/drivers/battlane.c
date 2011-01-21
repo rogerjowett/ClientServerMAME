@@ -22,7 +22,7 @@
 
 static WRITE8_HANDLER( battlane_cpu_command_w )
 {
-	battlane_state *state = (battlane_state *)space->machine->driver_data;
+	battlane_state *state = space->machine->driver_data<battlane_state>();
 
 	state->cpu_control = data;
 
@@ -81,7 +81,7 @@ static WRITE8_HANDLER( battlane_cpu_command_w )
 
 static INTERRUPT_GEN( battlane_cpu1_interrupt )
 {
-	battlane_state *state = (battlane_state *)device->machine->driver_data;
+	battlane_state *state = device->machine->driver_data<battlane_state>();
 
 	/* See note in battlane_cpu_command_w */
 	if (~state->cpu_control & 0x08)
@@ -256,9 +256,9 @@ GFXDECODE_END
  *
  *************************************/
 
-static void irqhandler( running_device *device, int irq )
+static void irqhandler( device_t *device, int irq )
 {
-	battlane_state *state = (battlane_state *)device->machine->driver_data;
+	battlane_state *state = device->machine->driver_data<battlane_state>();
 	cpu_set_input_line(state->maincpu, M6809_FIRQ_LINE, irq ? ASSERT_LINE : CLEAR_LINE);
 }
 
@@ -276,7 +276,7 @@ static const ym3526_interface ym3526_config =
 
 static MACHINE_START( battlane )
 {
-	battlane_state *state = (battlane_state *)machine->driver_data;
+	battlane_state *state = machine->driver_data<battlane_state>();
 
 	state->maincpu = machine->device("maincpu");
 	state->subcpu = machine->device("sub");
@@ -287,50 +287,47 @@ static MACHINE_START( battlane )
 
 static MACHINE_RESET( battlane )
 {
-	battlane_state *state = (battlane_state *)machine->driver_data;
+	battlane_state *state = machine->driver_data<battlane_state>();
 
 	state->video_ctrl = 0;
 	state->cpu_control = 0;
 }
 
-static MACHINE_DRIVER_START( battlane )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(battlane_state)
+static MACHINE_CONFIG_START( battlane, battlane_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6809, 1250000)        /* 1.25 MHz ? */
-	MDRV_CPU_PROGRAM_MAP(battlane_map)
-	MDRV_CPU_VBLANK_INT("screen", battlane_cpu1_interrupt)
+	MCFG_CPU_ADD("maincpu", M6809, 1250000)        /* 1.25 MHz ? */
+	MCFG_CPU_PROGRAM_MAP(battlane_map)
+	MCFG_CPU_VBLANK_INT("screen", battlane_cpu1_interrupt)
 
-	MDRV_CPU_ADD("sub", M6809, 1250000)        /* 1.25 MHz ? */
-	MDRV_CPU_PROGRAM_MAP(battlane_map)
+	MCFG_CPU_ADD("sub", M6809, 1250000)        /* 1.25 MHz ? */
+	MCFG_CPU_PROGRAM_MAP(battlane_map)
 
-	MDRV_QUANTUM_TIME(HZ(6000))
+	MCFG_QUANTUM_TIME(HZ(6000))
 
-	MDRV_MACHINE_START(battlane)
-	MDRV_MACHINE_RESET(battlane)
+	MCFG_MACHINE_START(battlane)
+	MCFG_MACHINE_RESET(battlane)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32 * 8, 32 * 8)
-	MDRV_SCREEN_VISIBLE_AREA(1 * 8, 31 * 8 - 1, 0 * 8, 32 * 8 - 1)
-	MDRV_GFXDECODE(battlane)
-	MDRV_PALETTE_LENGTH(64)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32 * 8, 32 * 8)
+	MCFG_SCREEN_VISIBLE_AREA(1 * 8, 31 * 8 - 1, 0 * 8, 32 * 8 - 1)
+	MCFG_GFXDECODE(battlane)
+	MCFG_PALETTE_LENGTH(64)
 
-	MDRV_VIDEO_START(battlane)
-	MDRV_VIDEO_UPDATE(battlane)
+	MCFG_VIDEO_START(battlane)
+	MCFG_VIDEO_UPDATE(battlane)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM3526, 3000000)
-	MDRV_SOUND_CONFIG(ym3526_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM3526, 3000000)
+	MCFG_SOUND_CONFIG(ym3526_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 /*************************************

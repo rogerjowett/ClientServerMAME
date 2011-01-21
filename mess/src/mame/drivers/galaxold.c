@@ -824,9 +824,10 @@ static ADDRESS_MAP_START( hunchbkg, ADDRESS_SPACE_PROGRAM, 8 )
 ADDRESS_MAP_END
 
 /* the nmi line seems to be inverted on the cpu plugin board */
+READ8_DEVICE_HANDLER( ttl7474_trampoline ) { return ttl7474_output_comp_r(device); }
 static ADDRESS_MAP_START( hunchbkg_io, ADDRESS_SPACE_IO, 8 )
 	AM_RANGE(S2650_DATA_PORT,  S2650_DATA_PORT) AM_READNOP // not used
-	AM_RANGE(S2650_SENSE_PORT, S2650_SENSE_PORT) AM_DEVREAD("7474_9m_1", ttl7474_output_comp_r)
+	AM_RANGE(S2650_SENSE_PORT, S2650_SENSE_PORT) AM_DEVREAD("7474_9m_1", ttl7474_trampoline)
 ADDRESS_MAP_END
 
 
@@ -1507,7 +1508,7 @@ static INPUT_PORTS_START( porter )
 	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_JOYSTICK_RIGHT ) PORT_8WAY PORT_COCKTAIL
 	PORT_BIT( 0x10, IP_ACTIVE_HIGH, IPT_JOYSTICK_UP )  PORT_8WAY PORT_COCKTAIL
 	PORT_BIT( 0x20, IP_ACTIVE_HIGH, IPT_BUTTON1 ) PORT_COCKTAIL       /* see notes */
-	PORT_DIPNAME( 0x40, 0x00, DEF_STR( Coinage ) )
+	PORT_DIPNAME( 0x40, 0x00, DEF_STR( Bonus_Life ) )
 	PORT_DIPSETTING(	0x00, "10000 only" )
 	PORT_DIPSETTING(	0x40, "30000 only" )
 	PORT_DIPNAME( 0x80, 0x00, DEF_STR( Cabinet ) )
@@ -2117,349 +2118,338 @@ static const ay8910_interface bongo_ay8910_interface =
 };
 
 
-static MACHINE_DRIVER_START( galaxold_base )
+static MACHINE_CONFIG_START( galaxold_base, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, PIXEL_CLOCK/2)	/* 3.072 MHz */
-	MDRV_CPU_PROGRAM_MAP(galaxold_map)
+	MCFG_CPU_ADD("maincpu", Z80, PIXEL_CLOCK/2)	/* 3.072 MHz */
+	MCFG_CPU_PROGRAM_MAP(galaxold_map)
 
-	MDRV_MACHINE_RESET(galaxold)
+	MCFG_MACHINE_RESET(galaxold)
 
-	MDRV_7474_ADD("7474_9m_1", "7474_9m_1", galaxold_7474_9m_1_callback, NULL)
-	MDRV_7474_ADD("7474_9m_2", "7474_9m_1", NULL, galaxold_7474_9m_2_q_callback)
+	MCFG_7474_ADD("7474_9m_1", "7474_9m_1", galaxold_7474_9m_1_callback, NULL)
+	MCFG_7474_ADD("7474_9m_2", "7474_9m_1", NULL, galaxold_7474_9m_2_q_callback)
 
-	MDRV_TIMER_ADD("int_timer", galaxold_interrupt_timer)
+	MCFG_TIMER_ADD("int_timer", galaxold_interrupt_timer)
 
 	/* video hardware */
-	MDRV_GFXDECODE(galaxian)
-	MDRV_PALETTE_LENGTH(32+2+64)		/* 32 for the characters, 2 for the bullets, 64 for the stars */
+	MCFG_GFXDECODE(galaxian)
+	MCFG_PALETTE_LENGTH(32+2+64)		/* 32 for the characters, 2 for the bullets, 64 for the stars */
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_RAW_PARAMS(PIXEL_CLOCK, HTOTAL, HBEND, HBSTART, VTOTAL, VBEND, VBSTART)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_RAW_PARAMS(PIXEL_CLOCK, HTOTAL, HBEND, HBSTART, VTOTAL, VBEND, VBSTART)
 
-	MDRV_PALETTE_INIT(galaxold)
-	MDRV_VIDEO_START(galaxold)
-	MDRV_VIDEO_UPDATE(galaxold)
+	MCFG_PALETTE_INIT(galaxold)
+	MCFG_VIDEO_START(galaxold)
+	MCFG_VIDEO_UPDATE(galaxold)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-MACHINE_DRIVER_END
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( galaxian )
+static MACHINE_CONFIG_DERIVED( galaxian, galaxold_base )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(galaxold_base)
 
 	/* sound hardware */
-	MDRV_IMPORT_FROM(galaxian_audio)
-MACHINE_DRIVER_END
+	MCFG_FRAGMENT_ADD(galaxian_audio)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( batman2 )
+static MACHINE_CONFIG_DERIVED( batman2, galaxian )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(galaxian)
 
 	/* video hardware */
-	MDRV_VIDEO_START(batman2)
-MACHINE_DRIVER_END
+	MCFG_VIDEO_START(batman2)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( mooncrst )
+static MACHINE_CONFIG_DERIVED( mooncrst, galaxian )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(galaxian)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(mooncrst_map)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(mooncrst_map)
 
 	/* video hardware */
-	MDRV_VIDEO_START(mooncrst)
-MACHINE_DRIVER_END
+	MCFG_VIDEO_START(mooncrst)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( scramblb )
+static MACHINE_CONFIG_DERIVED( scramblb, galaxian )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(galaxian)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(scramblb_map)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(scramblb_map)
 
 	/* video hardware */
-	MDRV_PALETTE_LENGTH(32+2+64+1)	/* 32 for the characters, 2 for the bullets, 64 for the stars, 1 for background */
+	MCFG_PALETTE_LENGTH(32+2+64+1)	/* 32 for the characters, 2 for the bullets, 64 for the stars, 1 for background */
 
-	MDRV_PALETTE_INIT(scrambold)
-	MDRV_VIDEO_START(scrambold)
-MACHINE_DRIVER_END
+	MCFG_PALETTE_INIT(scrambold)
+	MCFG_VIDEO_START(scrambold)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( scramb2 )
+static MACHINE_CONFIG_DERIVED( scramb2, galaxian )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(galaxian)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(scramb2_map)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(scramb2_map)
 
 	/* video hardware */
-	MDRV_PALETTE_LENGTH(32+2+64+1)	/* 32 for the characters, 2 for the bullets, 64 for the stars, 1 for background */
+	MCFG_PALETTE_LENGTH(32+2+64+1)	/* 32 for the characters, 2 for the bullets, 64 for the stars, 1 for background */
 
-	MDRV_PALETTE_INIT(scrambold)
-	MDRV_VIDEO_START(scrambold)
-MACHINE_DRIVER_END
+	MCFG_PALETTE_INIT(scrambold)
+	MCFG_VIDEO_START(scrambold)
+MACHINE_CONFIG_END
 
 
 
-static MACHINE_DRIVER_START( 4in1 )
+static MACHINE_CONFIG_DERIVED( 4in1, galaxian )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(galaxian)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(_4in1_map)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(_4in1_map)
 
 	/* video hardware */
-	MDRV_GFXDECODE(_4in1)
+	MCFG_GFXDECODE(_4in1)
 
-	MDRV_VIDEO_START(pisces)
-MACHINE_DRIVER_END
+	MCFG_VIDEO_START(pisces)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( bagmanmc )
+static MACHINE_CONFIG_DERIVED( bagmanmc, galaxian )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(galaxian)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(bagmanmc_map)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(bagmanmc_map)
 
-	MDRV_MACHINE_RESET( devilfsg )
+	MCFG_MACHINE_RESET( devilfsg )
 
 	/* video hardware */
-	MDRV_GFXDECODE(bagmanmc)
+	MCFG_GFXDECODE(bagmanmc)
 
-	MDRV_VIDEO_START(pisces)
-MACHINE_DRIVER_END
+	MCFG_VIDEO_START(pisces)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( dkongjrm )
+static MACHINE_CONFIG_DERIVED( dkongjrm, galaxian )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(galaxian)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(dkongjrm_map)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(dkongjrm_map)
 
 	/* video hardware */
-	MDRV_VIDEO_START(dkongjrm)
-MACHINE_DRIVER_END
+	MCFG_VIDEO_START(dkongjrm)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( rockclim )
+static MACHINE_CONFIG_DERIVED( rockclim, galaxian )
+
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(galaxian)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(rockclim_map)
-	MDRV_GFXDECODE(rockclim)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(rockclim_map)
+	MCFG_GFXDECODE(rockclim)
 	/* video hardware */
-	MDRV_VIDEO_START(rockclim)
-	MDRV_PALETTE_LENGTH(64+64+2)	/* 64 colors only, but still uses bullets so we need to keep the palette big */
-	MDRV_PALETTE_INIT(rockclim)
+	MCFG_VIDEO_START(rockclim)
+	MCFG_PALETTE_LENGTH(64+64+2)	/* 64 colors only, but still uses bullets so we need to keep the palette big */
+	MCFG_PALETTE_INIT(rockclim)
 
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_SIZE(64*8, 32*8)
 
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( ozon1 )
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM(galaxold_base)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(ozon1_map)
-	MDRV_CPU_IO_MAP(ozon1_io_map)
-	MDRV_CPU_VBLANK_INT("screen", nmi_line_pulse)
-
-	MDRV_MACHINE_RESET(0)
-
-	MDRV_PALETTE_INIT(rockclim)
-	MDRV_PALETTE_LENGTH(32)
-
-	MDRV_VIDEO_START(galaxold_plain)
-	MDRV_SOUND_ADD("aysnd", AY8910, PIXEL_CLOCK/4)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
-
-static MACHINE_DRIVER_START( drivfrcg )
+static MACHINE_CONFIG_DERIVED( ozon1, galaxold_base )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", S2650, MASTER_CLOCK/6)
-	MDRV_CPU_PROGRAM_MAP(drivfrcg)
-	MDRV_CPU_IO_MAP(drivfrcg_io)
-	MDRV_CPU_VBLANK_INT("screen", hunchbks_vh_interrupt)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(ozon1_map)
+	MCFG_CPU_IO_MAP(ozon1_io_map)
+	MCFG_CPU_VBLANK_INT("screen", nmi_line_pulse)
+
+	MCFG_MACHINE_RESET(0)
+
+	MCFG_PALETTE_INIT(rockclim)
+	MCFG_PALETTE_LENGTH(32)
+
+	MCFG_VIDEO_START(galaxold_plain)
+	MCFG_SOUND_ADD("aysnd", AY8910, PIXEL_CLOCK/4)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
+
+static MACHINE_CONFIG_START( drivfrcg, driver_device )
+
+	/* basic machine hardware */
+	MCFG_CPU_ADD("maincpu", S2650, MASTER_CLOCK/6)
+	MCFG_CPU_PROGRAM_MAP(drivfrcg)
+	MCFG_CPU_IO_MAP(drivfrcg_io)
+	MCFG_CPU_VBLANK_INT("screen", hunchbks_vh_interrupt)
 
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(16000.0/132/2)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(16000.0/132/2)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_PALETTE_LENGTH(64)
-	MDRV_GFXDECODE(gmgalax)
+	MCFG_PALETTE_LENGTH(64)
+	MCFG_GFXDECODE(gmgalax)
 
-	MDRV_PALETTE_INIT(rockclim)
+	MCFG_PALETTE_INIT(rockclim)
 
-	MDRV_VIDEO_START(drivfrcg)
-	MDRV_VIDEO_UPDATE(galaxold)
+	MCFG_VIDEO_START(drivfrcg)
+	MCFG_VIDEO_UPDATE(galaxold)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_IMPORT_FROM(galaxian_audio)
-MACHINE_DRIVER_END
+	MCFG_FRAGMENT_ADD(galaxian_audio)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( bongo )
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM(galaxold_base)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(bongo)
-	MDRV_CPU_IO_MAP(bongo_io)
-
-	MDRV_VIDEO_START(bongo)
-	MDRV_VIDEO_UPDATE(galaxold)
-
-	MDRV_SOUND_ADD("aysnd", AY8910, PIXEL_CLOCK/4)
-	MDRV_SOUND_CONFIG(bongo_ay8910_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
-
-static MACHINE_DRIVER_START( hunchbkg )
+static MACHINE_CONFIG_DERIVED( bongo, galaxold_base )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(galaxold_base)
-	MDRV_CPU_REPLACE("maincpu", S2650, PIXEL_CLOCK / 4)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(bongo)
+	MCFG_CPU_IO_MAP(bongo_io)
 
-	MDRV_CPU_PROGRAM_MAP(hunchbkg)
-	MDRV_CPU_IO_MAP(hunchbkg_io)
+	MCFG_VIDEO_START(bongo)
+	MCFG_VIDEO_UPDATE(galaxold)
 
-	MDRV_MACHINE_RESET(hunchbkg)
+	MCFG_SOUND_ADD("aysnd", AY8910, PIXEL_CLOCK/4)
+	MCFG_SOUND_CONFIG(bongo_ay8910_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
-	MDRV_IMPORT_FROM(galaxian_audio)
-MACHINE_DRIVER_END
-
-static MACHINE_DRIVER_START( harem )
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM(galaxold_base)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(harem_cpu1)
-	MDRV_CPU_VBLANK_INT("screen", nmi_line_pulse)
-
-	MDRV_CPU_ADD("audiocpu", Z80, 1620000) //?
-	MDRV_CPU_PROGRAM_MAP(harem_cpu2)
-	MDRV_CPU_IO_MAP(harem_cpu2_io)
-
-	MDRV_MACHINE_RESET(0)
-
-	MDRV_PALETTE_INIT(rockclim)
-	MDRV_PALETTE_LENGTH(32)
-
-	MDRV_VIDEO_START(galaxold_plain)
-
-	MDRV_SOUND_ADD("ay1", AY8910, 2000000) //?
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.33/3)
-
-	MDRV_SOUND_ADD("ay2", AY8910, 2000000) //?
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.33/3)
-
-	MDRV_SOUND_ADD("ay3", AY8910, 2000000) //?
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.33/3)
-MACHINE_DRIVER_END
-
-static MACHINE_DRIVER_START( tazzmang )
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM(galaxian)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(tazzmang)
-MACHINE_DRIVER_END
-
-static MACHINE_DRIVER_START( racknrol )
+static MACHINE_CONFIG_DERIVED( hunchbkg, galaxold_base )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", S2650, PIXEL_CLOCK/2)
-	MDRV_CPU_PROGRAM_MAP(racknrol)
-	MDRV_CPU_IO_MAP(racknrol_io)
-	MDRV_CPU_VBLANK_INT("screen", hunchbks_vh_interrupt)
+	MCFG_CPU_REPLACE("maincpu", S2650, PIXEL_CLOCK / 4)
 
-	MDRV_GFXDECODE(galaxian)
-	MDRV_PALETTE_LENGTH(32)
+	MCFG_CPU_PROGRAM_MAP(hunchbkg)
+	MCFG_CPU_IO_MAP(hunchbkg_io)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_RAW_PARAMS(PIXEL_CLOCK, HTOTAL, HBEND, HBSTART, VTOTAL, VBEND, VBSTART)
+	MCFG_MACHINE_RESET(hunchbkg)
 
-	MDRV_PALETTE_INIT(rockclim)
-	MDRV_VIDEO_UPDATE(galaxold)
-	MDRV_VIDEO_START(racknrol)
+	MCFG_FRAGMENT_ADD(galaxian_audio)
+MACHINE_CONFIG_END
+
+static MACHINE_CONFIG_DERIVED( harem, galaxold_base )
+
+	/* basic machine hardware */
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(harem_cpu1)
+	MCFG_CPU_VBLANK_INT("screen", nmi_line_pulse)
+
+	MCFG_CPU_ADD("audiocpu", Z80, 1620000) //?
+	MCFG_CPU_PROGRAM_MAP(harem_cpu2)
+	MCFG_CPU_IO_MAP(harem_cpu2_io)
+
+	MCFG_MACHINE_RESET(0)
+
+	MCFG_PALETTE_INIT(rockclim)
+	MCFG_PALETTE_LENGTH(32)
+
+	MCFG_VIDEO_START(galaxold_plain)
+
+	MCFG_SOUND_ADD("ay1", AY8910, 2000000) //?
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.33/3)
+
+	MCFG_SOUND_ADD("ay2", AY8910, 2000000) //?
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.33/3)
+
+	MCFG_SOUND_ADD("ay3", AY8910, 2000000) //?
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.33/3)
+MACHINE_CONFIG_END
+
+static MACHINE_CONFIG_DERIVED( tazzmang, galaxian )
+
+	/* basic machine hardware */
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(tazzmang)
+MACHINE_CONFIG_END
+
+static MACHINE_CONFIG_START( racknrol, driver_device )
+
+	/* basic machine hardware */
+	MCFG_CPU_ADD("maincpu", S2650, PIXEL_CLOCK/2)
+	MCFG_CPU_PROGRAM_MAP(racknrol)
+	MCFG_CPU_IO_MAP(racknrol_io)
+	MCFG_CPU_VBLANK_INT("screen", hunchbks_vh_interrupt)
+
+	MCFG_GFXDECODE(galaxian)
+	MCFG_PALETTE_LENGTH(32)
+
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_RAW_PARAMS(PIXEL_CLOCK, HTOTAL, HBEND, HBSTART, VTOTAL, VBEND, VBSTART)
+
+	MCFG_PALETTE_INIT(rockclim)
+	MCFG_VIDEO_UPDATE(galaxold)
+	MCFG_VIDEO_START(racknrol)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("sn1", SN76496, PIXEL_CLOCK/2)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("sn1", SN76496, PIXEL_CLOCK/2)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-	MDRV_SOUND_ADD("sn2", SN76496, PIXEL_CLOCK/2)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SOUND_ADD("sn2", SN76496, PIXEL_CLOCK/2)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-	MDRV_SOUND_ADD("sn3", SN76496, PIXEL_CLOCK/2)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("sn3", SN76496, PIXEL_CLOCK/2)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( ckongg )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM(galaxian)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(ckongg_map)
-
-	MDRV_GFXDECODE(gmgalax)
-
-	MDRV_VIDEO_START(ckongs)
-
-MACHINE_DRIVER_END
-
-static MACHINE_DRIVER_START( ckongmc )
+static MACHINE_CONFIG_DERIVED( ckongg, galaxian )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(galaxian)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(ckongmc_map)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(ckongg_map)
 
-	MDRV_GFXDECODE(gmgalax)
+	MCFG_GFXDECODE(gmgalax)
 
-	MDRV_VIDEO_START(ckongs)
+	MCFG_VIDEO_START(ckongs)
 
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
-
-static MACHINE_DRIVER_START( hexpoola )
+static MACHINE_CONFIG_DERIVED( ckongmc, galaxian )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", S2650, PIXEL_CLOCK/2)
-	MDRV_CPU_PROGRAM_MAP(racknrol)
-	MDRV_CPU_IO_MAP(hexpoola_io)
-	MDRV_CPU_VBLANK_INT("screen", hunchbks_vh_interrupt)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(ckongmc_map)
 
-	MDRV_GFXDECODE(galaxian)
-	MDRV_PALETTE_LENGTH(32)
+	MCFG_GFXDECODE(gmgalax)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_RAW_PARAMS(PIXEL_CLOCK, HTOTAL, HBEND, HBSTART, VTOTAL, VBEND, VBSTART)
+	MCFG_VIDEO_START(ckongs)
 
-	MDRV_PALETTE_INIT(rockclim)
-	MDRV_VIDEO_UPDATE(galaxold)
-	MDRV_VIDEO_START(racknrol)
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_START( hexpoola, driver_device )
+
+	/* basic machine hardware */
+	MCFG_CPU_ADD("maincpu", S2650, PIXEL_CLOCK/2)
+	MCFG_CPU_PROGRAM_MAP(racknrol)
+	MCFG_CPU_IO_MAP(hexpoola_io)
+	MCFG_CPU_VBLANK_INT("screen", hunchbks_vh_interrupt)
+
+	MCFG_GFXDECODE(galaxian)
+	MCFG_PALETTE_LENGTH(32)
+
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_RAW_PARAMS(PIXEL_CLOCK, HTOTAL, HBEND, HBSTART, VTOTAL, VBEND, VBSTART)
+
+	MCFG_PALETTE_INIT(rockclim)
+	MCFG_VIDEO_UPDATE(galaxold)
+	MCFG_VIDEO_START(racknrol)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("snsnd", SN76496, PIXEL_CLOCK/2)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("snsnd", SN76496, PIXEL_CLOCK/2)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 /***************************************************************************
 

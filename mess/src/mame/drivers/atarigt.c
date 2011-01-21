@@ -49,10 +49,10 @@ static void cage_irq_callback(running_machine *machine, int reason);
 
 static void update_interrupts(running_machine *machine)
 {
-	atarigt_state *state = (atarigt_state *)machine->driver_data;
-	cputag_set_input_line(machine, "maincpu", 3, state->atarigen.sound_int_state    ? ASSERT_LINE : CLEAR_LINE);
-	cputag_set_input_line(machine, "maincpu", 4, state->atarigen.video_int_state    ? ASSERT_LINE : CLEAR_LINE);
-	cputag_set_input_line(machine, "maincpu", 6, state->atarigen.scanline_int_state ? ASSERT_LINE : CLEAR_LINE);
+	atarigt_state *state = machine->driver_data<atarigt_state>();
+	cputag_set_input_line(machine, "maincpu", 3, state->sound_int_state    ? ASSERT_LINE : CLEAR_LINE);
+	cputag_set_input_line(machine, "maincpu", 4, state->video_int_state    ? ASSERT_LINE : CLEAR_LINE);
+	cputag_set_input_line(machine, "maincpu", 6, state->scanline_int_state ? ASSERT_LINE : CLEAR_LINE);
 }
 
 
@@ -64,10 +64,10 @@ static MACHINE_START( atarigt )
 
 static MACHINE_RESET( atarigt )
 {
-	atarigt_state *state = (atarigt_state *)machine->driver_data;
+	atarigt_state *state = machine->driver_data<atarigt_state>();
 
-	atarigen_eeprom_reset(&state->atarigen);
-	atarigen_interrupt_reset(&state->atarigen, update_interrupts);
+	atarigen_eeprom_reset(state);
+	atarigen_interrupt_reset(state, update_interrupts);
 	atarigen_scanline_timer_reset(*machine->primary_screen, atarigt_scanline_update, 8);
 }
 
@@ -81,7 +81,7 @@ static MACHINE_RESET( atarigt )
 
 static void cage_irq_callback(running_machine *machine, int reason)
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	if (reason)
 		atarigen_sound_int_gen(machine->device("maincpu"));
@@ -108,10 +108,10 @@ static READ32_HANDLER( special_port2_r )
 
 static READ32_HANDLER( special_port3_r )
 {
-	atarigt_state *state = (atarigt_state *)space->machine->driver_data;
+	atarigt_state *state = space->machine->driver_data<atarigt_state>();
 	int temp = input_port_read(space->machine, "COIN");
-	if (state->atarigen.video_int_state) temp ^= 0x0001;
-	if (state->atarigen.scanline_int_state) temp ^= 0x0002;
+	if (state->video_int_state) temp ^= 0x0001;
+	if (state->scanline_int_state) temp ^= 0x0002;
 	return (temp << 16) | temp;
 }
 
@@ -211,7 +211,7 @@ static WRITE32_HANDLER( latch_w )
 
 static WRITE32_HANDLER( mo_command_w )
 {
-	atarigt_state *state = (atarigt_state *)space->machine->driver_data;
+	atarigt_state *state = space->machine->driver_data<atarigt_state>();
 	COMBINE_DATA(state->mo_command);
 	if (ACCESSING_BITS_0_15)
 		atarirle_command_w(0, ((data & 0xffff) == 2) ? ATARIRLE_COMMAND_CHECKSUM : ATARIRLE_COMMAND_DRAW);
@@ -280,7 +280,7 @@ static void tmek_update_mode(offs_t offset)
 }
 
 
-static void tmek_protection_w(const address_space *space, offs_t offset, UINT16 data)
+static void tmek_protection_w(address_space *space, offs_t offset, UINT16 data)
 {
 /*
     T-Mek init:
@@ -303,7 +303,7 @@ static void tmek_protection_w(const address_space *space, offs_t offset, UINT16 
 	}
 }
 
-static void tmek_protection_r(const address_space *space, offs_t offset, UINT16 *data)
+static void tmek_protection_r(address_space *space, offs_t offset, UINT16 *data)
 {
 	if (LOG_PROTECTION) logerror("%06X:Protection R@%06X\n", cpu_get_previouspc(space->cpu), offset);
 
@@ -369,7 +369,7 @@ static void primage_update_mode(offs_t offset)
 
 
 
-static void primrage_protection_w(const address_space *space, offs_t offset, UINT16 data)
+static void primrage_protection_w(address_space *space, offs_t offset, UINT16 data)
 {
 	if (LOG_PROTECTION)
 	{
@@ -439,7 +439,7 @@ static void primrage_protection_w(const address_space *space, offs_t offset, UIN
 
 
 
-static void primrage_protection_r(const address_space *space, offs_t offset, UINT16 *data)
+static void primrage_protection_r(address_space *space, offs_t offset, UINT16 *data)
 {
 	/* track accesses */
 	primage_update_mode(offset);
@@ -467,8 +467,8 @@ if (LOG_PROTECTION)
 			break;
 		case 0x275cc:
 			a6 = cpu_get_reg(space->cpu, M68K_A6);
-			p1 = (memory_read_word(space, a6+8) << 16) | memory_read_word(space, a6+10);
-			p2 = (memory_read_word(space, a6+12) << 16) | memory_read_word(space, a6+14);
+			p1 = (space->read_word(a6+8) << 16) | space->read_word(a6+10);
+			p2 = (space->read_word(a6+12) << 16) | space->read_word(a6+14);
 			logerror("Known Protection @ 275BC(%08X, %08X): R@%06X ", p1, p2, offset);
 			break;
 		case 0x275d2:
@@ -485,7 +485,7 @@ if (LOG_PROTECTION)
 		/* protection code from 3d8dc - 3d95a */
 		case 0x3d8f4:
 			a6 = cpu_get_reg(space->cpu, M68K_A6);
-			p1 = (memory_read_word(space, a6+12) << 16) | memory_read_word(space, a6+14);
+			p1 = (space->read_word(a6+12) << 16) | space->read_word(a6+14);
 			logerror("Known Protection @ 3D8F4(%08X): R@%06X ", p1, offset);
 			break;
 		case 0x3d8fa:
@@ -496,7 +496,7 @@ if (LOG_PROTECTION)
 		/* protection code from 437fa - 43860 */
 		case 0x43814:
 			a6 = cpu_get_reg(space->cpu, M68K_A6);
-			p1 = memory_read_dword(space, a6+14) & 0xffffff;
+			p1 = space->read_dword(a6+14) & 0xffffff;
 			logerror("Known Protection @ 43814(%08X): R@%06X ", p1, offset);
 			break;
 		case 0x4381c:
@@ -555,7 +555,7 @@ if (LOG_PROTECTION)
 
 static READ32_HANDLER( colorram_protection_r )
 {
-	atarigt_state *state = (atarigt_state *)space->machine->driver_data;
+	atarigt_state *state = space->machine->driver_data<atarigt_state>();
 	offs_t address = 0xd80000 + offset * 4;
 	UINT32 result32 = 0;
 	UINT16 result;
@@ -579,7 +579,7 @@ static READ32_HANDLER( colorram_protection_r )
 
 static WRITE32_HANDLER( colorram_protection_w )
 {
-	atarigt_state *state = (atarigt_state *)space->machine->driver_data;
+	atarigt_state *state = space->machine->driver_data<atarigt_state>();
 	offs_t address = 0xd80000 + offset * 4;
 
 	if (ACCESSING_BITS_16_31)
@@ -609,10 +609,10 @@ static ADDRESS_MAP_START( main_map, ADDRESS_SPACE_PROGRAM, 32 )
 	AM_RANGE(0xc00000, 0xc00003) AM_READWRITE(sound_data_r, sound_data_w)
 	AM_RANGE(0xd00014, 0xd00017) AM_READ(analog_port0_r)
 	AM_RANGE(0xd0001c, 0xd0001f) AM_READ(analog_port1_r)
-	AM_RANGE(0xd20000, 0xd20fff) AM_READWRITE(atarigen_eeprom_upper32_r, atarigen_eeprom32_w) AM_BASE_SIZE_MEMBER(atarigt_state, atarigen.eeprom, atarigen.eeprom_size)
+	AM_RANGE(0xd20000, 0xd20fff) AM_READWRITE(atarigen_eeprom_upper32_r, atarigen_eeprom32_w) AM_SHARE("eeprom")
 	AM_RANGE(0xd40000, 0xd4ffff) AM_WRITE(atarigen_eeprom_enable32_w)
-	AM_RANGE(0xd72000, 0xd75fff) AM_WRITE(atarigen_playfield32_w) AM_BASE_MEMBER(atarigt_state, atarigen.playfield32)
-	AM_RANGE(0xd76000, 0xd76fff) AM_WRITE(atarigen_alpha32_w) AM_BASE_MEMBER(atarigt_state, atarigen.alpha32)
+	AM_RANGE(0xd72000, 0xd75fff) AM_WRITE(atarigen_playfield32_w) AM_BASE_MEMBER(atarigt_state, playfield32)
+	AM_RANGE(0xd76000, 0xd76fff) AM_WRITE(atarigen_alpha32_w) AM_BASE_MEMBER(atarigt_state, alpha32)
 	AM_RANGE(0xd78000, 0xd78fff) AM_WRITE(atarirle_0_spriteram32_w) AM_BASE(&atarirle_0_spriteram32)
 	AM_RANGE(0xd7a200, 0xd7a203) AM_WRITE(mo_command_w) AM_BASE_MEMBER(atarigt_state, mo_command)
 	AM_RANGE(0xd70000, 0xd7ffff) AM_RAM
@@ -790,37 +790,36 @@ GFXDECODE_END
  *
  *************************************/
 
-static MACHINE_DRIVER_START( atarigt )
-	MDRV_DRIVER_DATA(atarigt_state)
+static MACHINE_CONFIG_START( atarigt, atarigt_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68EC020, ATARI_CLOCK_50MHz/2)
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_VBLANK_INT("screen", atarigen_video_int_gen)
-	MDRV_CPU_PERIODIC_INT(atarigen_scanline_int_gen, 250)
+	MCFG_CPU_ADD("maincpu", M68EC020, ATARI_CLOCK_50MHz/2)
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_VBLANK_INT("screen", atarigen_video_int_gen)
+	MCFG_CPU_PERIODIC_INT(atarigen_scanline_int_gen, 250)
 
-	MDRV_MACHINE_START(atarigt)
-	MDRV_MACHINE_RESET(atarigt)
-	MDRV_NVRAM_HANDLER(atarigen)
+	MCFG_MACHINE_START(atarigt)
+	MCFG_MACHINE_RESET(atarigt)
+	MCFG_NVRAM_ADD_1FILL("eeprom")
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
-	MDRV_GFXDECODE(atarigt)
-	MDRV_PALETTE_LENGTH(32768)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
+	MCFG_GFXDECODE(atarigt)
+	MCFG_PALETTE_LENGTH(32768)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
 	/* note: these parameters are from published specs, not derived */
 	/* the board uses a pair of GALs to determine H and V parameters */
-	MDRV_SCREEN_RAW_PARAMS(ATARI_CLOCK_14MHz/2, 456, 0, 336, 262, 0, 240)
+	MCFG_SCREEN_RAW_PARAMS(ATARI_CLOCK_14MHz/2, 456, 0, 336, 262, 0, 240)
 
-	MDRV_VIDEO_START(atarigt)
-	MDRV_VIDEO_EOF(atarirle)
-	MDRV_VIDEO_UPDATE(atarigt)
+	MCFG_VIDEO_START(atarigt)
+	MCFG_VIDEO_EOF(atarirle)
+	MCFG_VIDEO_UPDATE(atarigt)
 
 	/* sound hardware */
-	MDRV_IMPORT_FROM(cage)
-MACHINE_DRIVER_END
+	MCFG_FRAGMENT_ADD(cage)
+MACHINE_CONFIG_END
 
 
 
@@ -1247,9 +1246,9 @@ static WRITE32_HANDLER( tmek_pf_w )
 
 static DRIVER_INIT( tmek )
 {
-	atarigt_state *state = (atarigt_state *)machine->driver_data;
+	atarigt_state *state = machine->driver_data<atarigt_state>();
 
-	state->atarigen.eeprom_default = NULL;
+	state->eeprom_default = NULL;
 	state->is_primrage = 0;
 
 	cage_init(machine, 0x4fad);
@@ -1266,9 +1265,9 @@ static DRIVER_INIT( tmek )
 
 static void primrage_init_common(running_machine *machine, offs_t cage_speedup)
 {
-	atarigt_state *state = (atarigt_state *)machine->driver_data;
+	atarigt_state *state = machine->driver_data<atarigt_state>();
 
-	state->atarigen.eeprom_default = NULL;
+	state->eeprom_default = NULL;
 	state->is_primrage = 1;
 
 	cage_init(machine, cage_speedup);

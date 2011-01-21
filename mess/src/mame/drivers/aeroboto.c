@@ -30,7 +30,7 @@ Revisions:
 
 static READ8_HANDLER( aeroboto_201_r )
 {
-	aeroboto_state *state = (aeroboto_state *)space->machine->driver_data;
+	aeroboto_state *state = space->machine->driver_data<aeroboto_state>();
 	/* if you keep a button pressed during boot, the game will expect this */
 	/* serie of values to be returned from 3004, and display "PASS 201" if it is */
 	static const UINT8 res[4] = { 0xff, 0x9f, 0x1b, 0x03 };
@@ -42,7 +42,7 @@ static READ8_HANDLER( aeroboto_201_r )
 
 static INTERRUPT_GEN( aeroboto_interrupt )
 {
-	aeroboto_state *state = (aeroboto_state *)device->machine->driver_data;
+	aeroboto_state *state = device->machine->driver_data<aeroboto_state>();
 
 	if (!state->disable_irq)
 		cpu_set_input_line(device, 0, ASSERT_LINE);
@@ -58,7 +58,7 @@ static READ8_HANDLER( aeroboto_irq_ack_r )
 
 static READ8_HANDLER( aeroboto_2973_r )
 {
-	aeroboto_state *state = (aeroboto_state *)space->machine->driver_data;
+	aeroboto_state *state = space->machine->driver_data<aeroboto_state>();
 
 	state->mainram[0x02be] = 0;
 	return 0xff;
@@ -66,7 +66,7 @@ static READ8_HANDLER( aeroboto_2973_r )
 
 static WRITE8_HANDLER ( aeroboto_1a2_w )
 {
-	aeroboto_state *state = (aeroboto_state *)space->machine->driver_data;
+	aeroboto_state *state = space->machine->driver_data<aeroboto_state>();
 
 	state->mainram[0x01a2] = data;
 	if (data)
@@ -228,10 +228,10 @@ static const ay8910_interface ay8910_config =
 
 static MACHINE_START( formatz )
 {
-	aeroboto_state *state = (aeroboto_state *)machine->driver_data;
+	aeroboto_state *state = machine->driver_data<aeroboto_state>();
 
-	state->stars_rom = memory_region(machine, "gfx2");
-	state->stars_length = memory_region_length(machine, "gfx2");
+	state->stars_rom = machine->region("gfx2")->base();
+	state->stars_length = machine->region("gfx2")->bytes();
 
 	state_save_register_global(machine, state->disable_irq);
 	state_save_register_global(machine, state->count);
@@ -239,7 +239,7 @@ static MACHINE_START( formatz )
 
 static MACHINE_RESET( formatz )
 {
-	aeroboto_state *state = (aeroboto_state *)machine->driver_data;
+	aeroboto_state *state = machine->driver_data<aeroboto_state>();
 
 	state->disable_irq = 0;
 	state->count = 0;
@@ -252,49 +252,46 @@ static MACHINE_RESET( formatz )
 	state->sy = 0;
 }
 
-static MACHINE_DRIVER_START( formatz )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(aeroboto_state)
+static MACHINE_CONFIG_START( formatz, aeroboto_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6809, XTAL_10MHz/8) /* verified on pcb */
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_VBLANK_INT("screen", aeroboto_interrupt)
+	MCFG_CPU_ADD("maincpu", M6809, XTAL_10MHz/8) /* verified on pcb */
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_VBLANK_INT("screen", aeroboto_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", M6809, XTAL_10MHz/16) /* verified on pcb */
-	MDRV_CPU_PROGRAM_MAP(sound_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("audiocpu", M6809, XTAL_10MHz/16) /* verified on pcb */
+	MCFG_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_MACHINE_START(formatz)
-	MDRV_MACHINE_RESET(formatz)
+	MCFG_MACHINE_START(formatz)
+	MCFG_MACHINE_RESET(formatz)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 31*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 31*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(aeroboto)
+	MCFG_GFXDECODE(aeroboto)
 
-	MDRV_PALETTE_LENGTH(256)
+	MCFG_PALETTE_LENGTH(256)
 
-	MDRV_PALETTE_INIT(RRRR_GGGG_BBBB)
-	MDRV_VIDEO_START(aeroboto)
-	MDRV_VIDEO_UPDATE(aeroboto)
+	MCFG_PALETTE_INIT(RRRR_GGGG_BBBB)
+	MCFG_VIDEO_START(aeroboto)
+	MCFG_VIDEO_UPDATE(aeroboto)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ay1", AY8910, XTAL_10MHz/8) /* verified on pcb */
-	MDRV_SOUND_CONFIG(ay8910_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+	MCFG_SOUND_ADD("ay1", AY8910, XTAL_10MHz/8) /* verified on pcb */
+	MCFG_SOUND_CONFIG(ay8910_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
-	MDRV_SOUND_ADD("ay2", AY8910, XTAL_10MHz/16) /* verified on pcb */
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ay2", AY8910, XTAL_10MHz/16) /* verified on pcb */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+MACHINE_CONFIG_END
 
 
 

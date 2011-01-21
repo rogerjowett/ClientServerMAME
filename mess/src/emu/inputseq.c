@@ -137,22 +137,27 @@ INLINE void input_seq_backspace(input_seq *seq)
     sequence of switch inputs is "pressed"
 -------------------------------------------------*/
 
-extern std::map< attotime, std::map<const input_seq*,char> > playerInput;
+extern std::map< attotime, std::map< pair<const input_field_config *,int> ,char> > playerInput;
 
 extern Client *netClient;
 extern Server *netServer;
 
-int input_seq_pressed(running_machine *machine,const input_seq* seq)
+attotime lastMissedTime = {0,0};
+
+int input_seq_pressed(running_machine *machine,const input_field_config* field, int seqtypeint)
 {
+    input_seq_type seqtype = (input_seq_type)seqtypeint;
     if(!netClient && !netServer)
-        input_seq_pressed_raw(machine,seq);
+        input_seq_pressed_raw(machine,input_field_seq(field,seqtype));
+
+    pair<const input_field_config *,int> fieldTypePair(field,seqtypeint);
 
 	attotime curtime = timer_get_time(machine);
 
-	std::map< attotime, std::map<const input_seq*,char> >::reverse_iterator it = playerInput.rbegin();
-    std::map< attotime, std::map<const input_seq*,char> >::reverse_iterator itold = playerInput.rbegin();
+	std::map< attotime, std::map< pair<const input_field_config *,int>, char> >::reverse_iterator it = playerInput.rbegin();
+    std::map< attotime, std::map< pair<const input_field_config *,int>, char> >::reverse_iterator itold = playerInput.rbegin();
 
-    int mostRecentFutureValue=0;
+    int mostRecentFutureValue=2;
 
 	while(true)
 	{
@@ -160,6 +165,7 @@ int input_seq_pressed(running_machine *machine,const input_seq* seq)
 	    {
 	        if(curtime.seconds)
                 std::cout << "ERROR: COULDN'T FIND INPUT FOR TIME" << curtime.seconds << '.' << curtime.attoseconds << '\n';
+            mostRecentFutureValue=0;
 			return mostRecentFutureValue;
 	    }
 	    //std::cout << "Checking at " << it->first.seconds << '.' << it->first.attoseconds << std::endl;
@@ -169,13 +175,14 @@ int input_seq_pressed(running_machine *machine,const input_seq* seq)
 	        {
                 if(curtime.seconds)
                     std::cout << "ERROR: COULDN'T FIND INPUT FOR TIME" << curtime.seconds << '.' << curtime.attoseconds << '\n';
+                mostRecentFutureValue=0;
 	            return mostRecentFutureValue;
 	        }
             //std::cout << "COULDN'T FIND EXACT INPUT FOR TIME " << curtime.seconds << '.' << curtime.attoseconds
             //<< ". USING " << itold->first.seconds << '.' << itold->first.attoseconds
             //<< ". (" << it->first.seconds << '.' << it->first.attoseconds << ")"
             //<< std::endl;
-	        if(itold->second.find(seq)==itold->second.end())
+	        if(itold->second.find(fieldTypePair)==itold->second.end())
 	        {
                 if(curtime.seconds)
                 {
@@ -184,11 +191,27 @@ int input_seq_pressed(running_machine *machine,const input_seq* seq)
                 }
 	            //return mostRecentFutureValue;
 	        }
+
+	        //while(it != playerInput.rend())
+	        {
+	            //JJG: TODO: Clean up really old inputs here
+	            //it++;
+	        }
+	        if(mostRecentFutureValue==2)
+	        {
+	            if(curtime>lastMissedTime)
+	            {
+	                lastMissedTime = curtime;
+                    //std::cout << "ERROR: COULDN'T FIND INPUT FOR TIME" << curtime.seconds << '.' << curtime.attoseconds << '\n';
+                    //std::cout << field << ' ' << int(field->player) << ' ' << field->type << ' ' << field->category << endl;
+	            }
+	            mostRecentFutureValue=0;
+	        }
 	        return mostRecentFutureValue;
 	    }
-	    else if(it->second.find(seq) != it->second.end())
+	    else if(it->second.find(fieldTypePair) != it->second.end())
 	    {
-	        mostRecentFutureValue = it->second[seq];
+	        mostRecentFutureValue = it->second[fieldTypePair];
 	    }
 
 	    itold = it;
@@ -488,7 +511,7 @@ astring &input_seq_name(running_machine *machine, astring &string, const input_s
 		input_code code = seq->code[codenum];
 
 		/* if this is a code item which is not valid, don't copy it and remove any preceding ORs/NOTs */
-		if (!INPUT_CODE_IS_INTERNAL(code) && input_code_name(machine, codestr, code).len() == 0)
+		if (!INPUT_CODE_IS_INTERNAL(code) && !input_code_name(machine, codestr, code))
 		{
 			while (copycodenum > 0 && INPUT_CODE_IS_INTERNAL(seqcopy.code[copycodenum - 1]))
 				copycodenum--;

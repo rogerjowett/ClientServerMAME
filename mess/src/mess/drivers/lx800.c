@@ -17,14 +17,13 @@
     TYPE DEFINITIONS
 ***************************************************************************/
 
-class lx800_state
+class lx800_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, lx800_state(machine)); }
+	lx800_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
-	lx800_state(running_machine &machine) { }
-
-	running_device *speaker;
+	device_t *speaker;
 };
 
 
@@ -84,7 +83,7 @@ static READ8_HANDLER( lx800_portc_r )
 
 static WRITE8_HANDLER( lx800_portc_w )
 {
-	lx800_state *lx800 = (lx800_state *)space->machine->driver_data;
+	lx800_state *lx800 = space->machine->driver_data<lx800_state>();
 
 	logerror("%s: lx800_portc_w(%02x): %02x\n", cpuexec_describe_context(space->machine), offset, data);
 	logerror("--> err: %d, ack: %d, fire: %d, buzzer: %d\n", BIT(data, 4), BIT(data, 5), BIT(data, 6), BIT(data, 7));
@@ -126,7 +125,7 @@ static WRITE_LINE_DEVICE_HANDLER( lx800_reset_w )
 
 static MACHINE_START( lx800 )
 {
-	lx800_state *lx800 = (lx800_state *)machine->driver_data;
+	lx800_state *lx800 = machine->driver_data<lx800_state>();
 
 	lx800->speaker = machine->device("beep");
 
@@ -240,27 +239,25 @@ static const e05a03_interface lx800_e05a03_intf =
 	DEVCB_LINE(lx800_reset_w)
 };
 
-static MACHINE_DRIVER_START( lx800 )
+static MACHINE_CONFIG_START( lx800, lx800_state )
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", UPD7810, XTAL_14_7456MHz)
-	MDRV_CPU_CONFIG(lx800_cpu_config)
-	MDRV_CPU_PROGRAM_MAP(lx800_mem)
-	MDRV_CPU_IO_MAP(lx800_io)
+	MCFG_CPU_ADD("maincpu", UPD7810, XTAL_14_7456MHz)
+	MCFG_CPU_CONFIG(lx800_cpu_config)
+	MCFG_CPU_PROGRAM_MAP(lx800_mem)
+	MCFG_CPU_IO_MAP(lx800_io)
 
-	MDRV_MACHINE_START(lx800)
+	MCFG_MACHINE_START(lx800)
 
-	MDRV_DRIVER_DATA(lx800_state)
-
-	MDRV_DEFAULT_LAYOUT(layout_lx800)
+	MCFG_DEFAULT_LAYOUT(layout_lx800)
 
 	/* audio hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("beep", BEEP, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("beep", BEEP, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
 	/* gate array */
-	MDRV_E05A03_ADD("ic3b", lx800_e05a03_intf)
-MACHINE_DRIVER_END
+	MCFG_E05A03_ADD("ic3b", lx800_e05a03_intf)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************

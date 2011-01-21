@@ -63,9 +63,10 @@ typedef struct
 	INT8	irq_line_state[17];
 	device_irq_callback irq_callback;
 	legacy_cpu_device *device;
-	const address_space *internal;
-	const address_space *program;
-	const address_space *io;
+	address_space *internal;
+	address_space *program;
+	direct_read_data *direct;
+	address_space *io;
 	UINT32	*m;
 	INT8	nmi_line_state;
 
@@ -148,7 +149,7 @@ void sh4_set_irq_line(sh4_state *sh4, int irqline, int state); // set state of e
 #ifdef LSB_FIRST
 void sh4_swap_fp_couples(sh4_state *sh4);
 #endif
-void sh4_common_init(running_device *device);
+void sh4_common_init(device_t *device);
 
 INLINE void sh4_check_pending_irq(sh4_state *sh4, const char *message) // look for highest priority active exception and handle it
 {

@@ -83,6 +83,7 @@
 #include "sound/upd7759.h"
 #include "includes/jpmimpct.h"
 #include "machine/meters.h"
+#include "machine/nvram.h"
 
 /*************************************
  *
@@ -623,7 +624,7 @@ static WRITE16_HANDLER( jpmio_w )
 static ADDRESS_MAP_START( m68k_program_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x00000000, 0x000fffff) AM_ROM
 	AM_RANGE(0x00100000, 0x001fffff) AM_ROM
-	AM_RANGE(0x00400000, 0x00403fff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0x00400000, 0x00403fff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0x00480000, 0x0048001f) AM_READWRITE(duart_1_r, duart_1_w)
 	AM_RANGE(0x00480020, 0x00480033) AM_READ(inputs1_r)
 	AM_RANGE(0x00480034, 0x00480035) AM_READ(unk_r)
@@ -820,7 +821,7 @@ INPUT_PORTS_END
  *
  *************************************/
 
-static void jpmimpct_tms_irq(running_device *device, int state)
+static void jpmimpct_tms_irq(device_t *device, int state)
 {
 	tms_irq = state;
 	update_irqs(device->machine);
@@ -845,33 +846,33 @@ static const tms34010_config tms_config =
  *
  *************************************/
 
-static MACHINE_DRIVER_START( jpmimpct )
-	MDRV_CPU_ADD("maincpu", M68000, 8000000)
-	MDRV_CPU_PROGRAM_MAP(m68k_program_map)
+static MACHINE_CONFIG_START( jpmimpct, driver_device )
+	MCFG_CPU_ADD("maincpu", M68000, 8000000)
+	MCFG_CPU_PROGRAM_MAP(m68k_program_map)
 
-	MDRV_CPU_ADD("dsp", TMS34010, 40000000)
-	MDRV_CPU_CONFIG(tms_config)
-	MDRV_CPU_PROGRAM_MAP(tms_program_map)
+	MCFG_CPU_ADD("dsp", TMS34010, 40000000)
+	MCFG_CPU_CONFIG(tms_config)
+	MCFG_CPU_PROGRAM_MAP(tms_program_map)
 
-	MDRV_QUANTUM_TIME(HZ(30000))
-	MDRV_MACHINE_START(jpmimpct)
-	MDRV_MACHINE_RESET(jpmimpct)
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_QUANTUM_TIME(HZ(30000))
+	MCFG_MACHINE_START(jpmimpct)
+	MCFG_MACHINE_RESET(jpmimpct)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
-	MDRV_TIMER_ADD( "duart_1_timer", duart_1_timer_event)
+	MCFG_TIMER_ADD( "duart_1_timer", duart_1_timer_event)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_RAW_PARAMS(40000000/4, 156*4, 0, 100*4, 328, 0, 300)
-	MDRV_PALETTE_LENGTH(256)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_RAW_PARAMS(40000000/4, 156*4, 0, 100*4, 328, 0, 300)
+	MCFG_PALETTE_LENGTH(256)
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("upd", UPD7759, UPD7759_STANDARD_CLOCK)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("upd", UPD7759, UPD7759_STANDARD_CLOCK)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MDRV_VIDEO_START(jpmimpct)
-	MDRV_VIDEO_UPDATE(tms340x0)
-MACHINE_DRIVER_END
+	MCFG_VIDEO_START(jpmimpct)
+	MCFG_VIDEO_UPDATE(tms340x0)
+MACHINE_CONFIG_END
 
 
 /*************************************
@@ -1294,7 +1295,7 @@ static READ16_HANDLER( ump_r )
 static ADDRESS_MAP_START( awp68k_program_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x00000000, 0x000fffff) AM_ROM
 	AM_RANGE(0x00100000, 0x001fffff) AM_ROM
-	AM_RANGE(0x00400000, 0x00403fff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0x00400000, 0x00403fff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0x00480000, 0x0048001f) AM_READWRITE(duart_1_r, duart_1_w)
 	AM_RANGE(0x00480020, 0x00480033) AM_READ(inputs1_r)
 	AM_RANGE(0x00480034, 0x00480035) AM_READ(ump_r)
@@ -1321,25 +1322,25 @@ ADDRESS_MAP_END
  *
  *************************************/
 
-static MACHINE_DRIVER_START( impctawp )
-	MDRV_CPU_ADD("maincpu",M68000, 8000000)
-	MDRV_CPU_PROGRAM_MAP(awp68k_program_map)
+static MACHINE_CONFIG_START( impctawp, driver_device )
+	MCFG_CPU_ADD("maincpu",M68000, 8000000)
+	MCFG_CPU_PROGRAM_MAP(awp68k_program_map)
 
-	MDRV_QUANTUM_TIME(HZ(30000))
+	MCFG_QUANTUM_TIME(HZ(30000))
 
-	MDRV_MACHINE_START(impctawp)
-	MDRV_MACHINE_RESET(impctawp)
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_MACHINE_START(impctawp)
+	MCFG_MACHINE_RESET(impctawp)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
-	MDRV_PPI8255_ADD( "ppi8255_0", ppi8255_intf[0] )
+	MCFG_PPI8255_ADD( "ppi8255_0", ppi8255_intf[0] )
 
-	MDRV_TIMER_ADD( "duart_1_timer", duart_1_timer_event)
+	MCFG_TIMER_ADD( "duart_1_timer", duart_1_timer_event)
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("upd",UPD7759, UPD7759_STANDARD_CLOCK)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-	MDRV_DEFAULT_LAYOUT(layout_awpvid16)
-MACHINE_DRIVER_END
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("upd",UPD7759, UPD7759_STANDARD_CLOCK)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_DEFAULT_LAYOUT(layout_awpvid16)
+MACHINE_CONFIG_END
 
 /*************************************
  *

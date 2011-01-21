@@ -26,6 +26,7 @@
 
 ***********************************************************************************/
 #include "emu.h"
+#include "machine/nvram.h"
 #include "sound/ay8910.h"
 #include "cpu/mcs48/mcs48.h"
 
@@ -42,29 +43,10 @@ static UINT8 pkr_io_ram[0x100];
 static UINT16 video_ram[0x0400];
 static UINT8 color_ram[0x0400];
 
-/********************
-*   NVRAM Handler   *
-********************/
-
-static NVRAM_HANDLER( drw80pkr )
+static MACHINE_START( drw80pkr )
 {
-	if (read_or_write)
-	{
-		mame_fwrite(file, pkr_io_ram, DATA_NVRAM_SIZE);
-	}
-	else
-	{
-		if (file)
-		{
-			mame_fread(file, pkr_io_ram, DATA_NVRAM_SIZE);
-		}
-		else
-		{
-			memset(pkr_io_ram, 0, DATA_NVRAM_SIZE);
-		}
-	}
+	machine->device<nvram_device>("nvram")->set_base(pkr_io_ram, sizeof(pkr_io_ram));
 }
-
 
 /*****************
 * Write Handlers *
@@ -389,7 +371,7 @@ GFXDECODE_END
 
 static DRIVER_INIT( drw80pkr )
 {
-	memory_configure_bank(machine, "bank1", 0, 2, memory_region(machine, "maincpu"), 0x1000);
+	memory_configure_bank(machine, "bank1", 0, 2, machine->region("maincpu")->base(), 0x1000);
 }
 
 
@@ -444,36 +426,39 @@ INPUT_PORTS_END
 *     Machine Driver     *
 *************************/
 
-static MACHINE_DRIVER_START( drw80pkr )
+static MACHINE_CONFIG_START( drw80pkr, driver_device )
 	// basic machine hardware
-	MDRV_CPU_ADD("maincpu", I8039, CPU_CLOCK)
-	MDRV_CPU_PROGRAM_MAP(drw80pkr_map)
-    MDRV_CPU_IO_MAP(drw80pkr_io_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", I8039, CPU_CLOCK)
+	MCFG_CPU_PROGRAM_MAP(drw80pkr_map)
+    MCFG_CPU_IO_MAP(drw80pkr_io_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
+
+	MCFG_MACHINE_START(drw80pkr)
 
 	// video hardware
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE((31+1)*8, (31+1)*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 24*8-1, 0*8, 27*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE((31+1)*8, (31+1)*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 24*8-1, 0*8, 27*8-1)
 
-	MDRV_GFXDECODE(drw80pkr)
-	MDRV_PALETTE_LENGTH(16*16)
+	MCFG_GFXDECODE(drw80pkr)
+	MCFG_PALETTE_LENGTH(16*16)
 
-	MDRV_PALETTE_INIT(drw80pkr)
-	MDRV_VIDEO_START(drw80pkr)
-	MDRV_VIDEO_UPDATE(drw80pkr)
-	MDRV_NVRAM_HANDLER(drw80pkr)
+	MCFG_PALETTE_INIT(drw80pkr)
+	MCFG_VIDEO_START(drw80pkr)
+	MCFG_VIDEO_UPDATE(drw80pkr)
+
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	// sound hardware
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("aysnd", AY8912, 20000000/12)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.75)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("aysnd", AY8912, 20000000/12)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.75)
+MACHINE_CONFIG_END
 
 /*************************
 *        Rom Load        *

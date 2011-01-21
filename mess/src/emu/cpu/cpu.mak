@@ -276,17 +276,17 @@ $(CPUOBJ)/esrip/esrip.o:	$(CPUSRC)/esrip/esrip.c \
 
 
 #-------------------------------------------------
-# RCA CDP1802
+# RCA COSMAC
 #-------------------------------------------------
 
-ifneq ($(filter CDP1802,$(CPUS)),)
-OBJDIRS += $(CPUOBJ)/cdp1802
-CPUOBJS += $(CPUOBJ)/cdp1802/cdp1802.o
-DASMOBJS += $(CPUOBJ)/cdp1802/1802dasm.o
+ifneq ($(filter COSMAC,$(CPUS)),)
+OBJDIRS += $(CPUOBJ)/cosmac
+CPUOBJS += $(CPUOBJ)/cosmac/cosmac.o
+DASMOBJS += $(CPUOBJ)/cosmac/cosdasm.o
 endif
 
-$(CPUOBJ)/cdp1802/cdp1802.o:	$(CPUSRC)/cdp1802/cdp1802.c \
-								$(CPUSRC)/cdp1802/cdp1802.h
+$(CPUOBJ)/cosmac/cosmac.o:	$(CPUSRC)/cosmac/cosmac.c \
+							$(CPUSRC)/cosmac/cosmac.h
 
 
 
@@ -658,7 +658,6 @@ I86DEPS = \
 
 $(CPUOBJ)/i86/i86.o:	$(CPUSRC)/i86/i86.c \
 						$(CPUSRC)/i86/i86.h \
-						$(CPUSRC)/i86/i86mem.c \
 						$(CPUSRC)/i86/i86time.c \
 						$(CPUSRC)/i86/instr86.c \
 						$(CPUSRC)/i86/instr186.c \
@@ -666,11 +665,11 @@ $(CPUOBJ)/i86/i86.o:	$(CPUSRC)/i86/i86.c \
 
 $(CPUOBJ)/i86/i286.o:	$(CPUSRC)/i86/i286.c \
 						$(CPUSRC)/i86/i286.h \
-						$(CPUSRC)/i86/i86mem.c \
 						$(CPUSRC)/i86/i86time.c \
 						$(CPUSRC)/i86/instr86.c \
 						$(CPUSRC)/i86/instr186.c \
 						$(CPUSRC)/i86/instr286.c \
+						$(CPUSRC)/i86/modrm286.h \
 						$(I86DEPS)
 
 $(CPUOBJ)/i386/i386.o:	$(CPUSRC)/i386/i386.c \
@@ -1053,15 +1052,44 @@ $(CPUOBJ)/m68000/m68kcpu.o: 	$(CPUOBJ)/m68000/m68kops.c \
 ifneq ($(filter DSP56156,$(CPUS)),)
 OBJDIRS += $(CPUOBJ)/dsp56k
 CPUOBJS += $(CPUOBJ)/dsp56k/dsp56k.o
+CPUOBJS += $(CPUOBJ)/dsp56k/dsp56mem.o
+CPUOBJS += $(CPUOBJ)/dsp56k/dsp56pcu.o
 DASMOBJS += $(CPUOBJ)/dsp56k/dsp56dsm.o
+DASMOBJS += $(CPUOBJ)/dsp56k/opcode.o
+DASMOBJS += $(CPUOBJ)/dsp56k/inst.o
+DASMOBJS += $(CPUOBJ)/dsp56k/pmove.o
+DASMOBJS += $(CPUOBJ)/dsp56k/tables.o
 endif
 
+$(CPUOBJ)/dsp56k/dsp56mem.o:	$(CPUSRC)/dsp56k/dsp56mem.c \
+								$(CPUSRC)/dsp56k/dsp56mem.h
+
+$(CPUOBJ)/dsp56k/dsp56pcu.o:	$(CPUSRC)/dsp56k/dsp56pcu.c \
+								$(CPUSRC)/dsp56k/dsp56pcu.h
+
 $(CPUOBJ)/dsp56k/dsp56k.o:	$(CPUSRC)/dsp56k/dsp56k.c \
-							$(CPUSRC)/dsp56k/dsp56ops.c \
-							$(CPUSRC)/dsp56k/dsp56mem.c \
-							$(CPUSRC)/dsp56k/dsp56pcu.c \
 							$(CPUSRC)/dsp56k/dsp56k.h
 
+$(CPUOBJ)/dsp56k/opcode.o:	$(CPUSRC)/dsp56k/opcode.c \
+							$(CPUSRC)/dsp56k/opcode.h
+
+$(CPUOBJ)/dsp56k/inst.o:	$(CPUSRC)/dsp56k/inst.c \
+							$(CPUSRC)/dsp56k/inst.h
+
+$(CPUOBJ)/dsp56k/pmove.o:	$(CPUSRC)/dsp56k/pmove.c \
+							$(CPUSRC)/dsp56k/pmove.h
+
+$(CPUOBJ)/dsp56k/tables.o:	$(CPUSRC)/dsp56k/tables.c \
+							$(CPUSRC)/dsp56k/tables.h
+
+$(CPUOBJ)/dsp56k/dsp56dsm.o:	$(CPUSRC)/dsp56k/opcode.c \
+								$(CPUSRC)/dsp56k/opcode.h \
+								$(CPUSRC)/dsp56k/inst.c \
+    							$(CPUSRC)/dsp56k/inst.h \
+								$(CPUSRC)/dsp56k/pmove.c \
+								$(CPUSRC)/dsp56k/pmove.h \
+								$(CPUSRC)/dsp56k/tables.c \
+								$(CPUSRC)/dsp56k/tables.h
 
 
 #-------------------------------------------------
@@ -1119,6 +1147,8 @@ $(CPUOBJ)/powerpc/ppcdrc.o:	$(CPUSRC)/powerpc/ppcdrc.c \
 ifneq ($(filter NEC,$(CPUS)),)
 OBJDIRS += $(CPUOBJ)/nec
 CPUOBJS += $(CPUOBJ)/nec/nec.o
+CPUOBJS += $(CPUOBJ)/nec/v25.o
+CPUOBJS += $(CPUOBJ)/nec/v25sfr.o
 DASMOBJS += $(CPUOBJ)/nec/necdasm.o
 endif
 
@@ -1131,10 +1161,23 @@ endif
 $(CPUOBJ)/nec/nec.o:	$(CPUSRC)/nec/nec.c \
 						$(CPUSRC)/nec/nec.h \
 						$(CPUSRC)/nec/necea.h \
-						$(CPUSRC)/nec/nechost.h \
+						$(CPUSRC)/nec/necinstr.c \
 						$(CPUSRC)/nec/necinstr.h \
 						$(CPUSRC)/nec/necmodrm.h \
 						$(CPUSRC)/nec/necpriv.h
+
+$(CPUOBJ)/nec/v25.o:	$(CPUSRC)/nec/v25.c \
+						$(CPUSRC)/nec/nec.h \
+						$(CPUSRC)/nec/necea.h \
+						$(CPUSRC)/nec/necinstr.c \
+						$(CPUSRC)/nec/v25instr.c \
+						$(CPUSRC)/nec/v25instr.h \
+						$(CPUSRC)/nec/necmodrm.h \
+						$(CPUSRC)/nec/v25priv.h
+
+$(CPUOBJ)/nec/v25sfr.o:	$(CPUSRC)/nec/v25sfr.c \
+						$(CPUSRC)/nec/nec.h \
+						$(CPUSRC)/nec/v25priv.h
 
 $(CPUOBJ)/v30mz/v30mz.o:	$(CPUSRC)/v30mz/v30mz.c \
 							$(CPUSRC)/v30mz/v30mz.h \
@@ -1170,7 +1213,6 @@ $(CPUOBJ)/v60/v60.o:	$(CPUSRC)/v60/am.c \
 						$(CPUSRC)/v60/optable.c \
 						$(CPUSRC)/v60/v60.c \
 						$(CPUSRC)/v60/v60.h \
-						$(CPUSRC)/v60/v60mem.c \
 						$(CPUSRC)/v60/v60d.c
 
 

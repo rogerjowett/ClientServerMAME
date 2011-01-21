@@ -36,10 +36,12 @@
 
 ****************************************************************************/
 
+#define ADDRESS_MAP_MODERN
+
 #include "emu.h"
 #include "cpu/m68000/m68000.h"
 #include "cpu/powerpc/ppc.h"
-#include "includes/mac.h"
+#include "cpu/m6805/m6805.h"
 #include "machine/6522via.h"
 #include "machine/ncr5380.h"
 #include "machine/applefdc.h"
@@ -47,416 +49,336 @@
 #include "devices/harddriv.h"
 #include "formats/ap_dsk35.h"
 #include "devices/messram.h"
-#include "sound/dmadac.h"
+#include "devices/chd_cd.h"
+#include "sound/asc.h"
+#include "sound/cdda.h"
+#include "includes/mac.h"
 
-/*
-    Apple Sound Chip
+#define C7M	(7833600)
+#define C15M	(C7M*2)
+#define C32M	(C15M*2)
 
-    Base is normally IOBase + 0x14000
-    First 0x800 bytes is buffer RAM
+// do this here - VIDEO_UPDATE is called each scanline when stepping in the
+// debugger, which means you can't escape the VIA2 IRQ handler
+//
+// RBV/MDU interrupts:
+// 
+// CA1: any slot interrupt = 0x02
+// CA2: SCSI interrupt = 0x01
+// CB1: ASC interrupt = 0x10
 
-    Verified to be only 8 bits wide by Apple documentation.
-
-    Registers:
-    0x800: VERSION
-    0x801: MODE (1=FIFO mode, 2=wavetable mode)
-    0x802: CONTROL (bit 0=analog or PWM output, 1=stereo/mono, 7=processing time exceeded)
-    0x803: FIFO MODE (bit 7=clear FIFO, bit 1="non-ROM companding", bit 0="ROM companding")
-    0x804: FIFO IRQ STATUS (bit 0=ch A 1/2 full, 1=ch A full, 2=ch B 1/2 full, 3=ch B full)
-    0x805: WAVETABLE CONTROL (bits 0-3 wavetables 0-3 start)
-    0x806: VOLUME (bits 2-4 = 3 bit internal ASC volume, bits 5-7 = volume control sent to Sony sound chip)
-    0x807: CLOCK RATE (0 = Mac 22257 Hz, 1 = undefined, 2 = 22050 Hz, 3 = 44100 Hz)
-    0x80a: PLAY REC A
-    0x80f: TEST (bits 6-7 = digital test, bits 4-5 = analog test)
-    0x810: WAVETABLE 0 PHASE (big-endian, only 24 bits valid)
-    0x814: WAVETABLE 0 INCREMENT (big-endian, only 24 bits valid)
-    0x818: WAVETABLE 1 PHASE
-    0x81C: WAVETABLE 1 INCREMENT
-    0x820: WAVETABLE 2 PHASE
-    0x824: WAVETABLE 2 INCREMENT
-    0x828: WAVETABLE 3 PHASE
-    0x82C: WAVETABLE 3 INCREMENT
-
-    Should become it's own device.
-*/
-
-static READ8_HANDLER(mac_asc_r)
+INTERRUPT_GEN( mac_rbv_vbl )
 {
-	mac_state *mac = (mac_state *)space->machine->driver_data;
+	mac_state *mac = device->machine->driver_data<mac_state>();
 
-	logerror("ASC: Read @ %x (PC %x)\n", offset, cpu_get_pc(space->machine->device("maincpu")));
+	mac->m_rbv_regs[2] &= ~0x40;	// set vblank signal
 
-	switch (offset)
+	if ((mac->m_rbv_regs[0x12] & 0x40) && (mac->m_rbv_ier & 0x2))	
 	{
-		case 0x800:	// VERSION
-			// LC/LCII return 0xe8 (V8 ASIC ASC emulation)
-			if ((mac->mac_model == MODEL_MAC_LC) || (mac->mac_model == MODEL_MAC_LC_II))
-		      	{
-				return 0xe8;
-			}
-
-			// LCIII returns 0xbc (Sonora ASIC ASC emulation)
-			if (mac->mac_model == MODEL_MAC_LC_III)
-			{
-				return 0xbc;
-			}
-
-			return 0;	// original ASC
-
-		case 0x804:
-			if ((mac->mac_model == MODEL_MAC_LC) || (mac->mac_model == MODEL_MAC_LC_II))
-		      	{
-				return 3;
-			}
-			break;
-
-		default:
-			break;
-	}
-
-	return mac->mac_asc_regs[offset];
-}
-
-static WRITE8_HANDLER(mac_asc_w)
-{
-	static dmadac_sound_device *dacs[2];
-	INT32 i;
-	mac_state *mac = (mac_state *)space->machine->driver_data;
-
-	logerror("ASC: %02x to %x (PC %x)\n", data, offset, cpu_get_pc(space->machine->device("maincpu")));
-
-	mac->mac_asc_regs[offset] = data;
-
-	switch (offset)
-	{
-		case 0x801:	// CONTROL
-			dacs[0] = space->machine->device<dmadac_sound_device>("ascal");
-			dacs[1] = space->machine->device<dmadac_sound_device>("ascar");
-
-			if (data == 2)	// boot ROM uses this mode
-			{
-				dmadac_set_frequency(&dacs[0], 1, 22255*2);
-				dmadac_set_frequency(&dacs[1], 1, 22255*2);
-				dmadac_enable(&dacs[0], 1, 1);
-				dmadac_enable(&dacs[1], 1, 1);
-			}
-			else if (data == 0) // stop
-			{
-				dmadac_enable(&dacs[0], 1, 0);
-				dmadac_enable(&dacs[1], 1, 0);
-			}
-			break;
-
-		case 0x7ff:
-			for (i = 0; i < 0x200; i++)
-			{
-				mac->xfersamples[i] = (INT16)mac->mac_asc_regs[i]<<8;
-			}
-
-			dmadac_transfer(&dacs[0], 1, 1, 1, 0x200, mac->xfersamples);
-			dmadac_transfer(&dacs[1], 1, 1, 1, 0x200, mac->xfersamples);
-			break;
+		mac->m_rbv_ifr |= 0x82;
+		mac->set_via2_interrupt(1);
 	}
 }
 
-static READ32_HANDLER(mac_swim_r)
+READ32_MEMBER( mac_state::rbv_ramdac_r )
 {
-	return 0x17171717;
-}
-
-// IIci/IIsi RAM-Based Video (RBV)
-
-// 512x384x1 framebuffer at fb008000?
-// 640x480x1 framebuffer at fee00000?
-
-static UINT32 *rbv_vram;
-
-static UINT32 rbv_colors[3], rbv_count, rbv_clutoffs;
-static UINT32 rbv_palette[256];
-
-static VIDEO_UPDATE( macrbv )
-{
-	UINT32 *scanline;
-	int x, y;
-	UINT8 *vram8 = (UINT8 *)rbv_vram;
-	UINT8 pixels;
-
-	for (y = 0; y < 480; y++)
-	{
-		scanline = BITMAP_ADDR32(bitmap, y, 0);
-		for (x = 0; x < 640; x+=8)
-		{
-			pixels = vram8[(y * 1024) + ((x/8)^3)];
-
-			*scanline++ = rbv_palette[(pixels>>7)^1];
-			*scanline++ = rbv_palette[((pixels>>6)&1)^1];
-			*scanline++ = rbv_palette[((pixels>>5)&1)^1];
-			*scanline++ = rbv_palette[((pixels>>4)&1)^1];
-			*scanline++ = rbv_palette[((pixels>>3)&1)^1];
-			*scanline++ = rbv_palette[((pixels>>2)&1)^1];
-			*scanline++ = rbv_palette[((pixels>>1)&1)^1];
-			*scanline++ = rbv_palette[(pixels&1)^1];
-		}
-	}
-
 	return 0;
 }
 
-static WRITE32_HANDLER( rbv_ramdac_w )
+WRITE32_MEMBER( mac_state::rbv_ramdac_w )
 {
 	if (!offset)
 	{
-		rbv_clutoffs = data>>24;
-		rbv_count = 0;
+		m_rbv_clutoffs = data>>24;
+		m_rbv_count = 0;
 	}
 	else
 	{
-		rbv_colors[rbv_count++] = data>>24;
+		m_rbv_colors[m_rbv_count++] = data>>24;
 
-		if (rbv_count == 3)
+		if (m_rbv_count == 3)
 		{
-			rbv_count = 0;
-			palette_set_color(space->machine, rbv_clutoffs, MAKE_RGB(rbv_colors[0], rbv_colors[1], rbv_colors[2]));
-			rbv_palette[rbv_clutoffs] = MAKE_RGB(rbv_colors[0], rbv_colors[1], rbv_colors[2]);
-			rbv_clutoffs++;
+			// for portrait display, force monochrome by using the blue channel
+			if (m_model != MODEL_MAC_CLASSIC_II)
+			{
+				// Color Classic has no MONTYPE so the safe read gets us 512x384, which is right
+				if (input_port_read_safe(space.machine, "MONTYPE", 2) == 1)
+				{
+					palette_set_color(space.machine, m_rbv_clutoffs, MAKE_RGB(m_rbv_colors[2], m_rbv_colors[2], m_rbv_colors[2]));
+					m_rbv_palette[m_rbv_clutoffs] = MAKE_RGB(m_rbv_colors[2], m_rbv_colors[2], m_rbv_colors[2]);
+					m_rbv_clutoffs++;
+					m_rbv_count = 0;
+				}
+				else
+				{
+					palette_set_color(space.machine, m_rbv_clutoffs, MAKE_RGB(m_rbv_colors[0], m_rbv_colors[1], m_rbv_colors[2]));
+					m_rbv_palette[m_rbv_clutoffs] = MAKE_RGB(m_rbv_colors[0], m_rbv_colors[1], m_rbv_colors[2]);
+					m_rbv_clutoffs++;
+					m_rbv_count = 0;
+				}
+			}
 		}
 	}
 }
 
-
-static UINT32 rbv_toggle = 0;
-static READ16_HANDLER ( mac_rbv_r )
-{
-	int data;
-	running_device *via_1 = space->machine->device("via6522_1");
-
-	logerror("rbv_r: %x, mask %x\n", offset, mem_mask);
-
-	if (offset == 1)
-	{
-		rbv_toggle ^= 0x4040;
-		return rbv_toggle;
-	}
-
-	if (offset == 0x0010)
-	{
-		logerror("RBV: Read monitor type (PC=%x)\n", cpu_get_pc(space->cpu));
-
-		data = (6<<3) | 3;	// 13" RGB, 8 bits per pixel
-
-		return (data & 0xff) | (data << 8);
-	}
-
-	offset >>= 8;
-	offset &= 0x0f;
-
-	data = via_r(via_1, offset);
-
-	return (data & 0xff) | (data << 8);
-}
-
-static WRITE16_HANDLER ( mac_rbv_w )
-{
-	running_device *via_1 = space->machine->device("via6522_1");
-
-	logerror("rbv_w: %x to offset %x, mask %x\n", data, offset, mem_mask);
-
-	offset >>= 8;
-	offset &= 0x0f;
-
-	if (ACCESSING_BITS_8_15)
-		via_w(via_1, offset, (data >> 8) & 0xff);
-}
-
-// LC/LC II "V8" video and friends
-
-static UINT8 v8_regs[256];
-static UINT32 v8_colors[3], v8_count, v8_clutoffs;
-static UINT32 v8_palette[256];
-
-static READ16_HANDLER ( mac_v8_r )
-{
-	int data, viaoffs;
-	running_device *via_1 = space->machine->device("via6522_1");
-
-//  printf("v8_r: %x, mask %x (PC %x)\n", offset*2, mem_mask, cpu_get_pc(space->cpu));
-
-	viaoffs = (offset >> 8) & 0x0f;
-
-	switch (offset)
-	{
-		case 0:
-			data = via_r(via_1, viaoffs);
-			return (data<<8) | v8_regs[0];
-
-		default:
-			data = via_r(via_1, viaoffs);
-			return (data<<8)|data;
-	}
-
-}
-
-static WRITE16_HANDLER ( mac_v8_w )
-{
-	running_device *via_1 = space->machine->device("via6522_1");
-	int viaoffs;
-
-//  printf("v8_w: %x to offset %x, mask %x (PC %x)\n", data, offset*2, mem_mask, cpu_get_pc(space->cpu));
-
-	viaoffs = (offset >> 8) & 0x0f;
-
-	switch (offset)
-	{
-		case 0:
-			if (ACCESSING_BITS_8_15)
-			{
-				via_w(via_1, viaoffs, (data >> 8) & 0xff);
-			}
-			else
-			{
-				v8_regs[0] = data&0xe7;
-			}
-			break;
-
-		default:
-			if (ACCESSING_BITS_8_15)
-			{
-				via_w(via_1, viaoffs, (data >> 8) & 0xff);
-			}
-			break;
-	}
-}
-
-static WRITE32_HANDLER( mac_v8_ramdac_w )
+WRITE32_MEMBER( mac_state::ariel_ramdac_w )	// this is for the "Ariel" style RAMDAC
 {
 	if (mem_mask == 0xff000000)
 	{
-		v8_clutoffs = data>>24;
-		v8_count = 0;
+		m_rbv_clutoffs = data>>24;
+		m_rbv_count = 0;
 	}
 	else if (mem_mask == 0x00ff0000)
 	{
-		v8_colors[v8_count++] = data>>16;
+		m_rbv_colors[m_rbv_count++] = data>>16;
 
-		if (v8_count == 3)
+		if (m_rbv_count == 3)
 		{
-			v8_count = 0;
-			palette_set_color(space->machine, v8_clutoffs, MAKE_RGB(v8_colors[0], v8_colors[1], v8_colors[2]));
-			v8_palette[v8_clutoffs] = MAKE_RGB(v8_colors[0], v8_colors[1], v8_colors[2]);
-			v8_clutoffs++;
+			// for portrait display, force monochrome by using the blue channel
+			if (m_model != MODEL_MAC_CLASSIC_II)
+			{
+				// Color Classic has no MONTYPE so the safe read gets us 512x384, which is right
+				if (input_port_read_safe(space.machine, "MONTYPE", 2) == 1)
+				{
+					palette_set_color(space.machine, m_rbv_clutoffs, MAKE_RGB(m_rbv_colors[2], m_rbv_colors[2], m_rbv_colors[2]));
+					m_rbv_palette[m_rbv_clutoffs] = MAKE_RGB(m_rbv_colors[2], m_rbv_colors[2], m_rbv_colors[2]);
+					m_rbv_clutoffs++;
+					m_rbv_count = 0;
+				}
+				else
+				{
+					palette_set_color(space.machine, m_rbv_clutoffs, MAKE_RGB(m_rbv_colors[0], m_rbv_colors[1], m_rbv_colors[2]));
+					m_rbv_palette[m_rbv_clutoffs] = MAKE_RGB(m_rbv_colors[0], m_rbv_colors[1], m_rbv_colors[2]);
+					m_rbv_clutoffs++;
+					m_rbv_count = 0;
+				}
+			}
+		}
+	}
+	else if (mem_mask == 0x0000ff00)
+	{
+		// config reg
+//		printf("Ariel: %02x to config\n", (data>>8)&0xff);
+	}
+	else	// color key reg
+	{
+	}
+}
+
+READ8_MEMBER( mac_state::mac_sonora_vctl_r )
+{
+	if (offset == 2)
+	{
+		return (6 << 4);	// 640x480 RGB monitor
+	}
+
+	return m_sonora_vctl[offset];
+}
+
+WRITE8_MEMBER( mac_state::mac_sonora_vctl_w )
+{
+//	printf("Sonora: %02x to vctl %x\n", data, offset);
+	m_sonora_vctl[offset] = data;	
+}
+
+READ8_MEMBER ( mac_state::mac_rbv_r )
+{
+	int data = 0;
+	
+	if (offset < 0x100)
+	{	
+		data = m_rbv_regs[offset];
+
+		if (offset == 0x02)
+		{
+			if (!space.machine->primary_screen->vblank())
+			{
+				data |= 0x40;
+			}
+		}
+
+		if (offset == 0x10)
+		{
+			data &= ~0x38;
+			data |= (input_port_read_safe(space.machine, "MONTYPE", 2)<<3);
+//			printf("rbv_r montype: %02x (PC %x)\n", data, cpu_get_pc(space.cpu));
+		}
+
+		// bit 7 of these registers always reads as 0 on RBV
+		if ((offset == 0x12) || (offset == 0x13))
+		{
+			data &= ~0x80;
+		}
+	}
+	else
+	{
+		offset >>= 9;
+
+		switch (offset)
+		{
+			case 13:	// IFR
+//				printf("Read IER = %02x (PC=%x)\n", m_rbv_ier, cpu_get_pc(space.cpu));
+				return m_rbv_ifr;
+				break;
+
+			case 14:	// IER
+//				printf("Read IFR = %02x (PC=%x)\n", m_rbv_ifr, cpu_get_pc(space.cpu));
+				return m_rbv_ier;
+				break;
+
+			default:
+				logerror("rbv_r: Unknown extended RBV VIA register %d access\n", offset);
+				break;
+		}
+	}
+
+//	if (offset != 2) printf("rbv_r: %x = %02x (PC=%x)\n", offset, data, cpu_get_pc(space.cpu));
+
+	return data;
+}
+
+WRITE8_MEMBER ( mac_state::mac_rbv_w )
+{
+	if (offset < 0x100)
+	{
+//		if (offset == 0x10) 
+//		printf("rbv_w: %02x to offset %x (PC=%x)\n", data, offset, cpu_get_pc(space.cpu));
+		switch (offset)
+		{
+			case 0x00:
+				if (m_model == MODEL_MAC_LC)
+				{
+					m68k_set_hmmu_enable(m_maincpu, (data & 0x8) ? M68K_HMMU_DISABLE : M68K_HMMU_ENABLE_LC);
+				}
+				break;
+
+			case 0x01:
+				if (((data & 0xc0) != (m_rbv_regs[1] & 0xc0)) && (m_rbv_type == RBV_TYPE_V8))
+				{
+					m_rbv_regs[1] = data;
+					this->v8_resize();
+				}
+				break;
+
+			case 0x02:
+				if ((data & 0x40) && (m_rbv_type == RBV_TYPE_SONORA))
+				{
+					m_rbv_regs[offset] &= ~0x40;
+				}
+				else
+				{
+					m_rbv_regs[offset] = data;
+				}
+				break;
+
+			case 0x03:
+				this->set_via2_interrupt(0);
+				m_rbv_regs[offset] = data;
+				break;
+
+			case 0x10:
+				if (data != 0)
+				{
+					m_rbv_immed10wr = 1;
+				}
+				m_rbv_regs[offset] = data;
+				break;
+
+			case 0x12:
+				if (data & 0x80)	// 1 bits write 1s
+				{
+					m_rbv_regs[offset] |= data & 0x7f;
+				}
+				else			// 1 bits write 0s
+				{
+					m_rbv_regs[offset] &= ~(data & 0x7f);
+				}
+				break;
+
+			case 0x13:
+				if (data & 0x80)	// 1 bits write 1s
+				{
+					m_rbv_regs[offset] |= data & 0x7f;
+
+					if (data == 0xff) m_rbv_regs[offset] = 0x1f;	// I don't know why this is special, but the IIci ROM's POST demands it
+				}
+				else			// 1 bits write 0s
+				{
+					m_rbv_regs[offset] &= ~(data & 0x7f);
+				}
+//				printf("RBV: 0x13 (%02x) = %02x (PC %x)\n", data, m_rbv_regs[offset], cpu_get_pc(space.cpu));
+				break;
+
+			default:
+				m_rbv_regs[offset] = data;
+				break;
+		}
+	}
+	else
+	{
+		offset >>= 9;
+
+		switch (offset)
+		{
+			case 13:	// IFR
+//				printf("rbv_w: %02x to IFR\n", data);
+				m_rbv_ifr = data;
+				this->set_via2_interrupt(0);
+				break;
+
+			case 14:	// IER
+				if (data & 0x80)	// 1 bits write 1s
+				{
+					m_rbv_ier |= data & 0x7f;
+				}
+				else	    // 1 bits write 0s
+				{
+					m_rbv_ier &= ~(data & 0x7f);
+				}
+
+//				printf("rbv_w: %02x to IER => %02x\n", data, m_rbv_ier);
+				break;
+
+			default:
+				logerror("rbv_w: Unknown extended RBV VIA register %d access\n", offset);
+				break;
 		}
 	}
 }
 
-static VIDEO_START( maclc )
+READ32_MEMBER(mac_state::mac_read_id)
 {
-	memset(v8_regs, 0, sizeof(v8_regs));
+	logerror("Mac read ID reg @ PC=%x\n", cpu_get_pc(space.cpu));
 
-	v8_regs[1] = 0x6;	// set init value
-}
-
-static VIDEO_UPDATE( maclc )
-{
-	return 0;
-}
-
-// LC III "Sonora" video
-
-static UINT8 sonora_regs[256];
-static UINT32 sonora_colors[3], sonora_count, sonora_clutoffs;
-static UINT32 sonora_palette[256];
-
-static READ16_HANDLER ( mac_sonora_r )
-{
-	int data, viaoffs;
-	running_device *via_1 = space->machine->device("via6522_1");
-
-//  printf("sonora_r: %x, mask %x (PC %x)\n", offset*2, mem_mask, cpu_get_pc(space->cpu));
-
-	viaoffs = (offset >> 8) & 0x0f;
-
-	switch (offset)
+	switch (m_model)
 	{
-		case 0:
-			data = via_r(via_1, viaoffs);
-			return (data<<8) | sonora_regs[0];
+		case MODEL_MAC_LC_III:
+			return 0xa55a0001;	// 25 MHz LC III
+
+		case MODEL_MAC_LC_III_PLUS:
+			return 0xa55a0003;	// 33 MHz LC III+
+
+		case MODEL_MAC_POWERMAC_6100:
+			return 0xa55a3011;
+
+		case MODEL_MAC_POWERMAC_7100:
+			return 0xa55a3012;
+
+		case MODEL_MAC_POWERMAC_8100:
+			return 0xa55a3013;
+
+		case MODEL_MAC_PBDUO_210:
+			return 0xa55a1004;
+
+		case MODEL_MAC_PBDUO_230:
+			return 0xa55a1005;
+
+		case MODEL_MAC_PBDUO_250:
+			return 0xa55a1006;
 
 		default:
-			data = via_r(via_1, viaoffs);
-			return (data<<8)|data;
+			return 0;
 	}
-
-}
-
-static WRITE16_HANDLER ( mac_sonora_w )
-{
-	running_device *via_1 = space->machine->device("via6522_1");
-	int viaoffs;
-
-//  printf("sonora_w: %x to offset %x, mask %x (PC %x)\n", data, offset*2, mem_mask, cpu_get_pc(space->cpu));
-
-	viaoffs = (offset >> 8) & 0x0f;
-
-	switch (offset)
-	{
-		case 0:
-			if (ACCESSING_BITS_8_15)
-			{
-				via_w(via_1, viaoffs, (data >> 8) & 0xff);
-			}
-			else
-			{
-				sonora_regs[0] = data&0xe7;
-			}
-			break;
-
-		default:
-			if (ACCESSING_BITS_8_15)
-			{
-				via_w(via_1, viaoffs, (data >> 8) & 0xff);
-			}
-			break;
-	}
-}
-
-static WRITE32_HANDLER( mac_sonora_ramdac_w )
-{
-	if (mem_mask == 0xff000000)
-	{
-		sonora_clutoffs = data>>24;
-		sonora_count = 0;
-	}
-	else if (mem_mask == 0x00ff0000)
-	{
-		sonora_colors[sonora_count++] = data>>16;
-
-		if (sonora_count == 3)
-		{
-			sonora_count = 0;
-			palette_set_color(space->machine, sonora_clutoffs, MAKE_RGB(sonora_colors[0], sonora_colors[1], sonora_colors[2]));
-			sonora_palette[sonora_clutoffs] = MAKE_RGB(sonora_colors[0], sonora_colors[1], sonora_colors[2]);
-			sonora_clutoffs++;
-		}
-	}
-}
-
-static VIDEO_START( macsonora )
-{
-	memset(sonora_regs, 0, sizeof(sonora_regs));
-
-	sonora_regs[1] = 0x6;	// set init value
-}
-
-static VIDEO_UPDATE( macsonora )
-{
-	return 0;
-}
-
-static READ32_HANDLER(mac_lc3_id)
-{
-//  printf("Sonora ID register read, PC=%x\n", cpu_get_pc(space->cpu));
-
-	return 0xa55a0001;	// 25 MHz LC III
 }
 
 // Portable/PB100 video
@@ -469,19 +391,24 @@ static VIDEO_UPDATE( mac_prtb )
 	return 0;
 }
 
+READ16_MEMBER(mac_state::mac_config_r)
+{
+	return 0xffff;	// not sure what this does
+}
+
 /***************************************************************************
     ADDRESS MAPS
 ***************************************************************************/
 
-static ADDRESS_MAP_START(mac512ke_map, ADDRESS_SPACE_PROGRAM, 16)
+static ADDRESS_MAP_START(mac512ke_map, ADDRESS_SPACE_PROGRAM, 16, mac_state )
 	AM_RANGE(0x800000, 0x9fffff) AM_READ(mac_scc_r)
 	AM_RANGE(0xa00000, 0xbfffff) AM_WRITE(mac_scc_w)
 	AM_RANGE(0xc00000, 0xdfffff) AM_READWRITE(mac_iwm_r, mac_iwm_w)
 	AM_RANGE(0xe80000, 0xefffff) AM_READWRITE(mac_via_r, mac_via_w)
 	AM_RANGE(0xfffff0, 0xffffff) AM_READWRITE(mac_autovector_r, mac_autovector_w)
 ADDRESS_MAP_END
-
-static ADDRESS_MAP_START(macplus_map, ADDRESS_SPACE_PROGRAM, 16)
+						
+static ADDRESS_MAP_START(macplus_map, ADDRESS_SPACE_PROGRAM, 16, mac_state )
 	AM_RANGE(0x580000, 0x5fffff) AM_READWRITE(macplus_scsi_r, macplus_scsi_w)
 	AM_RANGE(0x800000, 0x9fffff) AM_READ(mac_scc_r)
 	AM_RANGE(0xa00000, 0xbfffff) AM_WRITE(mac_scc_w)
@@ -490,53 +417,55 @@ static ADDRESS_MAP_START(macplus_map, ADDRESS_SPACE_PROGRAM, 16)
 	AM_RANGE(0xfffff0, 0xffffff) AM_READWRITE(mac_autovector_r, mac_autovector_w)
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START(macprtb_map, ADDRESS_SPACE_PROGRAM, 16)
+static ADDRESS_MAP_START(macprtb_map, ADDRESS_SPACE_PROGRAM, 16, mac_state )
 	AM_RANGE(0x900000, 0x93ffff) AM_ROM AM_REGION("bootrom", 0) AM_MIRROR(0x0c0000)
 	AM_RANGE(0xf60000, 0xf6ffff) AM_READWRITE(mac_iwm_r, mac_iwm_w)
 	AM_RANGE(0xf70000, 0xf7ffff) AM_READWRITE(mac_via_r, mac_via_w)
 	AM_RANGE(0xf90000, 0xf9ffff) AM_READWRITE(macplus_scsi_r, macplus_scsi_w)
-//  AM_RANGE(0xfa0000, 0xfaffff) AM_RAM // video RAM? registers?
-	AM_RANGE(0xfb0000, 0xfbffff) AM_READWRITE8(mac_asc_r, mac_asc_w, 0xffff)
-	AM_RANGE(0xfd0000, 0xfdffff) AM_READWRITE(mac_scc_r, mac_scc_w)
+	AM_RANGE(0xfa8000, 0xfaffff) AM_RAM	// VRAM
+	AM_RANGE(0xfb0000, 0xfbffff) AM_DEVREADWRITE8("asc", asc_device, read, write, 0xffff)
+	AM_RANGE(0xfc0000, 0xfcffff) AM_READ(mac_config_r)
+	AM_RANGE(0xfd0000, 0xfdffff) AM_READWRITE(mac_scc_r, mac_scc_2_w)
 	AM_RANGE(0xfffff0, 0xffffff) AM_READWRITE(mac_autovector_r, mac_autovector_w)
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START(maclc_map, ADDRESS_SPACE_PROGRAM, 32)
-	AM_RANGE(0x00a00000, 0x00a7ffff) AM_ROM AM_REGION("bootrom", 0)	// ROM (in 32-bit mode)
+static ADDRESS_MAP_START(maclc_map, ADDRESS_SPACE_PROGRAM, 32, mac_state )
+	ADDRESS_MAP_GLOBAL_MASK(0x80ffffff)	// V8 uses bit 31 and 23-0 for address decoding only
 
-	AM_RANGE(0x50f00000, 0x50f01fff) AM_READWRITE16(mac_via_r, mac_via_w, 0xffffffff)
-	AM_RANGE(0x50f04000, 0x50f05fff) AM_READWRITE16(mac_scc_r, mac_scc_2_w, 0xffffffff)
-	// 50f06000-7fff = SCSI handshake
+	AM_RANGE(0xa00000, 0xafffff) AM_ROM AM_REGION("bootrom", 0)	// ROM (in 32-bit mode)
 
-	// 50f10000-1fff = SCSI
-	// 50f12000-3fff = SCSI DMA
-	AM_RANGE(0x50f14000, 0x50f15fff) AM_READ8(mac_asc_r, 0xffffffff) AM_WRITE8(mac_asc_w, 0xffffffff)
-	AM_RANGE(0x50f16000, 0x50f17fff) AM_READ(mac_swim_r) AM_WRITENOP
-	// 50f18000-9fff = PWMs
-
-	// 50f24000-5fff = VDAC (palette)
-	AM_RANGE(0x50f24000, 0x50f24003) AM_WRITE(mac_v8_ramdac_w)
-	AM_RANGE(0x50f26000, 0x50f27fff) AM_READWRITE16(mac_v8_r, mac_v8_w, 0xffffffff)	// VIA2 (V8)
-
-	AM_RANGE(0x50f40000, 0x50fbffff) AM_RAM	// V8 VRAM
+	AM_RANGE(0xf00000, 0xf01fff) AM_READWRITE16(mac_via_r, mac_via_w, 0xffffffff)
+	AM_RANGE(0xf04000, 0xf05fff) AM_READWRITE16(mac_scc_r, mac_scc_2_w, 0xffffffff)
+	AM_RANGE(0xf06000, 0xf07fff) AM_READWRITE(macii_scsi_drq_r, macii_scsi_drq_w)
+	AM_RANGE(0xf10000, 0xf11fff) AM_READWRITE16(macplus_scsi_r, macii_scsi_w, 0xffffffff)
+	AM_RANGE(0xf12000, 0xf13fff) AM_READWRITE(macii_scsi_drq_r, macii_scsi_drq_w)
+	AM_RANGE(0xf14000, 0xf15fff) AM_DEVREADWRITE8("asc", asc_device, read, write, 0xffffffff)
+	AM_RANGE(0xf16000, 0xf17fff) AM_READWRITE16(mac_iwm_r, mac_iwm_w, 0xffffffff)
+	AM_RANGE(0xf24000, 0xf24003) AM_READWRITE(rbv_ramdac_r, ariel_ramdac_w)
+	AM_RANGE(0xf26000, 0xf27fff) AM_READWRITE8(mac_rbv_r, mac_rbv_w, 0xffffffff)	// VIA2 (V8)
+	AM_RANGE(0xf40000, 0xfbffff) AM_RAM AM_BASE(m_rbv_vram)
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START(maclc3_map, ADDRESS_SPACE_PROGRAM, 32)
-	AM_RANGE(0x40000000, 0x4003ffff) AM_ROM AM_REGION("bootrom", 0) AM_MIRROR(0x0ffc0000)
+static ADDRESS_MAP_START(maclc3_map, ADDRESS_SPACE_PROGRAM, 32, mac_state )
+	AM_RANGE(0x40000000, 0x400fffff) AM_ROM AM_REGION("bootrom", 0) AM_MIRROR(0x0ff00000)
 
 	AM_RANGE(0x50000000, 0x50001fff) AM_READWRITE16(mac_via_r, mac_via_w, 0xffffffff) AM_MIRROR(0x00f00000)
 	AM_RANGE(0x50004000, 0x50005fff) AM_READWRITE16(mac_scc_r, mac_scc_2_w, 0xffffffff) AM_MIRROR(0x00f00000)
-	AM_RANGE(0x50014000, 0x50015fff) AM_READ8(mac_asc_r, 0xffffffff) AM_WRITE8(mac_asc_w, 0xffffffff) AM_MIRROR(0x00f00000)
-	AM_RANGE(0x50016000, 0x50017fff) AM_READ(mac_swim_r) AM_WRITENOP AM_MIRROR(0x00f00000)
-	AM_RANGE(0x50024000, 0x50024003) AM_WRITE(mac_sonora_ramdac_w) AM_MIRROR(0x00f00000)
-	AM_RANGE(0x50026000, 0x50027fff) AM_READWRITE16(mac_sonora_r, mac_sonora_w, 0xffffffff)	 AM_MIRROR(0x00f00000)// VIA2 (Sonora)
+	AM_RANGE(0x50006000, 0x50007fff) AM_READWRITE(macii_scsi_drq_r, macii_scsi_drq_w) AM_MIRROR(0x00f00000)
+	AM_RANGE(0x50010000, 0x50011fff) AM_READWRITE16(macplus_scsi_r, macii_scsi_w, 0xffffffff) AM_MIRROR(0x00f00000)
+	AM_RANGE(0x50012000, 0x50013fff) AM_READWRITE(macii_scsi_drq_r, macii_scsi_drq_w) AM_MIRROR(0x00f00000)
+	AM_RANGE(0x50014000, 0x50015fff) AM_DEVREADWRITE8("asc", asc_device, read, write, 0xffffffff) AM_MIRROR(0x00f00000) 
+	AM_RANGE(0x50016000, 0x50017fff) AM_READWRITE16(mac_iwm_r, mac_iwm_w, 0xffffffff) AM_MIRROR(0x00f00000)
+	AM_RANGE(0x50024000, 0x50025fff) AM_WRITE( ariel_ramdac_w ) AM_MIRROR(0x00f00000)
+	AM_RANGE(0x50026000, 0x50027fff) AM_READWRITE8(mac_rbv_r, mac_rbv_w, 0xffffffff) AM_MIRROR(0x00f00000)
+	AM_RANGE(0x50028000, 0x50028003) AM_READWRITE8(mac_sonora_vctl_r, mac_sonora_vctl_w, 0xffffffff) AM_MIRROR(0x00f00000) 
 
-	AM_RANGE(0x5ffffffc, 0x5fffffff) AM_READ(mac_lc3_id)
+	AM_RANGE(0x5ffffffc, 0x5fffffff) AM_READ(mac_read_id)
 
-	AM_RANGE(0xfeff8000, 0xfeffffff) AM_ROM AM_REGION("bootrom", 0x78000)
+	AM_RANGE(0x60000000, 0x600fffff) AM_RAM AM_MIRROR(0x0ff00000) AM_BASE(m_rbv_vram)
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START(macii_map, ADDRESS_SPACE_PROGRAM, 32)
+static ADDRESS_MAP_START(macii_map, ADDRESS_SPACE_PROGRAM, 32, mac_state )
 	AM_RANGE(0x40000000, 0x4003ffff) AM_ROM AM_REGION("bootrom", 0) AM_MIRROR(0x0ffc0000)
 
 	// MMU remaps I/O without the F
@@ -547,71 +476,53 @@ static ADDRESS_MAP_START(macii_map, ADDRESS_SPACE_PROGRAM, 32)
 	AM_RANGE(0x50006060, 0x50006063) AM_READ(macii_scsi_drq_r) AM_MIRROR(0x00f00000)
 	AM_RANGE(0x50010000, 0x50011fff) AM_READWRITE16(macplus_scsi_r, macii_scsi_w, 0xffffffff) AM_MIRROR(0x00f00000)
 	AM_RANGE(0x50012060, 0x50012063) AM_READ(macii_scsi_drq_r) AM_MIRROR(0x00f00000)
-	AM_RANGE(0x50014000, 0x50015fff) AM_READ8(mac_asc_r, 0xffffffff) AM_WRITE8(mac_asc_w, 0xffffffff) AM_MIRROR(0x00f00000)
+	AM_RANGE(0x50014000, 0x50015fff) AM_DEVREADWRITE8("asc", asc_device, read, write, 0xffffffff) AM_MIRROR(0x00f00000) 
 	AM_RANGE(0x50016000, 0x50017fff) AM_READWRITE16(mac_iwm_r, mac_iwm_w, 0xffffffff) AM_MIRROR(0x00f00000)
 	AM_RANGE(0x50040000, 0x50041fff) AM_READWRITE16(mac_via_r, mac_via_w, 0xffffffff) AM_MIRROR(0x00f00000)
 
 	// RasterOps 264 640x480 fixed-res color video card (8, 16, or 24 bit)
-	AM_RANGE(0xfe000000, 0xfe1fffff) AM_RAM	AM_BASE(&mac_cb264_vram) // supposed to be 1.5 megs of VRAM, but every other word?
+	AM_RANGE(0xfe000000, 0xfe1fffff) AM_RAM	AM_BASE(m_cb264_vram) // supposed to be 1.5 megs of VRAM, but every other word?
 	AM_RANGE(0xfeff6000, 0xfeff60ff) AM_READWRITE( mac_cb264_r, mac_cb264_w )
 	AM_RANGE(0xfeff7000, 0xfeff7fff) AM_WRITE( mac_cb264_ramdac_w )
 	AM_RANGE(0xfeff8000, 0xfeffffff) AM_ROM AM_REGION("rops264", 0)
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START(maciici_map, ADDRESS_SPACE_PROGRAM, 32)
+static ADDRESS_MAP_START(maciici_map, ADDRESS_SPACE_PROGRAM, 32, mac_state )
 	AM_RANGE(0x40000000, 0x4007ffff) AM_ROM AM_REGION("bootrom", 0) AM_MIRROR(0x0ff80000)
 
 	AM_RANGE(0x50000000, 0x50001fff) AM_READWRITE16(mac_via_r, mac_via_w, 0xffffffff) AM_MIRROR(0x00f00000)
 	AM_RANGE(0x50004000, 0x50005fff) AM_READWRITE16(mac_scc_r, mac_scc_2_w, 0xffffffff) AM_MIRROR(0x00f00000)
-	AM_RANGE(0x50006000, 0x50006003) AM_WRITE(macii_scsi_drq_w) AM_MIRROR(0x00f00000)
-	AM_RANGE(0x50006060, 0x50006063) AM_READ(macii_scsi_drq_r) AM_MIRROR(0x00f00000)
+	AM_RANGE(0x50006000, 0x50007fff) AM_READWRITE(macii_scsi_drq_r, macii_scsi_drq_w) AM_MIRROR(0x00f00000)
 	AM_RANGE(0x50010000, 0x50011fff) AM_READWRITE16(macplus_scsi_r, macii_scsi_w, 0xffffffff) AM_MIRROR(0x00f00000)
 	AM_RANGE(0x50012060, 0x50012063) AM_READ(macii_scsi_drq_r) AM_MIRROR(0x00f00000)
-	AM_RANGE(0x50014000, 0x50015fff) AM_READ8(mac_asc_r, 0xffffffff) AM_WRITE8(mac_asc_w, 0xffffffff) AM_MIRROR(0x00f00000)
-	AM_RANGE(0x50016000, 0x50017fff) AM_READ(mac_swim_r) AM_WRITENOP AM_MIRROR(0x00f00000)
+	AM_RANGE(0x50014000, 0x50015fff) AM_DEVREADWRITE8("asc", asc_device, read, write, 0xffffffff) AM_MIRROR(0x00f00000) 
+	AM_RANGE(0x50016000, 0x50017fff) AM_READWRITE16(mac_iwm_r, mac_iwm_w, 0xffffffff) AM_MIRROR(0x00f00000)
 	AM_RANGE(0x50024000, 0x50024007) AM_WRITE( rbv_ramdac_w ) AM_MIRROR(0x00f00000)
-	AM_RANGE(0x50026000, 0x50027fff) AM_READWRITE16(mac_rbv_r, mac_rbv_w, 0xffffffff) AM_MIRROR(0x00f00000)
+	AM_RANGE(0x50026000, 0x50027fff) AM_READWRITE8(mac_rbv_r, mac_rbv_w, 0xffffffff) AM_MIRROR(0x00f00000)
 	AM_RANGE(0x50040000, 0x50041fff) AM_READWRITE16(mac_via_r, mac_via_w, 0xffffffff) AM_MIRROR(0x00f00000)
-
-	// mirror video declaration ROM
-	AM_RANGE(0xfee00000, 0xfee7ffff) AM_RAM AM_BASE(&rbv_vram)
-//  AM_RANGE(0xfeff8000, 0xfeffffff) AM_ROM AM_REGION("bootrom", 0x78000)
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START(macse30_map, ADDRESS_SPACE_PROGRAM, 32)
+static ADDRESS_MAP_START(macse30_map, ADDRESS_SPACE_PROGRAM, 32, mac_state )
 	AM_RANGE(0x40000000, 0x4003ffff) AM_ROM AM_REGION("bootrom", 0) AM_MIRROR(0x0ffc0000)
 
 	AM_RANGE(0x50000000, 0x50001fff) AM_READWRITE16(mac_via_r, mac_via_w, 0xffffffff) AM_MIRROR(0x00f00000)
 	AM_RANGE(0x50002000, 0x50003fff) AM_READWRITE16(mac_via2_r, mac_via2_w, 0xffffffff) AM_MIRROR(0x00f00000)
 	AM_RANGE(0x50004000, 0x50005fff) AM_READWRITE16(mac_scc_r, mac_scc_2_w, 0xffffffff) AM_MIRROR(0x00f00000)
-	AM_RANGE(0x50006000, 0x50006003) AM_WRITE(macii_scsi_drq_w) AM_MIRROR(0x00f00000)
-	AM_RANGE(0x50006060, 0x50006063) AM_READ(macii_scsi_drq_r) AM_MIRROR(0x00f00000)
+	AM_RANGE(0x50006000, 0x50007fff) AM_READWRITE(macii_scsi_drq_r, macii_scsi_drq_w) AM_MIRROR(0x00f00000)
 	AM_RANGE(0x50010000, 0x50011fff) AM_READWRITE16(macplus_scsi_r, macii_scsi_w, 0xffffffff) AM_MIRROR(0x00f00000)
 	AM_RANGE(0x50012060, 0x50012063) AM_READ(macii_scsi_drq_r) AM_MIRROR(0x00f00000)
-	AM_RANGE(0x50014000, 0x50015fff) AM_READ8(mac_asc_r, 0xffffffff) AM_WRITE8(mac_asc_w, 0xffffffff) AM_MIRROR(0x00f00000)
+	AM_RANGE(0x50014000, 0x50015fff) AM_DEVREADWRITE8("asc", asc_device, read, write, 0xffffffff) AM_MIRROR(0x00f00000) 
 	AM_RANGE(0x50016000, 0x50017fff) AM_READWRITE16(mac_iwm_r, mac_iwm_w, 0xffffffff) AM_MIRROR(0x00f00000)
 	AM_RANGE(0x50040000, 0x50041fff) AM_READWRITE16(mac_via_r, mac_via_w, 0xffffffff) AM_MIRROR(0x00f00000)	// mirror
 
-	AM_RANGE(0xfe000000, 0xfe00ffff) AM_RAM	AM_BASE(&mac_se30_vram)
+	AM_RANGE(0xfe000000, 0xfe00ffff) AM_RAM	AM_BASE(m_se30_vram)
 	AM_RANGE(0xfeffe000, 0xfeffffff) AM_ROM AM_REGION("se30vrom", 0x0)
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START(macclas2_map, ADDRESS_SPACE_PROGRAM, 32)
-	AM_RANGE(0x40000000, 0x4007ffff) AM_ROM AM_REGION("bootrom", 0) AM_MIRROR(0x0ff80000)
+static ADDRESS_MAP_START(pwrmac_map, ADDRESS_SPACE_PROGRAM, 64, mac_state )
+	AM_RANGE(0x00000000, 0x007fffff) AM_RAM	// 8 MB standard
 
-	AM_RANGE(0x50000000, 0x50001fff) AM_READWRITE16(mac_via_r, mac_via_w, 0xffffffff) AM_MIRROR(0x00f00000)
-	AM_RANGE(0x50002000, 0x50003fff) AM_READWRITE16(mac_via2_r, mac_via2_w, 0xffffffff) AM_MIRROR(0x00f00000)
-	AM_RANGE(0x50004000, 0x50005fff) AM_READWRITE16(mac_scc_r, mac_scc_2_w, 0xffffffff) AM_MIRROR(0x00f00000)
-	AM_RANGE(0x50010000, 0x50011fff) AM_READWRITE16(macplus_scsi_r, macii_scsi_w, 0xffffffff) AM_MIRROR(0x00f00000)
-	AM_RANGE(0x50006000, 0x50006003) AM_WRITE(macii_scsi_drq_w) AM_MIRROR(0x00f00000)
-	AM_RANGE(0x50012060, 0x50012063) AM_READ(macii_scsi_drq_r) AM_MIRROR(0x00f00000)
-	AM_RANGE(0x50014000, 0x50015fff) AM_READ8(mac_asc_r, 0xffffffff) AM_WRITE8(mac_asc_w, 0xffffffff) AM_MIRROR(0x00f00000)
-	AM_RANGE(0x50016000, 0x50017fff) AM_READ(mac_swim_r) AM_WRITENOP AM_MIRROR(0x00f00000)
-	AM_RANGE(0x50040000, 0x50041fff) AM_READWRITE16(mac_via_r, mac_via_w, 0xffffffff) AM_MIRROR(0x00f00000)	// mirror
-ADDRESS_MAP_END
-
-static ADDRESS_MAP_START(pwrmac_map, ADDRESS_SPACE_PROGRAM, 64)
-	AM_RANGE(0x40000000, 0x4003ffff) AM_ROM AM_REGION("bootrom", 0) AM_MIRROR(0x0ffc0000)
+	AM_RANGE(0x40000000, 0x403fffff) AM_ROM AM_REGION("bootrom", 0) AM_MIRROR(0x0fc00000)
 
 	AM_RANGE(0x50000000, 0x50001fff) AM_READWRITE16(mac_via_r, mac_via_w, U64(0xffffffffffffffff)) AM_MIRROR(0x00f00000)
 	AM_RANGE(0x50002000, 0x50003fff) AM_READWRITE16(mac_via2_r, mac_via2_w, U64(0xffffffffffffffff)) AM_MIRROR(0x00f00000)
@@ -620,8 +531,9 @@ static ADDRESS_MAP_START(pwrmac_map, ADDRESS_SPACE_PROGRAM, 64)
 	AM_RANGE(0x50006060, 0x50006067) AM_READ32(macii_scsi_drq_r,U64(0xffffffffffffffff)) AM_MIRROR(0x00f00000)
 	AM_RANGE(0x50010000, 0x50011fff) AM_READWRITE16(macplus_scsi_r, macii_scsi_w, U64(0xffffffffffffffff)) AM_MIRROR(0x00f00000)
 	AM_RANGE(0x50012060, 0x50012067) AM_READ32(macii_scsi_drq_r,U64(0xffffffffffffffff)) AM_MIRROR(0x00f00000)
-	AM_RANGE(0x50014000, 0x50015fff) AM_READWRITE8(mac_asc_r, mac_asc_w, U64(0xffffffffffffffff)) AM_MIRROR(0x00f00000)
 	AM_RANGE(0x50016000, 0x50017fff) AM_READWRITE16(mac_iwm_r, mac_iwm_w, U64(0xffffffffffffffff)) AM_MIRROR(0x00f00000)
+
+	AM_RANGE(0x5ffffff8, 0x5fffffff) AM_READ32(mac_read_id, U64(0xffffffffffffffff))
 
 	AM_RANGE(0xffc00000, 0xffffffff) AM_ROM AM_REGION("bootrom", 0)
 ADDRESS_MAP_END
@@ -640,7 +552,20 @@ static const applefdc_interface mac_iwm_interface =
 	sony_read_status
 };
 
+static const SCSIConfigTable dev_table =
+{
+	2,                                      /* 2 SCSI devices */
+	{
+	 { SCSI_ID_6, "harddisk1", SCSI_DEVICE_HARDDISK },  /* SCSI ID 6, using disk1, and it's a harddisk */
+	 { SCSI_ID_5, "harddisk2", SCSI_DEVICE_HARDDISK }   /* SCSI ID 5, using disk2, and it's a harddisk */
+	}
+};
 
+static const struct NCR5380interface macplus_5380intf =
+{
+	&dev_table,	// SCSI device table
+	mac_scsi_irq	// IRQ (unconnected on the Mac Plus)
+};
 
 /***************************************************************************
     MACHINE DRIVERS
@@ -670,397 +595,410 @@ static const floppy_config mac_floppy_config = //SONY_FLOPPY_ALLOW400K | SONY_FL
 	NULL
 };
 
-static MACHINE_DRIVER_START( mac512ke )
-	MDRV_DRIVER_DATA(mac_state)
+static MACHINE_CONFIG_START( mac512ke, mac_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 7833600)        /* 7.8336 MHz */
-	MDRV_CPU_PROGRAM_MAP(mac512ke_map)
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60.15)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(1260))
-	MDRV_QUANTUM_TIME(HZ(60))
-
-	MDRV_MACHINE_START( mac )
-	MDRV_MACHINE_RESET( mac )
+	MCFG_CPU_ADD("maincpu", M68000, 7833600)        /* 7.8336 MHz */
+	MCFG_CPU_PROGRAM_MAP(mac512ke_map)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60.15)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(1260))
+	MCFG_QUANTUM_TIME(HZ(60))
 
     /* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(MAC_H_TOTAL, MAC_V_TOTAL)
-	MDRV_SCREEN_VISIBLE_AREA(0, MAC_H_VIS-1, 0, MAC_V_VIS-1)
-	MDRV_PALETTE_LENGTH(2)
-	MDRV_PALETTE_INIT(mac)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(MAC_H_TOTAL, MAC_V_TOTAL)
+	MCFG_SCREEN_VISIBLE_AREA(0, MAC_H_VIS-1, 0, MAC_V_VIS-1)
+	MCFG_PALETTE_LENGTH(2)
+	MCFG_PALETTE_INIT(mac)
 
-	MDRV_VIDEO_START(mac)
-	MDRV_VIDEO_UPDATE(mac)
+	MCFG_VIDEO_START(mac)
+	MCFG_VIDEO_UPDATE(mac)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("custom", MAC_SOUND, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("custom", MAC_SOUND, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
 
 	/* nvram */
-	MDRV_NVRAM_HANDLER(mac)
+	MCFG_NVRAM_HANDLER(mac)
 
 	/* devices */
-	MDRV_IWM_ADD("fdc", mac_iwm_interface)
-	MDRV_FLOPPY_SONY_2_DRIVES_ADD(mac128512_floppy_config)
+	MCFG_IWM_ADD("fdc", mac_iwm_interface)
+	MCFG_FLOPPY_SONY_2_DRIVES_ADD(mac128512_floppy_config)
 
-	MDRV_SCC8530_ADD("scc", 7833600)
-	MDRV_SCC8530_IRQ(mac_scc_irq)
-	MDRV_VIA6522_ADD("via6522_0", 1000000, mac_via6522_intf)
-
-	/* internal ram */
-	MDRV_RAM_ADD("messram")
-	MDRV_RAM_DEFAULT_SIZE("512K")
-MACHINE_DRIVER_END
-
-static MACHINE_DRIVER_START( mac128k )
-	MDRV_IMPORT_FROM( mac512ke )
+	MCFG_SCC8530_ADD("scc", 7833600)
+	MCFG_SCC8530_IRQ(mac_scc_irq)
+	MCFG_VIA6522_ADD("via6522_0", 1000000, mac_via6522_intf)
 
 	/* internal ram */
-	MDRV_RAM_MODIFY("messram")
-	MDRV_RAM_DEFAULT_SIZE("128K")
-MACHINE_DRIVER_END
+	MCFG_RAM_ADD("messram")
+	MCFG_RAM_DEFAULT_SIZE("512K")
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( macplus )
-	MDRV_IMPORT_FROM( mac512ke )
-	MDRV_CPU_MODIFY( "maincpu" )
-	MDRV_CPU_PROGRAM_MAP(macplus_map)
-
-	MDRV_MACHINE_START(macscsi)
-
-	MDRV_HARDDISK_ADD( "harddisk1" )
-	MDRV_HARDDISK_ADD( "harddisk2" )
-
-	MDRV_FLOPPY_SONY_2_DRIVES_MODIFY(mac_floppy_config)
+static MACHINE_CONFIG_DERIVED( mac128k, mac512ke )
 
 	/* internal ram */
-	MDRV_RAM_MODIFY("messram")
-	MDRV_RAM_DEFAULT_SIZE("4M")
-	MDRV_RAM_EXTRA_OPTIONS("512K,2M,2560K,4M")
-MACHINE_DRIVER_END
+	MCFG_RAM_MODIFY("messram")
+	MCFG_RAM_DEFAULT_SIZE("128K")
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( macse )
-	MDRV_IMPORT_FROM( macplus )
+static MACHINE_CONFIG_DERIVED( macplus, mac512ke )
+	MCFG_CPU_MODIFY( "maincpu" )
+	MCFG_CPU_PROGRAM_MAP(macplus_map)
 
-	MDRV_DEVICE_REMOVE("via6522_0")
-	MDRV_VIA6522_ADD("via6522_0", 1000000, mac_via6522_adb_intf)
+	MCFG_NCR5380_ADD("ncr5380", 7833600, macplus_5380intf)
 
-	/* internal ram */
-	MDRV_RAM_MODIFY("messram")
-	MDRV_RAM_DEFAULT_SIZE("4M")
-	MDRV_RAM_EXTRA_OPTIONS("2M,2560K,4M")
-MACHINE_DRIVER_END
+	MCFG_HARDDISK_ADD( "harddisk1" )
+	MCFG_HARDDISK_ADD( "harddisk2" )
 
-static MACHINE_DRIVER_START( macprtb )
-	MDRV_IMPORT_FROM( macplus )
-
-	MDRV_CPU_MODIFY( "maincpu" )
-	MDRV_CPU_PROGRAM_MAP(macprtb_map)
-
-	MDRV_DEVICE_REMOVE("via6522_0")
-	MDRV_VIA6522_ADD("via6522_0", 1000000, mac_via6522_adb_intf)
-
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_SIZE(640, 400)
-	MDRV_SCREEN_VISIBLE_AREA(0, 640-1, 0, 400-1)
-	MDRV_PALETTE_LENGTH(256)
-
-	MDRV_VIDEO_START(mac_prtb)
-	MDRV_VIDEO_UPDATE(mac_prtb)
+	MCFG_FLOPPY_SONY_2_DRIVES_MODIFY(mac_floppy_config)
 
 	/* internal ram */
-	MDRV_RAM_MODIFY("messram")
-	MDRV_RAM_DEFAULT_SIZE("2M")
-	MDRV_RAM_EXTRA_OPTIONS("2M,4M,6M,8M")
+	MCFG_RAM_MODIFY("messram")
+	MCFG_RAM_DEFAULT_SIZE("4M")
+	MCFG_RAM_EXTRA_OPTIONS("1M,2M,2560K,4M")
+MACHINE_CONFIG_END
 
-	MDRV_SOUND_ADD("ascal", DMADAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-	MDRV_SOUND_ADD("ascar", DMADAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-	MDRV_SOUND_ADD("ascbl", DMADAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-	MDRV_SOUND_ADD("ascbr", DMADAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( macse, macplus )
 
-static MACHINE_DRIVER_START( macii )
-	MDRV_DRIVER_DATA(mac_state)
+	MCFG_DEVICE_REMOVE("via6522_0")
+	MCFG_VIA6522_ADD("via6522_0", 1000000, mac_via6522_adb_intf)
+
+	/* internal ram */
+	MCFG_RAM_MODIFY("messram")
+	MCFG_RAM_DEFAULT_SIZE("4M")
+	MCFG_RAM_EXTRA_OPTIONS("2M,2560K,4M")
+MACHINE_CONFIG_END
+
+static MACHINE_CONFIG_START( macprtb, mac_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68020PMMU, 7833600*2)
-	MDRV_CPU_PROGRAM_MAP(macii_map)
-	MDRV_CPU_VBLANK_INT("screen", mac_cb264_vbl)
+	MCFG_CPU_ADD("maincpu", M68000, 7833600*2)
+	MCFG_CPU_PROGRAM_MAP(macprtb_map)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60.15)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(1260))
+	MCFG_QUANTUM_TIME(HZ(60))
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	// dot clock, htotal, hstart, hend, vtotal, vstart, vend
-	MDRV_SCREEN_RAW_PARAMS(25175000, 800, 0, 640, 525, 0, 480)
+    /* video hardware */
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(700, 480)
+	MCFG_SCREEN_VISIBLE_AREA(0, 639, 0, 399)
+	MCFG_PALETTE_LENGTH(2)
+	MCFG_PALETTE_INIT(mac)
 
-	MDRV_MACHINE_START(macscsi)
-	MDRV_MACHINE_RESET( mac )
-
-        /* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(1024, 768)
-	MDRV_SCREEN_VISIBLE_AREA(0, 640-1, 0, 480-1)
-	MDRV_PALETTE_LENGTH(256)
-
-	MDRV_VIDEO_START(mac_cb264)
-	MDRV_VIDEO_UPDATE(mac_cb264)
+	MCFG_VIDEO_START(mac_prtb)
+	MCFG_VIDEO_UPDATE(mac_prtb)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
-	MDRV_SOUND_ADD("ascal", DMADAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ADD("ascar", DMADAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
-	MDRV_SOUND_ADD("ascbl", DMADAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ADD("ascbr", DMADAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_ASC_ADD("asc", C15M, ASC_TYPE_ASC, mac_asc_irq)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
 
 	/* nvram */
-	MDRV_NVRAM_HANDLER(mac)
+	MCFG_NVRAM_HANDLER(mac)
 
 	/* devices */
-	MDRV_IWM_ADD("fdc", mac_iwm_interface)
-	MDRV_FLOPPY_SONY_2_DRIVES_ADD(mac_floppy_config)
+	MCFG_NCR5380_ADD("ncr5380", 7833600, macplus_5380intf)
 
-	MDRV_SCC8530_ADD("scc", 7833600)
-	MDRV_SCC8530_IRQ(mac_scc_irq)
-	MDRV_VIA6522_ADD("via6522_0", 1000000, mac_via6522_intf)
+	MCFG_IWM_ADD("fdc", mac_iwm_interface)
+	MCFG_FLOPPY_SONY_2_DRIVES_ADD(mac128512_floppy_config)
 
-	MDRV_DEVICE_REMOVE("via6522_0")
-	MDRV_VIA6522_ADD("via6522_0", 1000000, mac_via6522_adb_intf)
-	MDRV_VIA6522_ADD("via6522_1", 1000000, mac_via6522_2_intf)
+	MCFG_SCC8530_ADD("scc", 7833600)
+	MCFG_SCC8530_IRQ(mac_scc_irq)
+	MCFG_VIA6522_ADD("via6522_0", 783360, mac_via6522_intf)
 
-	MDRV_HARDDISK_ADD( "harddisk1" )
-	MDRV_HARDDISK_ADD( "harddisk2" )
+	MCFG_HARDDISK_ADD( "harddisk1" )
+	MCFG_HARDDISK_ADD( "harddisk2" )
 
 	/* internal ram */
-	MDRV_RAM_ADD("messram")
-	MDRV_RAM_DEFAULT_SIZE("2M")
-	MDRV_RAM_EXTRA_OPTIONS("8M,12M,16M,20M")
-MACHINE_DRIVER_END
+	MCFG_RAM_ADD("messram")
+	MCFG_RAM_DEFAULT_SIZE("1M")
+	MCFG_RAM_EXTRA_OPTIONS("1M,3M,5M,7M,9M")
 
-static MACHINE_DRIVER_START( maclc )
-	MDRV_IMPORT_FROM( macii )
+MACHINE_CONFIG_END
 
-	MDRV_CPU_REPLACE("maincpu", M68020, 7833600*2)
-	MDRV_CPU_PROGRAM_MAP(maclc_map)
-
-	MDRV_PALETTE_LENGTH(256)
-
-	MDRV_VIDEO_START(maclc)
-	MDRV_VIDEO_UPDATE(maclc)
-
-	MDRV_RAM_MODIFY("messram")
-	MDRV_RAM_DEFAULT_SIZE("2M")
-	MDRV_RAM_EXTRA_OPTIONS("4M,6M,8M,10M")
-MACHINE_DRIVER_END
-
-static MACHINE_DRIVER_START( maclc2 )
-	MDRV_IMPORT_FROM(maclc)
-
-	MDRV_CPU_REPLACE("maincpu", M68030, 7833600*2)
-	MDRV_CPU_PROGRAM_MAP(maclc_map)
-
-	MDRV_RAM_MODIFY("messram")
-	MDRV_RAM_DEFAULT_SIZE("4M")
-	MDRV_RAM_EXTRA_OPTIONS("8M,12M,16M,20M,24M,28M,32M,36M")
-MACHINE_DRIVER_END
-
-static MACHINE_DRIVER_START( maclc3 )
-	MDRV_IMPORT_FROM(maclc)
-
-	MDRV_CPU_REPLACE("maincpu", M68030, 25000000)
-	MDRV_CPU_PROGRAM_MAP(maclc3_map)
-
-	MDRV_VIDEO_START(macsonora)
-	MDRV_VIDEO_UPDATE(macsonora)
-
-	MDRV_RAM_MODIFY("messram")
-	MDRV_RAM_DEFAULT_SIZE("4M")
-	MDRV_RAM_EXTRA_OPTIONS("8M,12M,16M,20M,24M,28M,32M,36M")
-MACHINE_DRIVER_END
-
-static MACHINE_DRIVER_START( maciix )
-	MDRV_IMPORT_FROM( macii )
-
-	MDRV_CPU_REPLACE("maincpu", M68030, 7833600*2)
-	MDRV_CPU_PROGRAM_MAP(macii_map)
-	MDRV_CPU_VBLANK_INT("screen", mac_cb264_vbl)
-
-	MDRV_RAM_MODIFY("messram")
-	MDRV_RAM_DEFAULT_SIZE("2M")
-	MDRV_RAM_EXTRA_OPTIONS("8M,16M,32M,48M,64M,96M,128M")
-MACHINE_DRIVER_END
-
-static MACHINE_DRIVER_START( macse30 )
-	MDRV_DRIVER_DATA(mac_state)
-
-	MDRV_CPU_ADD("maincpu", M68030, 7833600*2)
-	MDRV_CPU_PROGRAM_MAP(macse30_map)
-
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60.15)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(1260))
-	MDRV_QUANTUM_TIME(HZ(60))
-
-	MDRV_MACHINE_START(macscsi)
-	MDRV_MACHINE_RESET( mac )
-
-        /* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(MAC_H_TOTAL, MAC_V_TOTAL)
-	MDRV_SCREEN_VISIBLE_AREA(0, MAC_H_VIS-1, 0, MAC_V_VIS-1)
-	MDRV_PALETTE_LENGTH(2)
-	MDRV_PALETTE_INIT(mac)
-
-	MDRV_VIDEO_START(mac)
-	MDRV_VIDEO_UPDATE(macse30)
-
-	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
-	MDRV_SOUND_ADD("ascal", DMADAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ADD("ascar", DMADAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
-	MDRV_SOUND_ADD("ascbl", DMADAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ADD("ascbr", DMADAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
-
-	/* nvram */
-	MDRV_NVRAM_HANDLER(mac)
-
-	/* devices */
-	MDRV_IWM_ADD("fdc", mac_iwm_interface)
-	MDRV_FLOPPY_SONY_2_DRIVES_ADD(mac_floppy_config)
-
-	MDRV_SCC8530_ADD("scc", 7833600)
-	MDRV_SCC8530_IRQ(mac_scc_irq)
-	MDRV_VIA6522_ADD("via6522_0", 1000000, mac_via6522_intf)
-
-	MDRV_DEVICE_REMOVE("via6522_0")
-	MDRV_VIA6522_ADD("via6522_0", 1000000, mac_via6522_adb_intf)
-	MDRV_VIA6522_ADD("via6522_1", 1000000, mac_via6522_2_intf)
-
-	MDRV_HARDDISK_ADD( "harddisk1" )
-	MDRV_HARDDISK_ADD( "harddisk2" )
-
-	/* internal ram */
-	MDRV_RAM_ADD("messram")
-	MDRV_RAM_DEFAULT_SIZE("2M")
-	MDRV_RAM_EXTRA_OPTIONS("8M,16M,32M,48M,64M,96M,128M")
-MACHINE_DRIVER_END
-
-static MACHINE_DRIVER_START( macclas2 )
-	MDRV_IMPORT_FROM( maclc )
-
-	MDRV_CPU_REPLACE("maincpu", M68030, 7833600*2)
-	MDRV_CPU_PROGRAM_MAP(macclas2_map)
-
-	MDRV_VIDEO_START(maclc)
-	MDRV_VIDEO_UPDATE(maclc)
-MACHINE_DRIVER_END
-
-static MACHINE_DRIVER_START( maciici )
-	MDRV_IMPORT_FROM( macii )
-
-	MDRV_CPU_REPLACE("maincpu", M68030, 7833600*2)
-	MDRV_CPU_PROGRAM_MAP(maciici_map)
-
-	MDRV_PALETTE_LENGTH(256)
-
-	MDRV_VIDEO_START(maclc)
-	MDRV_VIDEO_UPDATE(macrbv)
-
-	/* internal ram */
-	MDRV_RAM_MODIFY("messram")
-	MDRV_RAM_DEFAULT_SIZE("2M")
-	MDRV_RAM_EXTRA_OPTIONS("4M,8M,16M,32M,48M,64M")
-MACHINE_DRIVER_END
-
-static MACHINE_DRIVER_START( maciisi )
-	MDRV_IMPORT_FROM( macii )
-
-	MDRV_CPU_REPLACE("maincpu", M68030, 25000000)
-	MDRV_CPU_PROGRAM_MAP(maciici_map)
-
-	MDRV_PALETTE_LENGTH(256)
-
-	MDRV_VIDEO_START(maclc)
-	MDRV_VIDEO_UPDATE(macrbv)
-
-	/* internal ram */
-	MDRV_RAM_MODIFY("messram")
-	MDRV_RAM_DEFAULT_SIZE("2M")
-	MDRV_RAM_EXTRA_OPTIONS("4M,8M,16M,32M,48M,64M")
-MACHINE_DRIVER_END
-
-static MACHINE_DRIVER_START( pwrmac )
-	MDRV_DRIVER_DATA(mac_state)
+static MACHINE_CONFIG_START( macii, mac_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", PPC601, 66000000)
-	MDRV_CPU_PROGRAM_MAP(pwrmac_map)
+	MCFG_CPU_ADD("maincpu", M68020HMMU, 7833600*2)
+	MCFG_CPU_PROGRAM_MAP(macii_map)
+	MCFG_CPU_VBLANK_INT("screen", mac_cb264_vbl)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_ADD("screen", RASTER)
 	// dot clock, htotal, hstart, hend, vtotal, vstart, vend
-	MDRV_SCREEN_RAW_PARAMS(25175000, 800, 0, 640, 525, 0, 480)
-
-	MDRV_MACHINE_START(macscsi)
-	MDRV_MACHINE_RESET(mac)
+	MCFG_SCREEN_RAW_PARAMS(25175000, 800, 0, 640, 525, 0, 480)
 
         /* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(1024, 768)
-	MDRV_SCREEN_VISIBLE_AREA(0, 640-1, 0, 480-1)
-	MDRV_PALETTE_LENGTH(256)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(1024, 768)
+	MCFG_SCREEN_VISIBLE_AREA(0, 640-1, 0, 480-1)
+	MCFG_PALETTE_LENGTH(256)
 
-	MDRV_VIDEO_START(maclc)
-	MDRV_VIDEO_UPDATE(maclc)
+	MCFG_VIDEO_START(mac_cb264)
+	MCFG_VIDEO_UPDATE(mac_cb264)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
-	MDRV_SOUND_ADD("ascal", DMADAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ADD("ascar", DMADAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
-	MDRV_SOUND_ADD("ascbl", DMADAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ADD("ascbr", DMADAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_ASC_ADD("asc", C15M, ASC_TYPE_ASC, mac_asc_irq)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
 
 	/* nvram */
-	MDRV_NVRAM_HANDLER(mac)
+	MCFG_NVRAM_HANDLER(mac)
 
 	/* devices */
-	MDRV_IWM_ADD("fdc", mac_iwm_interface)
-	MDRV_FLOPPY_SONY_2_DRIVES_ADD(mac_floppy_config)
+	MCFG_NCR5380_ADD("ncr5380", 7833600, macplus_5380intf)
 
-	MDRV_SCC8530_ADD("scc", 7833600)
-	MDRV_SCC8530_IRQ(mac_scc_irq)
-	MDRV_VIA6522_ADD("via6522_0", 1000000, mac_via6522_intf)
+	MCFG_IWM_ADD("fdc", mac_iwm_interface)
+	MCFG_FLOPPY_SONY_2_DRIVES_ADD(mac_floppy_config)
 
-	MDRV_DEVICE_REMOVE("via6522_0")
-	MDRV_VIA6522_ADD("via6522_0", 1000000, mac_via6522_adb_intf)
-	MDRV_VIA6522_ADD("via6522_1", 1000000, mac_via6522_2_intf)
+	MCFG_SCC8530_ADD("scc", 7833600)
+	MCFG_SCC8530_IRQ(mac_scc_irq)
 
-	MDRV_HARDDISK_ADD( "harddisk1" )
-	MDRV_HARDDISK_ADD( "harddisk2" )
+	MCFG_VIA6522_ADD("via6522_0", 783360, mac_via6522_adb_intf)
+	MCFG_VIA6522_ADD("via6522_1", 783360, mac_via6522_2_intf)
+
+	MCFG_HARDDISK_ADD( "harddisk1" )
+	MCFG_HARDDISK_ADD( "harddisk2" )
 
 	/* internal ram */
-	MDRV_RAM_ADD("messram")
-	MDRV_RAM_DEFAULT_SIZE("8M")
-	MDRV_RAM_EXTRA_OPTIONS("16M,32M,64M,128M")
-MACHINE_DRIVER_END
+	MCFG_RAM_ADD("messram")
+	MCFG_RAM_DEFAULT_SIZE("2M")
+	MCFG_RAM_EXTRA_OPTIONS("8M,32M,64M,96M,128M")
+MACHINE_CONFIG_END
+
+static MACHINE_CONFIG_DERIVED( maclc, macii )
+
+	MCFG_CPU_REPLACE("maincpu", M68020HMMU, 7833600*2)
+	MCFG_CPU_PROGRAM_MAP(maclc_map)
+	MCFG_CPU_VBLANK_INT("screen", mac_rbv_vbl)
+
+	MCFG_PALETTE_LENGTH(256)
+
+	MCFG_VIDEO_START(macv8)
+	MCFG_VIDEO_RESET(macrbv)
+	MCFG_VIDEO_UPDATE(macrbvvram)
+
+	MCFG_RAM_MODIFY("messram")
+	MCFG_RAM_DEFAULT_SIZE("2M")
+	MCFG_RAM_EXTRA_OPTIONS("4M,6M,8M,10M")
+
+	MCFG_ASC_REPLACE("asc", C15M, ASC_TYPE_V8, mac_asc_irq)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
+MACHINE_CONFIG_END
+
+static MACHINE_CONFIG_DERIVED( maclc2, maclc )
+
+	MCFG_CPU_REPLACE("maincpu", M68030, 7833600*2)
+	MCFG_CPU_PROGRAM_MAP(maclc_map)
+	MCFG_CPU_VBLANK_INT("screen", mac_rbv_vbl)
+
+	MCFG_RAM_MODIFY("messram")
+	MCFG_RAM_DEFAULT_SIZE("4M")
+	MCFG_RAM_EXTRA_OPTIONS("6M,8M,10M")
+MACHINE_CONFIG_END
+
+static MACHINE_CONFIG_DERIVED( maclc3, maclc )
+
+	MCFG_CPU_REPLACE("maincpu", M68030, 25000000)
+	MCFG_CPU_PROGRAM_MAP(maclc3_map)
+	MCFG_CPU_VBLANK_INT("screen", mac_rbv_vbl)
+
+	MCFG_VIDEO_START(macsonora)
+	MCFG_VIDEO_RESET(macrbv)
+	MCFG_VIDEO_UPDATE(macrbvvram)
+
+	MCFG_RAM_MODIFY("messram")
+	MCFG_RAM_DEFAULT_SIZE("4M")
+	MCFG_RAM_EXTRA_OPTIONS("8M,12M,16M,20M,24M,28M,32M,36M")
+
+	MCFG_ASC_REPLACE("asc", C15M, ASC_TYPE_SONORA, mac_asc_irq)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
+MACHINE_CONFIG_END
+
+static MACHINE_CONFIG_DERIVED( maciix, macii )
+
+	MCFG_CPU_REPLACE("maincpu", M68030, 7833600*2)
+	MCFG_CPU_PROGRAM_MAP(macii_map)
+	MCFG_CPU_VBLANK_INT("screen", mac_cb264_vbl)
+
+	MCFG_RAM_MODIFY("messram")
+	MCFG_RAM_DEFAULT_SIZE("2M")
+	MCFG_RAM_EXTRA_OPTIONS("8M,32M,64M,96M,128M")
+MACHINE_CONFIG_END
+
+static MACHINE_CONFIG_START( macse30, mac_state )
+
+	MCFG_CPU_ADD("maincpu", M68030, 7833600*2)
+	MCFG_CPU_PROGRAM_MAP(macse30_map)
+
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60.15)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(1260))
+	MCFG_QUANTUM_TIME(HZ(60))
+
+        /* video hardware */
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(MAC_H_TOTAL, MAC_V_TOTAL)
+	MCFG_SCREEN_VISIBLE_AREA(0, MAC_H_VIS-1, 0, MAC_V_VIS-1)
+	MCFG_PALETTE_LENGTH(2)
+	MCFG_PALETTE_INIT(mac)
+
+	MCFG_VIDEO_START(mac)
+	MCFG_VIDEO_UPDATE(macse30)
+
+	/* sound hardware */
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_ASC_ADD("asc", C15M, ASC_TYPE_ASC, mac_asc_irq)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
+
+	/* nvram */
+	MCFG_NVRAM_HANDLER(mac)
+
+	/* devices */
+	MCFG_NCR5380_ADD("ncr5380", 7833600, macplus_5380intf)
+
+	MCFG_IWM_ADD("fdc", mac_iwm_interface)
+	MCFG_FLOPPY_SONY_2_DRIVES_ADD(mac_floppy_config)
+
+	MCFG_SCC8530_ADD("scc", 7833600)
+	MCFG_SCC8530_IRQ(mac_scc_irq)
+
+	MCFG_VIA6522_ADD("via6522_0", 783360, mac_via6522_adb_intf)
+	MCFG_VIA6522_ADD("via6522_1", 783360, mac_via6522_2_intf)
+
+	MCFG_HARDDISK_ADD( "harddisk1" )
+	MCFG_HARDDISK_ADD( "harddisk2" )
+
+	/* internal ram */
+	MCFG_RAM_ADD("messram")
+	MCFG_RAM_DEFAULT_SIZE("2M")
+	MCFG_RAM_EXTRA_OPTIONS("8M,16M,32M,48M,64M,96M,128M")
+MACHINE_CONFIG_END
+
+static MACHINE_CONFIG_DERIVED( macclas2, maclc )
+
+	MCFG_CPU_REPLACE("maincpu", M68030, 7833600*2)
+	MCFG_CPU_PROGRAM_MAP(maclc_map)
+
+	MCFG_VIDEO_START(macv8)
+	MCFG_VIDEO_RESET(maceagle)
+	MCFG_VIDEO_UPDATE(macrbv)
+
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_SIZE(MAC_H_TOTAL, MAC_V_TOTAL)
+	MCFG_SCREEN_VISIBLE_AREA(0, MAC_H_VIS-1, 0, MAC_V_VIS-1)
+
+	MCFG_ASC_REPLACE("asc", C15M, ASC_TYPE_EAGLE, mac_asc_irq)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
+
+	MCFG_RAM_MODIFY("messram")
+	MCFG_RAM_DEFAULT_SIZE("10M")
+	MCFG_RAM_EXTRA_OPTIONS("2M,4M,6M,8M,10M")
+MACHINE_CONFIG_END
+
+static MACHINE_CONFIG_DERIVED( maciici, macii )
+
+	MCFG_CPU_REPLACE("maincpu", M68030, 25000000)
+	MCFG_CPU_PROGRAM_MAP(maciici_map)
+	MCFG_CPU_VBLANK_INT("screen", mac_rbv_vbl)
+
+	MCFG_PALETTE_LENGTH(256)
+
+	MCFG_VIDEO_START(macrbv)
+	MCFG_VIDEO_RESET(macrbv)
+	MCFG_VIDEO_UPDATE(macrbv)
+
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_SIZE(640, 870)
+	MCFG_SCREEN_VISIBLE_AREA(0, 640-1, 0, 480-1)
+
+	/* internal ram */
+	MCFG_RAM_MODIFY("messram")
+	MCFG_RAM_DEFAULT_SIZE("2M")
+	MCFG_RAM_EXTRA_OPTIONS("4M,8M,16M,32M,48M,64M")
+MACHINE_CONFIG_END
+
+static MACHINE_CONFIG_DERIVED( maciisi, macii )
+
+	MCFG_CPU_REPLACE("maincpu", M68030, 20000000)
+	MCFG_CPU_PROGRAM_MAP(maciici_map)
+	MCFG_CPU_VBLANK_INT("screen", mac_rbv_vbl)
+
+	MCFG_PALETTE_LENGTH(256)
+
+	MCFG_VIDEO_START(macrbv)
+	MCFG_VIDEO_RESET(macrbv)
+	MCFG_VIDEO_UPDATE(macrbv)
+
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_SIZE(640, 870)
+	MCFG_SCREEN_VISIBLE_AREA(0, 640-1, 0, 480-1)
+
+	/* internal ram */
+	MCFG_RAM_MODIFY("messram")
+	MCFG_RAM_DEFAULT_SIZE("2M")
+	MCFG_RAM_EXTRA_OPTIONS("4M,8M,16M,32M,48M,64M")
+MACHINE_CONFIG_END
+
+static MACHINE_CONFIG_START( pwrmac, mac_state )
+
+	/* basic machine hardware */
+	MCFG_CPU_ADD("maincpu", PPC601, 66000000)
+	MCFG_CPU_PROGRAM_MAP(pwrmac_map)
+
+	MCFG_SCREEN_ADD("screen", RASTER)
+	// dot clock, htotal, hstart, hend, vtotal, vstart, vend
+	MCFG_SCREEN_RAW_PARAMS(25175000, 800, 0, 640, 525, 0, 480)
+
+        /* video hardware */
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(1024, 768)
+	MCFG_SCREEN_VISIBLE_AREA(0, 640-1, 0, 480-1)
+	MCFG_PALETTE_LENGTH(256)
+
+	MCFG_VIDEO_START(macsonora)
+	MCFG_VIDEO_RESET(macrbv)
+	MCFG_VIDEO_UPDATE(macrbv)
+
+	/* sound hardware */
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+
+	/* nvram */
+	MCFG_NVRAM_HANDLER(mac)
+
+	/* devices */
+	MCFG_NCR5380_ADD("ncr5380", 7833600, macplus_5380intf)
+
+	MCFG_IWM_ADD("fdc", mac_iwm_interface)
+	MCFG_FLOPPY_SONY_2_DRIVES_ADD(mac_floppy_config)
+
+	MCFG_SCC8530_ADD("scc", 7833600)
+	MCFG_SCC8530_IRQ(mac_scc_irq)
+
+	MCFG_VIA6522_ADD("via6522_0", 783360, mac_via6522_adb_intf)
+	MCFG_VIA6522_ADD("via6522_1", 783360, mac_via6522_2_intf)
+
+	MCFG_HARDDISK_ADD( "harddisk1" )
+	MCFG_HARDDISK_ADD( "harddisk2" )
+
+	/* internal ram */
+	MCFG_RAM_ADD("messram")
+	MCFG_RAM_DEFAULT_SIZE("8M")
+	MCFG_RAM_EXTRA_OPTIONS("16M,32M,64M,128M")
+MACHINE_CONFIG_END
 
 static INPUT_PORTS_START( macplus )
 	PORT_START("MOUSE0") /* Mouse - button */
@@ -1271,8 +1209,8 @@ static INPUT_PORTS_START( macadb )
 	PORT_BIT(0x0100, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_NAME("Shift") PORT_CODE(KEYCODE_LSHIFT) PORT_CODE(KEYCODE_RSHIFT) PORT_CHAR(UCHAR_SHIFT_1)
 	PORT_BIT(0x0200, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_NAME("Caps Lock") PORT_CODE(KEYCODE_CAPSLOCK) PORT_TOGGLE
 	PORT_BIT(0x0400, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_NAME("Option / Solid Apple") PORT_CODE(KEYCODE_RALT)
-	PORT_BIT(0x0800, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_NAME("Right Arrow") PORT_CODE(KEYCODE_RIGHT)	PORT_CHAR(UCHAR_MAMEKEY(RIGHT))
-	PORT_BIT(0x1000, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_NAME("Left Arrow") PORT_CODE(KEYCODE_LEFT)		PORT_CHAR(UCHAR_MAMEKEY(LEFT))
+	PORT_BIT(0x0800, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_NAME("Left Arrow") PORT_CODE(KEYCODE_LEFT)		PORT_CHAR(UCHAR_MAMEKEY(LEFT))
+	PORT_BIT(0x1000, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_NAME("Right Arrow") PORT_CODE(KEYCODE_RIGHT)	PORT_CHAR(UCHAR_MAMEKEY(RIGHT))
 	PORT_BIT(0x2000, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_NAME("Down Arrow") PORT_CODE(KEYCODE_DOWN)		PORT_CHAR(UCHAR_MAMEKEY(DOWN))
 	PORT_BIT(0x4000, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_NAME("Up Arrow") PORT_CODE(KEYCODE_UP)			PORT_CHAR(UCHAR_MAMEKEY(UP))
 	PORT_BIT(0x8000, IP_ACTIVE_HIGH, IPT_UNUSED)	/* ??? */
@@ -1311,6 +1249,15 @@ static INPUT_PORTS_START( macadb )
 	PORT_BIT(0xE000, IP_ACTIVE_HIGH, IPT_UNUSED)
 INPUT_PORTS_END
 
+INPUT_PORTS_START( maciici )
+	PORT_INCLUDE(macadb)
+
+	PORT_START("MONTYPE")
+	PORT_CONFNAME(0x0f, 0x06, "Connected monitor")
+	PORT_CONFSETTING( 0x01, "15\" Portrait Display (640x870)")
+	PORT_CONFSETTING( 0x02, "12\" RGB (512x384)")
+	PORT_CONFSETTING( 0x06, "13\" RGB (640x480)")
+INPUT_PORTS_END
 
 /***************************************************************************
 
@@ -1358,8 +1305,11 @@ ROM_START( macclasc )
 ROM_END
 
 ROM_START( maclc )
-	ROM_REGION32_BE(0x80000, "bootrom", 0)
+	ROM_REGION32_BE(0x100000, "bootrom", 0)
         ROM_LOAD("350eacf0.rom", 0x000000, 0x080000, CRC(71681726) SHA1(6bef5853ae736f3f06c2b4e79772f65910c3b7d4))
+
+	ROM_REGION(0x1100, "egret", 0)
+	ROM_LOAD( "341s0851.bin", 0x000000, 0x001100, CRC(ea9ea6e4) SHA1(8b0dae3ec66cdddbf71567365d2c462688aeb571) ) 
 ROM_END
 
 ROM_START( macii )
@@ -1418,21 +1368,36 @@ ROM_END
 ROM_START( maciisi )
 	ROM_REGION32_BE(0x80000, "bootrom", 0)
         ROM_LOAD( "36b7fb6c.rom", 0x000000, 0x080000, CRC(f304d973) SHA1(f923de4125aae810796527ff6e25364cf1d54eec) )
+
+	ROM_REGION(0x1100, "egret", 0)
+	ROM_LOAD( "341s0851.bin", 0x000000, 0x001100, CRC(ea9ea6e4) SHA1(8b0dae3ec66cdddbf71567365d2c462688aeb571) ) 
 ROM_END
 
 ROM_START( macclas2 )
-	ROM_REGION32_BE(0x80000, "bootrom", 0)
+	ROM_REGION32_BE(0x100000, "bootrom", 0)
         ROM_LOAD( "3193670e.rom", 0x000000, 0x080000, CRC(96d2e1fd) SHA1(50df69c1b6e805e12a405dc610bc2a1471b2eac2) )
+
+	ROM_REGION(0x1100, "egret", 0)
+	ROM_LOAD( "341s0851.bin", 0x000000, 0x001100, CRC(ea9ea6e4) SHA1(8b0dae3ec66cdddbf71567365d2c462688aeb571) ) 
 ROM_END
 
 ROM_START( maclc2 )
-	ROM_REGION32_BE(0x80000, "bootrom", 0)
-	ROM_LOAD( "35c28f5f.rom", 0x000000, 0x080000, CRC(a92145b3) SHA1(d5786182b62a8ffeeb9fd3f80b5511dba70318a0) )
+	ROM_REGION32_BE(0x100000, "bootrom", 0)
+        ROM_LOAD32_BYTE( "341-0476_ue2-hh.bin", 0x000000, 0x020000, CRC(0c3b0ce4) SHA1(e4e8c883d7f2e002a3f7b7aefaa3840991e57025) ) 
+        ROM_LOAD32_BYTE( "341-0475_ud2-mh.bin", 0x000001, 0x020000, CRC(7b013595) SHA1(0b82d8fac570270db9774f6254017d28611ae756) ) 
+        ROM_LOAD32_BYTE( "341-0474_uc2-ml.bin", 0x000002, 0x020000, CRC(2ff2f52b) SHA1(876850df61d0233c1dd3c00d48d8d6690186b164) ) 
+        ROM_LOAD32_BYTE( "341-0473_ub2-ll.bin", 0x000003, 0x020000, CRC(8843c37c) SHA1(bb5104110507ca543d106f11c6061245fd90c1a7) ) 
+
+	ROM_REGION(0x1100, "egret", 0)
+	ROM_LOAD( "341s0851.bin", 0x000000, 0x001100, CRC(ea9ea6e4) SHA1(8b0dae3ec66cdddbf71567365d2c462688aeb571) ) 
 ROM_END
 
 ROM_START( maclc3 )
 	ROM_REGION32_BE(0x100000, "bootrom", 0)
         ROM_LOAD( "ecbbc41c.rom", 0x000000, 0x100000, CRC(e578f5f3) SHA1(c77df3220c861f37a2c553b6ee9241b202dfdffc) )
+
+	ROM_REGION(0x1100, "egret", 0)
+	ROM_LOAD( "341s0851.bin", 0x000000, 0x001100, CRC(ea9ea6e4) SHA1(8b0dae3ec66cdddbf71567365d2c462688aeb571) ) 
 ROM_END
 
 ROM_START( pmac6100 )
@@ -1450,6 +1415,14 @@ ROM_START( macpb100 )
         ROM_LOAD16_WORD( "96645f9c.rom", 0x000000, 0x040000, CRC(29ac7ee9) SHA1(7f3acf40b1f63612de2314a2e9fcfeafca0711fc) )
 ROM_END
 
+ROM_START( maccclas )
+	ROM_REGION32_BE(0x100000, "bootrom", 0)
+        ROM_LOAD( "ecd99dc0.rom", 0x000000, 0x100000, CRC(c84c3aa5) SHA1(fd9e852e2d77fe17287ba678709b9334d4d74f1e) ) 
+
+	ROM_REGION(0x1100, "egret", 0)
+	ROM_LOAD( "341s0851.bin", 0x000000, 0x001100, CRC(ea9ea6e4) SHA1(8b0dae3ec66cdddbf71567365d2c462688aeb571) ) 
+ROM_END
+
 /*    YEAR  NAME      PARENT    COMPAT  MACHINE   INPUT     INIT     COMPANY          FULLNAME */
 COMP( 1984, mac128k,  0,	0,	mac128k,  macplus,  mac128k512k,      "Apple Computer", "Macintosh 128k",  GAME_NOT_WORKING )
 COMP( 1984, mac512k,  mac128k,  0,	mac512ke, macplus,  mac128k512k,  "Apple Computer", "Macintosh 512k",  GAME_NOT_WORKING )
@@ -1463,13 +1436,14 @@ COMP( 1988, maciix,   mac2fdhd, 0,	maciix,   macadb,   maciix,	      "Apple Comp
 COMP( 1989, macprtb,  0,        0,      macprtb,  macadb,   macprtb,  "Apple Computer", "Macintosh Portable", GAME_NOT_WORKING )
 COMP( 1989, macse30,  mac2fdhd, 0,	macse30,  macadb,   macse30,	  "Apple Computer", "Macintosh SE/30",  0 )
 COMP( 1989, maciicx,  mac2fdhd, 0,	maciix,   macadb,   maciicx,	  "Apple Computer", "Macintosh IIcx",  0 )
-COMP( 1989, maciici,  0,	0,	maciici,  macadb,   maciici,	      "Apple Computer", "Macintosh IIci",  GAME_NOT_WORKING )
+COMP( 1989, maciici,  0,	0,	maciici,  maciici,  maciici,	      "Apple Computer", "Macintosh IIci", 0 )
 COMP( 1990, macclasc, 0,	0,	macse,    macadb,   macclassic,	      "Apple Computer", "Macintosh Classic",  GAME_NOT_WORKING )
-COMP( 1990, maclc,    0,	0,	maclc,    macadb,   maclc,	          "Apple Computer", "Macintosh LC",  GAME_NOT_WORKING )
-COMP( 1990, maciisi,  0,	0,	maciisi,  macadb,   maciici,	      "Apple Computer", "Macintosh IIsi",  GAME_NOT_WORKING )
+COMP( 1990, maclc,    0,	0,	maclc,    maciici,  maclc,	          "Apple Computer", "Macintosh LC",  GAME_NOT_WORKING )
+COMP( 1990, maciisi,  0,	0,	maciisi,  maciici,  maciisi,	      "Apple Computer", "Macintosh IIsi",  GAME_NOT_WORKING )
 COMP( 1991, macpb100, 0,        0,      macprtb,  macadb,   macprtb,  "Apple Computer", "Macintosh PowerBook 100", GAME_NOT_WORKING )
 COMP( 1991, macclas2, 0,	0,	macclas2, macadb,   macclassic2,      "Apple Computer", "Macintosh Classic II",  GAME_NOT_WORKING )
-COMP( 1991, maclc2,   0,	0,	maclc2,   macadb,   maclc2,	          "Apple Computer", "Macintosh LC II",  GAME_NOT_WORKING )
-COMP( 1993, maclc3,   0,	0,	maclc3,   macadb,   maclc3,	          "Apple Computer", "Macintosh LC III",  GAME_NOT_WORKING )
-COMP( 1994, pmac6100, 0,	0,	pwrmac,   macadb,   macpm6100,	      "Apple Computer", "Power Macintosh 6100",  GAME_NOT_WORKING )
+COMP( 1991, maclc2,   0,	0,	maclc2,   maciici,  maclc2,	          "Apple Computer", "Macintosh LC II",  GAME_NOT_WORKING )
+COMP( 1993, maccclas, 0,        0,      maclc2,   macadb,   maclrcclassic,        "Apple Computer", "Macintosh Color Classic", GAME_NOT_WORKING )
+COMP( 1993, maclc3,   0,	0,	maclc3,   maciici,  maclc3,	          "Apple Computer", "Macintosh LC III",  GAME_NOT_WORKING )
+COMP( 1994, pmac6100, 0,	0,	pwrmac,   macadb,   macpm6100,	      "Apple Computer", "Power Macintosh 6100",  GAME_NOT_WORKING | GAME_NO_SOUND )
 

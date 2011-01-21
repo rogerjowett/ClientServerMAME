@@ -395,16 +395,18 @@ static WRITE16_HANDLER( kyustrkr_input_w )
 
 /**************************************************************************/
 
-static INT32 banknum;
-
 static void reset_sound_region(running_machine *machine)
 {
-	memory_set_bankptr(machine,  "bank2", memory_region(machine, "audiocpu") + (banknum * 0x4000) + 0x10000 );
+	seta_state *state = machine->driver_data<seta_state>();
+
+	memory_set_bankptr(machine,  "bank2", machine->region("audiocpu")->base() + (state->taitox_banknum * 0x4000) + 0x10000 );
 }
 
 static WRITE8_HANDLER( sound_bankswitch_w )
 {
-	banknum = (data - 1) & 3;
+	seta_state *state = space->machine->driver_data<seta_state>();
+
+	state->taitox_banknum = (data - 1) & 3;
 	reset_sound_region(space->machine);
 }
 
@@ -423,8 +425,8 @@ static ADDRESS_MAP_START( superman_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x900802, 0x900803) AM_READWRITE(cchip1_ctrl_r, cchip1_ctrl_w)
 	AM_RANGE(0x900c00, 0x900c01) AM_WRITE(cchip1_bank_w)
 	AM_RANGE(0xb00000, 0xb00fff) AM_RAM_WRITE(paletteram16_xRRRRRGGGGGBBBBB_word_w) AM_BASE_GENERIC(paletteram)
-	AM_RANGE(0xd00000, 0xd007ff) AM_RAM AM_BASE_GENERIC(spriteram	)	// Sprites Y
-	AM_RANGE(0xe00000, 0xe03fff) AM_RAM AM_BASE_GENERIC(spriteram2	)	// Sprites Code + X + Attr
+	AM_RANGE(0xd00000, 0xd007ff) AM_RAM AM_BASE_MEMBER(seta_state, spriteram)	// Sprites Y
+	AM_RANGE(0xe00000, 0xe03fff) AM_RAM AM_BASE_MEMBER(seta_state, spriteram2)	// Sprites Code + X + Attr
 	AM_RANGE(0xf00000, 0xf03fff) AM_RAM			/* Main RAM */
 ADDRESS_MAP_END
 
@@ -437,8 +439,8 @@ static ADDRESS_MAP_START( daisenpu_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x800002, 0x800003) AM_DEVREADWRITE8("tc0140syt", tc0140syt_comm_r, tc0140syt_comm_w, 0x00ff)
 	AM_RANGE(0x900000, 0x90000f) AM_READWRITE(daisenpu_input_r, daisenpu_input_w)
 	AM_RANGE(0xb00000, 0xb00fff) AM_RAM_WRITE(paletteram16_xRRRRRGGGGGBBBBB_word_w) AM_BASE_GENERIC(paletteram)
-	AM_RANGE(0xd00000, 0xd007ff) AM_RAM AM_BASE_GENERIC(spriteram	)	// Sprites Y
-	AM_RANGE(0xe00000, 0xe03fff) AM_RAM AM_BASE_GENERIC(spriteram2	)	// Sprites Code + X + Attr
+	AM_RANGE(0xd00000, 0xd007ff) AM_RAM AM_BASE_MEMBER(seta_state, spriteram)	// Sprites Y
+	AM_RANGE(0xe00000, 0xe03fff) AM_RAM AM_BASE_MEMBER(seta_state, spriteram2)	// Sprites Code + X + Attr
 	AM_RANGE(0xf00000, 0xf03fff) AM_RAM			/* Main RAM */
 ADDRESS_MAP_END
 
@@ -451,8 +453,8 @@ static ADDRESS_MAP_START( gigandes_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x800002, 0x800003) AM_DEVREADWRITE8("tc0140syt", tc0140syt_comm_r, tc0140syt_comm_w, 0x00ff)
 	AM_RANGE(0x900000, 0x90000f) AM_READWRITE(daisenpu_input_r, daisenpu_input_w)
 	AM_RANGE(0xb00000, 0xb00fff) AM_RAM_WRITE(paletteram16_xRRRRRGGGGGBBBBB_word_w) AM_BASE_GENERIC(paletteram)
-	AM_RANGE(0xd00000, 0xd007ff) AM_RAM AM_BASE_GENERIC(spriteram)	// Sprites Y
-	AM_RANGE(0xe00000, 0xe03fff) AM_RAM AM_BASE_GENERIC(spriteram2	)	// Sprites Code + X + Attr
+	AM_RANGE(0xd00000, 0xd007ff) AM_RAM AM_BASE_MEMBER(seta_state, spriteram)	// Sprites Y
+	AM_RANGE(0xe00000, 0xe03fff) AM_RAM AM_BASE_MEMBER(seta_state, spriteram2)	// Sprites Code + X + Attr
 	AM_RANGE(0xf00000, 0xf03fff) AM_RAM			/* Main RAM */
 ADDRESS_MAP_END
 
@@ -465,8 +467,8 @@ static ADDRESS_MAP_START( ballbros_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x800002, 0x800003) AM_DEVREADWRITE8("tc0140syt", tc0140syt_comm_r, tc0140syt_comm_w, 0x00ff)
 	AM_RANGE(0x900000, 0x90000f) AM_READWRITE(daisenpu_input_r, daisenpu_input_w)
 	AM_RANGE(0xb00000, 0xb00fff) AM_RAM_WRITE(paletteram16_xRRRRRGGGGGBBBBB_word_w) AM_BASE_GENERIC(paletteram)
-	AM_RANGE(0xd00000, 0xd007ff) AM_RAM AM_BASE_GENERIC(spriteram	)	// Sprites Y
-	AM_RANGE(0xe00000, 0xe03fff) AM_RAM AM_BASE_GENERIC(spriteram2	)	// Sprites Code + X + Attr
+	AM_RANGE(0xd00000, 0xd007ff) AM_RAM AM_BASE_MEMBER(seta_state, spriteram)	// Sprites Y
+	AM_RANGE(0xe00000, 0xe03fff) AM_RAM AM_BASE_MEMBER(seta_state, spriteram2)	// Sprites Code + X + Attr
 	AM_RANGE(0xf00000, 0xf03fff) AM_RAM			/* Main RAM */
 ADDRESS_MAP_END
 
@@ -870,7 +872,7 @@ GFXDECODE_END
 /**************************************************************************/
 
 /* handler called by the YM2610 emulator when the internal timers cause an IRQ */
-static void irqhandler(running_device *device, int irq)
+static void irqhandler(device_t *device, int irq)
 {
 	cputag_set_input_line(device->machine, "audiocpu", 0, irq ? ASSERT_LINE : CLEAR_LINE);
 }
@@ -892,8 +894,10 @@ static STATE_POSTLOAD( taitox_postload )
 
 static MACHINE_START( taitox )
 {
-	banknum = -1;
-	state_save_register_global(machine, banknum);
+	seta_state *state = machine->driver_data<seta_state>();
+
+	state->taitox_banknum = -1;
+	state_save_register_global(machine, state->taitox_banknum);
 	state_save_register_postload(machine, taitox_postload, NULL);
 }
 
@@ -905,168 +909,168 @@ static const tc0140syt_interface taitox_tc0140syt_intf =
 
 /**************************************************************************/
 
-static MACHINE_DRIVER_START( superman )
+static MACHINE_CONFIG_START( superman, seta_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, XTAL_16MHz/2)	/* verified on pcb */
-	MDRV_CPU_PROGRAM_MAP(superman_map)
-	MDRV_CPU_VBLANK_INT("screen", irq6_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, XTAL_16MHz/2)	/* verified on pcb */
+	MCFG_CPU_PROGRAM_MAP(superman_map)
+	MCFG_CPU_VBLANK_INT("screen", irq6_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80, XTAL_16MHz/4)	/* verified on pcb */
-	MDRV_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL_16MHz/4)	/* verified on pcb */
+	MCFG_CPU_PROGRAM_MAP(sound_map)
 
-	MDRV_QUANTUM_TIME(HZ(600))	/* 10 CPU slices per frame - enough for the sound CPU to read all commands */
+	MCFG_QUANTUM_TIME(HZ(600))	/* 10 CPU slices per frame - enough for the sound CPU to read all commands */
 
-	MDRV_MACHINE_START(taitox)
-	MDRV_MACHINE_RESET(cchip1)
+	MCFG_MACHINE_START(taitox)
+	MCFG_MACHINE_RESET(cchip1)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(57.43)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(52*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 48*8-1, 1*8, 31*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(57.43)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(52*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 48*8-1, 1*8, 31*8-1)
 
-	MDRV_GFXDECODE(superman)
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_GFXDECODE(superman)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(seta_no_layers)
-	MDRV_VIDEO_UPDATE(seta_no_layers)
+	MCFG_VIDEO_START(seta_no_layers)
+	MCFG_VIDEO_UPDATE(seta_no_layers)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2610, XTAL_16MHz/2)	/* verified on pcb */
-	MDRV_SOUND_CONFIG(ym2610_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker",  0.25)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.25)
-	MDRV_SOUND_ROUTE(1, "lspeaker",  1.0)
-	MDRV_SOUND_ROUTE(2, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM2610, XTAL_16MHz/2)	/* verified on pcb */
+	MCFG_SOUND_CONFIG(ym2610_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker",  0.25)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.25)
+	MCFG_SOUND_ROUTE(1, "lspeaker",  1.0)
+	MCFG_SOUND_ROUTE(2, "rspeaker", 1.0)
 
-	MDRV_TC0140SYT_ADD("tc0140syt", taitox_tc0140syt_intf)
-MACHINE_DRIVER_END
+	MCFG_TC0140SYT_ADD("tc0140syt", taitox_tc0140syt_intf)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( daisenpu )
+static MACHINE_CONFIG_START( daisenpu, seta_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, XTAL_16MHz/2)	/* verified on pcb */
-	MDRV_CPU_PROGRAM_MAP(daisenpu_map)
-	MDRV_CPU_VBLANK_INT("screen", irq2_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, XTAL_16MHz/2)	/* verified on pcb */
+	MCFG_CPU_PROGRAM_MAP(daisenpu_map)
+	MCFG_CPU_VBLANK_INT("screen", irq2_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80, XTAL_16MHz/4)	/* verified on pcb */
-	MDRV_CPU_PROGRAM_MAP(daisenpu_sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL_16MHz/4)	/* verified on pcb */
+	MCFG_CPU_PROGRAM_MAP(daisenpu_sound_map)
 
-	MDRV_QUANTUM_TIME(HZ(600))	/* 10 CPU slices per frame - enough for the sound CPU to read all commands */
+	MCFG_QUANTUM_TIME(HZ(600))	/* 10 CPU slices per frame - enough for the sound CPU to read all commands */
 
-	MDRV_MACHINE_START(taitox)
+	MCFG_MACHINE_START(taitox)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(52*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 48*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(52*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 48*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(superman)
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_GFXDECODE(superman)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(seta_no_layers)
-	MDRV_VIDEO_UPDATE(seta_no_layers)
+	MCFG_VIDEO_START(seta_no_layers)
+	MCFG_VIDEO_UPDATE(seta_no_layers)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, XTAL_16MHz/4)	/* verified on pcb */
-	MDRV_SOUND_CONFIG(ym2151_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.45)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.45)
+	MCFG_SOUND_ADD("ymsnd", YM2151, XTAL_16MHz/4)	/* verified on pcb */
+	MCFG_SOUND_CONFIG(ym2151_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.45)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.45)
 
-	MDRV_TC0140SYT_ADD("tc0140syt", taitox_tc0140syt_intf)
-MACHINE_DRIVER_END
+	MCFG_TC0140SYT_ADD("tc0140syt", taitox_tc0140syt_intf)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( gigandes )
+static MACHINE_CONFIG_START( gigandes, seta_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 8000000)	/* 8 MHz? */
-	MDRV_CPU_PROGRAM_MAP(gigandes_map)
-	MDRV_CPU_VBLANK_INT("screen", irq2_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, 8000000)	/* 8 MHz? */
+	MCFG_CPU_PROGRAM_MAP(gigandes_map)
+	MCFG_CPU_VBLANK_INT("screen", irq2_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 4000000)	/* 4 MHz ??? */
-	MDRV_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 4000000)	/* 4 MHz ??? */
+	MCFG_CPU_PROGRAM_MAP(sound_map)
 
-	MDRV_QUANTUM_TIME(HZ(600))	/* 10 CPU slices per frame - enough for the sound CPU to read all commands */
+	MCFG_QUANTUM_TIME(HZ(600))	/* 10 CPU slices per frame - enough for the sound CPU to read all commands */
 
-	MDRV_MACHINE_START(taitox)
+	MCFG_MACHINE_START(taitox)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(52*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 48*8-1, 1*8, 31*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(52*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 48*8-1, 1*8, 31*8-1)
 
-	MDRV_GFXDECODE(superman)
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_GFXDECODE(superman)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(seta_no_layers)
-	MDRV_VIDEO_UPDATE(seta_no_layers)
+	MCFG_VIDEO_START(seta_no_layers)
+	MCFG_VIDEO_UPDATE(seta_no_layers)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2610, 8000000)
-	MDRV_SOUND_CONFIG(ym2610_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker",  0.25)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.25)
-	MDRV_SOUND_ROUTE(1, "lspeaker",  1.0)
-	MDRV_SOUND_ROUTE(2, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM2610, 8000000)
+	MCFG_SOUND_CONFIG(ym2610_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker",  0.25)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.25)
+	MCFG_SOUND_ROUTE(1, "lspeaker",  1.0)
+	MCFG_SOUND_ROUTE(2, "rspeaker", 1.0)
 
-	MDRV_TC0140SYT_ADD("tc0140syt", taitox_tc0140syt_intf)
-MACHINE_DRIVER_END
+	MCFG_TC0140SYT_ADD("tc0140syt", taitox_tc0140syt_intf)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( ballbros )
+static MACHINE_CONFIG_START( ballbros, seta_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 8000000)	/* 8 MHz? */
-	MDRV_CPU_PROGRAM_MAP(ballbros_map)
-	MDRV_CPU_VBLANK_INT("screen", irq2_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, 8000000)	/* 8 MHz? */
+	MCFG_CPU_PROGRAM_MAP(ballbros_map)
+	MCFG_CPU_VBLANK_INT("screen", irq2_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 4000000)	/* 4 MHz ??? */
-	MDRV_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 4000000)	/* 4 MHz ??? */
+	MCFG_CPU_PROGRAM_MAP(sound_map)
 
-	MDRV_QUANTUM_TIME(HZ(600))	/* 10 CPU slices per frame - enough for the sound CPU to read all commands */
+	MCFG_QUANTUM_TIME(HZ(600))	/* 10 CPU slices per frame - enough for the sound CPU to read all commands */
 
-	MDRV_MACHINE_START(taitox)
+	MCFG_MACHINE_START(taitox)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(52*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 48*8-1, 1*8, 31*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(52*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 48*8-1, 1*8, 31*8-1)
 
-	MDRV_GFXDECODE(ballbros)
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_GFXDECODE(ballbros)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(seta_no_layers)
-	MDRV_VIDEO_UPDATE(seta_no_layers)
+	MCFG_VIDEO_START(seta_no_layers)
+	MCFG_VIDEO_UPDATE(seta_no_layers)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2610, 8000000)
-	MDRV_SOUND_CONFIG(ym2610_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker",  0.25)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.25)
-	MDRV_SOUND_ROUTE(1, "lspeaker",  1.0)
-	MDRV_SOUND_ROUTE(2, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM2610, 8000000)
+	MCFG_SOUND_CONFIG(ym2610_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker",  0.25)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.25)
+	MCFG_SOUND_ROUTE(1, "lspeaker",  1.0)
+	MCFG_SOUND_ROUTE(2, "rspeaker", 1.0)
 
-	MDRV_TC0140SYT_ADD("tc0140syt", taitox_tc0140syt_intf)
-MACHINE_DRIVER_END
+	MCFG_TC0140SYT_ADD("tc0140syt", taitox_tc0140syt_intf)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************

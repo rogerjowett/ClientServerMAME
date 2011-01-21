@@ -1,4 +1,5 @@
 #include "emu.h"
+#include "includes/rollrace.h"
 
 UINT8 *rollrace_videoram;
 UINT8 *rollrace_colorram;
@@ -66,7 +67,7 @@ VIDEO_UPDATE( rollrace )
 	int sx, sy;
 	int scroll;
 	int col;
-	const UINT8 *mem = memory_region(screen->machine, "user1");
+	const UINT8 *mem = screen->machine->region("user1")->base();
 
 	/* fill in background colour*/
 	bitmap_fill(bitmap,cliprect,ra_bkgpen);

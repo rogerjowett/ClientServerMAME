@@ -1,6 +1,45 @@
+/***************************************************************************
+
+    voodoo.c
+
+    3dfx Voodoo Graphics SST-1/2 emulator.
+
+****************************************************************************
+
+    Copyright Aaron Giles
+    All rights reserved.
+
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions are
+    met:
+
+        * Redistributions of source code must retain the above copyright
+          notice, this list of conditions and the following disclaimer.
+        * Redistributions in binary form must reproduce the above copyright
+          notice, this list of conditions and the following disclaimer in
+          the documentation and/or other materials provided with the
+          distribution.
+        * Neither the name 'MAME' nor the names of its contributors may be
+          used to endorse or promote products derived from this software
+          without specific prior written permission.
+
+    THIS SOFTWARE IS PROVIDED BY AARON GILES ''AS IS'' AND ANY EXPRESS OR
+    IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+    WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+    DISCLAIMED. IN NO EVENT SHALL AARON GILES BE LIABLE FOR ANY DIRECT,
+    INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+    (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+    SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+    HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+    STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+    IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+    POSSIBILITY OF SUCH DAMAGE.
+
+****************************************************************************
+
 //fix me -- blitz2k dies when starting a game with heavy fog (in DRC)
 
-/*************************************************************************
+****************************************************************************
 
     3dfx Voodoo Graphics SST-1/2 emulator
 
@@ -270,7 +309,7 @@ static const raster_info predef_raster_table[] =
     in device is, in fact, a voodoo device
 -------------------------------------------------*/
 
-INLINE voodoo_state *get_safe_token(running_device *device)
+INLINE voodoo_state *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
 	assert(device->type() == VOODOO_GRAPHICS);
@@ -286,7 +325,7 @@ INLINE voodoo_state *get_safe_token(running_device *device)
  *
  *************************************/
 
-int voodoo_update(running_device *device, bitmap_t *bitmap, const rectangle *cliprect)
+int voodoo_update(device_t *device, bitmap_t *bitmap, const rectangle *cliprect)
 {
 	voodoo_state *v = get_safe_token(device);
 	int changed = v->fbi.video_changed;
@@ -423,21 +462,21 @@ int voodoo_update(running_device *device, bitmap_t *bitmap, const rectangle *cli
  *
  *************************************/
 
-int voodoo_get_type(running_device *device)
+int voodoo_get_type(device_t *device)
 {
 	voodoo_state *v = get_safe_token(device);
 	return v->type;
 }
 
 
-int voodoo_is_stalled(running_device *device)
+int voodoo_is_stalled(device_t *device)
 {
 	voodoo_state *v = get_safe_token(device);
 	return (v->pci.stall_state != NOT_STALLED);
 }
 
 
-void voodoo_set_init_enable(running_device *device, UINT32 newval)
+void voodoo_set_init_enable(device_t *device, UINT32 newval)
 {
 	voodoo_state *v = get_safe_token(device);
 	v->pci.init_enable = newval;
@@ -612,7 +651,7 @@ static STATE_POSTLOAD( voodoo_postload )
 }
 
 
-static void init_save_state(running_device *device)
+static void init_save_state(device_t *device)
 {
 	voodoo_state *v = get_safe_token(device);
 	int index, subindex;
@@ -3417,7 +3456,7 @@ WRITE32_DEVICE_HANDLER( voodoo_w )
 	voodoo_state *v = get_safe_token(device);
 	int stall = FALSE;
 
-	profiler_mark_start(PROFILER_USER1);
+	g_profiler.start(PROFILER_USER1);
 
 	/* should not be getting accesses while stalled */
 	if (v->pci.stall_state != NOT_STALLED)
@@ -3445,7 +3484,7 @@ WRITE32_DEVICE_HANDLER( voodoo_w )
 					if (offset & 0x40000/4)
 						data = FLIPENDIAN_INT32(data);
 					cmdfifo_w(v, &v->fbi.cmdfifo[0], offset & 0xffff, data);
-					profiler_mark_end();
+					g_profiler.stop();
 					return;
 				}
 
@@ -3458,7 +3497,7 @@ WRITE32_DEVICE_HANDLER( voodoo_w )
 						v->fbi.swaps_pending++;
 
 					logerror("Ignoring write to %s in CMDFIFO mode\n", v->regnames[offset & 0xff]);
-					profiler_mark_end();
+					g_profiler.stop();
 					return;
 				}
 			}
@@ -3475,7 +3514,7 @@ WRITE32_DEVICE_HANDLER( voodoo_w )
 		/* ignore if writes aren't allowed */
 		if (!(access & REGISTER_WRITE))
 		{
-			profiler_mark_end();
+			g_profiler.stop();
 			return;
 		}
 
@@ -3511,7 +3550,7 @@ WRITE32_DEVICE_HANDLER( voodoo_w )
 				timer_get_time(device->machine).seconds, (UINT32)(timer_get_time(device->machine).attoseconds >> 32), (UINT32)timer_get_time(device->machine).attoseconds,
 				v->pci.op_end_time.seconds, (UINT32)(v->pci.op_end_time.attoseconds >> 32), (UINT32)v->pci.op_end_time.attoseconds);
 		}
-		profiler_mark_end();
+		g_profiler.stop();
 		return;
 	}
 
@@ -3577,7 +3616,7 @@ WRITE32_DEVICE_HANDLER( voodoo_w )
 		stall_cpu(v, STALLED_UNTIL_FIFO_EMPTY, timer_get_time(device->machine));
 	}
 
-	profiler_mark_end();
+	g_profiler.stop();
 }
 
 
@@ -4788,7 +4827,7 @@ static INT32 triangle(voodoo_state *v)
 	int destbuf;
 	int pixels;
 
-	profiler_mark_start(PROFILER_USER2);
+	g_profiler.start(PROFILER_USER2);
 
 	/* determine the number of TMUs involved */
 	texcount = 0;
@@ -4859,7 +4898,7 @@ static INT32 triangle(voodoo_state *v)
 	/* update stats */
 	v->stats.total_triangles++;
 
-	profiler_mark_end();
+	g_profiler.stop();
 
 	/* 1 pixel per clock, plus some setup time */
 	if (LOG_REGISTERS) logerror("cycles = %d\n", TRIANGLE_SETUP_CLOCKS + pixels);

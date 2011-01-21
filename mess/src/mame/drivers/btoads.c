@@ -12,6 +12,7 @@
 #include "video/tlc34076.h"
 #include "includes/btoads.h"
 #include "sound/bsmt2000.h"
+#include "machine/nvram.h"
 
 
 #define CPU_CLOCK			XTAL_64MHz
@@ -48,12 +49,6 @@ static MACHINE_START( btoads )
 	state_save_register_global(machine, sound_to_main_data);
 	state_save_register_global(machine, sound_to_main_ready);
 	state_save_register_global(machine, sound_int_state);
-}
-
-
-static MACHINE_RESET( btoads )
-{
-	tlc34076_reset(6);
 }
 
 
@@ -199,7 +194,7 @@ static ADDRESS_MAP_START( main_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x20000380, 0x200003ff) AM_READWRITE(main_sound_r, main_sound_w)
 	AM_RANGE(0x20000400, 0x2000047f) AM_WRITE(btoads_misc_control_w)
 	AM_RANGE(0x40000000, 0x4000000f) AM_WRITENOP	/* watchdog? */
-	AM_RANGE(0x60000000, 0x6003ffff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0x60000000, 0x6003ffff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0xa0000000, 0xa03fffff) AM_READWRITE(btoads_vram_fg_display_r, btoads_vram_fg_display_w) AM_BASE(&btoads_vram_fg0)
 	AM_RANGE(0xa4000000, 0xa43fffff) AM_READWRITE(btoads_vram_fg_draw_r, btoads_vram_fg_draw_w) AM_BASE(&btoads_vram_fg1)
 	AM_RANGE(0xa8000000, 0xa87fffff) AM_RAM AM_BASE(&btoads_vram_fg_data)
@@ -337,36 +332,37 @@ static const tms34010_config tms_config =
  *
  *************************************/
 
-static MACHINE_DRIVER_START( btoads )
+static MACHINE_CONFIG_START( btoads, driver_device )
 
-	MDRV_CPU_ADD("maincpu", TMS34020, CPU_CLOCK/2)
-	MDRV_CPU_CONFIG(tms_config)
-	MDRV_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_ADD("maincpu", TMS34020, CPU_CLOCK/2)
+	MCFG_CPU_CONFIG(tms_config)
+	MCFG_CPU_PROGRAM_MAP(main_map)
 
-	MDRV_CPU_ADD("audiocpu", Z80, SOUND_CLOCK/4)
-	MDRV_CPU_PROGRAM_MAP(sound_map)
-	MDRV_CPU_IO_MAP(sound_io_map)
-	MDRV_CPU_PERIODIC_INT(irq0_line_assert, 183)
+	MCFG_CPU_ADD("audiocpu", Z80, SOUND_CLOCK/4)
+	MCFG_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_IO_MAP(sound_io_map)
+	MCFG_CPU_PERIODIC_INT(irq0_line_assert, 183)
 
-	MDRV_MACHINE_START(btoads)
-	MDRV_MACHINE_RESET(btoads)
-	MDRV_NVRAM_HANDLER(generic_1fill)
+	MCFG_MACHINE_START(btoads)
+	MCFG_NVRAM_ADD_1FILL("nvram")
 
 	/* video hardware */
-	MDRV_VIDEO_START(btoads)
-	MDRV_VIDEO_UPDATE(tms340x0)
+	MCFG_TLC34076_ADD("tlc34076", TLC34076_6_BIT)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_RAW_PARAMS(VIDEO_CLOCK/2, 640, 0, 512, 257, 0, 224)
+	MCFG_VIDEO_START(btoads)
+	MCFG_VIDEO_UPDATE(tms340x0)
+
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_RAW_PARAMS(VIDEO_CLOCK/2, 640, 0, 512, 257, 0, 224)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("bsmt", BSMT2000, SOUND_CLOCK)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("bsmt", BSMT2000, SOUND_CLOCK)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 
 

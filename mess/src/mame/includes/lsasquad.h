@@ -1,10 +1,9 @@
 
-class lsasquad_state
+class lsasquad_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, lsasquad_state(machine)); }
-
-	lsasquad_state(running_machine &machine) { }
+	lsasquad_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *      scrollram;
@@ -24,9 +23,9 @@ public:
 	UINT8 port_b_in, port_b_out, ddr_b;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *audiocpu;
-	running_device *mcu;
+	device_t *maincpu;
+	device_t *audiocpu;
+	device_t *mcu;
 };
 
 /*----------- defined in machine/lsasquad.c -----------*/

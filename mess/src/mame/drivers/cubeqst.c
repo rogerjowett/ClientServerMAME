@@ -23,6 +23,7 @@
 #include "sound/dac.h"
 #include "streams.h"
 #include "machine/laserdsc.h"
+#include "machine/nvram.h"
 
 
 /*************************************
@@ -48,7 +49,7 @@ static int video_field;
 static UINT8 io_latch;
 static UINT8 reset_latch;
 
-static running_device *laserdisc;
+static device_t *laserdisc;
 static rgb_t *colormap;
 
 
@@ -404,7 +405,7 @@ static ADDRESS_MAP_START( m68k_program_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x03800e, 0x03800f) AM_READWRITE(laserdisc_r, laserdisc_w)
 	AM_RANGE(0x03c800, 0x03c9ff) AM_RAM_WRITE(palette_w) AM_BASE_GENERIC(paletteram)
 	AM_RANGE(0x03cc00, 0x03cc01) AM_WRITE(control_w)
-	AM_RANGE(0x03e000, 0x03efff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0x03e000, 0x03efff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0x03f000, 0x03ffff) AM_RAM
 ADDRESS_MAP_END
 
@@ -454,7 +455,7 @@ static MACHINE_RESET( cubeqst )
  */
 
 /* Called by the sound CPU emulation */
-static void sound_dac_w(running_device *device, UINT16 data)
+static void sound_dac_w(device_t *device, UINT16 data)
 {
 	static const char *const dacs[] =
 	{
@@ -493,79 +494,79 @@ static const cubeqst_lin_config lin_config =
  *
  *************************************/
 
-static MACHINE_DRIVER_START( cubeqst )
-	MDRV_CPU_ADD("main_cpu", M68000, XTAL_16MHz / 2)
-	MDRV_CPU_PROGRAM_MAP(m68k_program_map)
-	MDRV_CPU_VBLANK_INT("screen", vblank)
+static MACHINE_CONFIG_START( cubeqst, driver_device )
+	MCFG_CPU_ADD("main_cpu", M68000, XTAL_16MHz / 2)
+	MCFG_CPU_PROGRAM_MAP(m68k_program_map)
+	MCFG_CPU_VBLANK_INT("screen", vblank)
 
-	MDRV_CPU_ADD("rotate_cpu", CQUESTROT, XTAL_10MHz / 2)
-	MDRV_CPU_PROGRAM_MAP(rotate_map)
-	MDRV_CPU_CONFIG(rot_config)
+	MCFG_CPU_ADD("rotate_cpu", CQUESTROT, XTAL_10MHz / 2)
+	MCFG_CPU_PROGRAM_MAP(rotate_map)
+	MCFG_CPU_CONFIG(rot_config)
 
-	MDRV_CPU_ADD("line_cpu", CQUESTLIN, XTAL_10MHz / 2)
-	MDRV_CPU_PROGRAM_MAP(line_sound_map)
-	MDRV_CPU_CONFIG(lin_config)
+	MCFG_CPU_ADD("line_cpu", CQUESTLIN, XTAL_10MHz / 2)
+	MCFG_CPU_PROGRAM_MAP(line_sound_map)
+	MCFG_CPU_CONFIG(lin_config)
 
-	MDRV_CPU_ADD("sound_cpu", CQUESTSND, XTAL_10MHz / 2)
-	MDRV_CPU_PROGRAM_MAP(line_sound_map)
-	MDRV_CPU_CONFIG(snd_config)
+	MCFG_CPU_ADD("sound_cpu", CQUESTSND, XTAL_10MHz / 2)
+	MCFG_CPU_PROGRAM_MAP(line_sound_map)
+	MCFG_CPU_CONFIG(snd_config)
 
-	MDRV_QUANTUM_TIME(HZ(48000))
+	MCFG_QUANTUM_TIME(HZ(48000))
 
-	MDRV_MACHINE_START(cubeqst)
-	MDRV_MACHINE_RESET(cubeqst)
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_MACHINE_START(cubeqst)
+	MCFG_MACHINE_RESET(cubeqst)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
-	MDRV_LASERDISC_SCREEN_ADD_NTSC("screen", BITMAP_FORMAT_RGB32)
-	MDRV_VIDEO_START(cubeqst)
+	MCFG_LASERDISC_SCREEN_ADD_NTSC("screen", BITMAP_FORMAT_RGB32)
+	MCFG_VIDEO_START(cubeqst)
 
-	MDRV_PALETTE_INIT(cubeqst)
+	MCFG_PALETTE_INIT(cubeqst)
 
-	MDRV_LASERDISC_ADD("laserdisc", SIMUTREK_SPECIAL, "screen", "ldsound")
-	MDRV_LASERDISC_OVERLAY(cubeqst, CUBEQST_HBLANK, CUBEQST_VCOUNT, BITMAP_FORMAT_RGB32)
-	MDRV_LASERDISC_OVERLAY_CLIP(0, 320-1, 0, 256-8)
-	MDRV_LASERDISC_OVERLAY_POSITION(0.002, -0.018)
-	MDRV_LASERDISC_OVERLAY_SCALE(1.0, 1.030)
+	MCFG_LASERDISC_ADD("laserdisc", SIMUTREK_SPECIAL, "screen", "ldsound")
+	MCFG_LASERDISC_OVERLAY(cubeqst, CUBEQST_HBLANK, CUBEQST_VCOUNT, BITMAP_FORMAT_RGB32)
+	MCFG_LASERDISC_OVERLAY_CLIP(0, 320-1, 0, 256-8)
+	MCFG_LASERDISC_OVERLAY_POSITION(0.002, -0.018)
+	MCFG_LASERDISC_OVERLAY_SCALE(1.0, 1.030)
 
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ldsound", LASERDISC, 0)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("ldsound", LASERDISC_SOUND, 0)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
 
-	MDRV_SOUND_ADD("rdac0", DAC, 0)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.125)
-	MDRV_SOUND_ADD("ldac0", DAC, 0)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.125)
-	MDRV_SOUND_ADD("rdac1", DAC, 0)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.125)
-	MDRV_SOUND_ADD("ldac1", DAC, 0)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.125)
-	MDRV_SOUND_ADD("rdac2", DAC, 0)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.125)
-	MDRV_SOUND_ADD("ldac2", DAC, 0)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.125)
-	MDRV_SOUND_ADD("rdac3", DAC, 0)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.125)
-	MDRV_SOUND_ADD("ldac3", DAC, 0)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.125)
-	MDRV_SOUND_ADD("rdac4", DAC, 0)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.125)
-	MDRV_SOUND_ADD("ldac4", DAC, 0)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.125)
-	MDRV_SOUND_ADD("rdac5", DAC, 0)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.125)
-	MDRV_SOUND_ADD("ldac5", DAC, 0)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.125)
-	MDRV_SOUND_ADD("rdac6", DAC, 0)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.125)
-	MDRV_SOUND_ADD("ldac6", DAC, 0)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.125)
-	MDRV_SOUND_ADD("rdac7", DAC, 0)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.125)
-	MDRV_SOUND_ADD("ldac7", DAC, 0)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.125)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("rdac0", DAC, 0)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.125)
+	MCFG_SOUND_ADD("ldac0", DAC, 0)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.125)
+	MCFG_SOUND_ADD("rdac1", DAC, 0)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.125)
+	MCFG_SOUND_ADD("ldac1", DAC, 0)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.125)
+	MCFG_SOUND_ADD("rdac2", DAC, 0)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.125)
+	MCFG_SOUND_ADD("ldac2", DAC, 0)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.125)
+	MCFG_SOUND_ADD("rdac3", DAC, 0)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.125)
+	MCFG_SOUND_ADD("ldac3", DAC, 0)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.125)
+	MCFG_SOUND_ADD("rdac4", DAC, 0)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.125)
+	MCFG_SOUND_ADD("ldac4", DAC, 0)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.125)
+	MCFG_SOUND_ADD("rdac5", DAC, 0)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.125)
+	MCFG_SOUND_ADD("ldac5", DAC, 0)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.125)
+	MCFG_SOUND_ADD("rdac6", DAC, 0)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.125)
+	MCFG_SOUND_ADD("ldac6", DAC, 0)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.125)
+	MCFG_SOUND_ADD("rdac7", DAC, 0)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.125)
+	MCFG_SOUND_ADD("ldac7", DAC, 0)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.125)
+MACHINE_CONFIG_END
 
 
 /*************************************

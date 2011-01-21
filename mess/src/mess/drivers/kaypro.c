@@ -36,7 +36,6 @@
 #include "cpu/z80/z80.h"
 #include "cpu/z80/z80daisy.h"
 #include "machine/ctronics.h"
-#include "machine/kay_kbd.h"
 #include "sound/beep.h"
 #include "devices/snapquik.h"
 #include "devices/flopdrv.h"
@@ -44,7 +43,7 @@
 #include "includes/kaypro.h"
 
 
-static READ8_HANDLER( kaypro2x_87) { return 0x7f; }	/* to bypass unemulated HD controller */
+static READ8_HANDLER( kaypro2x_87 ) { return 0x7f; }	/* to bypass unemulated HD controller */
 
 /***********************************************************
 
@@ -54,7 +53,7 @@ static READ8_HANDLER( kaypro2x_87) { return 0x7f; }	/* to bypass unemulated HD c
 
 static ADDRESS_MAP_START( kaypro_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x0fff) AM_ROM AM_REGION("maincpu", 0x0000)
-	AM_RANGE(0x3000, 0x3fff) AM_RAM AM_REGION("maincpu", 0x3000) AM_BASE_SIZE_GENERIC(videoram)
+	AM_RANGE(0x3000, 0x3fff) AM_RAM AM_REGION("maincpu", 0x3000) AM_BASE_MEMBER(kaypro_state, videoram)
 	AM_RANGE(0x4000, 0xffff) AM_RAM AM_REGION("rambank", 0x4000)
 ADDRESS_MAP_END
 
@@ -219,100 +218,98 @@ static const floppy_config kaypro2x_floppy_config =
 	NULL
 };
 
-static MACHINE_DRIVER_START( kayproii )
+static MACHINE_CONFIG_START( kayproii, kaypro_state )
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, 2500000)	/* 2.5 MHz */
-	MDRV_CPU_PROGRAM_MAP(kaypro_map)
-	MDRV_CPU_IO_MAP(kayproii_io)
-	MDRV_CPU_VBLANK_INT("screen", kay_kbd_interrupt)	/* this doesn't actually exist, it is to run the keyboard */
-	MDRV_CPU_CONFIG(kayproii_daisy_chain)
+	MCFG_CPU_ADD("maincpu", Z80, 2500000)	/* 2.5 MHz */
+	MCFG_CPU_PROGRAM_MAP(kaypro_map)
+	MCFG_CPU_IO_MAP(kayproii_io)
+	MCFG_CPU_VBLANK_INT("screen", kay_kbd_interrupt)	/* this doesn't actually exist, it is to run the keyboard */
+	MCFG_CPU_CONFIG(kayproii_daisy_chain)
 
-	MDRV_MACHINE_START( kayproii )
-	MDRV_MACHINE_RESET( kayproii )
+	MCFG_MACHINE_START( kayproii )
+	MCFG_MACHINE_RESET( kayproii )
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(80*7, 24*10)
-	MDRV_SCREEN_VISIBLE_AREA(0,80*7-1,0,24*10-1)
-	MDRV_GFXDECODE(kayproii)
-	MDRV_PALETTE_LENGTH(2)
-	MDRV_PALETTE_INIT(kaypro)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(80*7, 24*10)
+	MCFG_SCREEN_VISIBLE_AREA(0,80*7-1,0,24*10-1)
+	MCFG_GFXDECODE(kayproii)
+	MCFG_PALETTE_LENGTH(2)
+	MCFG_PALETTE_INIT(kaypro)
 
-	MDRV_VIDEO_START( kaypro )
-	MDRV_VIDEO_UPDATE( kayproii )
+	MCFG_VIDEO_START( kaypro )
+	MCFG_VIDEO_UPDATE( kayproii )
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("beep", BEEP, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("beep", BEEP, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
 
 	/* devices */
-	MDRV_QUICKLOAD_ADD("quickload", kayproii, "com,cpm", 3)
-	MDRV_WD1793_ADD("wd1793", kaypro_wd1793_interface )
-	MDRV_CENTRONICS_ADD("centronics", standard_centronics)
-	MDRV_Z80PIO_ADD( "z80pio_g", 2500000, kayproii_pio_g_intf )
-	MDRV_Z80PIO_ADD( "z80pio_s", 2500000, kayproii_pio_s_intf )
-	MDRV_Z80SIO_ADD( "z80sio", 4800, kaypro_sio_intf )	/* start at 300 baud */
+	MCFG_QUICKLOAD_ADD("quickload", kayproii, "com,cpm", 3)
+	MCFG_WD1793_ADD("wd1793", kaypro_wd1793_interface )
+	MCFG_CENTRONICS_ADD("centronics", standard_centronics)
+	MCFG_Z80PIO_ADD( "z80pio_g", 2500000, kayproii_pio_g_intf )
+	MCFG_Z80PIO_ADD( "z80pio_s", 2500000, kayproii_pio_s_intf )
+	MCFG_Z80SIO_ADD( "z80sio", 4800, kaypro_sio_intf )	/* start at 300 baud */
 
-	MDRV_FLOPPY_2_DRIVES_ADD(kayproii_floppy_config)
-MACHINE_DRIVER_END
+	MCFG_FLOPPY_2_DRIVES_ADD(kayproii_floppy_config)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( kaypro4 )
-	MDRV_IMPORT_FROM(kayproii)
+static MACHINE_CONFIG_DERIVED( kaypro4, kayproii )
 
-	MDRV_DEVICE_REMOVE("z80pio_s")
-	MDRV_Z80PIO_ADD( "z80pio_s", 2500000, kaypro4_pio_s_intf )
-MACHINE_DRIVER_END
+	MCFG_DEVICE_REMOVE("z80pio_s")
+	MCFG_Z80PIO_ADD( "z80pio_s", 2500000, kaypro4_pio_s_intf )
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( kaypro2x )
+static MACHINE_CONFIG_START( kaypro2x, kaypro_state )
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, 4000000)	/* 4 MHz */
-	MDRV_CPU_PROGRAM_MAP(kaypro_map)
-	MDRV_CPU_IO_MAP(kaypro2x_io)
-	MDRV_CPU_VBLANK_INT("screen", kay_kbd_interrupt)
-	MDRV_CPU_CONFIG(kaypro2x_daisy_chain)
+	MCFG_CPU_ADD("maincpu", Z80, 4000000)	/* 4 MHz */
+	MCFG_CPU_PROGRAM_MAP(kaypro_map)
+	MCFG_CPU_IO_MAP(kaypro2x_io)
+	MCFG_CPU_VBLANK_INT("screen", kay_kbd_interrupt)
+	MCFG_CPU_CONFIG(kaypro2x_daisy_chain)
 
-	MDRV_MACHINE_START( kaypro2x )
-	MDRV_MACHINE_RESET( kaypro2x )
+	MCFG_MACHINE_START( kaypro2x )
+	MCFG_MACHINE_RESET( kaypro2x )
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(80*8, 25*16)
-	MDRV_SCREEN_VISIBLE_AREA(0,80*8-1,0,25*16-1)
-	MDRV_GFXDECODE(kaypro2x)
-	MDRV_PALETTE_LENGTH(3)
-	MDRV_PALETTE_INIT(kaypro)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(80*8, 25*16)
+	MCFG_SCREEN_VISIBLE_AREA(0,80*8-1,0,25*16-1)
+	MCFG_GFXDECODE(kaypro2x)
+	MCFG_PALETTE_LENGTH(3)
+	MCFG_PALETTE_INIT(kaypro)
 
-	MDRV_MC6845_ADD("crtc", MC6845, 2000000, kaypro2x_crtc) /* comes out of ULA - needs to be measured */
+	MCFG_MC6845_ADD("crtc", MC6845, 2000000, kaypro2x_crtc) /* comes out of ULA - needs to be measured */
 
-	MDRV_VIDEO_START( kaypro )
-	MDRV_VIDEO_UPDATE( kaypro2x )
+	MCFG_VIDEO_START( kaypro )
+	MCFG_VIDEO_UPDATE( kaypro2x )
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("beep", BEEP, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("beep", BEEP, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
 
 	/* devices */
-	MDRV_QUICKLOAD_ADD("quickload", kaypro2x, "com,cpm", 3)
-	MDRV_WD1793_ADD("wd1793", kaypro_wd1793_interface )
-	MDRV_CENTRONICS_ADD("centronics", standard_centronics)
-	MDRV_Z80SIO_ADD( "z80sio", 4800, kaypro_sio_intf )
-	MDRV_Z80SIO_ADD( "z80sio_2x", 4800, kaypro_sio_intf )	/* extra sio for modem and printer */
+	MCFG_QUICKLOAD_ADD("quickload", kaypro2x, "com,cpm", 3)
+	MCFG_WD1793_ADD("wd1793", kaypro_wd1793_interface )
+	MCFG_CENTRONICS_ADD("centronics", standard_centronics)
+	MCFG_Z80SIO_ADD( "z80sio", 4800, kaypro_sio_intf )
+	MCFG_Z80SIO_ADD( "z80sio_2x", 4800, kaypro_sio_intf )	/* extra sio for modem and printer */
 
-	MDRV_FLOPPY_2_DRIVES_ADD(kaypro2x_floppy_config)
-MACHINE_DRIVER_END
+	MCFG_FLOPPY_2_DRIVES_ADD(kaypro2x_floppy_config)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( omni2 )
-	MDRV_IMPORT_FROM( kaypro4 )
-	MDRV_VIDEO_UPDATE( omni2 )
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( omni2, kaypro4 )
+	MCFG_VIDEO_UPDATE( omni2 )
+MACHINE_CONFIG_END
 
 /***********************************************************
 

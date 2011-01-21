@@ -10,6 +10,16 @@
 #include "cpu/scmp/scmp.h"
 #include "elekscmp.lh"
 
+
+class elekscmp_state : public driver_device
+{
+public:
+	elekscmp_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
+
+};
+
+
 static WRITE8_HANDLER(hex_display_w)
 {
 	output_set_digit_value(7-offset, data);
@@ -38,17 +48,17 @@ static MACHINE_RESET(elekscmp)
 {
 }
 
-static MACHINE_DRIVER_START( elekscmp )
+static MACHINE_CONFIG_START( elekscmp, elekscmp_state )
     /* basic machine hardware */
-    MDRV_CPU_ADD("maincpu",INS8060, XTAL_4MHz)
-    MDRV_CPU_PROGRAM_MAP(elekscmp_mem)
+    MCFG_CPU_ADD("maincpu",INS8060, XTAL_4MHz)
+    MCFG_CPU_PROGRAM_MAP(elekscmp_mem)
 
-    MDRV_MACHINE_RESET(elekscmp)
+    MCFG_MACHINE_RESET(elekscmp)
 
     /* video hardware */
-	MDRV_DEFAULT_LAYOUT(layout_elekscmp)
+	MCFG_DEFAULT_LAYOUT(layout_elekscmp)
 
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
 /* ROM definition */
 ROM_START( elekscmp )

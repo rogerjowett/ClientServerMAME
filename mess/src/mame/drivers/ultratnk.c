@@ -70,7 +70,9 @@ static MACHINE_RESET( ultratnk )
 
 static READ8_HANDLER( ultratnk_wram_r )
 {
-	return space->machine->generic.videoram.u8[0x380 + offset];
+	ultratnk_state *state = space->machine->driver_data<ultratnk_state>();
+	UINT8 *videoram = state->videoram;
+	return videoram[0x380 + offset];
 }
 
 
@@ -96,7 +98,9 @@ static READ8_HANDLER( ultratnk_options_r )
 
 static WRITE8_HANDLER( ultratnk_wram_w )
 {
-	space->machine->generic.videoram.u8[0x380 + offset] = data;
+	ultratnk_state *state = space->machine->driver_data<ultratnk_state>();
+	UINT8 *videoram = state->videoram;
+	videoram[0x380 + offset] = data;
 }
 
 
@@ -152,7 +156,7 @@ static ADDRESS_MAP_START( ultratnk_cpu_map, ADDRESS_SPACE_PROGRAM, 8 )
 
 	AM_RANGE(0x0000, 0x007f) AM_MIRROR(0x700) AM_RAM
 	AM_RANGE(0x0080, 0x00ff) AM_MIRROR(0x700) AM_READWRITE(ultratnk_wram_r, ultratnk_wram_w)
-	AM_RANGE(0x0800, 0x0bff) AM_MIRROR(0x400) AM_RAM_WRITE(ultratnk_video_ram_w) AM_BASE_GENERIC(videoram)
+	AM_RANGE(0x0800, 0x0bff) AM_MIRROR(0x400) AM_RAM_WRITE(ultratnk_video_ram_w) AM_BASE_MEMBER(ultratnk_state, videoram)
 
 	AM_RANGE(0x1000, 0x17ff) AM_READ_PORT("IN0")
 	AM_RANGE(0x1800, 0x1fff) AM_READ_PORT("IN1")
@@ -287,36 +291,36 @@ static GFXDECODE_START( ultratnk )
 GFXDECODE_END
 
 
-static MACHINE_DRIVER_START( ultratnk )
+static MACHINE_CONFIG_START( ultratnk, ultratnk_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6502, PIXEL_CLOCK / 8)
-	MDRV_CPU_PROGRAM_MAP(ultratnk_cpu_map)
+	MCFG_CPU_ADD("maincpu", M6502, PIXEL_CLOCK / 8)
+	MCFG_CPU_PROGRAM_MAP(ultratnk_cpu_map)
 
-	MDRV_WATCHDOG_VBLANK_INIT(8)
-	MDRV_MACHINE_RESET(ultratnk)
+	MCFG_WATCHDOG_VBLANK_INIT(8)
+	MCFG_MACHINE_RESET(ultratnk)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_RAW_PARAMS(PIXEL_CLOCK, HTOTAL, 0, 256, VTOTAL, 0, 224)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_RAW_PARAMS(PIXEL_CLOCK, HTOTAL, 0, 256, VTOTAL, 0, 224)
 
-	MDRV_GFXDECODE(ultratnk)
-	MDRV_PALETTE_LENGTH(10)
+	MCFG_GFXDECODE(ultratnk)
+	MCFG_PALETTE_LENGTH(10)
 
-	MDRV_PALETTE_INIT(ultratnk)
-	MDRV_VIDEO_START(ultratnk)
-	MDRV_VIDEO_UPDATE(ultratnk)
-	MDRV_VIDEO_EOF(ultratnk)
+	MCFG_PALETTE_INIT(ultratnk)
+	MCFG_VIDEO_START(ultratnk)
+	MCFG_VIDEO_UPDATE(ultratnk)
+	MCFG_VIDEO_EOF(ultratnk)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("discrete", DISCRETE, 0)
-	MDRV_SOUND_CONFIG_DISCRETE(ultratnk)
-	MDRV_SOUND_ROUTE(0, "mono", 1.0)
+	MCFG_SOUND_ADD("discrete", DISCRETE, 0)
+	MCFG_SOUND_CONFIG_DISCRETE(ultratnk)
+	MCFG_SOUND_ROUTE(0, "mono", 1.0)
 
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
 
 ROM_START( ultratnk )

@@ -87,18 +87,8 @@ DM81LS95 = TriState buffer
 #include "cpu/z80/z80.h"
 #include "cpu/mcs48/mcs48.h"
 #include "sound/tms5220.h"
-
-extern PALETTE_INIT(portrait);
-
-extern UINT8 *portrait_bgvideoram,*portrait_fgvideoram;
-
-extern int portrait_scroll;
-
-//PALETTE_INIT( portrait );
-VIDEO_START( portrait );
-VIDEO_UPDATE( portrait );
-WRITE8_HANDLER( portrait_bgvideo_write );
-WRITE8_HANDLER( portrait_fgvideo_write );
+#include "machine/nvram.h"
+#include "includes/portrait.h"
 
 static WRITE8_HANDLER( portrait_ctrl_w )
 {
@@ -140,7 +130,7 @@ static ADDRESS_MAP_START( portrait_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0xa010, 0xa010) AM_READ_PORT("INPUTS")
 	AM_RANGE(0xa018, 0xa018) AM_READNOP AM_WRITE(portrait_positive_scroll_w)
 	AM_RANGE(0xa019, 0xa019) AM_WRITE(portrait_negative_scroll_w)
-	AM_RANGE(0xa800, 0xa83f) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0xa800, 0xa83f) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0xffff, 0xffff) AM_READNOP
 ADDRESS_MAP_END
 
@@ -250,37 +240,37 @@ static GFXDECODE_START( portrait )
 	GFXDECODE_ENTRY( "gfx1", 0x00000, tile_layout, 0, 0x800/8 )
 GFXDECODE_END
 
-static MACHINE_DRIVER_START( portrait )
-	MDRV_CPU_ADD("maincpu", Z80, 4000000)     /* 4 MHz ? */
-	MDRV_CPU_PROGRAM_MAP(portrait_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+static MACHINE_CONFIG_START( portrait, driver_device )
+	MCFG_CPU_ADD("maincpu", Z80, 4000000)     /* 4 MHz ? */
+	MCFG_CPU_PROGRAM_MAP(portrait_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", I8039, 3120000)  /* ? */
-	MDRV_CPU_PROGRAM_MAP(portrait_sound_map)
+	MCFG_CPU_ADD("audiocpu", I8039, 3120000)  /* ? */
+	MCFG_CPU_PROGRAM_MAP(portrait_sound_map)
 
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(50)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 64*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 54*8-1, 0*8, 40*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(50)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 64*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 54*8-1, 0*8, 40*8-1)
 
-	MDRV_GFXDECODE(portrait)
-	MDRV_PALETTE_LENGTH(0x800)
-	MDRV_PALETTE_INIT(portrait)
+	MCFG_GFXDECODE(portrait)
+	MCFG_PALETTE_LENGTH(0x800)
+	MCFG_PALETTE_INIT(portrait)
 
-	MDRV_VIDEO_START(portrait)
-	MDRV_VIDEO_UPDATE(portrait)
+	MCFG_VIDEO_START(portrait)
+	MCFG_VIDEO_UPDATE(portrait)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("tms", TMS5200, 640000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("tms", TMS5200, 640000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 ROM_START( portrait )

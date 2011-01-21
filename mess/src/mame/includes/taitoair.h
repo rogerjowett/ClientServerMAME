@@ -17,12 +17,11 @@ struct taitoair_poly {
 };
 
 
-class taitoair_state
+class taitoair_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, taitoair_state(machine)); }
-
-	taitoair_state(running_machine &machine) { }
+	taitoair_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT16 *      m68000_mainram;
@@ -38,9 +37,9 @@ public:
 	INT32         banknum;
 
 	/* devices */
-	running_device *audiocpu;
-	running_device *dsp;
-	running_device *tc0080vco;
+	device_t *audiocpu;
+	device_t *dsp;
+	device_t *tc0080vco;
 };
 
 

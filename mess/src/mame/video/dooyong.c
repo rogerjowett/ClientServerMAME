@@ -1,10 +1,11 @@
 #include "emu.h"
 #include "includes/dooyong.h"
 
-
+UINT8 *paletteram_flytiger;
 UINT8 *dooyong_txvideoram;
 
 static UINT8 sprites_disabled;		/* Used by lastday/lastdaya */
+static UINT8 flytiger_palette_bank;		/* Used by flytiger */
 static UINT8 flytiger_pri;			/* Used by flytiger */
 static UINT8 tx_pri;				/* Used by sadari/gundl94/primella */
 static UINT16 rshark_pri;			/* Used by rshark/superx/popbingo */
@@ -176,18 +177,33 @@ WRITE8_HANDLER( primella_ctrl_w )
 //  logerror("%04x: bankswitch = %02x\n",cpu_get_pc(space->cpu),data&0xe0);
 }
 
+WRITE8_HANDLER( paletteram_flytiger_w )
+{
+	if (flytiger_palette_bank)
+	{
+		UINT16 value;
+		paletteram_flytiger[offset] = data;
+		value = paletteram_flytiger[offset & ~1] | (paletteram_flytiger[offset | 1] << 8);
+		palette_set_color_rgb(space->machine, offset/2, pal5bit(value >> 10), pal5bit(value >> 5), pal5bit(value >> 0));
+	}
+}
+
 WRITE8_HANDLER( flytiger_ctrl_w )
 {
 	/* bit 0 is flip screen */
 	flip_screen_set(space->machine, data & 0x01);
 
-	/* bits 1, 2, 3 used but unknown */
+	/* bits 1, 2 used but unknown */
+
+	/* bit 3 fg palette banking: trash protection? */
+	flytiger_palette_bank = data & 0x08;
 
 	/* bit 4 changes tilemaps priority */
 	flytiger_pri = data & 0x10;
 }
 
 WRITE16_HANDLER( rshark_ctrl_w )
+
 {
 	if (ACCESSING_BITS_0_7)
 	{
@@ -302,9 +318,7 @@ static TILE_GET_INFO( get_fg2_tile_info )
 		lastday_get_tile_info(machine, tileinfo, tile_index, fg2_tilerom, fg2scroll8, fg2_gfx);
 }
 
-/* flytiger uses some palette banking technique or something, but we
-   don't know what it is.  For now, this is the same as the code used
-   for the other layers (hence the really strange colour). */
+/* flytiger uses some palette banking technique or something maybe a trash protection */
 
 static TILE_GET_INFO( flytiger_get_fg_tile_info )
 {
@@ -313,7 +327,7 @@ static TILE_GET_INFO( flytiger_get_fg_tile_info )
 	int offs = (tile_index + (fgscroll8[1] << 6)) * 2;
 	int attr = tilerom[offs];
 	int code = tilerom[offs + 1] | ((attr & 0x01) << 8) | ((attr & 0x80) << 2);
-	int color = (attr & 0x78) >> 3; //TODO: missing 4th bit or palette bank
+	int color = (attr & 0x78) >> 3;
 	int flags = ((attr & 0x02) ? TILE_FLIPX : 0) | ((attr & 0x04) ? TILE_FLIPY : 0);
 
 	SET_TILE_INFO(fg_gfx, code, color, flags);
@@ -624,8 +638,8 @@ VIDEO_UPDATE( popbingo )
 VIDEO_START( lastday )
 {
 	/* Configure tilemap callbacks */
-	bg_tilerom = memory_region(machine, "gfx5");
-	fg_tilerom = memory_region(machine, "gfx6");
+	bg_tilerom = machine->region("gfx5")->base();
+	fg_tilerom = machine->region("gfx6")->base();
 	bg_tilerom2 = NULL;
 	fg_tilerom2 = NULL;
 	bg_gfx = 2;
@@ -661,8 +675,8 @@ VIDEO_START( lastday )
 VIDEO_START( gulfstrm )
 {
 	/* Configure tilemap callbacks */
-	bg_tilerom = memory_region(machine, "gfx5");
-	fg_tilerom = memory_region(machine, "gfx6");
+	bg_tilerom = machine->region("gfx5")->base();
+	fg_tilerom = machine->region("gfx6")->base();
 	bg_tilerom2 = NULL;
 	fg_tilerom2 = NULL;
 	bg_gfx = 2;
@@ -697,8 +711,8 @@ VIDEO_START( gulfstrm )
 VIDEO_START( pollux )
 {
 	/* Configure tilemap callbacks */
-	bg_tilerom = memory_region(machine, "gfx5");
-	fg_tilerom = memory_region(machine, "gfx6");
+	bg_tilerom = machine->region("gfx5")->base();
+	fg_tilerom = machine->region("gfx6")->base();
 	bg_tilerom2 = NULL;
 	fg_tilerom2 = NULL;
 	bg_gfx = 2;
@@ -730,9 +744,9 @@ VIDEO_START( pollux )
 VIDEO_START( bluehawk )
 {
 	/* Configure tilemap callbacks */
-	bg_tilerom = memory_region(machine, "gfx3") + 0x78000;
-	fg_tilerom = memory_region(machine, "gfx4") + 0x78000;
-	fg2_tilerom = memory_region(machine, "gfx5") + 0x38000;
+	bg_tilerom = machine->region("gfx3")->base() + 0x78000;
+	fg_tilerom = machine->region("gfx4")->base() + 0x78000;
+	fg2_tilerom = machine->region("gfx5")->base() + 0x38000;
 	bg_tilerom2 = NULL;
 	fg_tilerom2 = NULL;
 	fg2_tilerom2 = NULL;
@@ -770,8 +784,8 @@ VIDEO_START( bluehawk )
 VIDEO_START( flytiger )
 {
 	/* Configure tilemap callbacks */
-	bg_tilerom = memory_region(machine, "gfx3") + 0x78000;
-	fg_tilerom = memory_region(machine, "gfx4") + 0x78000;
+	bg_tilerom = machine->region("gfx3")->base() + 0x78000;
+	fg_tilerom = machine->region("gfx4")->base() + 0x78000;
 	bg_tilerom2 = NULL;
 	fg_tilerom2 = NULL;
 	bg_gfx = 2;
@@ -805,8 +819,8 @@ VIDEO_START( flytiger )
 VIDEO_START( primella )
 {
 	/* Configure tilemap callbacks */
-	bg_tilerom = memory_region(machine, "gfx2") + memory_region_length(machine, "gfx2") - 0x8000;
-	fg_tilerom = memory_region(machine, "gfx3") + memory_region_length(machine, "gfx3") - 0x8000;
+	bg_tilerom = machine->region("gfx2")->base() + machine->region("gfx2")->bytes() - 0x8000;
+	fg_tilerom = machine->region("gfx3")->base() + machine->region("gfx3")->bytes() - 0x8000;
 	bg_tilerom2 = NULL;
 	fg_tilerom2 = NULL;
 	bg_gfx = 1;
@@ -839,14 +853,14 @@ VIDEO_START( primella )
 VIDEO_START( rshark )
 {
 	/* Configure tilemap callbacks */
-	bg_tilerom = memory_region(machine, "gfx5");
-	bg2_tilerom = memory_region(machine, "gfx4");
-	fg_tilerom = memory_region(machine, "gfx3");
-	fg2_tilerom = memory_region(machine, "gfx2");
-	bg_tilerom2 = memory_region(machine, "gfx6") + 0x60000;
-	bg2_tilerom2 = memory_region(machine, "gfx6") + 0x40000;
-	fg_tilerom2 = memory_region(machine, "gfx6") + 0x20000;
-	fg2_tilerom2 = memory_region(machine, "gfx6") + 0x00000;
+	bg_tilerom = machine->region("gfx5")->base();
+	bg2_tilerom = machine->region("gfx4")->base();
+	fg_tilerom = machine->region("gfx3")->base();
+	fg2_tilerom = machine->region("gfx2")->base();
+	bg_tilerom2 = machine->region("gfx6")->base() + 0x60000;
+	bg2_tilerom2 = machine->region("gfx6")->base() + 0x40000;
+	fg_tilerom2 = machine->region("gfx6")->base() + 0x20000;
+	fg2_tilerom2 = machine->region("gfx6")->base() + 0x00000;
 	bg_gfx = 4;
 	bg2_gfx = 3;
 	fg_gfx = 2;
@@ -883,7 +897,7 @@ VIDEO_START( rshark )
 VIDEO_START( popbingo )
 {
 	/* Configure tilemap callbacks */
-	bg_tilerom = memory_region(machine, "gfx2");
+	bg_tilerom = machine->region("gfx2")->base();
 	bg_gfx = 1;
 
 	/* Create tilemaps */
@@ -907,14 +921,14 @@ VIDEO_START( popbingo )
 
 VIDEO_EOF( dooyong )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	buffer_spriteram_w(space, 0, 0);
 }
 
 VIDEO_EOF( rshark )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	buffer_spriteram16_w(space, 0, 0, 0xffff);
 }

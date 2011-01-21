@@ -22,6 +22,7 @@ todo:
 #include "emu.h"
 #include "cpu/i8085/i8085.h"
 #include "sound/dac.h"
+#include "machine/nvram.h"
 
 
 #define NUM_PENS	(8)
@@ -169,7 +170,7 @@ static ADDRESS_MAP_START( wldarrow_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x4000, 0x5fff) AM_RAM AM_BASE(&wldarrow_videoram_0) AM_SIZE(&wldarrow_videoram_size)
 	AM_RANGE(0x6000, 0x7fff) AM_RAM AM_BASE(&wldarrow_videoram_1)
 	AM_RANGE(0x8000, 0x9fff) AM_RAM AM_BASE(&wldarrow_videoram_2)
-	AM_RANGE(0xcd00, 0xcdff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0xcd00, 0xcdff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0xf000, 0xf000) AM_READ_PORT("BITSW") AM_DEVWRITE("dac", wldarrow_dac_1_w)
 	AM_RANGE(0xf004, 0xf004) AM_READ_PORT("IN1") AM_WRITE(lights_1_w)
 	AM_RANGE(0xf006, 0xf006) AM_READ_PORT("IN2") AM_WRITE(lights_2_w)
@@ -344,30 +345,30 @@ INPUT_PORTS_END
  *
  *************************************/
 
-static MACHINE_DRIVER_START( wldarrow )
+static MACHINE_CONFIG_START( wldarrow, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", I8080, 2000000)
-	MDRV_CPU_PROGRAM_MAP(wldarrow_map)
+	MCFG_CPU_ADD("maincpu", I8080, 2000000)
+	MCFG_CPU_PROGRAM_MAP(wldarrow_map)
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	/* video hardware */
-	MDRV_VIDEO_UPDATE(wldarrow)
+	MCFG_VIDEO_UPDATE(wldarrow)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(256, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 4*8, 32*8-1)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(256, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 4*8, 32*8-1)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
 
 	/* audio hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("dac", DAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("dac", DAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
 
 
@@ -476,7 +477,7 @@ ROM_END
 static DRIVER_INIT( wldarrow )
 {
 	offs_t i;
-	UINT8 *rom = memory_region(machine, "maincpu");
+	UINT8 *rom = machine->region("maincpu")->base();
 
 	for (i = 0; i < 0x3800; i++)
 		rom[i] ^= 0xff;

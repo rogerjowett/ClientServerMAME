@@ -79,6 +79,17 @@ ROMS: All ROM labels say only "PROM" and a number.
 #include "deprecat.h"
 #include "sound/ay8910.h"
 
+
+class pturn_state : public driver_device
+{
+public:
+	pturn_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
+
+	UINT8 *videoram;
+};
+
+
 static tilemap_t *pturn_fgmap,*pturn_bgmap;
 static int bgbank=0;
 static int fgbank=0;
@@ -97,8 +108,10 @@ static const UINT8 tile_lookup[0x10]=
 
 static TILE_GET_INFO( get_pturn_tile_info )
 {
+	pturn_state *state = machine->driver_data<pturn_state>();
+	UINT8 *videoram = state->videoram;
 	int tileno;
-	tileno = machine->generic.videoram.u8[tile_index];
+	tileno = videoram[tile_index];
 
 	tileno=tile_lookup[tileno>>4]|(tileno&0xf)|(fgbank<<8);
 
@@ -110,7 +123,7 @@ static TILE_GET_INFO( get_pturn_tile_info )
 static TILE_GET_INFO( get_pturn_bg_tile_info )
 {
 	int tileno,palno;
-	tileno = memory_region(machine, "user1")[tile_index];
+	tileno = machine->region("user1")->base()[tile_index];
 	palno=bgpalette;
 	if(palno==1)
 	{
@@ -184,7 +197,9 @@ READ8_HANDLER (pturn_protection2_r)
 
 static WRITE8_HANDLER( pturn_videoram_w )
 {
-	space->machine->generic.videoram.u8[offset]=data;
+	pturn_state *state = space->machine->driver_data<pturn_state>();
+	UINT8 *videoram = state->videoram;
+	videoram[offset]=data;
 	tilemap_mark_tile_dirty(pturn_fgmap,offset);
 }
 
@@ -280,7 +295,7 @@ static ADDRESS_MAP_START( main_map, ADDRESS_SPACE_PROGRAM, 8 )
 
 	AM_RANGE(0xdfe0, 0xdfe0) AM_NOP
 
-	AM_RANGE(0xe000, 0xe3ff) AM_RAM_WRITE(pturn_videoram_w) AM_BASE_GENERIC(videoram)
+	AM_RANGE(0xe000, 0xe3ff) AM_RAM_WRITE(pturn_videoram_w) AM_BASE_MEMBER(pturn_state, videoram)
 	AM_RANGE(0xe400, 0xe400) AM_WRITE(fgpalette_w)
 	AM_RANGE(0xe800, 0xe800) AM_WRITE(sound_w)
 
@@ -440,45 +455,45 @@ static INTERRUPT_GEN( pturn_main_intgen )
 
 static MACHINE_RESET( pturn )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 	soundlatch_clear_w(space,0,0);
 }
 
-static MACHINE_DRIVER_START( pturn )
-	MDRV_CPU_ADD("maincpu", Z80, 12000000/3)
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_VBLANK_INT("screen", pturn_main_intgen)
-	MDRV_MACHINE_RESET(pturn)
+static MACHINE_CONFIG_START( pturn, pturn_state )
+	MCFG_CPU_ADD("maincpu", Z80, 12000000/3)
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_VBLANK_INT("screen", pturn_main_intgen)
+	MCFG_MACHINE_RESET(pturn)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 12000000/3)
-	MDRV_CPU_PROGRAM_MAP(sub_map)
-	MDRV_CPU_VBLANK_INT_HACK(pturn_sub_intgen,3)
+	MCFG_CPU_ADD("audiocpu", Z80, 12000000/3)
+	MCFG_CPU_PROGRAM_MAP(sub_map)
+	MCFG_CPU_VBLANK_INT_HACK(pturn_sub_intgen,3)
 
-	MDRV_GFXDECODE(pturn)
+	MCFG_GFXDECODE(pturn)
 
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_PALETTE_LENGTH(0x100)
-	MDRV_PALETTE_INIT(RRRR_GGGG_BBBB)
+	MCFG_PALETTE_LENGTH(0x100)
+	MCFG_PALETTE_INIT(RRRR_GGGG_BBBB)
 
-	MDRV_VIDEO_START(pturn)
-	MDRV_VIDEO_UPDATE(pturn)
+	MCFG_VIDEO_START(pturn)
+	MCFG_VIDEO_UPDATE(pturn)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ay1", AY8910, 2000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+	MCFG_SOUND_ADD("ay1", AY8910, 2000000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
-	MDRV_SOUND_ADD("ay2", AY8910, 2000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ay2", AY8910, 2000000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+MACHINE_CONFIG_END
 
 
 ROM_START( pturn )

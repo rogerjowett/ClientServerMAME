@@ -189,7 +189,7 @@ ADDRESS_MAP_END
 static ADDRESS_MAP_START( spbactn_sound_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0xefff) AM_ROM
 	AM_RANGE(0xf000, 0xf7ff) AM_RAM
-	AM_RANGE(0xf800, 0xf800) AM_DEVREADWRITE("oki", okim6295_r,okim6295_w)
+	AM_RANGE(0xf800, 0xf800) AM_DEVREADWRITE_MODERN("oki", okim6295_device, read, write)
 	AM_RANGE(0xf810, 0xf811) AM_DEVWRITE("ymsnd", ym3812_w)
 
 	AM_RANGE(0xfc00, 0xfc00) AM_READNOP	AM_WRITENOP /* irq ack ?? */
@@ -323,7 +323,7 @@ static GFXDECODE_START( spbactn )
 	GFXDECODE_ENTRY( "gfx3", 0, spritelayout,   0x0000, 16 + 384 )
 GFXDECODE_END
 
-static void irqhandler(running_device *device, int linestate)
+static void irqhandler(device_t *device, int linestate)
 {
 	cputag_set_input_line(device->machine, "audiocpu", 0, linestate);
 }
@@ -333,42 +333,40 @@ static const ym3812_interface ym3812_config =
 	irqhandler
 };
 
-static MACHINE_DRIVER_START( spbactn )
-
-	MDRV_DRIVER_DATA( spbactn_state )
+static MACHINE_CONFIG_START( spbactn, spbactn_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 12000000)
-	MDRV_CPU_PROGRAM_MAP(spbactn_map)
-	MDRV_CPU_VBLANK_INT("screen", irq3_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, 12000000)
+	MCFG_CPU_PROGRAM_MAP(spbactn_map)
+	MCFG_CPU_VBLANK_INT("screen", irq3_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 4000000)	/* 4 MHz ??? */
-	MDRV_CPU_PROGRAM_MAP(spbactn_sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 4000000)	/* 4 MHz ??? */
+	MCFG_CPU_PROGRAM_MAP(spbactn_sound_map)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 64*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 64*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(spbactn)
-	MDRV_PALETTE_LENGTH(0x2800/2)
+	MCFG_GFXDECODE(spbactn)
+	MCFG_PALETTE_LENGTH(0x2800/2)
 
-	MDRV_VIDEO_START(spbactn)
-	MDRV_VIDEO_UPDATE(spbactn)
+	MCFG_VIDEO_START(spbactn)
+	MCFG_VIDEO_UPDATE(spbactn)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM3812, 3579545)
-	MDRV_SOUND_CONFIG(ym3812_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM3812, 3579545)
+	MCFG_SOUND_CONFIG(ym3812_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-	MDRV_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 ROM_START( spbactn )
 	/* Board 9002-A (CPU Board) */

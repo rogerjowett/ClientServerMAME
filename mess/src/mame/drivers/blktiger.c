@@ -28,20 +28,20 @@ Protection comms between main cpu and i8751
 
 static READ8_HANDLER( blktiger_from_mcu_r )
 {
-	blktiger_state *state = (blktiger_state *)space->machine->driver_data;
+	blktiger_state *state = space->machine->driver_data<blktiger_state>();
 	return state->i8751_latch;
 }
 
 static WRITE8_HANDLER( blktiger_to_mcu_w )
 {
-	blktiger_state *state = (blktiger_state *)space->machine->driver_data;
+	blktiger_state *state = space->machine->driver_data<blktiger_state>();
 	cpu_set_input_line(state->mcu, MCS51_INT1_LINE, ASSERT_LINE);
 	state->z80_latch = data;
 }
 
 static READ8_HANDLER( blktiger_from_main_r )
 {
-	blktiger_state *state = (blktiger_state *)space->machine->driver_data;
+	blktiger_state *state = space->machine->driver_data<blktiger_state>();
 	cpu_set_input_line(state->mcu, MCS51_INT1_LINE, CLEAR_LINE);
 	//printf("%02x read\n",latch);
 	return state->z80_latch;
@@ -49,7 +49,7 @@ static READ8_HANDLER( blktiger_from_main_r )
 
 static WRITE8_HANDLER( blktiger_to_main_w )
 {
-	blktiger_state *state = (blktiger_state *)space->machine->driver_data;
+	blktiger_state *state = space->machine->driver_data<blktiger_state>();
 	//printf("%02x write\n",data);
 	state->i8751_latch = data;
 }
@@ -263,9 +263,9 @@ GFXDECODE_END
 
 
 /* handler called by the 2203 emulator when the internal timers cause an IRQ */
-static void irqhandler( running_device *device, int irq )
+static void irqhandler( device_t *device, int irq )
 {
-	blktiger_state *state = (blktiger_state *)device->machine->driver_data;
+	blktiger_state *state = device->machine->driver_data<blktiger_state>();
 	cpu_set_input_line(state->audiocpu, 0, irq ? ASSERT_LINE : CLEAR_LINE);
 }
 
@@ -281,13 +281,13 @@ static const ym2203_interface ym2203_config =
 
 static MACHINE_START( blktiger )
 {
-	blktiger_state *state = (blktiger_state *)machine->driver_data;
+	blktiger_state *state = machine->driver_data<blktiger_state>();
 
 	state->audiocpu = machine->device("audiocpu");
 	state->mcu = machine->device("mcu");
 
 	/* configure bankswitching */
-	memory_configure_bank(machine, "bank1", 0, 16, memory_region(machine, "maincpu") + 0x10000, 0x4000);
+	memory_configure_bank(machine, "bank1", 0, 16, machine->region("maincpu")->base() + 0x10000, 0x4000);
 
 	state_save_register_global(machine, state->scroll_bank);
 	state_save_register_global(machine, state->screen_layout);
@@ -302,10 +302,10 @@ static MACHINE_START( blktiger )
 
 static MACHINE_RESET( blktiger )
 {
-	blktiger_state *state = (blktiger_state *)machine->driver_data;
+	blktiger_state *state = machine->driver_data<blktiger_state>();
 
 	/* configure bankswitching */
-	memory_configure_bank(machine, "bank1", 0, 16, memory_region(machine, "maincpu") + 0x10000, 0x4000);
+	memory_configure_bank(machine, "bank1", 0, 16, machine->region("maincpu")->base() + 0x10000, 0x4000);
 
 	state->scroll_x[0] = 0;
 	state->scroll_x[1] = 0;
@@ -313,70 +313,63 @@ static MACHINE_RESET( blktiger )
 	state->scroll_y[1] = 0;
 	state->scroll_bank = 0;
 	state->screen_layout = 0;
-	state->chon = 0;
-	state->objon = 0;
-	state->bgon = 0;
 	state->z80_latch = 0;
 	state->i8751_latch = 0;
 }
 
-static MACHINE_DRIVER_START( blktiger )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(blktiger_state)
+static MACHINE_CONFIG_START( blktiger, blktiger_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, XTAL_24MHz/4)	/* verified on pcb */
-	MDRV_CPU_PROGRAM_MAP(blktiger_map)
-	MDRV_CPU_IO_MAP(blktiger_io_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80, XTAL_24MHz/4)	/* verified on pcb */
+	MCFG_CPU_PROGRAM_MAP(blktiger_map)
+	MCFG_CPU_IO_MAP(blktiger_io_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80, XTAL_3_579545MHz) /* verified on pcb */
-	MDRV_CPU_PROGRAM_MAP(blktiger_sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL_3_579545MHz) /* verified on pcb */
+	MCFG_CPU_PROGRAM_MAP(blktiger_sound_map)
 
-	MDRV_CPU_ADD("mcu", I8751, XTAL_24MHz/4) /* ??? */
-	MDRV_CPU_PROGRAM_MAP(blktiger_mcu_map)
-	MDRV_CPU_IO_MAP(blktiger_mcu_io_map)
-	//MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("mcu", I8751, XTAL_24MHz/4) /* ??? */
+	MCFG_CPU_PROGRAM_MAP(blktiger_mcu_map)
+	MCFG_CPU_IO_MAP(blktiger_mcu_io_map)
+	//MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_MACHINE_START(blktiger)
-	MDRV_MACHINE_RESET(blktiger)
+	MCFG_MACHINE_START(blktiger)
+	MCFG_MACHINE_RESET(blktiger)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_BUFFERS_SPRITERAM)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_BUFFERS_SPRITERAM)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(blktiger)
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_GFXDECODE(blktiger)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_VIDEO_START(blktiger)
-	MDRV_VIDEO_EOF(blktiger)
-	MDRV_VIDEO_UPDATE(blktiger)
+	MCFG_VIDEO_START(blktiger)
+	MCFG_VIDEO_EOF(blktiger)
+	MCFG_VIDEO_UPDATE(blktiger)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ym1", YM2203, XTAL_3_579545MHz) /* verified on pcb */
-	MDRV_SOUND_CONFIG(ym2203_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
+	MCFG_SOUND_ADD("ym1", YM2203, XTAL_3_579545MHz) /* verified on pcb */
+	MCFG_SOUND_CONFIG(ym2203_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
 
-	MDRV_SOUND_ADD("ym2", YM2203, XTAL_3_579545MHz) /* verified on pcb */
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ym2", YM2203, XTAL_3_579545MHz) /* verified on pcb */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( blktigerbl )
-	MDRV_IMPORT_FROM(blktiger)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_IO_MAP(blktigerbl_io_map)
+static MACHINE_CONFIG_DERIVED( blktigerbl, blktiger )
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_IO_MAP(blktigerbl_io_map)
 
-	MDRV_DEVICE_REMOVE("mcu")
-MACHINE_DRIVER_END
+	MCFG_DEVICE_REMOVE("mcu")
+MACHINE_CONFIG_END
 
 /***************************************************************************
 

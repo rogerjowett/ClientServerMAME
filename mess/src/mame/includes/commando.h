@@ -4,12 +4,11 @@
 
 *************************************************************************/
 
-class commando_state
+class commando_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, commando_state(machine)); }
-
-	commando_state(running_machine &machine) { }
+	commando_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *  videoram;
@@ -24,7 +23,7 @@ public:
 	UINT8 scroll_y[2];
 
 	/* devices */
-	running_device *audiocpu;
+	device_t *audiocpu;
 };
 
 

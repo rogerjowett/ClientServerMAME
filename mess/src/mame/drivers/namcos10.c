@@ -267,8 +267,15 @@ Utyuu Daisakusen Chocovader Contactee CVC1  Ver.A   KC022A
 #include "cpu/mips/psx.h"
 #include "includes/psx.h"
 
+class namcos10_state : public psx_state
+{
+public:
+	namcos10_state(running_machine &machine, const driver_device_config_base &config)
+		: psx_state(machine, config) { }
+};
+
 static ADDRESS_MAP_START( namcos10_map, ADDRESS_SPACE_PROGRAM, 32 )
-	AM_RANGE(0x00000000, 0x003fffff) AM_RAM AM_SHARE("share1") AM_BASE(&g_p_n_psxram) AM_SIZE(&g_n_psxramsize) /* ram */
+	AM_RANGE(0x00000000, 0x003fffff) AM_RAM AM_SHARE("share1") /* ram */
 	AM_RANGE(0x1f800000, 0x1f8003ff) AM_RAM /* scratchpad */
 	AM_RANGE(0x1f801000, 0x1f801007) AM_WRITENOP
 	AM_RANGE(0x1f801008, 0x1f80100b) AM_RAM /* ?? */
@@ -311,8 +318,8 @@ static void memm_driver_init( running_machine *machine )
 
 static void memn_driver_init( running_machine *machine )
 {
-	UINT8 *BIOS = (UINT8 *)memory_region( machine, "user1" );
-	UINT8 *ROM = (UINT8 *)memory_region( machine, "user2" );
+	UINT8 *BIOS = (UINT8 *)machine->region( "user1" )->base();
+	UINT8 *ROM = (UINT8 *)machine->region( "user2" )->base();
 
 	memcpy32le( (UINT32 *)( BIOS + 0x0000000 ), ROM + 0x08000, 0x001c000 );
 	memcpy32le( (UINT32 *)( BIOS + 0x0020000 ), ROM + 0x24000, 0x03dffff );
@@ -323,8 +330,8 @@ static void memn_driver_init( running_machine *machine )
 static void decrypt_bios( running_machine *machine, int b15, int b14, int b13, int b12, int b11, int b10, int b9, int b8,
 	int b7, int b6, int b5, int b4, int b3, int b2, int b1, int b0 )
 {
-	UINT16 *BIOS = (UINT16 *)memory_region( machine, "user1" );
-	int len = memory_region_length( machine, "user1" ) / 2;
+	UINT16 *BIOS = (UINT16 *)machine->region( "user1" )->base();
+	int len = machine->region( "user1" )->bytes() / 2;
 	int i;
 
 	for( i = 0; i < len; i++ )
@@ -375,31 +382,31 @@ static MACHINE_RESET( namcos10 )
 	psx_machine_init(machine);
 }
 
-static MACHINE_DRIVER_START( namcos10 )
+static MACHINE_CONFIG_START( namcos10, namcos10_state )
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu",  PSXCPU, XTAL_101_4912MHz )
-	MDRV_CPU_PROGRAM_MAP( namcos10_map)
-	MDRV_CPU_VBLANK_INT("screen", psx_vblank)
+	MCFG_CPU_ADD( "maincpu", PSXCPU, XTAL_101_4912MHz )
+	MCFG_CPU_PROGRAM_MAP( namcos10_map)
+	MCFG_CPU_VBLANK_INT("screen", psx_vblank)
 
-	MDRV_MACHINE_RESET( namcos10 )
+	MCFG_MACHINE_RESET( namcos10 )
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE( 60 )
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE( 1024, 1024 )
-	MDRV_SCREEN_VISIBLE_AREA( 0, 639, 0, 479 )
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE( 60 )
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE( 1024, 1024 )
+	MCFG_SCREEN_VISIBLE_AREA( 0, 639, 0, 479 )
 
-	MDRV_PALETTE_LENGTH( 65536 )
+	MCFG_PALETTE_LENGTH( 65536 )
 
-	MDRV_PALETTE_INIT( psx )
-	MDRV_VIDEO_START( psx_type2 )
-	MDRV_VIDEO_UPDATE( psx )
+	MCFG_PALETTE_INIT( psx )
+	MCFG_VIDEO_START( psx_type2 )
+	MCFG_VIDEO_UPDATE( psx )
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
-MACHINE_DRIVER_END
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+MACHINE_CONFIG_END
 
 static INPUT_PORTS_START( namcos10 )
 	/* IN 0 */

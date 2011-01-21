@@ -49,6 +49,7 @@ Known Issues:
 #include "sound/2151intf.h"
 #include "sound/k007232.h"
 #include "sound/upd7759.h"
+#include "machine/nvram.h"
 #include "includes/twin16.h"
 #include "includes/konamipt.h"
 
@@ -83,17 +84,21 @@ int twin16_spriteram_process_enable( void )
 
 static READ16_HANDLER( videoram16_r )
 {
-	return space->machine->generic.videoram.u16[offset];
+	twin16_state *state = space->machine->driver_data<twin16_state>();
+	UINT16 *videoram = state->videoram;
+	return videoram[offset];
 }
 
 static WRITE16_HANDLER( videoram16_w )
 {
-	COMBINE_DATA(space->machine->generic.videoram.u16 + offset);
+	twin16_state *state = space->machine->driver_data<twin16_state>();
+	UINT16 *videoram = state->videoram;
+	COMBINE_DATA(videoram + offset);
 }
 
 static READ16_HANDLER( extra_rom_r )
 {
-	return ((UINT16 *)memory_region(space->machine, "gfx3"))[offset];
+	return ((UINT16 *)space->machine->region("gfx3")->base())[offset];
 }
 
 static READ16_HANDLER( twin16_gfx_rom1_r )
@@ -248,13 +253,13 @@ static ADDRESS_MAP_START( main_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x0a0000, 0x0a0001) AM_WRITE(twin16_CPUA_register_w)
 	AM_RANGE(0x0a0008, 0x0a0009) AM_WRITE(sound_command_w)
 	AM_RANGE(0x0a0010, 0x0a0011) AM_WRITE(watchdog_reset16_w)
-	AM_RANGE(0x0b0000, 0x0b03ff) AM_READWRITE(cuebrickj_nvram_r, cuebrickj_nvram_w)
+	AM_RANGE(0x0b0000, 0x0b03ff) AM_READWRITE(cuebrickj_nvram_r, cuebrickj_nvram_w) AM_SHARE("nvram")
 	AM_RANGE(0x0b0400, 0x0b0401) AM_WRITE(cuebrickj_nvram_bank_w)
 	AM_RANGE(0x0c0000, 0x0c000f) AM_WRITE(twin16_video_register_w)
 	AM_RANGE(0x0c000e, 0x0c000f) AM_READ(twin16_sprite_status_r)
 	AM_RANGE(0x100000, 0x103fff) AM_RAM_WRITE(twin16_text_ram_w) AM_BASE(&twin16_text_ram)
 //  AM_RANGE(0x104000, 0x105fff) AM_NOP             // miaj
-	AM_RANGE(0x120000, 0x123fff) AM_RAM AM_BASE_GENERIC(videoram)
+	AM_RANGE(0x120000, 0x123fff) AM_RAM AM_BASE_MEMBER(twin16_state, videoram)
 	AM_RANGE(0x140000, 0x143fff) AM_RAM AM_SHARE("share1") AM_BASE_SIZE_GENERIC(spriteram)
 ADDRESS_MAP_END
 
@@ -286,7 +291,7 @@ static ADDRESS_MAP_START( fround_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x0c000e, 0x0c000f) AM_READ(twin16_sprite_status_r)
 	AM_RANGE(0x0e0000, 0x0e0001) AM_WRITE(fround_gfx_bank_w)
 	AM_RANGE(0x100000, 0x103fff) AM_RAM_WRITE(twin16_text_ram_w) AM_BASE(&twin16_text_ram)
-	AM_RANGE(0x120000, 0x123fff) AM_RAM AM_BASE_GENERIC(videoram)
+	AM_RANGE(0x120000, 0x123fff) AM_RAM AM_BASE_MEMBER(twin16_state, videoram)
 	AM_RANGE(0x140000, 0x143fff) AM_RAM AM_BASE_SIZE_GENERIC(spriteram)
 	AM_RANGE(0x500000, 0x6fffff) AM_READ(twin16_gfx_rom1_r)
 ADDRESS_MAP_END
@@ -670,7 +675,7 @@ GFXDECODE_END
 
 /* Sound Interfaces */
 
-static void volume_callback(running_device *device, int v)
+static void volume_callback(device_t *device, int v)
 {
 	k007232_set_volume(device,0,(v >> 4) * 0x11,0);
 	k007232_set_volume(device,1,0,(v & 0x0f) * 0x11);
@@ -714,127 +719,124 @@ static MACHINE_START( twin16 )
 	state_save_register_global_array(machine, cuebrickj_nvram);
 }
 
-static MACHINE_DRIVER_START( twin16 )
+static MACHINE_CONFIG_START( twin16, twin16_state )
 	// basic machine hardware
-	MDRV_CPU_ADD("maincpu", M68000, XTAL_18_432MHz/2)
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_VBLANK_INT("screen", CPUA_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, XTAL_18_432MHz/2)
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_VBLANK_INT("screen", CPUA_interrupt)
 
-	MDRV_CPU_ADD("sub", M68000, XTAL_18_432MHz/2)
-	MDRV_CPU_PROGRAM_MAP(sub_map)
-	MDRV_CPU_VBLANK_INT("screen", CPUB_interrupt)
+	MCFG_CPU_ADD("sub", M68000, XTAL_18_432MHz/2)
+	MCFG_CPU_PROGRAM_MAP(sub_map)
+	MCFG_CPU_VBLANK_INT("screen", CPUB_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 3579545)
-	MDRV_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 3579545)
+	MCFG_CPU_PROGRAM_MAP(sound_map)
 
-	MDRV_QUANTUM_TIME(HZ(6000))
+	MCFG_QUANTUM_TIME(HZ(6000))
 
-	MDRV_MACHINE_START(twin16)
-	MDRV_MACHINE_RESET(twin16)
+	MCFG_MACHINE_START(twin16)
+	MCFG_MACHINE_RESET(twin16)
 
 	// video hardware
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_BUFFERS_SPRITERAM)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_BUFFERS_SPRITERAM)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(((double)XTAL_18_432MHz / 2) / (576 * 264))
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2062)) // 32 lines
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(40*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0, 40*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(((double)XTAL_18_432MHz / 2) / (576 * 264))
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2062)) // 32 lines
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(40*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0, 40*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(twin16)
-	MDRV_PALETTE_LENGTH(0x400)
+	MCFG_GFXDECODE(twin16)
+	MCFG_PALETTE_LENGTH(0x400)
 
-	MDRV_VIDEO_START(twin16)
-	MDRV_VIDEO_UPDATE(twin16)
-	MDRV_VIDEO_EOF(twin16)
+	MCFG_VIDEO_START(twin16)
+	MCFG_VIDEO_UPDATE(twin16)
+	MCFG_VIDEO_EOF(twin16)
 
 	// sound hardware
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, 7159160/2)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM2151, 7159160/2)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
 
-	MDRV_SOUND_ADD("konami", K007232, 3579545)
-	MDRV_SOUND_CONFIG(k007232_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.12) // estimated with gradius2 OST
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.12)
-	MDRV_SOUND_ROUTE(1, "lspeaker", 0.12)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.12)
+	MCFG_SOUND_ADD("konami", K007232, 3579545)
+	MCFG_SOUND_CONFIG(k007232_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.12) // estimated with gradius2 OST
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.12)
+	MCFG_SOUND_ROUTE(1, "lspeaker", 0.12)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.12)
 
-	MDRV_SOUND_ADD("upd", UPD7759, UPD7759_STANDARD_CLOCK)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.20)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.20)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("upd", UPD7759, UPD7759_STANDARD_CLOCK)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.20)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.20)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( devilw )
-	MDRV_IMPORT_FROM(twin16)
-	MDRV_QUANTUM_TIME(HZ(60000)) // watchdog reset otherwise
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( devilw, twin16 )
+	MCFG_QUANTUM_TIME(HZ(60000)) // watchdog reset otherwise
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( fround )
+static MACHINE_CONFIG_START( fround, twin16_state )
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 10000000)
-	MDRV_CPU_PROGRAM_MAP(fround_map)
-	MDRV_CPU_VBLANK_INT("screen", CPUA_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, 10000000)
+	MCFG_CPU_PROGRAM_MAP(fround_map)
+	MCFG_CPU_VBLANK_INT("screen", CPUA_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 3579545)
-	MDRV_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 3579545)
+	MCFG_CPU_PROGRAM_MAP(sound_map)
 
-	MDRV_QUANTUM_TIME(HZ(6000))
+	MCFG_QUANTUM_TIME(HZ(6000))
 
-	MDRV_MACHINE_START(twin16)
-	MDRV_MACHINE_RESET(twin16)
+	MCFG_MACHINE_START(twin16)
+	MCFG_MACHINE_RESET(twin16)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_BUFFERS_SPRITERAM)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_BUFFERS_SPRITERAM)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(40*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0, 40*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(40*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0, 40*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(twin16)
-	MDRV_PALETTE_LENGTH(0x400)
+	MCFG_GFXDECODE(twin16)
+	MCFG_PALETTE_LENGTH(0x400)
 
-	MDRV_VIDEO_START(twin16)
-	MDRV_VIDEO_UPDATE(twin16)
-	MDRV_VIDEO_EOF(twin16)
+	MCFG_VIDEO_START(twin16)
+	MCFG_VIDEO_UPDATE(twin16)
+	MCFG_VIDEO_EOF(twin16)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, 7159160/2)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM2151, 7159160/2)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
 
-	MDRV_SOUND_ADD("konami", K007232, 3579545)
-	MDRV_SOUND_CONFIG(k007232_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.12)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.12)
-	MDRV_SOUND_ROUTE(1, "lspeaker", 0.12)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.12)
+	MCFG_SOUND_ADD("konami", K007232, 3579545)
+	MCFG_SOUND_CONFIG(k007232_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.12)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.12)
+	MCFG_SOUND_ROUTE(1, "lspeaker", 0.12)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.12)
 
-	MDRV_SOUND_ADD("upd", UPD7759, UPD7759_STANDARD_CLOCK)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.20)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.20)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("upd", UPD7759, UPD7759_STANDARD_CLOCK)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.20)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.20)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( miaj )
-	MDRV_IMPORT_FROM(twin16)
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_VISIBLE_AREA(1*8, 39*8-1, 2*8, 30*8-1)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( miaj, twin16 )
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_VISIBLE_AREA(1*8, 39*8-1, 2*8, 30*8-1)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( cuebrickj )
-	MDRV_IMPORT_FROM(twin16)
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_VISIBLE_AREA(1*8, 39*8-1, 2*8, 30*8-1)
-	MDRV_NVRAM_HANDLER(generic_0fill)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( cuebrickj, twin16 )
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_VISIBLE_AREA(1*8, 39*8-1, 2*8, 30*8-1)
+	MCFG_NVRAM_ADD_0FILL("nvram")
+MACHINE_CONFIG_END
 
 /* ROMs */
 
@@ -1305,7 +1307,7 @@ static void gfx_untangle( running_machine *machine )
 	int i;
 	UINT16 *temp = auto_alloc_array(machine, UINT16, 0x200000/2);
 
-	twin16_gfx_rom = (UINT16 *)memory_region(machine, "gfx2");
+	twin16_gfx_rom = (UINT16 *)machine->region("gfx2")->base();
 	memcpy( temp, twin16_gfx_rom, 0x200000 );
 
 	for( i=0; i<0x080000; i++ )
@@ -1332,8 +1334,7 @@ static DRIVER_INIT( cuebrickj )
 {
 	gfx_untangle(machine);
 
-	machine->generic.nvram.u8 = (UINT8 *)cuebrickj_nvram;
-	machine->generic.nvram_size = 0x400*0x20;
+	machine->device<nvram_device>("nvram")->set_base(cuebrickj_nvram, 0x400*0x20);
 }
 
 /* Game Drivers */

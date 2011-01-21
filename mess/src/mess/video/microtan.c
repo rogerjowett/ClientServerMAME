@@ -19,38 +19,43 @@
 UINT8 microtan_chunky_graphics = 0;
 UINT8 *microtan_chunky_buffer = NULL;
 
-static tilemap_t *bg_tilemap;
 
 WRITE8_HANDLER( microtan_videoram_w )
 {
-	if ((space->machine->generic.videoram.u8[offset] != data) || (microtan_chunky_buffer[offset] != microtan_chunky_graphics))
+	microtan_state *state = space->machine->driver_data<microtan_state>();
+	UINT8 *videoram = state->videoram;
+	if ((videoram[offset] != data) || (state->chunky_buffer[offset] != state->chunky_graphics))
 	{
-		space->machine->generic.videoram.u8[offset] = data;
-		tilemap_mark_tile_dirty(bg_tilemap, offset);
-		microtan_chunky_buffer[offset] = microtan_chunky_graphics;
+		videoram[offset] = data;
+		tilemap_mark_tile_dirty(state->bg_tilemap, offset);
+		state->chunky_buffer[offset] = state->chunky_graphics;
 	}
 }
 
 static TILE_GET_INFO(get_bg_tile_info)
 {
-	int gfxn = microtan_chunky_buffer[tile_index];
-	int code = machine->generic.videoram.u8[tile_index];
+	microtan_state *state = machine->driver_data<microtan_state>();
+	UINT8 *videoram = state->videoram;
+	int gfxn = state->chunky_buffer[tile_index];
+	int code = videoram[tile_index];
 
 	SET_TILE_INFO(gfxn, code, 0, 0);
 }
 
 VIDEO_START( microtan )
 {
-	bg_tilemap = tilemap_create(machine, get_bg_tile_info, tilemap_scan_rows,
+	microtan_state *state = machine->driver_data<microtan_state>();
+	state->bg_tilemap = tilemap_create(machine, get_bg_tile_info, tilemap_scan_rows,
 		8, 16, 32, 16);
 
-	microtan_chunky_buffer = auto_alloc_array(machine, UINT8, machine->generic.videoram_size);
-	memset(microtan_chunky_buffer, 0, machine->generic.videoram_size);
-	microtan_chunky_graphics = 0;
+	state->chunky_buffer = auto_alloc_array(machine, UINT8, 0x200);
+	memset(state->chunky_buffer, 0, 0x200);
+	state->chunky_graphics = 0;
 }
 
 VIDEO_UPDATE( microtan )
 {
-	tilemap_draw(bitmap, cliprect, bg_tilemap, 0, 0);
+	microtan_state *state = screen->machine->driver_data<microtan_state>();
+	tilemap_draw(bitmap, cliprect, state->bg_tilemap, 0, 0);
 	return 0;
 }

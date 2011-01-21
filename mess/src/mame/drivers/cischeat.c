@@ -514,8 +514,8 @@ static ADDRESS_MAP_START( scudhamm_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x0f0000, 0x0fffff) AM_RAM AM_BASE(&megasys1_ram)											// Work RAM + Spriteram
 	AM_RANGE(0x100000, 0x100001) AM_WRITE(scudhamm_oki_bank_w)											// Sound
 	AM_RANGE(0x100008, 0x100009) AM_READ_PORT("IN0") AM_WRITE(scudhamm_leds_w)							// Buttons
-	AM_RANGE(0x100014, 0x100015) AM_DEVREADWRITE8("oki1", okim6295_r, okim6295_w, 0x00ff)				// Sound
-	AM_RANGE(0x100018, 0x100019) AM_DEVREADWRITE8("oki2", okim6295_r, okim6295_w, 0x00ff)				//
+	AM_RANGE(0x100014, 0x100015) AM_DEVREADWRITE8_MODERN("oki1", okim6295_device, read, write, 0x00ff)				// Sound
+	AM_RANGE(0x100018, 0x100019) AM_DEVREADWRITE8_MODERN("oki2", okim6295_device, read, write, 0x00ff)				//
 	AM_RANGE(0x10001c, 0x10001d) AM_WRITE(scudhamm_enable_w)											// ?
 	AM_RANGE(0x100040, 0x100041) AM_READ(scudhamm_analog_r) AM_WRITENOP							// A / D
 	AM_RANGE(0x100044, 0x100045) AM_READ(scudhamm_motor_pos_r)									// Motor Position
@@ -599,8 +599,8 @@ static ADDRESS_MAP_START( armchmp2_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x100008, 0x100009) AM_READWRITE(armchmp2_buttons_r, armchmp2_leds_w)						// Leds + Coin Counters + Buttons + Sensors
 	AM_RANGE(0x10000c, 0x10000d) AM_READ(armchmp2_analog_r) AM_WRITENOP							// A / D
 	AM_RANGE(0x100010, 0x100011) AM_READWRITE(armchmp2_motor_status_r, armchmp2_motor_command_w)		// Motor Limit Switches?
-	AM_RANGE(0x100014, 0x100015) AM_DEVREADWRITE8("oki1", okim6295_r, okim6295_w, 0x00ff	)			// Sound
-	AM_RANGE(0x100018, 0x100019) AM_DEVREADWRITE8("oki2", okim6295_r, okim6295_w, 0x00ff	)			//
+	AM_RANGE(0x100014, 0x100015) AM_DEVREADWRITE8_MODERN("oki1", okim6295_device, read, write, 0x00ff	)			// Sound
+	AM_RANGE(0x100018, 0x100019) AM_DEVREADWRITE8_MODERN("oki2", okim6295_device, read, write, 0x00ff	)			//
 ADDRESS_MAP_END
 
 
@@ -707,8 +707,8 @@ static ADDRESS_MAP_START( bigrun_sound_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x040000, 0x040001) AM_READWRITE(soundlatch_word_r, bigrun_soundbank_w)	// From Main CPU
 	AM_RANGE(0x060000, 0x060001) AM_WRITE(soundlatch2_word_w)							// To Main CPU
 	AM_RANGE(0x080000, 0x080003) AM_DEVREADWRITE8("ymsnd", ym2151_r, ym2151_w, 0x00ff)
-	AM_RANGE(0x0a0000, 0x0a0003) AM_DEVREADWRITE8("oki1", okim6295_r, okim6295_w, 0x00ff)
-	AM_RANGE(0x0c0000, 0x0c0003) AM_DEVREADWRITE8("oki2", okim6295_r, okim6295_w, 0x00ff)
+	AM_RANGE(0x0a0000, 0x0a0003) AM_DEVREADWRITE8_MODERN("oki1", okim6295_device, read, write, 0x00ff)
+	AM_RANGE(0x0c0000, 0x0c0003) AM_DEVREADWRITE8_MODERN("oki2", okim6295_device, read, write, 0x00ff)
 	AM_RANGE(0x0f0000, 0x0fffff) AM_RAM													// RAM
 ADDRESS_MAP_END
 
@@ -730,8 +730,8 @@ static ADDRESS_MAP_START( cischeat_sound_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x060002, 0x060003) AM_WRITE(soundlatch2_word_w)							// To Main CPU
 	AM_RANGE(0x060004, 0x060005) AM_READ(soundlatch_word_r)								// From Main CPU
 	AM_RANGE(0x080000, 0x080003) AM_DEVREADWRITE8("ymsnd", ym2151_r, ym2151_w, 0x00ff)
-	AM_RANGE(0x0a0000, 0x0a0003) AM_DEVREADWRITE8("oki1", okim6295_r, okim6295_w, 0x00ff)
-	AM_RANGE(0x0c0000, 0x0c0003) AM_DEVREADWRITE8("oki2", okim6295_r, okim6295_w, 0x00ff)
+	AM_RANGE(0x0a0000, 0x0a0003) AM_DEVREADWRITE8_MODERN("oki1", okim6295_device, read, write, 0x00ff)
+	AM_RANGE(0x0c0000, 0x0c0003) AM_DEVREADWRITE8_MODERN("oki2", okim6295_device, read, write, 0x00ff)
 	AM_RANGE(0x0f0000, 0x0fffff) AM_RAM													// RAM
 ADDRESS_MAP_END
 
@@ -746,8 +746,8 @@ static ADDRESS_MAP_START( f1gpstar_sound_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x040008, 0x040009) AM_DEVWRITE("oki2", cischeat_soundbank_w)				// Sample Banking   (cischeat: 40004)
 	AM_RANGE(0x060000, 0x060001) AM_READWRITE(soundlatch_word_r, soundlatch2_word_w)	// From Main CPU    (cischeat: 60004)
 	AM_RANGE(0x080000, 0x080003) AM_DEVREADWRITE8("ymsnd", ym2151_r, ym2151_w, 0x00ff)
-	AM_RANGE(0x0a0000, 0x0a0003) AM_DEVREADWRITE8("oki1", okim6295_r, okim6295_w, 0x00ff)
-	AM_RANGE(0x0c0000, 0x0c0003) AM_DEVREADWRITE8("oki2", okim6295_r, okim6295_w, 0x00ff)
+	AM_RANGE(0x0a0000, 0x0a0003) AM_DEVREADWRITE8_MODERN("oki1", okim6295_device, read, write, 0x00ff)
+	AM_RANGE(0x0c0000, 0x0c0003) AM_DEVREADWRITE8_MODERN("oki2", okim6295_device, read, write, 0x00ff)
 	AM_RANGE(0x0e0000, 0x0fffff) AM_RAM													// RAM              (cischeat: f0000-fffff)
 ADDRESS_MAP_END
 
@@ -763,8 +763,8 @@ static ADDRESS_MAP_START( f1gpstr2_sound_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x04000e, 0x04000f) AM_WRITENOP											// ? 0              (f1gpstar: no)
 	AM_RANGE(0x060004, 0x060005) AM_READWRITE(soundlatch_word_r, soundlatch2_word_w)		// From Main CPU    (f1gpstar: 60000)
 	AM_RANGE(0x080000, 0x080003) AM_DEVREADWRITE8("ymsnd", ym2151_r, ym2151_w, 0x00ff)
-	AM_RANGE(0x0a0000, 0x0a0003) AM_DEVREADWRITE8("oki1", okim6295_r, okim6295_w, 0x00ff)
-	AM_RANGE(0x0c0000, 0x0c0003) AM_DEVREADWRITE8("oki2", okim6295_r, okim6295_w, 0x00ff)
+	AM_RANGE(0x0a0000, 0x0a0003) AM_DEVREADWRITE8_MODERN("oki1", okim6295_device, read, write, 0x00ff)
+	AM_RANGE(0x0c0000, 0x0c0003) AM_DEVREADWRITE8_MODERN("oki2", okim6295_device, read, write, 0x00ff)
 	AM_RANGE(0x0e0000, 0x0fffff) AM_RAM														// RAM
 ADDRESS_MAP_END
 
@@ -898,7 +898,7 @@ static INPUT_PORTS_START( bigrun )
 	PORT_DIPSETTING(      0x1400, DEF_STR( 1C_3C ) )
 	PORT_DIPSETTING(      0x0400, DEF_STR( 1C_4C ) )
 	PORT_DIPSETTING(      0x0000, DEF_STR( Free_Play ) )
-	PORT_DIPNAME( 0x1c00, 0x1c00, DEF_STR( Coin_B ) ) PORT_DIPLOCATION("SW301:6,5,4") PORT_CONDITION("IN4", 0x0003, PORTCOND_NOTEQUALS, 0x0003)
+	PORT_DIPNAME( 0x1c00, 0x1c00, "Set Coin B" ) PORT_DIPLOCATION("SW301:6,5,4") PORT_CONDITION("IN4", 0x0003, PORTCOND_NOTEQUALS, 0x0003)
 	PORT_DIPSETTING(      0x1c00, DEF_STR( Unused ) )
 	PORT_DIPSETTING(      0x0000, DEF_STR( Free_Play ) )
 	PORT_DIPNAME( 0xe000, 0xe000, DEF_STR( Coin_A ) ) PORT_DIPLOCATION("SW301:3,2,1")
@@ -1565,129 +1565,126 @@ static INTERRUPT_GEN( cischeat_interrupt )
 
 
 
-static MACHINE_DRIVER_START( bigrun )
+static MACHINE_CONFIG_START( bigrun, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("cpu1", M68000, 10000000)
-	MDRV_CPU_PROGRAM_MAP(bigrun_map)
-	MDRV_CPU_VBLANK_INT_HACK(cischeat_interrupt,CISCHEAT_INTERRUPT_NUM)
+	MCFG_CPU_ADD("cpu1", M68000, 10000000)
+	MCFG_CPU_PROGRAM_MAP(bigrun_map)
+	MCFG_CPU_VBLANK_INT_HACK(cischeat_interrupt,CISCHEAT_INTERRUPT_NUM)
 
-	MDRV_CPU_ADD("cpu2", M68000, 10000000)
-	MDRV_CPU_PROGRAM_MAP(bigrun_map2)
-	MDRV_CPU_VBLANK_INT("screen", irq4_line_hold)
+	MCFG_CPU_ADD("cpu2", M68000, 10000000)
+	MCFG_CPU_PROGRAM_MAP(bigrun_map2)
+	MCFG_CPU_VBLANK_INT("screen", irq4_line_hold)
 
-	MDRV_CPU_ADD("cpu3", M68000, 10000000)
-	MDRV_CPU_PROGRAM_MAP(bigrun_map3)
-	MDRV_CPU_VBLANK_INT("screen", irq4_line_hold)
+	MCFG_CPU_ADD("cpu3", M68000, 10000000)
+	MCFG_CPU_PROGRAM_MAP(bigrun_map3)
+	MCFG_CPU_VBLANK_INT("screen", irq4_line_hold)
 
-	MDRV_CPU_ADD("soundcpu", M68000, 6000000)
-	MDRV_CPU_PROGRAM_MAP(bigrun_sound_map)
-	MDRV_CPU_VBLANK_INT_HACK(irq4_line_hold,CISCHEAT_SOUND_INTERRUPT_NUM)
+	MCFG_CPU_ADD("soundcpu", M68000, 6000000)
+	MCFG_CPU_PROGRAM_MAP(bigrun_sound_map)
+	MCFG_CPU_VBLANK_INT_HACK(irq4_line_hold,CISCHEAT_SOUND_INTERRUPT_NUM)
 
-	MDRV_QUANTUM_TIME(HZ(1200))
+	MCFG_QUANTUM_TIME(HZ(1200))
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_UPDATE_AFTER_VBLANK | VIDEO_HAS_SHADOWS)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_AFTER_VBLANK | VIDEO_HAS_SHADOWS)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(30)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(256, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 256-1,	0+16, 256-16-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(30)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(256, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 256-1,	0+16, 256-16-1)
 
-	MDRV_GFXDECODE(bigrun)
-	MDRV_PALETTE_LENGTH(16*16 * 3 + 64*16 * 2 + 64*16)	/* scroll 0,1,2; road 0,1; sprites */
+	MCFG_GFXDECODE(bigrun)
+	MCFG_PALETTE_LENGTH(16*16 * 3 + 64*16 * 2 + 64*16)	/* scroll 0,1,2; road 0,1; sprites */
 
-	MDRV_VIDEO_START(bigrun)
-	MDRV_VIDEO_UPDATE(bigrun)
+	MCFG_VIDEO_START(bigrun)
+	MCFG_VIDEO_UPDATE(bigrun)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, STD_FM_CLOCK)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.75)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.75)
+	MCFG_SOUND_ADD("ymsnd", YM2151, STD_FM_CLOCK)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.75)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.75)
 
-	MDRV_OKIM6295_ADD("oki1", STD_OKI_CLOCK, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_OKIM6295_ADD("oki1", STD_OKI_CLOCK, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
 
-	MDRV_OKIM6295_ADD("oki2", STD_OKI_CLOCK, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki2", STD_OKI_CLOCK, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( cischeat )
+static MACHINE_CONFIG_DERIVED( cischeat, bigrun )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(bigrun)
-	MDRV_CPU_MODIFY("cpu1")
-	MDRV_CPU_PROGRAM_MAP(cischeat_map)
+	MCFG_CPU_MODIFY("cpu1")
+	MCFG_CPU_PROGRAM_MAP(cischeat_map)
 
-	MDRV_CPU_MODIFY("cpu2")
-	MDRV_CPU_PROGRAM_MAP(cischeat_map2)
+	MCFG_CPU_MODIFY("cpu2")
+	MCFG_CPU_PROGRAM_MAP(cischeat_map2)
 
-	MDRV_CPU_MODIFY("cpu3")
-	MDRV_CPU_PROGRAM_MAP(cischeat_map3)
+	MCFG_CPU_MODIFY("cpu3")
+	MCFG_CPU_PROGRAM_MAP(cischeat_map3)
 
-	MDRV_CPU_MODIFY("soundcpu")
-	MDRV_CPU_PROGRAM_MAP(cischeat_sound_map)
+	MCFG_CPU_MODIFY("soundcpu")
+	MCFG_CPU_PROGRAM_MAP(cischeat_sound_map)
 
 	/* video hardware */
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_VISIBLE_AREA(0, 256-1,	0+16, 256-16-8-1)
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_VISIBLE_AREA(0, 256-1,	0+16, 256-16-8-1)
 
-	MDRV_GFXDECODE(cischeat)
-	MDRV_PALETTE_LENGTH(32*16 * 3 + 64*16 * 2 + 128*16)	/* scroll 0,1,2; road 0,1; sprites */
+	MCFG_GFXDECODE(cischeat)
+	MCFG_PALETTE_LENGTH(32*16 * 3 + 64*16 * 2 + 128*16)	/* scroll 0,1,2; road 0,1; sprites */
 
-	MDRV_VIDEO_START(cischeat)
-	MDRV_VIDEO_UPDATE(cischeat)
-MACHINE_DRIVER_END
+	MCFG_VIDEO_START(cischeat)
+	MCFG_VIDEO_UPDATE(cischeat)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( f1gpstar )
+static MACHINE_CONFIG_DERIVED( f1gpstar, bigrun )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(bigrun)
-	MDRV_CPU_MODIFY("cpu1")
-	MDRV_CPU_CLOCK(12000000)
-	MDRV_CPU_PROGRAM_MAP(f1gpstar_map)
+	MCFG_CPU_MODIFY("cpu1")
+	MCFG_CPU_CLOCK(12000000)
+	MCFG_CPU_PROGRAM_MAP(f1gpstar_map)
 
-	MDRV_CPU_MODIFY("cpu2")
-	MDRV_CPU_CLOCK(12000000)
-	MDRV_CPU_PROGRAM_MAP(f1gpstar_map2)
+	MCFG_CPU_MODIFY("cpu2")
+	MCFG_CPU_CLOCK(12000000)
+	MCFG_CPU_PROGRAM_MAP(f1gpstar_map2)
 
-	MDRV_CPU_MODIFY("cpu3")
-	MDRV_CPU_CLOCK(12000000)
-	MDRV_CPU_PROGRAM_MAP(f1gpstar_map3)
+	MCFG_CPU_MODIFY("cpu3")
+	MCFG_CPU_CLOCK(12000000)
+	MCFG_CPU_PROGRAM_MAP(f1gpstar_map3)
 
-	MDRV_CPU_MODIFY("soundcpu")
-	MDRV_CPU_PROGRAM_MAP(f1gpstar_sound_map)
+	MCFG_CPU_MODIFY("soundcpu")
+	MCFG_CPU_PROGRAM_MAP(f1gpstar_sound_map)
 
 	/* video hardware */
-	MDRV_GFXDECODE(f1gpstar)
-	MDRV_PALETTE_LENGTH(16*16 * 3 + 64*16 * 2 + 128*16)	/* scroll 0,1,2; road 0,1; sprites */
+	MCFG_GFXDECODE(f1gpstar)
+	MCFG_PALETTE_LENGTH(16*16 * 3 + 64*16 * 2 + 128*16)	/* scroll 0,1,2; road 0,1; sprites */
 
-	MDRV_VIDEO_START(f1gpstar)
-	MDRV_VIDEO_UPDATE(f1gpstar)
-MACHINE_DRIVER_END
+	MCFG_VIDEO_START(f1gpstar)
+	MCFG_VIDEO_UPDATE(f1gpstar)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( f1gpstr2 )
+static MACHINE_CONFIG_DERIVED( f1gpstr2, f1gpstar )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(f1gpstar)
 
-	MDRV_CPU_MODIFY("cpu1")
-	MDRV_CPU_PROGRAM_MAP(f1gpstr2_map)
+	MCFG_CPU_MODIFY("cpu1")
+	MCFG_CPU_PROGRAM_MAP(f1gpstr2_map)
 
-	MDRV_CPU_MODIFY("soundcpu")
-	MDRV_CPU_PROGRAM_MAP(f1gpstr2_sound_map)
+	MCFG_CPU_MODIFY("soundcpu")
+	MCFG_CPU_PROGRAM_MAP(f1gpstr2_sound_map)
 
-	MDRV_CPU_ADD("cpu5", M68000, 12000000/* was 10000000 */)
-	MDRV_CPU_PROGRAM_MAP(f1gpstr2_io_map)
-	MDRV_CPU_VBLANK_INT("screen", irq4_line_hold)
-MACHINE_DRIVER_END
+	MCFG_CPU_ADD("cpu5", M68000, 12000000/* was 10000000 */)
+	MCFG_CPU_PROGRAM_MAP(f1gpstr2_io_map)
+	MCFG_CPU_VBLANK_INT("screen", irq4_line_hold)
+MACHINE_CONFIG_END
 
 
 /**************************************************************************
@@ -1713,40 +1710,40 @@ static INTERRUPT_GEN( interrupt_scudhamm )
 }
 
 
-static MACHINE_DRIVER_START( scudhamm )
+static MACHINE_CONFIG_START( scudhamm, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu",M68000, 12000000)
-	MDRV_CPU_PROGRAM_MAP(scudhamm_map)
-	MDRV_CPU_VBLANK_INT_HACK(interrupt_scudhamm,INTERRUPT_NUM_SCUDHAMM)
+	MCFG_CPU_ADD("maincpu",M68000, 12000000)
+	MCFG_CPU_PROGRAM_MAP(scudhamm_map)
+	MCFG_CPU_VBLANK_INT_HACK(interrupt_scudhamm,INTERRUPT_NUM_SCUDHAMM)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_UPDATE_AFTER_VBLANK | VIDEO_HAS_SHADOWS)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_AFTER_VBLANK | VIDEO_HAS_SHADOWS)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(30)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500 * 3) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(256, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 256-1, 0 +16, 256-1 -16)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(30)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500 * 3) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(256, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 256-1, 0 +16, 256-1 -16)
 
-	MDRV_GFXDECODE(scudhamm)
-	MDRV_PALETTE_LENGTH(16*16+16*16+128*16)
+	MCFG_GFXDECODE(scudhamm)
+	MCFG_PALETTE_LENGTH(16*16+16*16+128*16)
 
-	MDRV_VIDEO_START(f1gpstar)
-	MDRV_VIDEO_UPDATE(scudhamm)
+	MCFG_VIDEO_START(f1gpstar)
+	MCFG_VIDEO_UPDATE(scudhamm)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_OKIM6295_ADD("oki1", 2112000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+	MCFG_OKIM6295_ADD("oki1", 2112000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
 
-	MDRV_OKIM6295_ADD("oki2", 2112000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki2", 2112000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 
 /**************************************************************************
@@ -1764,15 +1761,14 @@ static INTERRUPT_GEN( interrupt_armchmp2)
 	}
 }
 
-static MACHINE_DRIVER_START( armchmp2 )
+static MACHINE_CONFIG_DERIVED( armchmp2, scudhamm )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(scudhamm)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(armchmp2_map)
-	MDRV_CPU_VBLANK_INT_HACK(interrupt_armchmp2,INTERRUPT_NUM_SCUDHAMM)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(armchmp2_map)
+	MCFG_CPU_VBLANK_INT_HACK(interrupt_armchmp2,INTERRUPT_NUM_SCUDHAMM)
 
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
 
 /***************************************************************************
@@ -1796,8 +1792,8 @@ MACHINE_DRIVER_END
 */
 static void cischeat_untangle_sprites(running_machine *machine, const char *region)
 {
-	UINT8		*src = memory_region(machine, region);
-	const UINT8	*end = src + memory_region_length(machine, region);
+	UINT8		*src = machine->region(region)->base();
+	const UINT8	*end = src + machine->region(region)->bytes();
 
 	while (src < end)
 	{
@@ -1950,7 +1946,7 @@ ROM_END
 static DRIVER_INIT( bigrun )
 {
 	/* Split ROMs */
-	rom_1 = (UINT16 *) memory_region(machine, "user1");
+	rom_1 = (UINT16 *) machine->region("user1")->base();
 
 	cischeat_untangle_sprites(machine, "gfx4");	// Untangle sprites
 	phantasm_rom_decode(machine, "soundcpu");					// Decrypt sound cpu code
@@ -2072,17 +2068,17 @@ ROM_END
 static DRIVER_INIT( cischeat )
 {
 	/* Split ROMs */
-	rom_1 = (UINT16 *) (memory_region(machine, "user1") + 0x00000);
-	rom_2 = (UINT16 *) (memory_region(machine, "cpu2")  + 0x40000);
-	rom_3 = (UINT16 *) (memory_region(machine, "cpu3")  + 0x40000);
+	rom_1 = (UINT16 *) (machine->region("user1")->base() + 0x00000);
+	rom_2 = (UINT16 *) (machine->region("cpu2")->base()  + 0x40000);
+	rom_3 = (UINT16 *) (machine->region("cpu3")->base()  + 0x40000);
 
-	memcpy(memory_region(machine, "user1") + 0x80000, rom_2, 0x40000);
+	memcpy(machine->region("user1")->base() + 0x80000, rom_2, 0x40000);
 	memset(rom_2, 0, 0x40000);
-	rom_2 = (UINT16 *) (memory_region(machine, "user1") + 0x80000);
+	rom_2 = (UINT16 *) (machine->region("user1")->base() + 0x80000);
 
-	memcpy(memory_region(machine, "user1") + 0xc0000, rom_3, 0x40000);
+	memcpy(machine->region("user1")->base() + 0xc0000, rom_3, 0x40000);
 	memset(rom_3, 0, 0x40000);
-	rom_3 = (UINT16 *) (memory_region(machine, "user1") + 0xc0000);
+	rom_3 = (UINT16 *) (machine->region("user1")->base() + 0xc0000);
 
 	cischeat_untangle_sprites(machine, "gfx4");	// Untangle sprites
 	astyanax_rom_decode(machine, "soundcpu");					// Decrypt sound cpu code
@@ -2299,7 +2295,7 @@ ROM_END
 static DRIVER_INIT( f1gpstar )
 {
 	/* Split ROMs */
-	rom_1 = (UINT16 *) memory_region(machine, "user1");
+	rom_1 = (UINT16 *) machine->region("user1")->base();
 
 	cischeat_untangle_sprites(machine, "gfx4");
 }

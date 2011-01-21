@@ -90,14 +90,14 @@ Stephh's notes :
 
 static READ16_HANDLER(fitfight_700000_r)
 {
-	fitfight_state *state = (fitfight_state *)space->machine->driver_data;
+	fitfight_state *state = space->machine->driver_data<fitfight_state>();
 	UINT16 data = state->fof_700000_data;
 	return (data << 2);
 }
 
 static READ16_HANDLER(histryma_700000_r)
 {
-	fitfight_state *state = (fitfight_state *)space->machine->driver_data;
+	fitfight_state *state = space->machine->driver_data<fitfight_state>();
 	UINT16 data = (state->fof_700000_data & 0x00AA);
 	data |= ((state->fof_700000_data & 0x0055) >> 2);
 	return (data);
@@ -105,7 +105,7 @@ static READ16_HANDLER(histryma_700000_r)
 
 static READ16_HANDLER(bbprot_700000_r)
 {
-	fitfight_state *state = (fitfight_state *)space->machine->driver_data;
+	fitfight_state *state = space->machine->driver_data<fitfight_state>();
 	UINT16 data = 0;
 	data  =  (state->fof_700000_data & 0x000b);
 	data |= ((state->fof_700000_data & 0x01d0) >> 2);
@@ -116,7 +116,7 @@ static READ16_HANDLER(bbprot_700000_r)
 
 static WRITE16_HANDLER(fitfight_700000_w)
 {
-	fitfight_state *state = (fitfight_state *)space->machine->driver_data;
+	fitfight_state *state = space->machine->driver_data<fitfight_state>();
 	COMBINE_DATA(&state->fof_700000[offset]);		// needed for scrolling
 
 	if (data < 0x0200)				// to avoid considering writes of 0x0200
@@ -219,19 +219,19 @@ ADDRESS_MAP_END
 static READ8_HANDLER(snd_porta_r)
 {
 	//mame_printf_debug("PA R @%x\n",cpu_get_pc(space->cpu));
-	return mame_rand(space->machine);
+	return space->machine->rand();
 }
 
 static READ8_HANDLER(snd_portb_r)
 {
 	//mame_printf_debug("PB R @%x\n",cpu_get_pc(space->cpu));
-	return mame_rand(space->machine);
+	return space->machine->rand();
 }
 
 static READ8_HANDLER(snd_portc_r)
 {
 	//mame_printf_debug("PC R @%x\n",cpu_get_pc(space->cpu));
-	return mame_rand(space->machine);
+	return space->machine->rand();
 }
 
 static WRITE8_HANDLER(snd_porta_w)
@@ -719,83 +719,81 @@ GFXDECODE_END
 
 static MACHINE_START( fitfight )
 {
-	fitfight_state *state = (fitfight_state *)machine->driver_data;
+	fitfight_state *state = machine->driver_data<fitfight_state>();
 
 	state_save_register_global(machine, state->fof_700000_data);
 }
 
 static MACHINE_RESET( fitfight )
 {
-	fitfight_state *state = (fitfight_state *)machine->driver_data;
+	fitfight_state *state = machine->driver_data<fitfight_state>();
 
 	state->fof_700000_data = 0;
 }
 
-static MACHINE_DRIVER_START( fitfight )
-	MDRV_DRIVER_DATA(fitfight_state)
+static MACHINE_CONFIG_START( fitfight, fitfight_state )
 
-	MDRV_CPU_ADD("maincpu",M68000, 12000000)
-	MDRV_CPU_PROGRAM_MAP(fitfight_main_map)
-	MDRV_CPU_VBLANK_INT("screen", irq2_line_hold)
+	MCFG_CPU_ADD("maincpu",M68000, 12000000)
+	MCFG_CPU_PROGRAM_MAP(fitfight_main_map)
+	MCFG_CPU_VBLANK_INT("screen", irq2_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", UPD7810, 12000000)
-	MDRV_CPU_CONFIG(sound_cpu_config)
-	MDRV_CPU_PROGRAM_MAP(snd_mem)
-	MDRV_CPU_IO_MAP(snd_io)
-	MDRV_CPU_VBLANK_INT("screen", snd_irq)
+	MCFG_CPU_ADD("audiocpu", UPD7810, 12000000)
+	MCFG_CPU_CONFIG(sound_cpu_config)
+	MCFG_CPU_PROGRAM_MAP(snd_mem)
+	MCFG_CPU_IO_MAP(snd_io)
+	MCFG_CPU_VBLANK_INT("screen", snd_irq)
 
-	MDRV_MACHINE_START(fitfight)
-	MDRV_MACHINE_RESET(fitfight)
+	MCFG_MACHINE_START(fitfight)
+	MCFG_MACHINE_RESET(fitfight)
 
-	MDRV_GFXDECODE(fitfight)
+	MCFG_GFXDECODE(fitfight)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(40*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(2*8, 39*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(40*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(2*8, 39*8-1, 2*8, 30*8-1)
 
-	MDRV_PALETTE_LENGTH(0x800)
+	MCFG_PALETTE_LENGTH(0x800)
 
-	MDRV_VIDEO_START(fitfight)
-	MDRV_VIDEO_UPDATE(fitfight)
+	MCFG_VIDEO_START(fitfight)
+	MCFG_VIDEO_UPDATE(fitfight)
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_OKIM6295_ADD("oki", 1333333, OKIM6295_PIN7_LOW) // ~8080Hz ??? TODO: find out the real frequency
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 1333333, OKIM6295_PIN7_LOW) // ~8080Hz ??? TODO: find out the real frequency
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( bbprot )
-	MDRV_DRIVER_DATA(fitfight_state)
+static MACHINE_CONFIG_START( bbprot, fitfight_state )
 
-	MDRV_CPU_ADD("maincpu",M68000, 12000000)
-	MDRV_CPU_PROGRAM_MAP(bbprot_main_map)
-	MDRV_CPU_VBLANK_INT("screen", irq2_line_hold)
+	MCFG_CPU_ADD("maincpu",M68000, 12000000)
+	MCFG_CPU_PROGRAM_MAP(bbprot_main_map)
+	MCFG_CPU_VBLANK_INT("screen", irq2_line_hold)
 
-	MDRV_MACHINE_START(fitfight)
-	MDRV_MACHINE_RESET(fitfight)
+	MCFG_MACHINE_START(fitfight)
+	MCFG_MACHINE_RESET(fitfight)
 
-	MDRV_GFXDECODE(prot)
+	MCFG_GFXDECODE(prot)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(40*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(2*8, 39*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(40*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(2*8, 39*8-1, 2*8, 30*8-1)
 
-	MDRV_PALETTE_LENGTH(0x2000)
+	MCFG_PALETTE_LENGTH(0x2000)
 
-	MDRV_VIDEO_START(fitfight)
-	MDRV_VIDEO_UPDATE(fitfight)
+	MCFG_VIDEO_START(fitfight)
+	MCFG_VIDEO_UPDATE(fitfight)
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_OKIM6295_ADD("oki", 1333333, OKIM6295_PIN7_LOW) // ~8080Hz ??? TODO: find out the real frequency
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 1333333, OKIM6295_PIN7_LOW) // ~8080Hz ??? TODO: find out the real frequency
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 /***
 
@@ -977,25 +975,25 @@ ROM_END
 
 static DRIVER_INIT( fitfight )
 {
-//  UINT16 *mem16 = (UINT16 *)memory_region(machine, "maincpu");
+//  UINT16 *mem16 = (UINT16 *)machine->region("maincpu")->base();
 //  mem16[0x0165B2/2] = 0x4e71; // for now so it boots
-	fitfight_state *state = (fitfight_state *)machine->driver_data;
+	fitfight_state *state = machine->driver_data<fitfight_state>();
 	memory_install_read16_handler(cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM), 0x700000, 0x700001, 0, 0, fitfight_700000_r);
 	state->bbprot_kludge = 0;
 }
 
 static DRIVER_INIT( histryma )
 {
-//  UINT16 *mem16 = (UINT16 *)memory_region(machine, "maincpu");
+//  UINT16 *mem16 = (UINT16 *)machine->region("maincpu")->base();
 //  mem16[0x017FDC/2] = 0x4e71; // for now so it boots
-	fitfight_state *state = (fitfight_state *)machine->driver_data;
+	fitfight_state *state = machine->driver_data<fitfight_state>();
 	memory_install_read16_handler(cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM), 0x700000, 0x700001, 0, 0, histryma_700000_r);
 	state->bbprot_kludge = 0;
 }
 
 static DRIVER_INIT( bbprot )
 {
-	fitfight_state *state = (fitfight_state *)machine->driver_data;
+	fitfight_state *state = machine->driver_data<fitfight_state>();
 	state->bbprot_kludge = 1;
 }
 

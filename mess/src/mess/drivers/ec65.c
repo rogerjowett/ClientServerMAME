@@ -22,12 +22,11 @@
 #define VIA6522_1_TAG "via6522_1"
 #define MC6845_TAG "mc6845"
 
-class ec65_state
+class ec65_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, ec65_state(machine)); }
-
-	ec65_state(running_machine &machine) { }
+	ec65_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	UINT8 *video_ram;
 };
@@ -38,8 +37,8 @@ static ADDRESS_MAP_START(ec65_mem, ADDRESS_SPACE_PROGRAM, 8)
 	AM_RANGE(0xe000, 0xe003) AM_DEVREADWRITE(PIA6821_TAG, pia6821_r, pia6821_w)
 	AM_RANGE(0xe010, 0xe010) AM_DEVREADWRITE(ACIA6850_TAG, acia6850_stat_r, acia6850_ctrl_w)
 	AM_RANGE(0xe011, 0xe011) AM_DEVREADWRITE(ACIA6850_TAG, acia6850_data_r, acia6850_data_w)
-	AM_RANGE(0xe100, 0xe10f) AM_DEVREADWRITE(VIA6522_0_TAG, via_r, via_w)
-	AM_RANGE(0xe110, 0xe11f) AM_DEVREADWRITE(VIA6522_1_TAG, via_r, via_w)
+	AM_RANGE(0xe100, 0xe10f) AM_DEVREADWRITE_MODERN(VIA6522_0_TAG, via6522_device, read, write)
+	AM_RANGE(0xe110, 0xe11f) AM_DEVREADWRITE_MODERN(VIA6522_1_TAG, via6522_device, read, write)
 	AM_RANGE(0xe130, 0xe133) AM_DEVREADWRITE(ACIA6551_TAG,  acia_6551_r, acia_6551_w )
 	AM_RANGE(0xe140, 0xe140) AM_DEVWRITE(MC6845_TAG, mc6845_address_w)
 	AM_RANGE(0xe141, 0xe141) AM_DEVREADWRITE(MC6845_TAG, mc6845_register_r , mc6845_register_w)
@@ -151,15 +150,15 @@ static VIDEO_START( ec65 )
 
 static VIDEO_UPDATE( ec65 )
 {
-	running_device *mc6845 = screen->machine->device(MC6845_TAG);
+	device_t *mc6845 = screen->machine->device(MC6845_TAG);
 	mc6845_update(mc6845, bitmap, cliprect);
 	return 0;
 }
 
 static MC6845_UPDATE_ROW( ec65_update_row )
 {
-	ec65_state *state = (ec65_state *)device->machine->driver_data;
-	UINT8 *charrom = memory_region(device->machine, "chargen");
+	ec65_state *state = device->machine->driver_data<ec65_state>();
+	UINT8 *charrom = device->machine->region("chargen")->base();
 	int column, bit;
 
 	for (column = 0; column < x_count; column++)
@@ -216,66 +215,62 @@ static GFXDECODE_START( ec65 )
 	GFXDECODE_ENTRY( "chargen", 0x0000, ec65_charlayout, 0, 1 )
 GFXDECODE_END
 
-static MACHINE_DRIVER_START( ec65 )
-
-    MDRV_DRIVER_DATA( ec65_state )
+static MACHINE_CONFIG_START( ec65, ec65_state )
 
     /* basic machine hardware */
-    MDRV_CPU_ADD("maincpu",M6502, XTAL_4MHz / 4)
-    MDRV_CPU_PROGRAM_MAP(ec65_mem)
+    MCFG_CPU_ADD("maincpu",M6502, XTAL_4MHz / 4)
+    MCFG_CPU_PROGRAM_MAP(ec65_mem)
 
-    MDRV_MACHINE_RESET(ec65)
+    MCFG_MACHINE_RESET(ec65)
 
     /* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(640, 200)
-	MDRV_SCREEN_VISIBLE_AREA(0, 640 - 1, 0, 200 - 1)
-	MDRV_GFXDECODE(ec65)
-	MDRV_PALETTE_LENGTH(2)
-	MDRV_PALETTE_INIT(black_and_white)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(640, 200)
+	MCFG_SCREEN_VISIBLE_AREA(0, 640 - 1, 0, 200 - 1)
+	MCFG_GFXDECODE(ec65)
+	MCFG_PALETTE_LENGTH(2)
+	MCFG_PALETTE_INIT(black_and_white)
 
-	MDRV_MC6845_ADD(MC6845_TAG, MC6845, XTAL_16MHz / 8, ec65_crtc6845_interface)
+	MCFG_MC6845_ADD(MC6845_TAG, MC6845, XTAL_16MHz / 8, ec65_crtc6845_interface)
 
-    MDRV_VIDEO_START(ec65)
-    MDRV_VIDEO_UPDATE(ec65)
+    MCFG_VIDEO_START(ec65)
+    MCFG_VIDEO_UPDATE(ec65)
 
     /* devices */
-	MDRV_PIA6821_ADD( PIA6821_TAG, ec65_pia_interface )
-	MDRV_ACIA6850_ADD(ACIA6850_TAG, ec65_acia_intf)
-	MDRV_VIA6522_ADD(VIA6522_0_TAG, XTAL_4MHz / 4, ec65_via_0_intf)
-	MDRV_VIA6522_ADD(VIA6522_1_TAG, XTAL_4MHz / 4, ec65_via_1_intf)
-	MDRV_ACIA6551_ADD(ACIA6551_TAG)     // have XTAL of 1.8432MHz connected
-MACHINE_DRIVER_END
+	MCFG_PIA6821_ADD( PIA6821_TAG, ec65_pia_interface )
+	MCFG_ACIA6850_ADD(ACIA6850_TAG, ec65_acia_intf)
+	MCFG_VIA6522_ADD(VIA6522_0_TAG, XTAL_4MHz / 4, ec65_via_0_intf)
+	MCFG_VIA6522_ADD(VIA6522_1_TAG, XTAL_4MHz / 4, ec65_via_1_intf)
+	MCFG_ACIA6551_ADD(ACIA6551_TAG)     // have XTAL of 1.8432MHz connected
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( ec65k )
-
-    MDRV_DRIVER_DATA( ec65_state )
+static MACHINE_CONFIG_START( ec65k, ec65_state )
 
     /* basic machine hardware */
-    MDRV_CPU_ADD("maincpu",G65816, XTAL_4MHz) // can use 4,2 or 1 MHz
-    MDRV_CPU_PROGRAM_MAP(ec65k_mem)
+    MCFG_CPU_ADD("maincpu",G65816, XTAL_4MHz) // can use 4,2 or 1 MHz
+    MCFG_CPU_PROGRAM_MAP(ec65k_mem)
 
-    MDRV_MACHINE_RESET(ec65)
+    MCFG_MACHINE_RESET(ec65)
 
     /* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(640, 200)
-	MDRV_SCREEN_VISIBLE_AREA(0, 640 - 1, 0, 200 - 1)
-	MDRV_GFXDECODE(ec65)
-	MDRV_PALETTE_LENGTH(2)
-	MDRV_PALETTE_INIT(black_and_white)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(640, 200)
+	MCFG_SCREEN_VISIBLE_AREA(0, 640 - 1, 0, 200 - 1)
+	MCFG_GFXDECODE(ec65)
+	MCFG_PALETTE_LENGTH(2)
+	MCFG_PALETTE_INIT(black_and_white)
 
-	MDRV_MC6845_ADD(MC6845_TAG, MC6845, XTAL_16MHz / 8, ec65_crtc6845_interface)
+	MCFG_MC6845_ADD(MC6845_TAG, MC6845, XTAL_16MHz / 8, ec65_crtc6845_interface)
 
-    MDRV_VIDEO_START(ec65)
-    MDRV_VIDEO_UPDATE(ec65)
-MACHINE_DRIVER_END
+    MCFG_VIDEO_START(ec65)
+    MCFG_VIDEO_UPDATE(ec65)
+MACHINE_CONFIG_END
 
 /* ROM definition */
 ROM_START( ec65 )

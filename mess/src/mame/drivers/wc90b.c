@@ -86,7 +86,7 @@ Noted added by ClawGrip 28-Mar-2008:
 #include "cpu/z80/z80.h"
 #include "sound/2203intf.h"
 #include "sound/msm5205.h"
-
+#include "includes/wc90b.h"
 
 #define TEST_DIPS false /* enable to test unmapped dip switches */
 
@@ -95,28 +95,12 @@ Noted added by ClawGrip 28-Mar-2008:
 #define YM2203_CLOCK XTAL_20MHz/16
 #define MSM5205_CLOCK XTAL_384kHz
 
-extern UINT8 *wc90b_fgvideoram,*wc90b_bgvideoram,*wc90b_txvideoram;
-
-extern UINT8 *wc90b_scroll1x;
-extern UINT8 *wc90b_scroll2x;
-
-extern UINT8 *wc90b_scroll1y;
-extern UINT8 *wc90b_scroll2y;
-
-extern UINT8 *wc90b_scroll_x_lo;
-
-VIDEO_START( wc90b );
-WRITE8_HANDLER( wc90b_bgvideoram_w );
-WRITE8_HANDLER( wc90b_fgvideoram_w );
-WRITE8_HANDLER( wc90b_txvideoram_w );
-VIDEO_UPDATE( wc90b );
-
 static int msm5205next;
 
 static WRITE8_HANDLER( wc90b_bankswitch_w )
 {
 	int bankaddress;
-	UINT8 *ROM = memory_region(space->machine, "maincpu");
+	UINT8 *ROM = space->machine->region("maincpu")->base();
 
 	bankaddress = 0x10000 + ((data & 0xf8) << 8);
 	memory_set_bankptr(space->machine, "bank1",&ROM[bankaddress]);
@@ -125,7 +109,7 @@ static WRITE8_HANDLER( wc90b_bankswitch_w )
 static WRITE8_HANDLER( wc90b_bankswitch1_w )
 {
 	int bankaddress;
-	UINT8 *ROM = memory_region(space->machine, "sub");
+	UINT8 *ROM = space->machine->region("sub")->base();
 
 	bankaddress = 0x10000 + ((data & 0xf8) << 8);
 	memory_set_bankptr(space->machine, "bank2",&ROM[bankaddress]);
@@ -140,7 +124,7 @@ static WRITE8_HANDLER( wc90b_sound_command_w )
 static WRITE8_DEVICE_HANDLER( adpcm_control_w )
 {
 	int bankaddress;
-	UINT8 *ROM = memory_region(device->machine, "audiocpu");
+	UINT8 *ROM = device->machine->region("audiocpu")->base();
 
 	/* the code writes either 2 or 3 in the bottom two bits */
 	bankaddress = 0x10000 + (data & 0x01) * 0x4000;
@@ -340,7 +324,7 @@ GFXDECODE_END
 
 
 /* handler called by the 2203 emulator when the internal timers cause an IRQ */
-static void irqhandler(running_device *device, int irq)
+static void irqhandler(device_t *device, int irq)
 {
 	/* NMI writes to MSM ports *only*! -AS */
 	//cputag_set_input_line(device->machine, "audiocpu", INPUT_LINE_NMI, irq ? ASSERT_LINE : CLEAR_LINE);
@@ -356,7 +340,7 @@ static const ym2203_interface ym2203_config =
 	irqhandler
 };
 
-static void adpcm_int(running_device *device)
+static void adpcm_int(device_t *device)
 {
 	static int toggle = 0;
 
@@ -376,46 +360,46 @@ static const msm5205_interface msm5205_config =
 	MSM5205_S96_4B	/* 4KHz 4-bit */
 };
 
-static MACHINE_DRIVER_START( wc90b )
+static MACHINE_CONFIG_START( wc90b, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, MASTER_CLOCK)
-	MDRV_CPU_PROGRAM_MAP(wc90b_map1)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80, MASTER_CLOCK)
+	MCFG_CPU_PROGRAM_MAP(wc90b_map1)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("sub", Z80, MASTER_CLOCK)
-	MDRV_CPU_PROGRAM_MAP(wc90b_map2)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("sub", Z80, MASTER_CLOCK)
+	MCFG_CPU_PROGRAM_MAP(wc90b_map2)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80, SOUND_CLOCK)
-	MDRV_CPU_PROGRAM_MAP(sound_cpu)
+	MCFG_CPU_ADD("audiocpu", Z80, SOUND_CLOCK)
+	MCFG_CPU_PROGRAM_MAP(sound_cpu)
 	/* IRQs are triggered by the main CPU */
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(wc90b)
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_GFXDECODE(wc90b)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_VIDEO_START(wc90b)
-	MDRV_VIDEO_UPDATE(wc90b)
+	MCFG_VIDEO_START(wc90b)
+	MCFG_VIDEO_UPDATE(wc90b)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM2203, YM2203_CLOCK)
-	MDRV_SOUND_CONFIG(ym2203_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.20)
+	MCFG_SOUND_ADD("ymsnd", YM2203, YM2203_CLOCK)
+	MCFG_SOUND_CONFIG(ym2203_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.20)
 
-	MDRV_SOUND_ADD("msm", MSM5205, MSM5205_CLOCK)
-	MDRV_SOUND_CONFIG(msm5205_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("msm", MSM5205, MSM5205_CLOCK)
+	MCFG_SOUND_CONFIG(msm5205_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
+MACHINE_CONFIG_END
 
 ROM_START( wc90b1 )
 	ROM_REGION( 0x20000, "maincpu", 0 )

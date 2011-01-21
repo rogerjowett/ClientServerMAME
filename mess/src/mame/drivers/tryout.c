@@ -23,18 +23,7 @@ $208 strikes count
 #include "emu.h"
 #include "cpu/m6502/m6502.h"
 #include "sound/2203intf.h"
-
-extern UINT8 *tryout_gfx_control;
-
-extern READ8_HANDLER( tryout_vram_r );
-extern WRITE8_HANDLER( tryout_videoram_w );
-extern WRITE8_HANDLER( tryout_vram_w );
-extern WRITE8_HANDLER( tryout_vram_bankswitch_w );
-extern WRITE8_HANDLER( tryout_flipscreen_w );
-
-extern PALETTE_INIT( tryout );
-extern VIDEO_START( tryout );
-extern VIDEO_UPDATE( tryout );
+#include "includes/tryout.h"
 
 static WRITE8_HANDLER( tryout_nmi_ack_w )
 {
@@ -56,7 +45,7 @@ static WRITE8_HANDLER( tryout_sound_irq_ack_w )
 
 static WRITE8_HANDLER( tryout_bankswitch_w )
 {
-	UINT8 *RAM = memory_region(space->machine, "maincpu");
+	UINT8 *RAM = space->machine->region("maincpu")->base();
 	int bankaddress;
 
 	bankaddress = 0x10000 + (data & 0x01) * 0x2000;
@@ -65,7 +54,7 @@ static WRITE8_HANDLER( tryout_bankswitch_w )
 
 static ADDRESS_MAP_START( main_cpu, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x07ff) AM_RAM
-	AM_RANGE(0x1000, 0x17ff) AM_RAM_WRITE(tryout_videoram_w) AM_BASE_GENERIC(videoram)
+	AM_RANGE(0x1000, 0x17ff) AM_RAM_WRITE(tryout_videoram_w) AM_BASE_MEMBER(tryout_state, videoram)
 	AM_RANGE(0x2000, 0x3fff) AM_ROMBANK("bank1")
 	AM_RANGE(0x4000, 0xbfff) AM_ROM
 	AM_RANGE(0xc800, 0xc87f) AM_RAM AM_BASE_GENERIC(spriteram)
@@ -196,36 +185,36 @@ static GFXDECODE_START( tryout )
 	GFXDECODE_ENTRY( NULL,	 0, vramlayout,   0, 4 )
 GFXDECODE_END
 
-static MACHINE_DRIVER_START( tryout )
+static MACHINE_CONFIG_START( tryout, tryout_state )
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6502, 2000000)		/* ? */
-	MDRV_CPU_PROGRAM_MAP(main_cpu)
+	MCFG_CPU_ADD("maincpu", M6502, 2000000)		/* ? */
+	MCFG_CPU_PROGRAM_MAP(main_cpu)
 
-	MDRV_CPU_ADD("audiocpu", M6502, 1500000)	/* ? */
-	MDRV_CPU_PROGRAM_MAP(sound_cpu)
-	MDRV_CPU_PERIODIC_INT(nmi_line_pulse,1000) /* controls BGM tempo, 1000 is an hand-tuned value to match a side-by-side video */
+	MCFG_CPU_ADD("audiocpu", M6502, 1500000)	/* ? */
+	MCFG_CPU_PROGRAM_MAP(sound_cpu)
+	MCFG_CPU_PERIODIC_INT(nmi_line_pulse,1000) /* controls BGM tempo, 1000 is an hand-tuned value to match a side-by-side video */
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(256, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 1*8, 31*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(256, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 1*8, 31*8-1)
 
-	MDRV_GFXDECODE(tryout)
-	MDRV_PALETTE_LENGTH(0x20)
-	MDRV_PALETTE_INIT(tryout)
+	MCFG_GFXDECODE(tryout)
+	MCFG_PALETTE_LENGTH(0x20)
+	MCFG_PALETTE_INIT(tryout)
 
-	MDRV_VIDEO_START(tryout)
-	MDRV_VIDEO_UPDATE(tryout)
+	MCFG_VIDEO_START(tryout)
+	MCFG_VIDEO_UPDATE(tryout)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM2203, 1500000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2203, 1500000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 ROM_START( tryout )
 	ROM_REGION( 0x14000, "maincpu", 0 )

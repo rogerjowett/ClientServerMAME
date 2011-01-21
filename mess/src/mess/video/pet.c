@@ -12,7 +12,7 @@
 
 void pet_vh_init (running_machine *machine)
 {
-	UINT8 *gfx = memory_region(machine, "gfx1");
+	UINT8 *gfx = machine->region("gfx1")->base();
 	int i;
 
 	/* inversion logic on board */
@@ -26,7 +26,7 @@ void pet_vh_init (running_machine *machine)
 
 void pet80_vh_init (running_machine *machine)
 {
-	UINT8 *gfx = memory_region(machine, "gfx1");
+	UINT8 *gfx = machine->region("gfx1")->base();
 	int i;
 
 	/* inversion logic on board */
@@ -45,7 +45,7 @@ void pet80_vh_init (running_machine *machine)
 
 void superpet_vh_init (running_machine *machine)
 {
-	UINT8 *gfx = memory_region(machine, "gfx1");
+	UINT8 *gfx = machine->region("gfx1")->base();
 	int i;
 
 	for (i=0; i<0x400; i++) {
@@ -68,14 +68,16 @@ void superpet_vh_init (running_machine *machine)
 //  commodore pet discrete video circuit
 VIDEO_UPDATE( pet )
 {
+	pet_state *state = screen->machine->driver_data<pet_state>();
+	UINT8 *videoram = state->videoram;
 	int x, y, i;
 
 	for (y=0, i=0; y<25;y++)
 	{
 		for (x=0;x<40;x++, i++)
 		{
-			drawgfx_opaque(bitmap, NULL,screen->machine->gfx[pet_font],
-					screen->machine->generic.videoram.u8[i], 0, 0, 0, 8*x,8*y);
+			drawgfx_opaque(bitmap, NULL,screen->machine->gfx[state->font],
+					videoram[i], 0, 0, 0, 8*x,8*y);
 		}
 	}
 	return 0;
@@ -84,20 +86,24 @@ VIDEO_UPDATE( pet )
 
 MC6845_UPDATE_ROW( pet40_update_row )
 {
+	pet_state *state = device->machine->driver_data<pet_state>();
+	UINT8 *videoram = state->videoram;
 	int i;
 
 	for( i = 0; i < x_count; i++ ) {
-		drawgfx_opaque( bitmap, cliprect, device->machine->gfx[pet_font], device->machine->generic.videoram.u8[(ma+i)&0x3ff], 0, 0, 0, 8 * i, y-ra );
+		drawgfx_opaque( bitmap, cliprect, device->machine->gfx[state->font], videoram[(ma+i)&0x3ff], 0, 0, 0, 8 * i, y-ra );
 	}
 }
 
 MC6845_UPDATE_ROW( pet80_update_row )
 {
+	pet_state *state = device->machine->driver_data<pet_state>();
+	UINT8 *videoram = state->videoram;
 	int i;
 
 	for( i = 0; i < x_count; i++ ) {
-		drawgfx_opaque( bitmap, cliprect, device->machine->gfx[pet_font], device->machine->generic.videoram.u8[((ma+i)<<1)&0x7ff], 0, 0, 0, 16 * i, y-ra );
-		drawgfx_opaque( bitmap, cliprect, device->machine->gfx[pet_font], device->machine->generic.videoram.u8[(((ma+i)<<1)+1)&0x7ff], 0, 0, 0, 16 * i + 8, y-ra );
+		drawgfx_opaque( bitmap, cliprect, device->machine->gfx[state->font], videoram[((ma+i)<<1)&0x7ff], 0, 0, 0, 16 * i, y-ra );
+		drawgfx_opaque( bitmap, cliprect, device->machine->gfx[state->font], videoram[(((ma+i)<<1)+1)&0x7ff], 0, 0, 0, 16 * i + 8, y-ra );
 	}
 }
 

@@ -80,8 +80,9 @@ struct _vic2_state
 	vic2_type  type;
 
 	screen_device *screen;			// screen which sets bitmap properties
-	running_device *cpu;
+	device_t *cpu;
 
+	UINT8 rdy_cycles;
 	UINT8 reg[0x80];
 
 	int on;								/* rastering of the screen */
@@ -205,8 +206,8 @@ struct _vic2_state
 #define VIC6569_Y_BEGIN			-6
 #define VIC2_X_BEGIN			((vic2->type == VIC6569 || vic2->type == VIC8566) ? VIC6569_X_BEGIN : VIC6567_X_BEGIN)
 #define VIC2_Y_BEGIN			((vic2->type == VIC6569 || vic2->type == VIC8566) ? VIC6569_Y_BEGIN : VIC6567_Y_BEGIN)
-#define VIC2_X_VALUE			((LIGHTPEN_X_VALUE + VIC2_X_BEGIN + VIC2_MAME_XPOS) / 2)
-#define VIC2_Y_VALUE			((LIGHTPEN_Y_VALUE + VIC2_Y_BEGIN + VIC2_MAME_YPOS))
+#define VIC2_X_VALUE			((LIGHTPEN_X_VALUE / 1.3) + 12)
+#define VIC2_Y_VALUE			((LIGHTPEN_Y_VALUE      ) + 10)
 
 #define VIC2E_K0_LEVEL			(vic2->reg[0x2f] & 0x01)
 #define VIC2E_K1_LEVEL			(vic2->reg[0x2f] & 0x02)
@@ -263,7 +264,7 @@ struct _vic2_state
     INLINE FUNCTIONS
 *****************************************************************************/
 
-INLINE vic2_state *get_safe_token( running_device *device )
+INLINE vic2_state *get_safe_token( device_t *device )
 {
 	assert(device != NULL);
 	assert(device->type() == VIC2);
@@ -271,7 +272,7 @@ INLINE vic2_state *get_safe_token( running_device *device )
 	return (vic2_state *)downcast<legacy_device_base *>(device)->token();
 }
 
-INLINE const vic2_interface *get_interface( running_device *device )
+INLINE const vic2_interface *get_interface( device_t *device )
 {
 	assert(device != NULL);
 	assert((device->type() == VIC2));
@@ -307,7 +308,7 @@ static void vic2_clear_interrupt( running_machine *machine, int mask, vic2_state
 	}
 }
 
-void vic2_lightpen_write( running_device *device, int level )
+void vic2_lightpen_write( device_t *device, int level )
 {
 	/* calculate current position, write it and raise interrupt */
 }
@@ -321,15 +322,15 @@ static TIMER_CALLBACK( vic2_timer_timeout )
 
 	switch (which)
 	{
-	case 1:						   /* light pen */
-		/* and diode must recognize light */
-		if (1)
-		{
-			vic2->reg[0x13] = VIC2_X_VALUE;
-			vic2->reg[0x14] = VIC2_Y_VALUE;
-		}
-		vic2_set_interrupt(machine, 8, vic2);
-		break;
+		case 1:						   /* light pen */
+			/* and diode must recognize light */
+			if (1)
+			{
+				vic2->reg[0x13] = VIC2_X_VALUE;
+				vic2->reg[0x14] = VIC2_Y_VALUE;
+			}
+			vic2_set_interrupt(machine, 8, vic2);
+			break;
 	}
 }
 
@@ -374,8 +375,10 @@ INLINE void vic2_suspend_cpu( running_machine *machine, vic2_state *vic2 )
 	if (vic2->cpu_suspended == 0)
 	{
 		vic2->first_ba_cycle = vic2->cycles_counter;
-		if (vic2->rdy_workaround_cb != NULL && vic2->rdy_workaround_cb(machine))
-			cpu_suspend(machine->firstcpu, SUSPEND_REASON_SPIN, 0);
+		if ((vic2->rdy_workaround_cb != NULL) && (vic2->rdy_workaround_cb(machine) != 7 ))
+		{
+//          cpu_suspend(machine->firstcpu, SUSPEND_REASON_SPIN, 0);
+		}
 		vic2->cpu_suspended = 1;
 	}
 }
@@ -385,8 +388,10 @@ INLINE void vic2_resume_cpu( running_machine *machine, vic2_state *vic2 )
 {
 	if (vic2->cpu_suspended == 1)
 	{
-		if (vic2->rdy_workaround_cb != NULL && vic2->rdy_workaround_cb(machine))
-			cpu_resume(machine->firstcpu, SUSPEND_REASON_SPIN);
+		if ((vic2->rdy_workaround_cb != NULL))
+		{
+//  cpu_resume(machine->firstcpu, SUSPEND_REASON_SPIN);
+		}
 		vic2->cpu_suspended = 0;
 	}
 }
@@ -446,7 +451,7 @@ INLINE void vic2_check_sprite_dma( vic2_state *vic2 )
 // Video matrix access
 INLINE void vic2_matrix_access( running_machine *machine, vic2_state *vic2 )
 {
-	if (vic2->cpu_suspended == 1)
+//  if (vic2->cpu_suspended == 1)
 	{
 		if ((vic2->cycles_counter - vic2->first_ba_cycle) < 0)
 			vic2->matrix_line[vic2->ml_index] = vic2->color_line[vic2->ml_index] = 0xff;
@@ -993,7 +998,41 @@ static TIMER_CALLBACK( pal_timer_callback )
 	vic2_state *vic2 = (vic2_state *)ptr;
 	int i;
 	UINT8 mask;
+	//static int adjust[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+	UINT8 cpu_cycles = machine->device<cpu_device>("maincpu")->total_cycles() & 0xff;
+	UINT8 vic_cycles = (vic2->cycles_counter + 1) & 0xff;
 	vic2->cycles_counter++;
+
+//  printf("%02x %02x %02x\n",cpu_cycles,vic_cycles,vic2->rdy_cycles);
+#if 0
+if (input_code_pressed(machine, KEYCODE_X))
+{
+if (input_code_pressed_once(machine, KEYCODE_Q)) adjust[1]++;
+if (input_code_pressed_once(machine, KEYCODE_W)) adjust[2]++;
+if (input_code_pressed_once(machine, KEYCODE_E)) adjust[3]++;
+if (input_code_pressed_once(machine, KEYCODE_R)) adjust[4]++;
+if (input_code_pressed_once(machine, KEYCODE_T)) adjust[5]++;
+if (input_code_pressed_once(machine, KEYCODE_Y)) adjust[6]++;
+if (input_code_pressed_once(machine, KEYCODE_U)) adjust[7]++;
+if (input_code_pressed_once(machine, KEYCODE_I)) adjust[8]++;
+if (input_code_pressed_once(machine, KEYCODE_A)) adjust[1]--;
+if (input_code_pressed_once(machine, KEYCODE_S)) adjust[2]--;
+if (input_code_pressed_once(machine, KEYCODE_D)) adjust[3]--;
+if (input_code_pressed_once(machine, KEYCODE_F)) adjust[4]--;
+if (input_code_pressed_once(machine, KEYCODE_G)) adjust[5]--;
+if (input_code_pressed_once(machine, KEYCODE_H)) adjust[6]--;
+if (input_code_pressed_once(machine, KEYCODE_J)) adjust[7]--;
+if (input_code_pressed_once(machine, KEYCODE_K)) adjust[8]--;
+if (input_code_pressed_once(machine, KEYCODE_C)) adjust[0]++;
+if (input_code_pressed_once(machine, KEYCODE_V)) adjust[0]--;
+if (input_code_pressed_once(machine, KEYCODE_Z)) printf("b:%02x 1:%02x 2:%02x 3:%02x 4:%02x 5:%02x 6:%02x 7:%02x 8:%02x\n",
+                                adjust[0],adjust[1],adjust[2],adjust[3],adjust[4],adjust[5],adjust[6],adjust[7],adjust[8]);
+}
+#define adjust(x) adjust[x]
+#else
+#define adjust(x) 0
+#endif
 
 	switch(vic2->cycle)
 	{
@@ -1004,7 +1043,7 @@ static TIMER_CALLBACK( pal_timer_callback )
 		{
 			vic2->vblanking = 1;
 
-			if (LIGHTPEN_BUTTON)
+//          if (LIGHTPEN_BUTTON)
 			{
 				/* lightpen timer start */
 				timer_set(machine, attotime_make(0, 0), vic2, 1, vic2_timer_timeout);
@@ -1033,6 +1072,8 @@ static TIMER_CALLBACK( pal_timer_callback )
 			vic2_suspend_cpu(machine, vic2);
 		else
 			vic2_resume_cpu(machine, vic2);
+
+		if (vic2->spr_dma_on & 0x08) vic2->rdy_cycles += (2 + adjust(1));
 
 		vic2->cycle++;
 		break;
@@ -1078,6 +1119,8 @@ static TIMER_CALLBACK( pal_timer_callback )
 		else
 			vic2_resume_cpu(machine, vic2);
 
+		if (vic2->spr_dma_on & 0x10) vic2->rdy_cycles += (2 + adjust(2));
+
 		vic2->cycle++;
 		break;
 
@@ -1100,6 +1143,8 @@ static TIMER_CALLBACK( pal_timer_callback )
 			vic2_suspend_cpu(machine, vic2);
 		else
 			vic2_resume_cpu(machine, vic2);
+
+		if (vic2->spr_dma_on & 0x20) vic2->rdy_cycles += (2 + adjust(3));
 
 		vic2->cycle++;
 		break;
@@ -1124,6 +1169,8 @@ static TIMER_CALLBACK( pal_timer_callback )
 		else
 			vic2_resume_cpu(machine, vic2);
 
+		if (vic2->spr_dma_on & 0x40) vic2->rdy_cycles += (2 + adjust(4));
+
 		vic2->cycle++;
 		break;
 
@@ -1146,6 +1193,8 @@ static TIMER_CALLBACK( pal_timer_callback )
 			vic2_suspend_cpu(machine, vic2);
 		else
 			vic2_resume_cpu(machine, vic2);
+
+		if (vic2->spr_dma_on & 0x80) vic2->rdy_cycles += (2 + adjust(5));
 
 		vic2->cycle++;
 		break;
@@ -1186,6 +1235,9 @@ static TIMER_CALLBACK( pal_timer_callback )
 
 		vic2->raster_x = 0xfffc;
 
+		if ((vic2->rdy_workaround_cb(machine) == 0 ) && (vic2->is_bad_line))
+			vic2->rdy_cycles += (43+adjust(0));
+
 		vic2->cycle++;
 		break;
 
@@ -1197,6 +1249,9 @@ static TIMER_CALLBACK( pal_timer_callback )
 		vic2_rc_if_bad_line(vic2);
 
 		vic2->vc = vic2->vc_base;
+
+		if ((vic2->rdy_workaround_cb(machine) == 1 ) && (vic2->is_bad_line))
+			vic2->rdy_cycles += (42+adjust(0));
 
 		vic2->cycle++;
 		break;
@@ -1212,11 +1267,11 @@ static TIMER_CALLBACK( pal_timer_callback )
 			if (vic2->spr_exp_y & (1 << i))
 				vic2->mc_base[i] += 2;
 
-		if (vic2->is_bad_line)
-			vic2_suspend_cpu(machine, vic2);
-
 		vic2->ml_index = 0;
 		vic2_matrix_access(machine, vic2);
+
+		if ((vic2->rdy_workaround_cb(machine) == 2 ) && (vic2->is_bad_line))
+			vic2->rdy_cycles += (41+adjust(0));
 
 		vic2->cycle++;
 		break;
@@ -1238,6 +1293,9 @@ static TIMER_CALLBACK( pal_timer_callback )
 		}
 
 		vic2_matrix_access(machine, vic2);
+
+		if ((vic2->rdy_workaround_cb(machine) == 3 ) && (vic2->is_bad_line))
+			vic2->rdy_cycles += (40+adjust(0));
 
 		vic2->cycle++;
 		break;
@@ -1272,6 +1330,9 @@ static TIMER_CALLBACK( pal_timer_callback )
 		vic2_graphics_access(machine, vic2);
 		vic2_fetch_if_bad_line(vic2);
 		vic2_matrix_access(machine, vic2);
+
+		if ((vic2->rdy_workaround_cb(machine) == 4 ) && (vic2->is_bad_line))
+			vic2->rdy_cycles += (40+adjust(0));
 
 		vic2->cycle++;
 		break;
@@ -1444,6 +1505,8 @@ static TIMER_CALLBACK( pal_timer_callback )
 		else
 			vic2_resume_cpu(machine, vic2);
 
+		if (vic2->spr_dma_on & 0x01) vic2->rdy_cycles += (2 + adjust(6));
+
 		vic2->cycle++;
 		break;
 
@@ -1499,6 +1562,8 @@ static TIMER_CALLBACK( pal_timer_callback )
 		else
 			vic2_resume_cpu(machine, vic2);
 
+		if (vic2->spr_dma_on & 0x02) vic2->rdy_cycles += (2 + adjust(7));
+
 		vic2->cycle++;
 		break;
 
@@ -1522,6 +1587,8 @@ static TIMER_CALLBACK( pal_timer_callback )
 		else
 			vic2_resume_cpu(machine, vic2);
 
+		if (vic2->spr_dma_on & 0x04) vic2->rdy_cycles += (2 + adjust(8));
+
 		vic2->cycle++;
 		break;
 
@@ -1541,8 +1608,14 @@ static TIMER_CALLBACK( pal_timer_callback )
 		vic2->cycle = 1;
 	}
 
+	if ((cpu_cycles == vic_cycles) && (vic2->rdy_cycles > 0))
+	{
+		device_spin_until_time (machine->firstcpu, machine->device<cpu_device>("maincpu")->cycles_to_attotime(vic2->rdy_cycles));
+		vic2->rdy_cycles = 0;
+	}
+
 	vic2->raster_x += 8;
-	timer_set(machine, cputag_clocks_to_attotime(machine, "maincpu", 1), vic2, 0, pal_timer_callback);
+	timer_set(machine, machine->device<cpu_device>("maincpu")->cycles_to_attotime(1), vic2, 0, pal_timer_callback);
 }
 
 static TIMER_CALLBACK( ntsc_timer_callback )
@@ -1561,7 +1634,7 @@ static TIMER_CALLBACK( ntsc_timer_callback )
 		{
 			vic2->vblanking = 1;
 
-			if (LIGHTPEN_BUTTON)
+//          if (LIGHTPEN_BUTTON)
 			{
 				/* lightpen timer starten */
 				timer_set(machine, attotime_make(0, 0), vic2, 1, vic2_timer_timeout);
@@ -2121,7 +2194,7 @@ static TIMER_CALLBACK( ntsc_timer_callback )
 	}
 
 	vic2->raster_x += 8;
-	timer_set(machine, cputag_clocks_to_attotime(machine, "maincpu", 1), vic2, 0, ntsc_timer_callback);
+	timer_set(machine, machine->device<cpu_device>("maincpu")->cycles_to_attotime(1), vic2, 0, ntsc_timer_callback);
 }
 
 
@@ -2129,25 +2202,25 @@ static TIMER_CALLBACK( ntsc_timer_callback )
     I/O HANDLERS
 *****************************************************************************/
 
-void vic2_set_rastering( running_device *device, int onoff )
+void vic2_set_rastering( device_t *device, int onoff )
 {
 	vic2_state *vic2 = get_safe_token(device);
 	vic2->on = onoff;
 }
 
-int vic2e_k0_r( running_device *device )
+int vic2e_k0_r( device_t *device )
 {
 	vic2_state *vic2 = get_safe_token(device);
 	return VIC2E_K0_LEVEL;
 }
 
-int vic2e_k1_r( running_device *device )
+int vic2e_k1_r( device_t *device )
 {
 	vic2_state *vic2 = get_safe_token(device);
 	return VIC2E_K1_LEVEL;
 }
 
-int vic2e_k2_r( running_device *device )
+int vic2e_k2_r( device_t *device )
 {
 	vic2_state *vic2 = get_safe_token(device);
 	return VIC2E_K2_LEVEL;
@@ -2508,7 +2581,7 @@ READ8_DEVICE_HANDLER( vic2_port_r )
 	return val;
 }
 
-UINT32 vic2_video_update( running_device *device, bitmap_t *bitmap, const rectangle *cliprect )
+UINT32 vic2_video_update( device_t *device, bitmap_t *bitmap, const rectangle *cliprect )
 {
 	vic2_state *vic2 = get_safe_token(device);
 
@@ -2673,7 +2746,7 @@ static DEVICE_RESET( vic2 )
 	// from 0 to 311 (0 first, PAL) or from 0 to 261 (? first, NTSC 6567R56A) or from 0 to 262 (? first, NTSC 6567R8)
 	vic2->rasterline = 0; // VIC2_LINES - 1;
 
-	vic2->cycles_counter = 0;
+	vic2->cycles_counter = -1;
 	vic2->cycle = 63;
 
 	vic2->on = 1;

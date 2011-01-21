@@ -20,14 +20,14 @@ static KONAMI_SETLINES_CALLBACK( surpratk_banking );
 
 static INTERRUPT_GEN( surpratk_interrupt )
 {
-	surpratk_state *state = (surpratk_state *)device->machine->driver_data;
+	surpratk_state *state = device->machine->driver_data<surpratk_state>();
 	if (k052109_is_irq_enabled(state->k052109))
 		cpu_set_input_line(device, 0, HOLD_LINE);
 }
 
 static READ8_HANDLER( bankedram_r )
 {
-	surpratk_state *state = (surpratk_state *)space->machine->driver_data;
+	surpratk_state *state = space->machine->driver_data<surpratk_state>();
 
 	if (state->videobank & 0x02)
 	{
@@ -44,7 +44,7 @@ static READ8_HANDLER( bankedram_r )
 
 static WRITE8_HANDLER( bankedram_w )
 {
-	surpratk_state *state = (surpratk_state *)space->machine->driver_data;
+	surpratk_state *state = space->machine->driver_data<surpratk_state>();
 
 	if (state->videobank & 0x02)
 	{
@@ -61,7 +61,7 @@ static WRITE8_HANDLER( bankedram_w )
 
 static WRITE8_HANDLER( surpratk_videobank_w )
 {
-	surpratk_state *state = (surpratk_state *)space->machine->driver_data;
+	surpratk_state *state = space->machine->driver_data<surpratk_state>();
 
 	logerror("%04x: videobank = %02x\n",cpu_get_pc(space->cpu),data);
 	/* bit 0 = select 053245 at 0000-07ff */
@@ -72,7 +72,7 @@ static WRITE8_HANDLER( surpratk_videobank_w )
 
 static WRITE8_HANDLER( surpratk_5fc0_w )
 {
-	surpratk_state *state = (surpratk_state *)space->machine->driver_data;
+	surpratk_state *state = space->machine->driver_data<surpratk_state>();
 
 	if ((data & 0xf4) != 0x10)
 		logerror("%04x: 3fc0 = %02x\n",cpu_get_pc(space->cpu),data);
@@ -168,9 +168,9 @@ INPUT_PORTS_END
 
 
 
-static void irqhandler( running_device *device, int linestate )
+static void irqhandler( device_t *device, int linestate )
 {
-	surpratk_state *state = (surpratk_state *)device->machine->driver_data;
+	surpratk_state *state = device->machine->driver_data<surpratk_state>();
 	cpu_set_input_line(state->maincpu, KONAMI_FIRQ_LINE, linestate);
 }
 
@@ -200,8 +200,8 @@ static const k05324x_interface surpratk_k05324x_intf =
 
 static MACHINE_START( surpratk )
 {
-	surpratk_state *state = (surpratk_state *)machine->driver_data;
-	UINT8 *ROM = memory_region(machine, "maincpu");
+	surpratk_state *state = machine->driver_data<surpratk_state>();
+	UINT8 *ROM = machine->region("maincpu")->base();
 
 	memory_configure_bank(machine, "bank1", 0, 28, &ROM[0x10000], 0x2000);
 	memory_configure_bank(machine, "bank1", 28, 4, &ROM[0x08000], 0x2000);
@@ -223,7 +223,7 @@ static MACHINE_START( surpratk )
 
 static MACHINE_RESET( surpratk )
 {
-	surpratk_state *state = (surpratk_state *)machine->driver_data;
+	surpratk_state *state = machine->driver_data<surpratk_state>();
 	int i;
 
 	konami_configure_set_lines(machine->device("maincpu"), surpratk_banking);
@@ -238,45 +238,42 @@ static MACHINE_RESET( surpratk )
 	state->videobank = 0;
 }
 
-static MACHINE_DRIVER_START( surpratk )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(surpratk_state)
+static MACHINE_CONFIG_START( surpratk, surpratk_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", KONAMI, 3000000)	/* 053248 */
-	MDRV_CPU_PROGRAM_MAP(surpratk_map)
-	MDRV_CPU_VBLANK_INT("screen", surpratk_interrupt)
+	MCFG_CPU_ADD("maincpu", KONAMI, 3000000)	/* 053248 */
+	MCFG_CPU_PROGRAM_MAP(surpratk_map)
+	MCFG_CPU_VBLANK_INT("screen", surpratk_interrupt)
 
-	MDRV_MACHINE_START(surpratk)
-	MDRV_MACHINE_RESET(surpratk)
+	MCFG_MACHINE_START(surpratk)
+	MCFG_MACHINE_RESET(surpratk)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(14*8, (64-14)*8-1, 2*8, 30*8-1 )
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(14*8, (64-14)*8-1, 2*8, 30*8-1 )
 
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_UPDATE(surpratk)
+	MCFG_VIDEO_UPDATE(surpratk)
 
-	MDRV_K052109_ADD("k052109", surpratk_k052109_intf)
-	MDRV_K053244_ADD("k053244", surpratk_k05324x_intf)
-	MDRV_K053251_ADD("k053251")
+	MCFG_K052109_ADD("k052109", surpratk_k052109_intf)
+	MCFG_K053244_ADD("k053244", surpratk_k05324x_intf)
+	MCFG_K053251_ADD("k053251")
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, 3579545)
-	MDRV_SOUND_CONFIG(ym2151_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2151, 3579545)
+	MCFG_SOUND_CONFIG(ym2151_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 /***************************************************************************
 

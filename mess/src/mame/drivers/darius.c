@@ -144,13 +144,13 @@ static void parse_control( running_machine *machine )	/* assumes Z80 sandwiched 
 	/* bit 0 enables cpu B */
 	/* however this fails when recovering from a save state
        if cpu B is disabled !! */
-	darius_state *state = (darius_state *)machine->driver_data;
+	darius_state *state = machine->driver_data<darius_state>();
 	cpu_set_input_line(state->cpub, INPUT_LINE_RESET, (state->cpua_ctrl & 0x01) ? CLEAR_LINE : ASSERT_LINE);
 }
 
 static WRITE16_HANDLER( cpua_ctrl_w )
 {
-	darius_state *state = (darius_state *)space->machine->driver_data;
+	darius_state *state = space->machine->driver_data<darius_state>();
 
 	if ((data & 0xff00) && ((data & 0xff) == 0))
 		data = data >> 8;
@@ -174,7 +174,7 @@ static WRITE16_HANDLER( darius_watchdog_w )
 
 static READ16_HANDLER( darius_ioc_r )
 {
-	darius_state *state = (darius_state *)space->machine->driver_data;
+	darius_state *state = space->machine->driver_data<darius_state>();
 
 	switch (offset)
 	{
@@ -204,7 +204,7 @@ logerror("CPU #0 PC %06x: warning - read unmapped ioc offset %06x\n",cpu_get_pc(
 
 static WRITE16_HANDLER( darius_ioc_w )
 {
-	darius_state *state = (darius_state *)space->machine->driver_data;
+	darius_state *state = space->machine->driver_data<darius_state>();
 
 	switch (offset)
 	{
@@ -276,13 +276,13 @@ ADDRESS_MAP_END
 
 static void reset_sound_region( running_machine *machine )
 {
-	darius_state *state = (darius_state *)machine->driver_data;
+	darius_state *state = machine->driver_data<darius_state>();
 	memory_set_bank(machine, "bank1", state->banknum);
 }
 
 static WRITE8_HANDLER( sound_bankswitch_w )
 {
-	darius_state *state = (darius_state *)space->machine->driver_data;
+	darius_state *state = space->machine->driver_data<darius_state>();
 
 	state->banknum = data & 0x03;
 	reset_sound_region(space->machine);
@@ -292,7 +292,7 @@ static WRITE8_HANDLER( sound_bankswitch_w )
 
 static WRITE8_HANDLER( adpcm_command_w )
 {
-	darius_state *state = (darius_state *)space->machine->driver_data;
+	darius_state *state = space->machine->driver_data<darius_state>();
 	state->adpcm_command = data;
 	/* logerror("#ADPCM command write =%2x\n",data); */
 }
@@ -311,7 +311,7 @@ static WRITE8_HANDLER( display_value )
 
 static void update_fm0( running_machine *machine )
 {
-	darius_state *state = (darius_state *)machine->driver_data;
+	darius_state *state = machine->driver_data<darius_state>();
 	int left  = (        state->pan[0]  * state->vol[6]) >> 8;
 	int right = ((0xff - state->pan[0]) * state->vol[6]) >> 8;
 
@@ -323,7 +323,7 @@ static void update_fm0( running_machine *machine )
 
 static void update_fm1( running_machine *machine )
 {
-	darius_state *state = (darius_state *)machine->driver_data;
+	darius_state *state = machine->driver_data<darius_state>();
 	int left  = (        state->pan[1]  * state->vol[7]) >> 8;
 	int right = ((0xff - state->pan[1]) * state->vol[7]) >> 8;
 
@@ -335,8 +335,8 @@ static void update_fm1( running_machine *machine )
 
 static void update_psg0( running_machine *machine, int port )
 {
-	darius_state *state = (darius_state *)machine->driver_data;
-	running_device *lvol = NULL, *rvol = NULL;
+	darius_state *state = machine->driver_data<darius_state>();
+	device_t *lvol = NULL, *rvol = NULL;
 	int left, right;
 
 	switch (port)
@@ -358,8 +358,8 @@ static void update_psg0( running_machine *machine, int port )
 
 static void update_psg1( running_machine *machine, int port )
 {
-	darius_state *state = (darius_state *)machine->driver_data;
-	running_device *lvol = NULL, *rvol = NULL;
+	darius_state *state = machine->driver_data<darius_state>();
+	device_t *lvol = NULL, *rvol = NULL;
 	int left, right;
 
 	switch (port)
@@ -381,7 +381,7 @@ static void update_psg1( running_machine *machine, int port )
 
 static void update_da( running_machine *machine )
 {
-	darius_state *state = (darius_state *)machine->driver_data;
+	darius_state *state = machine->driver_data<darius_state>();
 	int left  = state->def_vol[(state->pan[4] >> 4) & 0x0f];
 	int right = state->def_vol[(state->pan[4] >> 0) & 0x0f];
 
@@ -393,21 +393,21 @@ static void update_da( running_machine *machine )
 
 static WRITE8_HANDLER( darius_fm0_pan )
 {
-	darius_state *state = (darius_state *)space->machine->driver_data;
+	darius_state *state = space->machine->driver_data<darius_state>();
 	state->pan[0] = data & 0xff;  /* data 0x00:right 0xff:left */
 	update_fm0(space->machine);
 }
 
 static WRITE8_HANDLER( darius_fm1_pan )
 {
-	darius_state *state = (darius_state *)space->machine->driver_data;
+	darius_state *state = space->machine->driver_data<darius_state>();
 	state->pan[1] = data & 0xff;
 	update_fm1(space->machine);
 }
 
 static WRITE8_HANDLER( darius_psg0_pan )
 {
-	darius_state *state = (darius_state *)space->machine->driver_data;
+	darius_state *state = space->machine->driver_data<darius_state>();
 	state->pan[2] = data & 0xff;
 	update_psg0(space->machine, 0);
 	update_psg0(space->machine, 1);
@@ -416,7 +416,7 @@ static WRITE8_HANDLER( darius_psg0_pan )
 
 static WRITE8_HANDLER( darius_psg1_pan )
 {
-	darius_state *state = (darius_state *)space->machine->driver_data;
+	darius_state *state = space->machine->driver_data<darius_state>();
 	state->pan[3] = data & 0xff;
 	update_psg1(space->machine, 0);
 	update_psg1(space->machine, 1);
@@ -425,7 +425,7 @@ static WRITE8_HANDLER( darius_psg1_pan )
 
 static WRITE8_HANDLER( darius_da_pan )
 {
-	darius_state *state = (darius_state *)space->machine->driver_data;
+	darius_state *state = space->machine->driver_data<darius_state>();
 	state->pan[4] = data & 0xff;
 	update_da(space->machine);
 }
@@ -434,7 +434,7 @@ static WRITE8_HANDLER( darius_da_pan )
 
 static WRITE8_DEVICE_HANDLER( darius_write_portA0 )
 {
-	darius_state *state = (darius_state *)device->machine->driver_data;
+	darius_state *state = device->machine->driver_data<darius_state>();
 
 	// volume control FM #0 PSG #0 A
 	//popmessage(" pan %02x %02x %02x %02x %02x", state->pan[0], state->pan[1], state->pan[2], state->pan[3], state->pan[4] );
@@ -448,7 +448,7 @@ static WRITE8_DEVICE_HANDLER( darius_write_portA0 )
 
 static WRITE8_DEVICE_HANDLER( darius_write_portA1 )
 {
-	darius_state *state = (darius_state *)device->machine->driver_data;
+	darius_state *state = device->machine->driver_data<darius_state>();
 
 	// volume control FM #1 PSG #1 A
 	//popmessage(" pan %02x %02x %02x %02x %02x", state->pan[0], state->pan[1], state->pan[2], state->pan[3], state->pan[4] );
@@ -461,7 +461,7 @@ static WRITE8_DEVICE_HANDLER( darius_write_portA1 )
 
 static WRITE8_DEVICE_HANDLER( darius_write_portB0 )
 {
-	darius_state *state = (darius_state *)device->machine->driver_data;
+	darius_state *state = device->machine->driver_data<darius_state>();
 
 	// volume control PSG #0 B/C
 	//popmessage(" pan %02x %02x %02x %02x %02x", state->pan[0], state->pan[1], state->pan[2], state->pan[3], state->pan[4] );
@@ -474,7 +474,7 @@ static WRITE8_DEVICE_HANDLER( darius_write_portB0 )
 
 static WRITE8_DEVICE_HANDLER( darius_write_portB1 )
 {
-	darius_state *state = (darius_state *)device->machine->driver_data;
+	darius_state *state = device->machine->driver_data<darius_state>();
 
 	// volume control PSG #1 B/C
 	//popmessage(" pan %02x %02x %02x %02x %02x", state->pan[0], state->pan[1], state->pan[2], state->pan[3], state->pan[4] );
@@ -513,9 +513,9 @@ static ADDRESS_MAP_START( darius_sound2_map, ADDRESS_SPACE_PROGRAM, 8 )
 ADDRESS_MAP_END
 
 
-static void darius_adpcm_int( running_device *device )
+static void darius_adpcm_int( device_t *device )
 {
-	darius_state *state = (darius_state *)device->machine->driver_data;
+	darius_state *state = device->machine->driver_data<darius_state>();
 
 	if (state->nmi_enable)
 		cpu_set_input_line(state->adpcm, INPUT_LINE_NMI, PULSE_LINE);
@@ -529,7 +529,7 @@ static const msm5205_interface msm5205_config =
 
 static READ8_HANDLER( adpcm_command_read )
 {
-	darius_state *state = (darius_state *)space->machine->driver_data;
+	darius_state *state = space->machine->driver_data<darius_state>();
 
 	/* logerror("read port 0: %02x  PC=%4x\n",adpcm_command, cpu_get_pc(space->cpu) ); */
 	return state->adpcm_command;
@@ -547,7 +547,7 @@ static READ8_HANDLER( readport3 )
 
 static WRITE8_HANDLER( adpcm_nmi_disable )
 {
-	darius_state *state = (darius_state *)space->machine->driver_data;
+	darius_state *state = space->machine->driver_data<darius_state>();
 
 	state->nmi_enable = 0;
 	/* logerror("write port 0: NMI DISABLE  PC=%4x\n", data, cpu_get_pc(space->cpu) ); */
@@ -555,7 +555,7 @@ static WRITE8_HANDLER( adpcm_nmi_disable )
 
 static WRITE8_HANDLER( adpcm_nmi_enable )
 {
-	darius_state *state = (darius_state *)space->machine->driver_data;
+	darius_state *state = space->machine->driver_data<darius_state>();
 	state->nmi_enable = 1;
 	/* logerror("write port 1: NMI ENABLE   PC=%4x\n", cpu_get_pc(space->cpu) ); */
 }
@@ -798,9 +798,9 @@ GFXDECODE_END
 **************************************************************/
 
 /* handler called by the YM2203 emulator when the internal timers cause an IRQ */
-static void irqhandler( running_device *device, int irq )	/* assumes Z80 sandwiched between 68Ks */
+static void irqhandler( device_t *device, int irq )	/* assumes Z80 sandwiched between 68Ks */
 {
-	darius_state *state = (darius_state *)device->machine->driver_data;
+	darius_state *state = device->machine->driver_data<darius_state>();
 	cpu_set_input_line(state->audiocpu, 0, irq ? ASSERT_LINE : CLEAR_LINE);
 }
 
@@ -853,10 +853,10 @@ static STATE_POSTLOAD( darius_postload )
 
 static MACHINE_START( darius )
 {
-	darius_state *state = (darius_state *)machine->driver_data;
+	darius_state *state = machine->driver_data<darius_state>();
 
-	memory_configure_bank(machine, "bank1", 0, 4, memory_region(machine, "audiocpu") + 0x10000, 0x8000);
-	memory_configure_bank(machine, "bank1", 4, 1, memory_region(machine, "audiocpu"), 0x8000);
+	memory_configure_bank(machine, "bank1", 0, 4, machine->region("audiocpu")->base() + 0x10000, 0x8000);
+	memory_configure_bank(machine, "bank1", 4, 1, machine->region("audiocpu")->base(), 0x8000);
 	memory_set_bank(machine, "bank1", 4);
 
 	state->maincpu = machine->device("maincpu");
@@ -905,7 +905,7 @@ static MACHINE_START( darius )
 
 static MACHINE_RESET( darius )
 {
-	darius_state *state = (darius_state *)machine->driver_data;
+	darius_state *state = machine->driver_data<darius_state>();
 	int  i;
 
 	state->cpua_ctrl = 0xff;
@@ -930,134 +930,131 @@ static MACHINE_RESET( darius )
 }
 
 
-static MACHINE_DRIVER_START( darius )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(darius_state)
+static MACHINE_CONFIG_START( darius, darius_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000,16000000/2)	/* 8 MHz ? */
-	MDRV_CPU_PROGRAM_MAP(darius_map)
-	MDRV_CPU_VBLANK_INT("lscreen", irq4_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000,16000000/2)	/* 8 MHz ? */
+	MCFG_CPU_PROGRAM_MAP(darius_map)
+	MCFG_CPU_VBLANK_INT("lscreen", irq4_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80,8000000/2)	/* 4 MHz ? */
-	MDRV_CPU_PROGRAM_MAP(darius_sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80,8000000/2)	/* 4 MHz ? */
+	MCFG_CPU_PROGRAM_MAP(darius_sound_map)
 
-	MDRV_CPU_ADD("cpub", M68000,16000000/2)	/* 8 MHz ? */
-	MDRV_CPU_PROGRAM_MAP(darius_cpub_map)
-	MDRV_CPU_VBLANK_INT("lscreen", irq4_line_hold)
+	MCFG_CPU_ADD("cpub", M68000,16000000/2)	/* 8 MHz ? */
+	MCFG_CPU_PROGRAM_MAP(darius_cpub_map)
+	MCFG_CPU_VBLANK_INT("lscreen", irq4_line_hold)
 
-	MDRV_CPU_ADD("adpcm", Z80,8000000/2) /* 4 MHz ? */	/* ADPCM player using MSM5205 */
-	MDRV_CPU_PROGRAM_MAP(darius_sound2_map)
-	MDRV_CPU_IO_MAP(darius_sound2_io_map)
+	MCFG_CPU_ADD("adpcm", Z80,8000000/2) /* 4 MHz ? */	/* ADPCM player using MSM5205 */
+	MCFG_CPU_PROGRAM_MAP(darius_sound2_map)
+	MCFG_CPU_IO_MAP(darius_sound2_io_map)
 
-	MDRV_QUANTUM_TIME(HZ(600))	/* 10 CPU slices per frame ? */
+	MCFG_QUANTUM_TIME(HZ(600))	/* 10 CPU slices per frame ? */
 
-	MDRV_MACHINE_START(darius)
-	MDRV_MACHINE_RESET(darius)
+	MCFG_MACHINE_START(darius)
+	MCFG_MACHINE_RESET(darius)
 
 	/* video hardware */
-	MDRV_GFXDECODE(darius)
-	MDRV_PALETTE_LENGTH(4096*2)
-	MDRV_DEFAULT_LAYOUT(layout_darius)
+	MCFG_GFXDECODE(darius)
+	MCFG_PALETTE_LENGTH(4096*2)
+	MCFG_DEFAULT_LAYOUT(layout_darius)
 
-	MDRV_SCREEN_ADD("lscreen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_SIZE(36*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 36*8-1, 1*8, 29*8-1)
+	MCFG_SCREEN_ADD("lscreen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_SIZE(36*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 36*8-1, 1*8, 29*8-1)
 
-	MDRV_SCREEN_ADD("mscreen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_SIZE(36*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 36*8-1, 1*8, 29*8-1)
+	MCFG_SCREEN_ADD("mscreen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_SIZE(36*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 36*8-1, 1*8, 29*8-1)
 
-	MDRV_SCREEN_ADD("rscreen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_SIZE(36*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 36*8-1, 1*8, 29*8-1)
+	MCFG_SCREEN_ADD("rscreen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_SIZE(36*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 36*8-1, 1*8, 29*8-1)
 
-	MDRV_VIDEO_START(darius)
-	MDRV_VIDEO_UPDATE(darius)
+	MCFG_VIDEO_START(darius)
+	MCFG_VIDEO_UPDATE(darius)
 
-	MDRV_PC080SN_ADD("pc080sn", darius_pc080sn_intf)
+	MCFG_PC080SN_ADD("pc080sn", darius_pc080sn_intf)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ym1", YM2203, 4000000)
-	MDRV_SOUND_CONFIG(ym2203_interface_1)
-	MDRV_SOUND_ROUTE(0, "filter0.0l", 0.08)
-	MDRV_SOUND_ROUTE(0, "filter0.0r", 0.08)
-	MDRV_SOUND_ROUTE(1, "filter0.1l", 0.08)
-	MDRV_SOUND_ROUTE(1, "filter0.1r", 0.08)
-	MDRV_SOUND_ROUTE(2, "filter0.2l", 0.08)
-	MDRV_SOUND_ROUTE(2, "filter0.2r", 0.08)
-	MDRV_SOUND_ROUTE(3, "filter0.3l", 0.60)
-	MDRV_SOUND_ROUTE(3, "filter0.3r", 0.60)
+	MCFG_SOUND_ADD("ym1", YM2203, 4000000)
+	MCFG_SOUND_CONFIG(ym2203_interface_1)
+	MCFG_SOUND_ROUTE(0, "filter0.0l", 0.08)
+	MCFG_SOUND_ROUTE(0, "filter0.0r", 0.08)
+	MCFG_SOUND_ROUTE(1, "filter0.1l", 0.08)
+	MCFG_SOUND_ROUTE(1, "filter0.1r", 0.08)
+	MCFG_SOUND_ROUTE(2, "filter0.2l", 0.08)
+	MCFG_SOUND_ROUTE(2, "filter0.2r", 0.08)
+	MCFG_SOUND_ROUTE(3, "filter0.3l", 0.60)
+	MCFG_SOUND_ROUTE(3, "filter0.3r", 0.60)
 
-	MDRV_SOUND_ADD("ym2", YM2203, 4000000)
-	MDRV_SOUND_CONFIG(ym2203_interface_2)
-	MDRV_SOUND_ROUTE(0, "filter1.0l", 0.08)
-	MDRV_SOUND_ROUTE(0, "filter1.0r", 0.08)
-	MDRV_SOUND_ROUTE(1, "filter1.1l", 0.08)
-	MDRV_SOUND_ROUTE(1, "filter1.1r", 0.08)
-	MDRV_SOUND_ROUTE(2, "filter1.2l", 0.08)
-	MDRV_SOUND_ROUTE(2, "filter1.2r", 0.08)
-	MDRV_SOUND_ROUTE(3, "filter1.3l", 0.60)
-	MDRV_SOUND_ROUTE(3, "filter1.3r", 0.60)
+	MCFG_SOUND_ADD("ym2", YM2203, 4000000)
+	MCFG_SOUND_CONFIG(ym2203_interface_2)
+	MCFG_SOUND_ROUTE(0, "filter1.0l", 0.08)
+	MCFG_SOUND_ROUTE(0, "filter1.0r", 0.08)
+	MCFG_SOUND_ROUTE(1, "filter1.1l", 0.08)
+	MCFG_SOUND_ROUTE(1, "filter1.1r", 0.08)
+	MCFG_SOUND_ROUTE(2, "filter1.2l", 0.08)
+	MCFG_SOUND_ROUTE(2, "filter1.2r", 0.08)
+	MCFG_SOUND_ROUTE(3, "filter1.3l", 0.60)
+	MCFG_SOUND_ROUTE(3, "filter1.3r", 0.60)
 
-	MDRV_SOUND_ADD("msm", MSM5205, 384000)
-	MDRV_SOUND_CONFIG(msm5205_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "msm5205.l", 1.0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "msm5205.r", 1.0)
+	MCFG_SOUND_ADD("msm", MSM5205, 384000)
+	MCFG_SOUND_CONFIG(msm5205_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "msm5205.l", 1.0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "msm5205.r", 1.0)
 
-	MDRV_SOUND_ADD("filter0.0l", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ADD("filter0.0r", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
-	MDRV_SOUND_ADD("filter0.1l", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ADD("filter0.1r", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
-	MDRV_SOUND_ADD("filter0.2l", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ADD("filter0.2r", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
-	MDRV_SOUND_ADD("filter0.3l", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ADD("filter0.3r", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("filter0.0l", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ADD("filter0.0r", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("filter0.1l", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ADD("filter0.1r", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("filter0.2l", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ADD("filter0.2r", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("filter0.3l", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ADD("filter0.3r", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
 
-	MDRV_SOUND_ADD("filter1.0l", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ADD("filter1.0r", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
-	MDRV_SOUND_ADD("filter1.1l", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ADD("filter1.1r", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
-	MDRV_SOUND_ADD("filter1.2l", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ADD("filter1.2r", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
-	MDRV_SOUND_ADD("filter1.3l", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ADD("filter1.3r", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("filter1.0l", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ADD("filter1.0r", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("filter1.1l", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ADD("filter1.1r", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("filter1.2l", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ADD("filter1.2r", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("filter1.3l", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ADD("filter1.3r", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
 
-	MDRV_SOUND_ADD("msm5205.l", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ADD("msm5205.r", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("msm5205.l", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ADD("msm5205.r", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
 
-	MDRV_TC0140SYT_ADD("tc0140syt", darius_tc0140syt_intf)
-MACHINE_DRIVER_END
+	MCFG_TC0140SYT_ADD("tc0140syt", darius_tc0140syt_intf)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************
@@ -1292,7 +1289,7 @@ ROM_END
 static DRIVER_INIT( darius )
 {
 	/**** setup sound bank image ****/
-	UINT8 *RAM = memory_region(machine, "audiocpu");
+	UINT8 *RAM = machine->region("audiocpu")->base();
 	int  i;
 
 	for (i = 3; i >= 0; i--)

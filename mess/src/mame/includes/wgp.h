@@ -4,12 +4,11 @@
 
 *************************************************************************/
 
-class wgp_state
+class wgp_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, wgp_state(machine)); }
-
-	wgp_state(running_machine &machine) { }
+	wgp_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT16 *    spritemap;
@@ -35,11 +34,11 @@ public:
 	INT32       banknum;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *audiocpu;
-	running_device *subcpu;
-	running_device *tc0100scn;
-	running_device *tc0140syt;
+	device_t *maincpu;
+	device_t *audiocpu;
+	device_t *subcpu;
+	device_t *tc0100scn;
+	device_t *tc0140syt;
 };
 
 

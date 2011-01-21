@@ -1,6 +1,8 @@
 #ifndef _GBA_H_
 #define _GBA_H_
 
+#include "machine/intelfsh.h"
+
 #define DISPSTAT_VBL			0x0001
 #define DISPSTAT_HBL			0x0002
 #define DISPSTAT_VCNT			0x0004
@@ -131,12 +133,11 @@ enum
 };
 
 /* driver state */
-class gba_state
+class gba_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, gba_state(machine)); }
-
-	gba_state(running_machine &machine) { }
+	gba_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	UINT32 DISPSTAT;
 	UINT32 BG2X, BG2Y, BG3X, BG3Y;
@@ -184,16 +185,16 @@ public:
 
 	UINT32 gba_sram[0x10000/4];
 	UINT8 gba_eeprom[0x2000];
-	UINT32 gba_flash[0x20000/4];
 	UINT32 flash_size;
 	UINT32 flash_mask;
-	int eeprom_state, eeprom_command, eeprom_count, eeprom_addr, eeprom_bits;
+	intelfsh8_device *mFlashDev;
+	int eeprom_state, eeprom_command, eeprom_count, eeprom_addr, eeprom_bits, eeprom_addr_bits;
 	UINT8 eep_data;
 
 	/* nvram-specific for MESS */
 	UINT8 *nvptr;
 	UINT32 nvsize;
-	running_device *nvimage;
+	device_t *nvimage;
 
 	emu_timer *dma_timer[4], *tmr_timer[4], *irq_timer;
 	emu_timer *scan_timer, *hbl_timer;
@@ -202,6 +203,10 @@ public:
 
 	int fifo_a_ptr, fifo_b_ptr, fifo_a_in, fifo_b_in;
 	UINT8 fifo_a[20], fifo_b[20];
+	UINT32 xferscan[7][240+2048];
+	
+	UINT32 bios_last_address;
+	int bios_protected;
 };
 
 /*----------- defined in video/gba.c -----------*/

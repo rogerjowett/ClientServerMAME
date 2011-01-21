@@ -1,31 +1,43 @@
 /***************************************************************************
 
-    JR-200
+    JR-200 (c) 1982 National / Panasonic
 
-    12/05/2009 Skeleton driver.
+    preliminary driver by Roberto Zandon? and Angelo Salese
 
     http://www.armchairarcade.com/neo/node/1598
 
-****************************************************************************/
-
-/*
-
     TODO:
-
+    - Timings are basically screwed, it takes too much to load the POST but
+      then the cursor blink is too fast
+    - keyboard MCU irq and data polling simulation should be inside a timer
+      callback
     - MN1544 4-bit CPU core and ROM dump
 
-*/
+****************************************************************************/
 
 #include "emu.h"
 #include "cpu/m6800/m6800.h"
+#include "sound/beep.h"
 
-static UINT8 *textram;
-static UINT8 *border;
-static UINT8 io_reg[0x20] = {
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+
+class jr200_state : public driver_device
+{
+public:
+	jr200_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
+
+	UINT8 *vram;
+	UINT8 *cram;
+	UINT8 *mn1271_ram;
+	UINT8 border_col;
+	UINT8 old_keydata;
+	UINT8 freq_reg[2];
+	emu_timer *timer_d;
 };
 
+
+
+/* TODO: double check this */
 static const UINT8 jr200_keycodes[4][9][8] =
 {
 	/* unshifted */
@@ -35,10 +47,10 @@ static const UINT8 jr200_keycodes[4][9][8] =
 	{ 0x37, 0x38, 0x39, 0x09, 0x71, 0x77, 0x65, 0x72 },
 	{ 0x74, 0x79, 0x75, 0x69, 0x6f, 0x70, 0x40, 0x5b },
 	{ 0x1b, 0x2b, 0x34, 0x35, 0x36, 0x61, 0x73, 0x64 },
-	{ 0x66, 0x67, 0x68, 0x6a, 0x6b, 0x6c, 0x3b, 0x3a },
+	{ 0x66, 0x67, 0x68, 0x6a, 0x6b, 0x6c, 0x3b, 0x27 },
 	{ 0x0d, 0x0a, 0x1e, 0x31, 0x32, 0x33, 0x7a, 0x78 },
 	{ 0x63, 0x76, 0x62, 0x6e, 0x6d, 0x2c, 0x2e, 0x2f },
-	{ 0x1d, 0x1f, 0x1c, 0x30, 0x2e, 0x20, 0x00, 0x00 }
+	{ 0x1d, 0x1f, 0x1c, 0x30, 0x2e, 0x20, 0x03, 0x00 }
 	},
 
 	/* shifted */
@@ -48,7 +60,7 @@ static const UINT8 jr200_keycodes[4][9][8] =
 	{ 0x37, 0x38, 0x39, 0x09, 0x51, 0x57, 0x45, 0x52 },
 	{ 0x54, 0x59, 0x55, 0x49, 0x4f, 0x50, 0x40, 0x7b },
 	{ 0x1b, 0x2b, 0x34, 0x35, 0x36, 0x41, 0x53, 0x44 },
-	{ 0x46, 0x47, 0x48, 0x4a, 0x4b, 0x4c, 0x2b, 0x2a },
+	{ 0x46, 0x47, 0x48, 0x4a, 0x4b, 0x4c, 0x3a, 0x22 },
 	{ 0x0d, 0x0a, 0x1e, 0x31, 0x32, 0x33, 0x5a, 0x58 },
 	{ 0x43, 0x56, 0x42, 0x4e, 0x4d, 0x3c, 0x3e, 0x3f },
 	{ 0x1d, 0x1f, 0x1c, 0x30, 0x2e, 0x20, 0x00, 0x00 }
@@ -81,119 +93,257 @@ static const UINT8 jr200_keycodes[4][9][8] =
 	}
 };
 
-#if 0
-static READ8_HANDLER( test_r )
-{
-	return 0x00;
-}
-#endif
 
-static WRITE8_HANDLER( io_reg_w )
+static VIDEO_START( jr200 )
 {
-	io_reg[offset] = data;
 }
 
-static READ8_HANDLER( io_reg_r )
+static VIDEO_UPDATE( jr200 )
 {
-	UINT8 value = 0x00;
+	jr200_state *state = screen->machine->driver_data<jr200_state>();
+	int x,y,xi,yi,pen;
 
-	switch (offset)
+	bitmap_fill(bitmap, cliprect, state->border_col);
+
+	for (y = 0; y < 24; y++)
 	{
-	case 0x01:
+		for (x = 0; x < 32; x++)
 		{
-			// hack
-			int row, col, keydata = 0, table = 0;
-			static const char *const keynames[] = { "ROW0", "ROW1", "ROW2", "ROW3", "ROW4", "ROW5", "ROW6", "ROW7", "ROW8" };
+			UINT8 tile = state->vram[x + y*32];
+			UINT8 attr = state->cram[x + y*32];
 
-			if (input_port_read(space->machine, "ROW9") & 0x07)
+			for(yi=0;yi<8;yi++)
 			{
-				/* shift, upper case */
-				table = 1;
-			}
-
-			/* scan keyboard */
-			for (row = 0; row < 9; row++)
-			{
-				UINT8 data = input_port_read(space->machine, keynames[row]);
-
-				for (col = 0; col < 8; col++)
+				for(xi=0;xi<8;xi++)
 				{
-					if (!BIT(data, col))
+					UINT8 *gfx_data;
+
+					if(attr & 0x80) //bitmap mode
 					{
-						/* latch key data */
-						keydata = jr200_keycodes[table][row][col];
+						/*
+                            this mode draws 4 x 4 dot blocks, by combining lower 6 bits of tile and attribute vram
+
+                            tile def
+                            00xx x--- up-right
+                            00-- -xxx up-left
+                            attr def
+                            10xx x--- down-right
+                            10-- -xxx down-left
+                        */
+						int step;
+
+						step = ((xi & 4) ? 3 : 0);
+						step+= ((yi & 4) ? 6 : 0);
+
+						pen = ((((attr & 0x3f) << 6) | (tile & 0x3f)) >> (step)) & 0x07;
 					}
+					else // tile mode
+					{
+						gfx_data = screen->machine->region(attr & 0x40 ? "pcg" : "gfx_ram")->base();
+
+						pen = (gfx_data[(tile*8)+yi]>>(7-xi) & 1) ? (attr & 0x7) : ((attr & 0x38) >> 3);
+					}
+
+					*BITMAP_ADDR16(bitmap, y*8+yi+16, x*8+xi+16) = screen->machine->pens[pen];
 				}
 			}
-
-			value = keydata;
 		}
-		break;
-	case 0x03:
-		value = 115;
-		break;
-	case 0x07:
-		io_reg[offset] ^= 1;
-		if (io_reg[offset] & 1)
-			value = 224;
-		else
-			value = 96;
-		break;
-	case 0x0a:
-		value = io_reg[offset] & 0xfe;
-		break;
-	case 0x0e:
-		value = 0;
-		break;
-	case 0x10:
-		value = io_reg[offset];
-		if ((value & 64) && (value & 1))
-		{
-			io_reg[offset] = 0;
-			value = 0;
-		}
-		break;
-	case 0x16:
-		value = 78;
-		break;
-	case 0x1c:
-		value = io_reg[offset];
-		io_reg[offset] |= 0x01;
-		break;
-	default:
-		value = io_reg[offset];
-		break;
 	}
 
-	return value;
+	return 0;
 }
 
+static READ8_HANDLER( jr200_pcg_1_r )
+{
+	UINT8 *pcg = space->machine->region("pcg")->base();
+
+	return pcg[offset+0x000];
+}
+
+static READ8_HANDLER( jr200_pcg_2_r )
+{
+	UINT8 *pcg = space->machine->region("pcg")->base();
+
+	return pcg[offset+0x400];
+}
+
+static WRITE8_HANDLER( jr200_pcg_1_w )
+{
+	UINT8 *pcg = space->machine->region("pcg")->base();
+
+	pcg[offset+0x000] = data;
+	gfx_element_mark_dirty(space->machine->gfx[1], (offset+0x000) >> 3);
+}
+
+static WRITE8_HANDLER( jr200_pcg_2_w )
+{
+	UINT8 *pcg = space->machine->region("pcg")->base();
+
+	pcg[offset+0x400] = data;
+	gfx_element_mark_dirty(space->machine->gfx[1], (offset+0x400) >> 3);
+}
+
+static READ8_HANDLER( jr200_bios_char_r )
+{
+	UINT8 *gfx = space->machine->region("gfx_ram")->base();
+
+	return gfx[offset];
+}
+
+
+static WRITE8_HANDLER( jr200_bios_char_w )
+{
+//  UINT8 *gfx = space->machine->region("gfx_ram")->base();
+
+	/* TODO: writing is presumably controlled by an I/O bit */
+//  gfx[offset] = data;
+//  gfx_element_mark_dirty(space->machine->gfx[0], offset >> 3);
+}
+
+/*
+
+I/O Device
+
+*/
+
+static READ8_HANDLER( mcu_keyb_r )
+{
+	jr200_state *state = space->machine->driver_data<jr200_state>();
+	int row, col, table = 0;
+	UINT8 keydata = 0;
+	static const char *const keynames[] = { "ROW0", "ROW1", "ROW2", "ROW3", "ROW4", "ROW5", "ROW6", "ROW7", "ROW8" };
+
+	if (input_port_read(space->machine, "ROW9") & 0x07)
+	{
+		/* shift, upper case */
+		table = 1;
+	}
+
+	/* scan keyboard */
+	for (row = 0; row < 9; row++)
+	{
+		UINT8 data = input_port_read(space->machine, keynames[row]);
+
+		for (col = 0; col < 8; col++)
+		{
+			if (!BIT(data, col))
+			{
+				/* latch key data */
+				keydata = jr200_keycodes[table][row][col];
+			}
+		}
+	}
+
+	if(state->old_keydata == keydata)
+		return 0x00;
+
+	state->old_keydata = keydata;
+
+	return keydata;
+}
+
+static WRITE8_HANDLER( jr200_beep_w )
+{
+	/* writing 0x0e enables the beeper, writing anything else disables it */
+	beep_set_state(space->machine->device("beeper"),((data & 0xf) == 0x0e) ? 1 : 0);
+}
+
+static WRITE8_HANDLER( jr200_beep_freq_w )
+{
+	jr200_state *state = space->machine->driver_data<jr200_state>();
+	UINT32 beep_freq;
+
+	state->freq_reg[offset] = data;
+
+	beep_freq = ((state->freq_reg[0]<<8) | (state->freq_reg[1] & 0xff)) + 1;
+
+	beep_set_frequency(space->machine->device("beeper"),84000 / beep_freq);
+}
+
+static WRITE8_HANDLER( jr200_border_col_w )
+{
+	jr200_state *state = space->machine->driver_data<jr200_state>();
+	state->border_col = data;
+}
+
+
+static TIMER_CALLBACK(timer_d_callback)
+{
+	cpu_set_input_line(machine->firstcpu, 0, HOLD_LINE);
+}
+
+static READ8_HANDLER( mn1271_io_r )
+{
+	jr200_state *state = space->machine->driver_data<jr200_state>();
+	UINT8 retVal = state->mn1271_ram[offset];
+	if((offset+0xc800) > 0xca00)
+		retVal= 0xff;
+
+	switch(offset+0xc800)
+	{
+		case 0xc801: retVal= mcu_keyb_r(space,0); break;
+		case 0xc803: retVal= (state->mn1271_ram[0x03] & 0xcf) | 0x30;  break;//---x ---- printer status ready (ACTIVE HIGH)
+		case 0xc807: retVal= (state->mn1271_ram[0x07] & 0x80) | 0x60; break;
+		case 0xc80a: retVal= (state->mn1271_ram[0x0a] & 0xfe); break;
+		case 0xc80c: retVal= (state->mn1271_ram[0x0c] & 0xdf) | 0x20; break;
+		case 0xc80e: retVal= 0; break;
+		case 0xc810: retVal= 0; break;
+		case 0xc816: retVal= 0x4e; break;
+		case 0xc81c: retVal= (state->mn1271_ram[0x1c] & 0xfe) | 1;  break;//bit 0 needs to be high otherwise system refuses to boot
+		case 0xc81d: retVal= (state->mn1271_ram[0x1d] & 0xed); break;
+	}
+	//logerror("mn1271_io_r [%04x] = %02x\n",offset+0xc800,retVal);
+	return retVal;
+}
+
+static WRITE8_HANDLER( mn1271_io_w )
+{
+	jr200_state *state = space->machine->driver_data<jr200_state>();
+	state->mn1271_ram[offset] = data;
+	switch(offset+0xc800)
+	{
+		case 0xc805: break; //LPT printer port W
+		case 0xc816: if (data!=0) {
+					timer_adjust_periodic(state->timer_d, attotime_zero, 0, attotime_mul(ATTOTIME_IN_HZ(XTAL_14_31818MHz), (state->mn1271_ram[0x17]*0x100 + state->mn1271_ram[0x18])));
+				} else {
+					timer_adjust_periodic(state->timer_d, attotime_zero, 0,  attotime_zero);
+				}
+				break;
+		case 0xc819: jr200_beep_w(space,0,data); break;
+		case 0xc81a:
+		case 0xc81b: jr200_beep_freq_w(space,offset-0x1a,data); break;
+		case 0xca00: jr200_border_col_w(space,0,data); break;
+	}
+}
+
+static ADDRESS_MAP_START(jr200_mem, ADDRESS_SPACE_PROGRAM, 8)
 /*
     0000-3fff RAM
     4000-4fff RAM ( 4k expansion)
     4000-7fff RAM (16k expansion)
     4000-bfff RAM (32k expansion)
-    c100-c3FF text code
-    c500-c7ff text color
-    ca00      border color
 */
+	AM_RANGE(0x0000, 0x7fff) AM_RAM
 
-static ADDRESS_MAP_START(jr200_mem, ADDRESS_SPACE_PROGRAM, 8)
-	AM_RANGE(0x0000, 0x000c) AM_RAM
-	AM_RANGE(0x000d, 0x000d) AM_RAM
-	AM_RANGE(0x000e, 0x3fff) AM_RAM
 	AM_RANGE(0xa000, 0xbfff) AM_ROM
-	AM_RANGE(0xc000, 0xc7ff) AM_RAM AM_BASE(&textram)
-	AM_RANGE(0xc800, 0xc81f) AM_READWRITE(io_reg_r, io_reg_w)
-	AM_RANGE(0xca00, 0xca00) AM_RAM AM_BASE(&border)
-	AM_RANGE(0xe000, 0xffff) AM_ROM
-ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( jr200_io, ADDRESS_SPACE_IO, 8)
+	AM_RANGE(0xc000, 0xc0ff) AM_READWRITE(jr200_pcg_1_r,jr200_pcg_1_w) //PCG area (1)
+	AM_RANGE(0xc100, 0xc3ff) AM_RAM AM_BASE_MEMBER(jr200_state, vram)
+	AM_RANGE(0xc400, 0xc4ff) AM_READWRITE(jr200_pcg_2_r,jr200_pcg_2_w) //PCG area (2)
+	AM_RANGE(0xc500, 0xc7ff) AM_RAM AM_BASE_MEMBER(jr200_state, cram)
+
+//  0xc800 - 0xcfff I / O area
+	AM_RANGE(0xc800, 0xcfff) AM_READWRITE(mn1271_io_r,mn1271_io_w) AM_BASE_MEMBER(jr200_state, mn1271_ram)
+
+	AM_RANGE(0xd000, 0xd7ff) AM_READWRITE(jr200_bios_char_r,jr200_bios_char_w) //BIOS PCG RAM area
+	AM_RANGE(0xd800, 0xdfff) AM_ROM // cart space (header 0x7e)
+	AM_RANGE(0xe000, 0xffff) AM_ROM
 ADDRESS_MAP_END
 
 /* Input ports */
 static INPUT_PORTS_START( jr200 )
+//  PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_VBLANK )
+
 	PORT_START("ROW0")
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("HELP") PORT_CODE(KEYCODE_TILDE)
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_1) PORT_CHAR('1') PORT_CHAR('!')
@@ -257,7 +407,7 @@ static INPUT_PORTS_START( jr200 )
 	PORT_START("ROW6")
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("RETURN") PORT_CODE(KEYCODE_ENTER) PORT_CHAR('\r')
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("LINE FEED") PORT_CODE(KEYCODE_ENTER_PAD)
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("\xE2\x86\x91") PORT_CODE(KEYCODE_UP) PORT_CHAR(UCHAR_MAMEKEY(UP))
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(UTF8_UP) PORT_CODE(KEYCODE_UP) PORT_CHAR(UCHAR_MAMEKEY(UP))
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad 1") PORT_CODE(KEYCODE_1_PAD)
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad 2") PORT_CODE(KEYCODE_2_PAD)
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad 3") PORT_CODE(KEYCODE_3_PAD)
@@ -275,9 +425,9 @@ static INPUT_PORTS_START( jr200 )
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_SLASH) PORT_CHAR('/') PORT_CHAR('?')
 
 	PORT_START("ROW8")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("\xE2\x86\x90") PORT_CODE(KEYCODE_LEFT) PORT_CHAR(UCHAR_MAMEKEY(LEFT))
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("\xE2\x86\x93") PORT_CODE(KEYCODE_DOWN) PORT_CHAR(UCHAR_MAMEKEY(DOWN))
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("\xE2\x86\x92") PORT_CODE(KEYCODE_RIGHT) PORT_CHAR(UCHAR_MAMEKEY(RIGHT))
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(UTF8_LEFT) PORT_CODE(KEYCODE_LEFT) PORT_CHAR(UCHAR_MAMEKEY(LEFT))
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(UTF8_DOWN) PORT_CODE(KEYCODE_DOWN) PORT_CHAR(UCHAR_MAMEKEY(DOWN))
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(UTF8_RIGHT) PORT_CODE(KEYCODE_RIGHT) PORT_CHAR(UCHAR_MAMEKEY(RIGHT))
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad 0") PORT_CODE(KEYCODE_0_PAD)
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad .") PORT_CODE(KEYCODE_ASTERISK)
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("SPACE") PORT_CODE(KEYCODE_SPACE) PORT_CHAR(' ')
@@ -292,56 +442,12 @@ static INPUT_PORTS_START( jr200 )
 	PORT_BIT( 0x10, IP_ACTIVE_HIGH, IPT_KEYBOARD ) PORT_NAME("RIGHT CTRL") PORT_CODE(KEYCODE_RCONTROL) PORT_CHAR(UCHAR_MAMEKEY(RCONTROL))
 INPUT_PORTS_END
 
-
-static MACHINE_RESET(jr200)
-{
-}
-
 static PALETTE_INIT( jr200 )
 {
 	int i;
 
-	for (i = 0; i < 64; i++)
-	{
-		palette_set_color_rgb(machine, 2 * i + 1, pal1bit(i >> 1), pal1bit(i >> 2), pal1bit(i >> 0));
-		palette_set_color_rgb(machine, 2 * i + 0, pal1bit(i >> 4), pal1bit(i >> 5), pal1bit(i >> 3));
-	}
-}
-
-static VIDEO_START( jr200 )
-{
-}
-
-static VIDEO_UPDATE( jr200 )
-{
-	int i,j;
-	const gfx_element *gfx = screen->machine->gfx[0];
-
-	bitmap_fill(bitmap, cliprect, border[0x0000] * 2 + 1);
-
-	for (i = 0; i < 0x02ff; i += 0x20)
-		for (j = 0; j < 0x20; j++)
-		{
-			UINT8 code = textram[0x0100 + i + j];
-			UINT8 col = textram[0x0500 + i + j];
-
-			if (col & 0x80)
-			{
-				UINT8 pixel01 = (textram[0x0100 + i + j] >> 3) & 0x07;
-				UINT8 pixel00 = (textram[0x0100 + i + j] >> 0) & 0x07;
-				UINT8 pixel11 = (textram[0x0500 + i + j] >> 3) & 0x07;
-				UINT8 pixel10 = (textram[0x0500 + i + j] >> 0) & 0x07;
-				plot_box(bitmap, 16 + j * 8    , 16 + (i >> 5) * 8    , 4, 4, pixel00 * 2 + 1);
-				plot_box(bitmap, 16 + j * 8 + 4, 16 + (i >> 5) * 8    , 4, 4, pixel01 * 2 + 1);
-				plot_box(bitmap, 16 + j * 8    , 16 + (i >> 5) * 8 + 4, 4, 4, pixel10 * 2 + 1);
-				plot_box(bitmap, 16 + j * 8 + 4, 16 + (i >> 5) * 8 + 4, 4, 4, pixel11 * 2 + 1);
-			}
-			else
-			{
-				drawgfx_transpen(bitmap, cliprect, gfx, code, col & 0x3f, 0, 0, 16 + j * 8, 16 + (i >> 5) * 8, 15);
-			}
-		}
-	return 0;
+	for (i = 0; i < 8; i++)
+		palette_set_color_rgb(machine, i, pal1bit(i >> 1), pal1bit(i >> 2), pal1bit(i >> 0));
 }
 
 static const gfx_layout tiles8x8_layout =
@@ -356,49 +462,68 @@ static const gfx_layout tiles8x8_layout =
 };
 
 static GFXDECODE_START( jr200 )
-	GFXDECODE_ENTRY( "char", 0, tiles8x8_layout, 0, 64 )
+	GFXDECODE_ENTRY( "gfx_ram", 0, tiles8x8_layout, 0, 1 )
+	GFXDECODE_ENTRY( "pcg", 0, tiles8x8_layout, 0, 1 )
 GFXDECODE_END
 
-
-static INTERRUPT_GEN( jr200_nmi )
+static MACHINE_START(jr200)
 {
-	cpu_set_input_line(device, INPUT_LINE_NMI, PULSE_LINE);
+	jr200_state *state = machine->driver_data<jr200_state>();
+	beep_set_frequency(machine->device("beeper"),0);
+	beep_set_state(machine->device("beeper"),0);
+	state->timer_d = timer_alloc(machine, timer_d_callback, NULL);
 }
 
-static INTERRUPT_GEN( jr200_irq )
+static MACHINE_RESET(jr200)
 {
-	cpu_set_input_line(device, 0, HOLD_LINE);
+	jr200_state *state = machine->driver_data<jr200_state>();
+	UINT8 *gfx_rom = machine->region("gfx_rom")->base();
+	UINT8 *gfx_ram = machine->region("gfx_ram")->base();
+	int i;
+	memset(state->mn1271_ram,0,0x800);
+
+	for(i=0;i<0x800;i++)
+		gfx_ram[i] = gfx_rom[i];
+
+	for(i=0;i<0x800;i+=8)
+		gfx_element_mark_dirty(machine->gfx[0], i >> 3);
 }
 
-static MACHINE_DRIVER_START( jr200 )
+
+static MACHINE_CONFIG_START( jr200, jr200_state )
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6802, 890000) /* MN1800A */
-	MDRV_CPU_PROGRAM_MAP(jr200_mem)
-	MDRV_CPU_IO_MAP(jr200_io)
-	// MDRV_CPU_VBLANK_INT("screen", jr200_irq)
-	MDRV_CPU_PERIODIC_INT(jr200_nmi,20)
-	MDRV_CPU_PERIODIC_INT(jr200_irq,20)
-/*
-    MDRV_CPU_ADD("mn1544", MN1544, ?)
-*/
-	MDRV_MACHINE_RESET(jr200)
+	MCFG_CPU_ADD("maincpu", M6802, XTAL_14_31818MHz / 4) /* MN1800A, ? Mhz assumption that it is same as JR-100*/
+	MCFG_CPU_PROGRAM_MAP(jr200_mem)
+
+//  MCFG_CPU_ADD("mn1544", MN1544, ?)
+
+	MCFG_MACHINE_START(jr200)
+	MCFG_MACHINE_RESET(jr200)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(50)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(16 + 256 + 16, 16 + 192 + 16) /* border size not accurate */
-	MDRV_SCREEN_VISIBLE_AREA(0, 16 + 256 + 16 - 1, 0, 16 + 192 + 16 - 1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(16 + 256 + 16, 16 + 192 + 16) /* border size not accurate */
+	MCFG_SCREEN_VISIBLE_AREA(0, 16 + 256 + 16 - 1, 0, 16 + 192 + 16 - 1)
 
-	MDRV_GFXDECODE(jr200)
-	MDRV_PALETTE_LENGTH(128)
-	MDRV_PALETTE_INIT(jr200)
-	MDRV_VIDEO_START(jr200)
-	MDRV_VIDEO_UPDATE(jr200)
-MACHINE_DRIVER_END
+	MCFG_GFXDECODE(jr200)
+	MCFG_PALETTE_LENGTH(8)
+	MCFG_PALETTE_INIT(jr200)
 
-  
+	MCFG_VIDEO_START(jr200)
+	MCFG_VIDEO_UPDATE(jr200)
+
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+
+	// AY-8910 ?
+
+	MCFG_SOUND_ADD("beeper", BEEP, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS,"mono",0.50)
+MACHINE_CONFIG_END
+
+
 
 /* ROM definition */
 ROM_START( jr200 )
@@ -409,8 +534,12 @@ ROM_START( jr200 )
 	ROM_REGION( 0x10000, "mn1544", ROMREGION_ERASEFF )
 	ROM_LOAD( "mn1544.bin",  0x0000, 0x0400, NO_DUMP )
 
-	ROM_REGION( 0x0800, "char", ROMREGION_ERASEFF )
+	ROM_REGION( 0x0800, "gfx_rom", ROMREGION_ERASEFF )
 	ROM_LOAD( "char.rom", 0x0000, 0x0800, CRC(cb641624) SHA1(6fe890757ebc65bbde67227f9c7c490d8edd84f2) )
+
+	ROM_REGION( 0x0800, "gfx_ram", ROMREGION_ERASEFF )
+
+	ROM_REGION( 0x0800, "pcg", ROMREGION_ERASEFF )
 ROM_END
 
 ROM_START( jr200u )
@@ -421,8 +550,12 @@ ROM_START( jr200u )
 	ROM_REGION( 0x10000, "mn1544", ROMREGION_ERASEFF )
 	ROM_LOAD( "mn1544.bin",  0x0000, 0x0400, NO_DUMP )
 
-	ROM_REGION( 0x0800, "char", ROMREGION_ERASEFF )
+	ROM_REGION( 0x0800, "gfx_rom", ROMREGION_ERASEFF )
 	ROM_LOAD( "char.rom", 0x0000, 0x0800, CRC(cb641624) SHA1(6fe890757ebc65bbde67227f9c7c490d8edd84f2) )
+
+	ROM_REGION( 0x0800, "gfx_ram", ROMREGION_ERASEFF )
+
+	ROM_REGION( 0x0800, "pcg", ROMREGION_ERASEFF )
 ROM_END
 
 /* Driver */

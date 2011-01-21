@@ -46,7 +46,7 @@ static WRITE16_DEVICE_HANDLER( magicstk_coin_eeprom_w )
 
 static WRITE16_HANDLER( magicstk_bgvideoram_w )
 {
-	playmark_state *state = (playmark_state *)space->machine->driver_data;
+	playmark_state *state = space->machine->driver_data<playmark_state>();
 
 	COMBINE_DATA(&state->videoram1[offset]);
 	tilemap_mark_tile_dirty(state->bg_tilemap, offset);
@@ -54,7 +54,7 @@ static WRITE16_HANDLER( magicstk_bgvideoram_w )
 
 static WRITE16_HANDLER( tile_banking_w )
 {
-	playmark_state *state = (playmark_state *)space->machine->driver_data;
+	playmark_state *state = space->machine->driver_data<playmark_state>();
 
 	if (((data >> 12) & 0x0f) != state->tilebank)
 	{
@@ -69,7 +69,7 @@ static WRITE16_DEVICE_HANDLER( oki_banking )
 	{
 		int addr = 0x40000 * ((data & 3) - 1);
 
-		if (addr < memory_region_length(device->machine, "oki"))
+		if (addr < device->machine->region("oki")->bytes())
 			downcast<okim6295_device *>(device)->set_bank_base(addr);
 	}
 }
@@ -87,7 +87,7 @@ static ADDRESS_MAP_START( magicstk_main_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x0c2016, 0x0c2017) AM_READ_PORT("DSW1")
 	AM_RANGE(0x0c2018, 0x0c2019) AM_READ_PORT("DSW2")
 	AM_RANGE(0x0c201c, 0x0c201d) AM_DEVWRITE("oki", oki_banking)
-	AM_RANGE(0x0c201e, 0x0c201f) AM_DEVREADWRITE8("oki", okim6295_r, okim6295_w, 0x00ff)
+	AM_RANGE(0x0c201e, 0x0c201f) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0x00ff)
 	AM_RANGE(0x0c4000, 0x0c4001) AM_WRITENOP
 	AM_RANGE(0x0e0000, 0x0fffff) AM_RAM
 	AM_RANGE(0x100000, 0x100fff) AM_RAM AM_BASE_SIZE_MEMBER(playmark_state, spriteram, spriteram_size)
@@ -107,7 +107,7 @@ static ADDRESS_MAP_START( powerbal_main_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x0c2016, 0x0c2017) AM_READ_PORT("DSW1")
 	AM_RANGE(0x0c2018, 0x0c2019) AM_READ_PORT("DSW2")
 	AM_RANGE(0x0c201c, 0x0c201d) AM_DEVWRITE("oki", oki_banking)
-	AM_RANGE(0x0c201e, 0x0c201f) AM_DEVREADWRITE8("oki", okim6295_r, okim6295_w, 0x00ff)
+	AM_RANGE(0x0c201e, 0x0c201f) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0x00ff)
 	AM_RANGE(0x0c4000, 0x0c4001) AM_WRITENOP
 	AM_RANGE(0x0f0000, 0x0fffff) AM_RAM
 	AM_RANGE(0x101000, 0x101fff) AM_RAM AM_BASE_SIZE_MEMBER(playmark_state, spriteram, spriteram_size)
@@ -377,7 +377,7 @@ INPUT_PORTS_END
 
 static TILE_GET_INFO( powerbal_get_bg_tile_info )
 {
-	playmark_state *state = (playmark_state *)machine->driver_data;
+	playmark_state *state = machine->driver_data<playmark_state>();
 	int code = (state->videoram1[tile_index] & 0x07ff) + state->tilebank * 0x800;
 	int colr = state->videoram1[tile_index] & 0xf000;
 
@@ -389,7 +389,7 @@ static TILE_GET_INFO( powerbal_get_bg_tile_info )
 
 static void draw_sprites( running_machine *machine, bitmap_t *bitmap, const rectangle *cliprect )
 {
-	playmark_state *state = (playmark_state *)machine->driver_data;
+	playmark_state *state = machine->driver_data<playmark_state>();
 	UINT16 *spriteram = state->spriteram;
 	int offs;
 	int height = machine->gfx[0]->height;
@@ -418,7 +418,7 @@ static void draw_sprites( running_machine *machine, bitmap_t *bitmap, const rect
 
 static VIDEO_START( powerbal )
 {
-	playmark_state *state = (playmark_state *)machine->driver_data;
+	playmark_state *state = machine->driver_data<playmark_state>();
 
 	state->bg_tilemap = tilemap_create(machine, powerbal_get_bg_tile_info, tilemap_scan_rows, 8, 8, 64, 32);
 
@@ -429,7 +429,7 @@ static VIDEO_START( powerbal )
 
 static VIDEO_UPDATE( powerbal )
 {
-	playmark_state *state = (playmark_state *)screen->machine->driver_data;
+	playmark_state *state = screen->machine->driver_data<playmark_state>();
 
 	tilemap_draw(bitmap, cliprect, state->bg_tilemap, 0, 0);
 	draw_sprites(screen->machine, bitmap, cliprect);
@@ -471,88 +471,82 @@ GFXDECODE_END
 
 static MACHINE_START( powerbal )
 {
-	playmark_state *state = (playmark_state *)machine->driver_data;
+	playmark_state *state = machine->driver_data<playmark_state>();
 
 	state_save_register_global(machine, state->tilebank);
 }
 
 static MACHINE_RESET( powerbal )
 {
-	playmark_state *state = (playmark_state *)machine->driver_data;
+	playmark_state *state = machine->driver_data<playmark_state>();
 
 	state->tilebank = 0;
 }
 
-static MACHINE_DRIVER_START( powerbal )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(playmark_state)
+static MACHINE_CONFIG_START( powerbal, playmark_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 12000000)	/* 12 MHz */
-	MDRV_CPU_PROGRAM_MAP(powerbal_main_map)
-	MDRV_CPU_VBLANK_INT("screen", irq2_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, 12000000)	/* 12 MHz */
+	MCFG_CPU_PROGRAM_MAP(powerbal_main_map)
+	MCFG_CPU_VBLANK_INT("screen", irq2_line_hold)
 
-	MDRV_MACHINE_START(powerbal)
-	MDRV_MACHINE_RESET(powerbal)
+	MCFG_MACHINE_START(powerbal)
+	MCFG_MACHINE_RESET(powerbal)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(61)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(128*8, 64*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 0*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(61)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(128*8, 64*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 0*8, 30*8-1)
 
-	MDRV_GFXDECODE(powerbal)
-	MDRV_PALETTE_LENGTH(512)
+	MCFG_GFXDECODE(powerbal)
+	MCFG_PALETTE_LENGTH(512)
 
-	MDRV_VIDEO_START(powerbal)
-	MDRV_VIDEO_UPDATE(powerbal)
+	MCFG_VIDEO_START(powerbal)
+	MCFG_VIDEO_UPDATE(powerbal)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_OKIM6295_ADD("oki", 1000000, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 1000000, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( magicstk )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(playmark_state)
+static MACHINE_CONFIG_START( magicstk, playmark_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 12000000)	/* 12 MHz */
-	MDRV_CPU_PROGRAM_MAP(magicstk_main_map)
-	MDRV_CPU_VBLANK_INT("screen", irq2_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, 12000000)	/* 12 MHz */
+	MCFG_CPU_PROGRAM_MAP(magicstk_main_map)
+	MCFG_CPU_VBLANK_INT("screen", irq2_line_hold)
 
-	MDRV_EEPROM_ADD("eeprom", eeprom_intf)
-	MDRV_EEPROM_DEFAULT_VALUE(0)
+	MCFG_EEPROM_ADD("eeprom", eeprom_intf)
+	MCFG_EEPROM_DEFAULT_VALUE(0)
 
-	MDRV_MACHINE_START(powerbal)
-	MDRV_MACHINE_RESET(powerbal)
+	MCFG_MACHINE_START(powerbal)
+	MCFG_MACHINE_RESET(powerbal)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(61)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(128*8, 64*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 0*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(61)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(128*8, 64*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 0*8, 30*8-1)
 
-	MDRV_GFXDECODE(powerbal)
-	MDRV_PALETTE_LENGTH(512)
+	MCFG_GFXDECODE(powerbal)
+	MCFG_PALETTE_LENGTH(512)
 
-	MDRV_VIDEO_START(powerbal)
-	MDRV_VIDEO_UPDATE(powerbal)
+	MCFG_VIDEO_START(powerbal)
+	MCFG_VIDEO_UPDATE(powerbal)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_OKIM6295_ADD("oki", 1000000, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 1000000, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 /*
@@ -688,7 +682,7 @@ ROM_END
 
 static DRIVER_INIT( powerbal )
 {
-	playmark_state *state = (playmark_state *)machine->driver_data;
+	playmark_state *state = machine->driver_data<playmark_state>();
 
 	state->bg_yoffset = 16;
 	state->yoffset = -8;
@@ -696,7 +690,7 @@ static DRIVER_INIT( powerbal )
 
 static DRIVER_INIT( magicstk )
 {
-	playmark_state *state = (playmark_state *)machine->driver_data;
+	playmark_state *state = machine->driver_data<playmark_state>();
 
 	state->bg_yoffset = 0;
 	state->yoffset = -5;

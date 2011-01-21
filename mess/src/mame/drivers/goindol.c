@@ -26,7 +26,7 @@ Notes:
 
 static WRITE8_HANDLER( goindol_bankswitch_w )
 {
-	goindol_state *state = (goindol_state *)space->machine->driver_data;
+	goindol_state *state = space->machine->driver_data<goindol_state>();
 
 	memory_set_bank(space->machine, "bank1", data & 0x03);
 
@@ -43,7 +43,7 @@ static WRITE8_HANDLER( goindol_bankswitch_w )
 
 static READ8_HANDLER( prot_f422_r )
 {
-	goindol_state *state = (goindol_state *)space->machine->driver_data;
+	goindol_state *state = space->machine->driver_data<goindol_state>();
 
 	/* bit 7 = vblank? */
 	state->prot_toggle ^= 0x80;
@@ -54,7 +54,7 @@ static READ8_HANDLER( prot_f422_r )
 
 static WRITE8_HANDLER( prot_fc44_w )
 {
-	goindol_state *state = (goindol_state *)space->machine->driver_data;
+	goindol_state *state = space->machine->driver_data<goindol_state>();
 
 	logerror("%04x: prot_fc44_w(%02x)\n", cpu_get_pc(space->cpu), data);
 	state->ram[0x0419] = 0x5b;
@@ -64,7 +64,7 @@ static WRITE8_HANDLER( prot_fc44_w )
 
 static WRITE8_HANDLER( prot_fd99_w )
 {
-	goindol_state *state = (goindol_state *)space->machine->driver_data;
+	goindol_state *state = space->machine->driver_data<goindol_state>();
 
 	logerror("%04x: prot_fd99_w(%02x)\n", cpu_get_pc(space->cpu), data);
 	state->ram[0x0421] = 0x3f;
@@ -72,7 +72,7 @@ static WRITE8_HANDLER( prot_fd99_w )
 
 static WRITE8_HANDLER( prot_fc66_w )
 {
-	goindol_state *state = (goindol_state *)space->machine->driver_data;
+	goindol_state *state = space->machine->driver_data<goindol_state>();
 
 	logerror("%04x: prot_fc66_w(%02x)\n", cpu_get_pc(space->cpu), data);
 	state->ram[0x0423] = 0x06;
@@ -80,7 +80,7 @@ static WRITE8_HANDLER( prot_fc66_w )
 
 static WRITE8_HANDLER( prot_fcb0_w )
 {
-	goindol_state *state = (goindol_state *)space->machine->driver_data;
+	goindol_state *state = space->machine->driver_data<goindol_state>();
 
 	logerror("%04x: prot_fcb0_w(%02x)\n", cpu_get_pc(space->cpu), data);
 	state->ram[0x0425] = 0x06;
@@ -226,8 +226,8 @@ GFXDECODE_END
 
 static MACHINE_START( goindol )
 {
-	goindol_state *state = (goindol_state *)machine->driver_data;
-	UINT8 *ROM = memory_region(machine, "maincpu");
+	goindol_state *state = machine->driver_data<goindol_state>();
+	UINT8 *ROM = machine->region("maincpu")->base();
 
 	memory_configure_bank(machine, "bank1", 0, 4, &ROM[0x10000], 0x4000);
 
@@ -237,50 +237,47 @@ static MACHINE_START( goindol )
 
 static MACHINE_RESET( goindol )
 {
-	goindol_state *state = (goindol_state *)machine->driver_data;
+	goindol_state *state = machine->driver_data<goindol_state>();
 
 	state->char_bank = 0;
 	state->prot_toggle = 0;
 }
 
-static MACHINE_DRIVER_START( goindol )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(goindol_state)
+static MACHINE_CONFIG_START( goindol, goindol_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, 6000000)        /* 6 MHz (?) */
-	MDRV_CPU_PROGRAM_MAP(goindol_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80, XTAL_12MHz/2)	/* XTAL confirmed, divisor is not */
+	MCFG_CPU_PROGRAM_MAP(goindol_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 4000000)
-	MDRV_CPU_PROGRAM_MAP(sound_map)
-	MDRV_CPU_VBLANK_INT_HACK(irq0_line_hold,4)
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL_12MHz/2)	/* XTAL confirmed, divisor is not */
+	MCFG_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_VBLANK_INT_HACK(irq0_line_hold,4)
 
-	MDRV_MACHINE_START(goindol)
-	MDRV_MACHINE_RESET(goindol)
+	MCFG_MACHINE_START(goindol)
+	MCFG_MACHINE_RESET(goindol)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(goindol)
-	MDRV_PALETTE_LENGTH(256)
+	MCFG_GFXDECODE(goindol)
+	MCFG_PALETTE_LENGTH(256)
 
-	MDRV_PALETTE_INIT(RRRR_GGGG_BBBB)
-	MDRV_VIDEO_START(goindol)
-	MDRV_VIDEO_UPDATE(goindol)
+	MCFG_PALETTE_INIT(RRRR_GGGG_BBBB)
+	MCFG_VIDEO_START(goindol)
+	MCFG_VIDEO_UPDATE(goindol)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM2203, 2000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2203, XTAL_12MHz/8)	/* Confirmed pitch from recording */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+MACHINE_CONFIG_END
 
 
 
@@ -394,7 +391,7 @@ ROM_END
 
 static DRIVER_INIT( goindol )
 {
-	UINT8 *rom = memory_region(machine, "maincpu");
+	UINT8 *rom = machine->region("maincpu")->base();
 
 
 	/* I hope that's all patches to avoid protection */

@@ -25,14 +25,14 @@ struct _ym2608_state
 	void *			chip;
 	void *			psg;
 	const ym2608_interface *intf;
-	running_device *device;
+	device_t *device;
 };
 
 
-INLINE ym2608_state *get_safe_token(running_device *device)
+INLINE ym2608_state *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
-	assert(device->type() == SOUND_YM2608);
+	assert(device->type() == YM2608);
 	return (ym2608_state *)downcast<legacy_device_base *>(device)->token();
 }
 
@@ -149,7 +149,7 @@ static DEVICE_START( ym2608 )
 	info->device = device;
 
 	/* FIXME: Force to use simgle output */
-	info->psg = ay8910_start_ym(NULL, SOUND_YM2608, device, device->clock(), &intf->ay8910_intf);
+	info->psg = ay8910_start_ym(NULL, YM2608, device, device->clock(), &intf->ay8910_intf);
 	assert_always(info->psg != NULL, "Error creating YM2608/AY8910 chip");
 
 	/* Timer Handler set */

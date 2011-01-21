@@ -126,10 +126,10 @@ static double make_fraction(attotime a, attotime b, double timediv);
 static double get_filtered_volume(speaker_state *sp);
 
 
-INLINE speaker_state *get_safe_token(running_device *device)
+INLINE speaker_state *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
-	assert(device->type() == SOUND_SPEAKER);
+	assert(device->type() == SPEAKER_SOUND);
 	return (speaker_state *)downcast<legacy_device_base *>(device)->token();
 }
 
@@ -260,7 +260,7 @@ static STREAM_UPDATE( speaker_sound_update )
 } /* speaker_sound_update */
 
 
-void speaker_level_w(running_device *device, int new_level)
+void speaker_level_w(device_t *device, int new_level)
 {
 	speaker_state *sp = get_safe_token(device);
 	int volume;
@@ -424,7 +424,7 @@ static double get_filtered_volume(speaker_state *sp)
  * Generic get_info
  **************************************************************************/
 
-DEVICE_GET_INFO( speaker )
+DEVICE_GET_INFO( speaker_sound )
 {
 	switch (state)
 	{
@@ -446,4 +446,4 @@ DEVICE_GET_INFO( speaker )
 }
 
 
-DEFINE_LEGACY_SOUND_DEVICE(SPEAKER, speaker);
+DEFINE_LEGACY_SOUND_DEVICE(SPEAKER_SOUND, speaker_sound);

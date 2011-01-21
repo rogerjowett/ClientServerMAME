@@ -47,7 +47,7 @@
 
 static TIMER_CALLBACK( interrupt_callback )
 {
-	mystston_state *state = (mystston_state *)machine->driver_data;
+	mystston_state *state = machine->driver_data<mystston_state>();
 	int scanline = param;
 
 	mystston_on_scanline_interrupt(machine);
@@ -75,7 +75,7 @@ static void set_palette(running_machine *machine, mystston_state *state)
 	static const int resistances_b [2] = { 3300, 1500 };
 	double weights_rg[3], weights_b[2];
 
-	UINT8 *color_prom = memory_region(machine, "proms");
+	UINT8 *color_prom = machine->region("proms")->base();
 
 	compute_resistor_weights(0,	255, -1.0,
 			3, resistances_rg, weights_rg, 0, 1000,
@@ -125,7 +125,7 @@ static void set_palette(running_machine *machine, mystston_state *state)
 
 WRITE8_HANDLER( mystston_video_control_w )
 {
-	mystston_state *state = (mystston_state *)space->machine->driver_data;
+	mystston_state *state = space->machine->driver_data<mystston_state>();
 
 	*state->video_control = data;
 
@@ -151,7 +151,7 @@ WRITE8_HANDLER( mystston_video_control_w )
 
 static TILE_GET_INFO( get_bg_tile_info )
 {
-	mystston_state *state = (mystston_state *)machine->driver_data;
+	mystston_state *state = machine->driver_data<mystston_state>();
 
 	int page = (*state->video_control & 0x04) << 8;
 	int code = ((state->bg_videoram[page | 0x200 | tile_index] & 0x01) << 8) | state->bg_videoram[page | tile_index];
@@ -163,7 +163,7 @@ static TILE_GET_INFO( get_bg_tile_info )
 
 static TILE_GET_INFO( get_fg_tile_info )
 {
-	mystston_state *state = (mystston_state *)machine->driver_data;
+	mystston_state *state = machine->driver_data<mystston_state>();
 
 	int code = ((state->fg_videoram[0x400 | tile_index] & 0x07) << 8) | state->fg_videoram[tile_index];
 	int color = ((*state->video_control & 0x01) << 1) | ((*state->video_control & 0x02) >> 1);
@@ -181,7 +181,7 @@ static TILE_GET_INFO( get_fg_tile_info )
 
 static void draw_sprites(bitmap_t *bitmap, const rectangle *cliprect, const gfx_element *gfx, int flip)
 {
-	mystston_state *state = (mystston_state *)gfx->machine->driver_data;
+	mystston_state *state = gfx->machine->driver_data<mystston_state>();
 	int offs;
 
 	for (offs = 0; offs < 0x60; offs += 4)
@@ -220,7 +220,7 @@ static void draw_sprites(bitmap_t *bitmap, const rectangle *cliprect, const gfx_
 
 static VIDEO_START( mystston )
 {
-	mystston_state *state = (mystston_state *)machine->driver_data;
+	mystston_state *state = machine->driver_data<mystston_state>();
 
 	state->bg_tilemap = tilemap_create(machine, get_bg_tile_info, tilemap_scan_cols_flip_x, 16, 16, 16, 32);
 
@@ -241,7 +241,7 @@ static VIDEO_START( mystston )
 
 static VIDEO_RESET( mystston )
 {
-	mystston_state *state = (mystston_state *)machine->driver_data;
+	mystston_state *state = machine->driver_data<mystston_state>();
 
 	timer_adjust_oneshot(state->interrupt_timer, machine->primary_screen->time_until_pos(FIRST_INT_VPOS - 1, INT_HPOS), FIRST_INT_VPOS);
 }
@@ -256,7 +256,7 @@ static VIDEO_RESET( mystston )
 
 static VIDEO_UPDATE( mystston )
 {
-	mystston_state *state = (mystston_state *)screen->machine->driver_data;
+	mystston_state *state = screen->machine->driver_data<mystston_state>();
 
 	int flip = (*state->video_control & 0x80) ^ ((input_port_read(screen->machine, "DSW1") & 0x20) << 2);
 
@@ -321,16 +321,16 @@ GFXDECODE_END
  *
  *************************************/
 
-MACHINE_DRIVER_START( mystston_video )
+MACHINE_CONFIG_FRAGMENT( mystston_video )
 
-	MDRV_VIDEO_START(mystston)
-	MDRV_VIDEO_RESET(mystston)
-	MDRV_VIDEO_UPDATE(mystston)
+	MCFG_VIDEO_START(mystston)
+	MCFG_VIDEO_RESET(mystston)
+	MCFG_VIDEO_UPDATE(mystston)
 
-	MDRV_GFXDECODE(mystston)
-	MDRV_PALETTE_LENGTH(0x40)
+	MCFG_GFXDECODE(mystston)
+	MCFG_PALETTE_LENGTH(0x40)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_RAW_PARAMS(PIXEL_CLOCK, HTOTAL, HBEND, HBSTART, VTOTAL, VBEND, VBSTART)
-MACHINE_DRIVER_END
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_RAW_PARAMS(PIXEL_CLOCK, HTOTAL, HBEND, HBSTART, VTOTAL, VBEND, VBSTART)
+MACHINE_CONFIG_END

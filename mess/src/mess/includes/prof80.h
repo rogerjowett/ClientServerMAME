@@ -26,12 +26,11 @@
 #define UNIO_CENTRONICS1_TAG	"n3"
 #define UNIO_CENTRONICS2_TAG	"n4"
 
-class prof80_state
+class prof80_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, prof80_state(machine)); }
-
-	prof80_state(running_machine &machine) { }
+	prof80_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory state */
 	UINT8 mmu[16];			/* MMU block register */
@@ -51,8 +50,8 @@ public:
 	UINT8 gripc;			/* GRIP status */
 
 	/* devices */
-	running_device *upd765;
-	running_device *upd1990a;
+	device_t *upd765;
+	device_t *upd1990a;
 
 	/* timers */
 	emu_timer	*floppy_motor_off_timer;
@@ -74,10 +73,10 @@ public:
 	int flash;				/* flash */
 
 	/* devices */
-	running_device *mc6845;
-	running_device *ppi8255;
-	running_device *z80sti;
-	running_device *centronics;
+	device_t *mc6845;
+	device_t *ppi8255;
+	device_t *z80sti;
+	device_t *centronics;
 };
 
 #endif

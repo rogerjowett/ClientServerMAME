@@ -141,6 +141,7 @@ Updates by Bryan McPhail, 12/12/2004:
 #include "cpu/m6809/m6809.h"
 #include "cpu/m6805/m6805.h"
 #include "sound/2203intf.h"
+#include "includes/xain.h"
 
 #define MASTER_CLOCK		XTAL_12MHz
 #define CPU_CLOCK			MASTER_CLOCK / 8
@@ -148,19 +149,6 @@ Updates by Bryan McPhail, 12/12/2004:
 #define PIXEL_CLOCK			MASTER_CLOCK / 2
 
 static int vblank;
-
-VIDEO_UPDATE( xain );
-VIDEO_START( xain );
-WRITE8_HANDLER( xain_scrollxP0_w );
-WRITE8_HANDLER( xain_scrollyP0_w );
-WRITE8_HANDLER( xain_scrollxP1_w );
-WRITE8_HANDLER( xain_scrollyP1_w );
-WRITE8_HANDLER( xain_charram_w );
-WRITE8_HANDLER( xain_bgram0_w );
-WRITE8_HANDLER( xain_bgram1_w );
-WRITE8_HANDLER( xain_flipscreen_w );
-
-extern UINT8 *xain_charram, *xain_bgram0, *xain_bgram1, xain_pri;
 
 /* MCU */
 static int from_main;
@@ -572,7 +560,7 @@ GFXDECODE_END
 
 
 /* handler called by the 2203 emulator when the internal timers cause an IRQ */
-static void irqhandler(running_device *device, int irq)
+static void irqhandler(device_t *device, int irq)
 {
 	cputag_set_input_line(device->machine, "audiocpu", M6809_FIRQ_LINE, irq ? ASSERT_LINE : CLEAR_LINE);
 }
@@ -589,65 +577,64 @@ static const ym2203_interface ym2203_config =
 
 static MACHINE_START( xsleena )
 {
-	memory_configure_bank(machine, "bank1", 0, 2, memory_region(machine, "maincpu") + 0x4000, 0xc000);
-	memory_configure_bank(machine, "bank2", 0, 2, memory_region(machine, "sub")  + 0x4000, 0xc000);
+	memory_configure_bank(machine, "bank1", 0, 2, machine->region("maincpu")->base() + 0x4000, 0xc000);
+	memory_configure_bank(machine, "bank2", 0, 2, machine->region("sub")->base()  + 0x4000, 0xc000);
 	memory_set_bank(machine, "bank1", 0);
 	memory_set_bank(machine, "bank2", 0);
 }
 
-static MACHINE_DRIVER_START( xsleena )
+static MACHINE_CONFIG_START( xsleena, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6809, CPU_CLOCK)
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_TIMER_ADD_SCANLINE("scantimer", xain_scanline, "screen", 0, 1)
+	MCFG_CPU_ADD("maincpu", M6809, CPU_CLOCK)
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", xain_scanline, "screen", 0, 1)
 
-	MDRV_CPU_ADD("sub", M6809, CPU_CLOCK)
-	MDRV_CPU_PROGRAM_MAP(cpu_map_B)
+	MCFG_CPU_ADD("sub", M6809, CPU_CLOCK)
+	MCFG_CPU_PROGRAM_MAP(cpu_map_B)
 
-	MDRV_CPU_ADD("audiocpu", M6809, CPU_CLOCK)
-	MDRV_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_ADD("audiocpu", M6809, CPU_CLOCK)
+	MCFG_CPU_PROGRAM_MAP(sound_map)
 
-	MDRV_CPU_ADD("mcu", M68705, MCU_CLOCK)
-	MDRV_CPU_PROGRAM_MAP(mcu_map)
+	MCFG_CPU_ADD("mcu", M68705, MCU_CLOCK)
+	MCFG_CPU_PROGRAM_MAP(mcu_map)
 
-	MDRV_MACHINE_START(xsleena)
+	MCFG_MACHINE_START(xsleena)
 
-	MDRV_QUANTUM_PERFECT_CPU("maincpu")
+	MCFG_QUANTUM_PERFECT_CPU("maincpu")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_RAW_PARAMS(PIXEL_CLOCK, 384, 0, 256, 272, 8, 248)	/* based on ddragon driver */
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_RAW_PARAMS(PIXEL_CLOCK, 384, 0, 256, 272, 8, 248)	/* based on ddragon driver */
 
-	MDRV_GFXDECODE(xain)
-	MDRV_PALETTE_LENGTH(512)
+	MCFG_GFXDECODE(xain)
+	MCFG_PALETTE_LENGTH(512)
 
-	MDRV_VIDEO_START(xain)
-	MDRV_VIDEO_UPDATE(xain)
+	MCFG_VIDEO_START(xain)
+	MCFG_VIDEO_UPDATE(xain)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ym1", YM2203, MCU_CLOCK)
-	MDRV_SOUND_CONFIG(ym2203_config)
-	MDRV_SOUND_ROUTE(0, "mono", 0.50)
-	MDRV_SOUND_ROUTE(1, "mono", 0.50)
-	MDRV_SOUND_ROUTE(2, "mono", 0.50)
-	MDRV_SOUND_ROUTE(3, "mono", 0.40)
+	MCFG_SOUND_ADD("ym1", YM2203, MCU_CLOCK)
+	MCFG_SOUND_CONFIG(ym2203_config)
+	MCFG_SOUND_ROUTE(0, "mono", 0.50)
+	MCFG_SOUND_ROUTE(1, "mono", 0.50)
+	MCFG_SOUND_ROUTE(2, "mono", 0.50)
+	MCFG_SOUND_ROUTE(3, "mono", 0.40)
 
-	MDRV_SOUND_ADD("ym2", YM2203, MCU_CLOCK)
-	MDRV_SOUND_ROUTE(0, "mono", 0.50)
-	MDRV_SOUND_ROUTE(1, "mono", 0.50)
-	MDRV_SOUND_ROUTE(2, "mono", 0.50)
-	MDRV_SOUND_ROUTE(3, "mono", 0.40)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ym2", YM2203, MCU_CLOCK)
+	MCFG_SOUND_ROUTE(0, "mono", 0.50)
+	MCFG_SOUND_ROUTE(1, "mono", 0.50)
+	MCFG_SOUND_ROUTE(2, "mono", 0.50)
+	MCFG_SOUND_ROUTE(3, "mono", 0.40)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( xsleenab )
-	MDRV_IMPORT_FROM(xsleena)
-	MDRV_DEVICE_REMOVE("mcu")
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( xsleenab, xsleena )
+	MCFG_DEVICE_REMOVE("mcu")
+MACHINE_CONFIG_END
 
 
 /***************************************************************************

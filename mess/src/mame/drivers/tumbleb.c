@@ -312,6 +312,7 @@ Stephh's notes (based on the games M68000 code and some tests) :
 #include "cpu/z80/z80.h"
 #include "cpu/m68000/m68000.h"
 #include "cpu/h6280/h6280.h"
+#include "cpu/mcs51/mcs51.h" // for semicom mcu
 #include "includes/decocrpt.h"
 #include "sound/2151intf.h"
 #include "sound/3812intf.h"
@@ -325,16 +326,17 @@ static WRITE16_HANDLER( semicom_soundcmd_w );
 
 /******************************************************************************/
 
-static WRITE16_DEVICE_HANDLER( tumblepb_oki_w )
+static WRITE16_HANDLER( tumblepb_oki_w )
 {
+	okim6295_device *oki = space->machine->device<okim6295_device>("oki");
 	if (mem_mask == 0xffff)
 	{
-		okim6295_w(device, 0, data & 0xff);
+		oki->write(*space, 0, data & 0xff);
 		//printf("tumbleb_oki_w %04x %04x\n", data, mem_mask);
 	}
 	else
 	{
-		okim6295_w(device, 0, (data >> 8) & 0xff);
+		oki->write(*space, 0, (data >> 8) & 0xff);
 		//printf("tumbleb_oki_w %04x %04x\n", data, mem_mask);
 	}
     /* STUFF IN OTHER BYTE TOO..*/
@@ -348,7 +350,7 @@ static READ16_HANDLER( tumblepb_prot_r )
 #ifdef UNUSED_FUNCTION
 static WRITE16_HANDLER( tumblepb_sound_w )
 {
-	tumbleb_state *state = (tumbleb_state *)space->machine->driver_data;
+	tumbleb_state *state = space->machine->driver_data<tumbleb_state>();
 	soundlatch_w(space, 0, data & 0xff);
 	cpu_set_input_line(state->audiocpu, 0, HOLD_LINE);
 }
@@ -356,7 +358,7 @@ static WRITE16_HANDLER( tumblepb_sound_w )
 
 static WRITE16_HANDLER( jumppop_sound_w )
 {
-	tumbleb_state *state = (tumbleb_state *)space->machine->driver_data;
+	tumbleb_state *state = space->machine->driver_data<tumbleb_state>();
 	soundlatch_w(space, 0, data & 0xff);
 	cpu_set_input_line(state->audiocpu, 0, ASSERT_LINE);
 }
@@ -450,17 +452,18 @@ command 1 - stop?
 */
 
 
-static void tumbleb2_playmusic( running_device *device )
+static void tumbleb2_playmusic( device_t *device )
 {
-	tumbleb_state *state = (tumbleb_state *)device->machine->driver_data;
-	int status = okim6295_r(device, 0);
+	tumbleb_state *state = device->machine->driver_data<tumbleb_state>();
+	okim6295_device *oki = downcast<okim6295_device *>(device);
+	int status = oki->read_status();
 
 	if (state->music_is_playing)
 	{
 		if (!BIT(status, 3))
 		{
-			okim6295_w(device, 0, 0x80 | state->music_command);
-			okim6295_w(device, 0, 0x00 | 0x82);
+			oki->write_command(0x80 | state->music_command);
+			oki->write_command(0x00 | 0x82);
 		}
 	}
 }
@@ -468,7 +471,7 @@ static void tumbleb2_playmusic( running_device *device )
 
 static INTERRUPT_GEN( tumbleb2_interrupt )
 {
-	tumbleb_state *state = (tumbleb_state *)device->machine->driver_data;
+	tumbleb_state *state = device->machine->driver_data<tumbleb_state>();
 	cpu_set_input_line(device, 6, HOLD_LINE);
 	tumbleb2_playmusic(state->oki);
 }
@@ -496,28 +499,28 @@ static const int tumbleb_sound_lookup[256] = {
 /* we use channels 1,2,3 for sound effects, and channel 4 for music */
 static void tumbleb2_set_music_bank( running_machine *machine, int bank )
 {
-	UINT8 *oki = memory_region(machine, "oki");
+	UINT8 *oki = machine->region("oki")->base();
 	memcpy(&oki[0x38000], &oki[0x80000 + 0x38000 + 0x8000 * bank], 0x8000);
 }
 
-static void tumbleb2_play_sound( running_device *device, int data )
+static void tumbleb2_play_sound( okim6295_device *oki, int data )
 {
-	int status = okim6295_r(device, 0);
+	int status = oki->read_status();
 
 	if (!BIT(status, 0))
 	{
-		okim6295_w(device, 0, 0x80 | data);
-		okim6295_w(device, 0, 0x00 | 0x12);
+		oki->write_command(0x80 | data);
+		oki->write_command(0x00 | 0x12);
 	}
 	else if (!BIT(status, 1))
 	{
-		okim6295_w(device, 0, 0x80 | data);
-		okim6295_w(device, 0, 0x00 | 0x22);
+		oki->write_command(0x80 | data);
+		oki->write_command(0x00 | 0x22);
 	}
 	else if (!BIT(status, 2))
 	{
-		okim6295_w(device, 0, 0x80 | data);
-		okim6295_w(device, 0, 0x00 | 0x42);
+		oki->write_command(0x80 | data);
+		oki->write_command(0x00 | 0x42);
 	}
 }
 
@@ -533,16 +536,16 @@ static void tumbleb2_play_sound( running_device *device, int data )
 // bank 7 = how to play?
 // bank 8 = boss???
 
-static void process_tumbleb2_music_command( running_device *device, int data )
+static void process_tumbleb2_music_command( okim6295_device *oki, int data )
 {
-	tumbleb_state *state = (tumbleb_state *)device->machine->driver_data;
-	int status = okim6295_r(device, 0);
+	tumbleb_state *state = oki->machine->driver_data<tumbleb_state>();
+	int status = oki->read_status();
 
 	if (data == 1) // stop?
 	{
 		if (BIT(status, 3))
 		{
-			okim6295_w(device, 0, 0x40);		/* Stop playing music */
+			oki->write_command(0x40);		/* Stop playing music */
 			state->music_is_playing = 0;
 		}
 	}
@@ -551,7 +554,7 @@ static void process_tumbleb2_music_command( running_device *device, int data )
 		if (state->music_is_playing != data)
 		{
 			state->music_is_playing = data;
-			okim6295_w(device, 0, 0x40); // stop the current music
+			oki->write_command(0x40); // stop the current music
 			switch (data)
 			{
 				case 0x04: // map screen
@@ -625,8 +628,8 @@ static void process_tumbleb2_music_command( running_device *device, int data )
 					break;
 			}
 
-			tumbleb2_set_music_bank(device->machine, state->music_bank);
-			tumbleb2_playmusic(device);
+			tumbleb2_set_music_bank(oki->machine, state->music_bank);
+			tumbleb2_playmusic(oki);
 		}
 	}
 }
@@ -643,11 +646,11 @@ static WRITE16_DEVICE_HANDLER( tumbleb2_soundmcu_w )
 	}
 	else if (sound == -2)
 	{
-		process_tumbleb2_music_command(device, data);
+		process_tumbleb2_music_command(downcast<okim6295_device *>(device), data);
 	}
 	else
 	{
-		tumbleb2_play_sound(device, sound);
+		tumbleb2_play_sound(downcast<okim6295_device *>(device), sound);
 	}
 }
 
@@ -658,7 +661,7 @@ static ADDRESS_MAP_START( tumblepopb_main_map, ADDRESS_SPACE_PROGRAM, 16 )
 #if TUMBLEP_HACK
 	AM_RANGE(0x000000, 0x07ffff) AM_WRITEONLY	/* To write levels modifications */
 #endif
-	AM_RANGE(0x100000, 0x100001) AM_READ(tumblepb_prot_r) AM_DEVWRITE("oki", tumblepb_oki_w)
+	AM_RANGE(0x100000, 0x100001) AM_READWRITE(tumblepb_prot_r, tumblepb_oki_w)
 	AM_RANGE(0x120000, 0x123fff) AM_RAM AM_BASE_MEMBER(tumbleb_state, mainram)
 	AM_RANGE(0x140000, 0x1407ff) AM_RAM_WRITE(paletteram16_xxxxBBBBGGGGRRRR_word_w) AM_BASE_GENERIC(paletteram)
 	AM_RANGE(0x160000, 0x1607ff) AM_RAM AM_BASE_SIZE_MEMBER(tumbleb_state, spriteram, spriteram_size) /* Bootleg sprite buffer */
@@ -681,7 +684,7 @@ static ADDRESS_MAP_START( fncywld_main_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x000000, 0x0fffff) AM_WRITEONLY	/* To write levels modifications */
 #endif
 	AM_RANGE(0x100000, 0x100003) AM_DEVREADWRITE8("ymsnd", ym2151_r, ym2151_w, 0x00ff)
-	AM_RANGE(0x100004, 0x100005) AM_DEVREADWRITE8("oki", okim6295_r, okim6295_w, 0x00ff)
+	AM_RANGE(0x100004, 0x100005) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0x00ff)
 	AM_RANGE(0x140000, 0x140fff) AM_RAM_WRITE(paletteram16_xxxxRRRRGGGGBBBB_word_w) AM_BASE_GENERIC(paletteram)
 	AM_RANGE(0x160000, 0x1607ff) AM_RAM AM_BASE_SIZE_MEMBER(tumbleb_state, spriteram, spriteram_size) /* sprites */
 	AM_RANGE(0x160800, 0x16080f) AM_WRITEONLY /* goes slightly past the end of spriteram? */
@@ -701,7 +704,7 @@ ADDRESS_MAP_END
 
 static READ16_HANDLER( semibase_unknown_r )
 {
-	return mame_rand(space->machine);
+	return space->machine->rand();
 }
 
 static ADDRESS_MAP_START( htchctch_main_map, ADDRESS_SPACE_PROGRAM, 16 )
@@ -740,7 +743,7 @@ ADDRESS_MAP_END
 
 static WRITE16_HANDLER( jumpkids_sound_w )
 {
-	tumbleb_state *state = (tumbleb_state *)space->machine->driver_data;
+	tumbleb_state *state = space->machine->driver_data<tumbleb_state>();
 	soundlatch_w(space, 0, data & 0xff);
 	cpu_set_input_line(state->audiocpu, 0, HOLD_LINE);
 }
@@ -789,7 +792,7 @@ static WRITE16_HANDLER( semicom_soundcmd_w )
 
 static WRITE8_HANDLER( oki_sound_bank_w )
 {
-	UINT8 *oki = memory_region(space->machine, "oki");
+	UINT8 *oki = space->machine->region("oki")->base();
 	memcpy(&oki[0x30000], &oki[(data * 0x10000) + 0x40000], 0x10000);
 }
 
@@ -797,7 +800,7 @@ static ADDRESS_MAP_START( semicom_sound_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0xcfff) AM_ROM
 	AM_RANGE(0xd000, 0xd7ff) AM_RAM
 	AM_RANGE(0xf000, 0xf001) AM_DEVREADWRITE("ymsnd", ym2151_r, ym2151_w)
-	AM_RANGE(0xf002, 0xf002) AM_DEVREADWRITE("oki", okim6295_r, okim6295_w)
+	AM_RANGE(0xf002, 0xf002) AM_DEVREADWRITE_MODERN("oki", okim6295_device, read, write)
 	//AM_RANGE(0xf006, 0xf006) ??
 	AM_RANGE(0xf008, 0xf008) AM_READ(soundlatch_r)
 	AM_RANGE(0xf00e, 0xf00e) AM_WRITE(oki_sound_bank_w)
@@ -806,7 +809,7 @@ ADDRESS_MAP_END
 static ADDRESS_MAP_START( suprtrio_sound_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0xcfff) AM_ROM
 	AM_RANGE(0xd000, 0xd7ff) AM_RAM
-	AM_RANGE(0xf002, 0xf002) AM_DEVREADWRITE("oki", okim6295_r, okim6295_w)
+	AM_RANGE(0xf002, 0xf002) AM_DEVREADWRITE_MODERN("oki", okim6295_device, read, write)
 	//AM_RANGE(0xf006, 0xf006) ??
 	AM_RANGE(0xf008, 0xf008) AM_READ(soundlatch_r)
 	AM_RANGE(0xf00e, 0xf00e) AM_WRITE(oki_sound_bank_w)
@@ -814,7 +817,7 @@ ADDRESS_MAP_END
 
 static WRITE8_HANDLER(jumppop_z80_bank_w)
 {
-	memory_set_bankptr(space->machine, "bank1", memory_region(space->machine, "audiocpu") + 0x10000 + (0x4000 * data));
+	memory_set_bankptr(space->machine, "bank1", space->machine->region("audiocpu")->base() + 0x10000 + (0x4000 * data));
 }
 
 static ADDRESS_MAP_START( jumppop_sound_map, ADDRESS_SPACE_PROGRAM, 8 )
@@ -825,7 +828,7 @@ ADDRESS_MAP_END
 
 static READ8_HANDLER(jumppop_z80latch_r)
 {
-	tumbleb_state *state = (tumbleb_state *)space->machine->driver_data;
+	tumbleb_state *state = space->machine->driver_data<tumbleb_state>();
 	cpu_set_input_line(state->audiocpu, 0, CLEAR_LINE);
 	return soundlatch_r(space, 0);
 }
@@ -833,7 +836,7 @@ static READ8_HANDLER(jumppop_z80latch_r)
 static ADDRESS_MAP_START( jumppop_sound_io_map, ADDRESS_SPACE_IO, 8 )
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 	AM_RANGE(0x00, 0x01) AM_DEVWRITE("ymsnd", ym3812_w)
-	AM_RANGE(0x02, 0x02) AM_DEVREADWRITE("oki", okim6295_r, okim6295_w)
+	AM_RANGE(0x02, 0x02) AM_DEVREADWRITE_MODERN("oki", okim6295_device, read, write)
 	AM_RANGE(0x03, 0x03) AM_READ(jumppop_z80latch_r)
 	AM_RANGE(0x04, 0x04) AM_NOP
 	AM_RANGE(0x05, 0x05) AM_WRITE(jumppop_z80_bank_w)
@@ -863,8 +866,8 @@ ADDRESS_MAP_END
 
 static WRITE8_HANDLER( jumpkids_oki_bank_w )
 {
-	UINT8* sound1 = memory_region(space->machine, "oki");
-	UINT8* sound2 = memory_region(space->machine, "oki2");
+	UINT8* sound1 = space->machine->region("oki")->base();
+	UINT8* sound2 = space->machine->region("oki2")->base();
 	int bank = data & 0x03;
 
 	memcpy(sound1 + 0x20000, sound2 + bank * 0x20000, 0x20000);
@@ -874,8 +877,67 @@ static ADDRESS_MAP_START( jumpkids_sound_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x0fff) AM_ROM
 	AM_RANGE(0x8000, 0x87ff) AM_RAM
 	AM_RANGE(0x9000, 0x9000) AM_WRITE(jumpkids_oki_bank_w)
-	AM_RANGE(0x9800, 0x9800) AM_DEVREADWRITE("oki", okim6295_r, okim6295_w)
+	AM_RANGE(0x9800, 0x9800) AM_DEVREADWRITE_MODERN("oki", okim6295_device, read, write)
 	AM_RANGE(0xa000, 0xa000) AM_READ(soundlatch_r)
+ADDRESS_MAP_END
+
+
+static READ8_HANDLER( prot_io_r )
+{
+	// never read?
+	return 0x00;
+}
+
+static UINT8 semicom_prot_offset = 0x00;
+static UINT16 protbase = 0x0000;
+
+// probably not endian safe
+static WRITE8_HANDLER( prot_io_w )
+{
+	tumbleb_state *state = space->machine->driver_data<tumbleb_state>();
+
+	switch (offset)
+	{
+		case 0x00:
+		{
+			UINT16 word = state->mainram[(protbase/2) + semicom_prot_offset];
+			word = (word & 0xff00) | (data << 0);
+			state->mainram[(protbase/2) + semicom_prot_offset] = word;
+
+			break;
+		}
+
+		case 0x01:
+		{
+			UINT16 word = state->mainram[(protbase/2) + semicom_prot_offset];
+			word = (word & 0x00ff) | (data << 8);
+			state->mainram[(protbase/2) + semicom_prot_offset] = word;
+
+			break;
+		}
+
+		case 0x02: // offset
+		{
+			semicom_prot_offset = data;
+			break;
+		}
+
+		case 0x03: // ??
+		{
+			//logerror("offset %02x data %02x\n",offset,data);
+			break;
+		}
+	}
+}
+
+
+/* Semicom AT89C52 MCU */
+static ADDRESS_MAP_START( protection_map, ADDRESS_SPACE_PROGRAM, 8 )
+	AM_RANGE(0x0000, 0x1fff) AM_ROM
+ADDRESS_MAP_END
+
+static ADDRESS_MAP_START( protection_iomap, ADDRESS_SPACE_IO, 8 )
+	AM_RANGE(MCS51_PORT_P0, MCS51_PORT_P3) AM_READWRITE(prot_io_r,prot_io_w)
 ADDRESS_MAP_END
 
 /******************************************************************************/
@@ -1474,7 +1536,7 @@ static INPUT_PORTS_START( wondl96 )
 	PORT_BIT( 0x0080, IP_ACTIVE_LOW, IPT_UNKNOWN )
 
 	PORT_START("DSW")
-	PORT_DIPNAME( 0x0001, 0x0001, DEF_STR( Free_Play ) )        PORT_DIPLOCATION("SW2:8")
+	PORT_DIPNAME( 0x0001, 0x0001, DEF_STR( Free_Play ) )        PORT_DIPLOCATION("SW1:8")
 	PORT_DIPSETTING(      0x0001, DEF_STR( Off ) )
 	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
 	PORT_DIPNAME( 0x000e, 0x000e, DEF_STR( Unknown ) )          PORT_DIPLOCATION("SW1:7,6,5")  // See notes
@@ -1985,7 +2047,7 @@ GFXDECODE_END
 
 static MACHINE_START( tumbleb )
 {
-	tumbleb_state *state = (tumbleb_state *)machine->driver_data;
+	tumbleb_state *state = machine->driver_data<tumbleb_state>();
 
 	state->maincpu = machine->device("maincpu");
 	state->audiocpu = machine->device("audiocpu");
@@ -2002,7 +2064,7 @@ static MACHINE_START( tumbleb )
 
 static MACHINE_RESET( tumbleb )
 {
-	tumbleb_state *state = (tumbleb_state *)machine->driver_data;
+	tumbleb_state *state = machine->driver_data<tumbleb_state>();
 
 	state->music_command = 0;
 	state->music_bank = 0;
@@ -2012,157 +2074,145 @@ static MACHINE_RESET( tumbleb )
 	memset(state->control_0, 0, ARRAY_LENGTH(state->control_0));
 }
 
-static MACHINE_DRIVER_START( tumblepb )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(tumbleb_state)
+static MACHINE_CONFIG_START( tumblepb, tumbleb_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 14000000)
-	MDRV_CPU_PROGRAM_MAP(tumblepopb_main_map)
-	MDRV_CPU_VBLANK_INT("screen", irq6_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, 14000000)
+	MCFG_CPU_PROGRAM_MAP(tumblepopb_main_map)
+	MCFG_CPU_VBLANK_INT("screen", irq6_line_hold)
 
-	MDRV_MACHINE_START(tumbleb)
-	MDRV_MACHINE_RESET(tumbleb)
+	MCFG_MACHINE_START(tumbleb)
+	MCFG_MACHINE_RESET(tumbleb)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(58)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(529))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(40*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(58)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(529))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(40*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
 
-	MDRV_GFXDECODE(tumbleb)
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_GFXDECODE(tumbleb)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_VIDEO_START(tumblepb)
-	MDRV_VIDEO_UPDATE(tumblepb)
+	MCFG_VIDEO_START(tumblepb)
+	MCFG_VIDEO_UPDATE(tumblepb)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_OKIM6295_ADD("oki", 8000000/10, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.70)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 8000000/10, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.70)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( tumbleb2 )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(tumbleb_state)
+static MACHINE_CONFIG_START( tumbleb2, tumbleb_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 14000000)
-	MDRV_CPU_PROGRAM_MAP(tumblepopb_main_map)
-	MDRV_CPU_VBLANK_INT("screen", tumbleb2_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, 14000000)
+	MCFG_CPU_PROGRAM_MAP(tumblepopb_main_map)
+	MCFG_CPU_VBLANK_INT("screen", tumbleb2_interrupt)
 
-	MDRV_MACHINE_START(tumbleb)
-	MDRV_MACHINE_RESET(tumbleb)
+	MCFG_MACHINE_START(tumbleb)
+	MCFG_MACHINE_RESET(tumbleb)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(58)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(529))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(40*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(58)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(529))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(40*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
 
-	MDRV_GFXDECODE(tumbleb)
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_GFXDECODE(tumbleb)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_VIDEO_START(tumblepb)
-	MDRV_VIDEO_UPDATE(tumblepb)
+	MCFG_VIDEO_START(tumblepb)
+	MCFG_VIDEO_UPDATE(tumblepb)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_OKIM6295_ADD("oki", 8000000/10, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.70)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 8000000/10, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.70)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( jumpkids )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(tumbleb_state)
+static MACHINE_CONFIG_START( jumpkids, tumbleb_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 12000000)
-	MDRV_CPU_PROGRAM_MAP(jumpkids_main_map)
-	MDRV_CPU_VBLANK_INT("screen", irq6_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, 12000000)
+	MCFG_CPU_PROGRAM_MAP(jumpkids_main_map)
+	MCFG_CPU_VBLANK_INT("screen", irq6_line_hold)
 
 	/* z80? */
-	MDRV_CPU_ADD("audiocpu", Z80, 8000000/2)
-	MDRV_CPU_PROGRAM_MAP(jumpkids_sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 8000000/2)
+	MCFG_CPU_PROGRAM_MAP(jumpkids_sound_map)
 
-	MDRV_MACHINE_START(tumbleb)
-	MDRV_MACHINE_RESET(tumbleb)
+	MCFG_MACHINE_START(tumbleb)
+	MCFG_MACHINE_RESET(tumbleb)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(529))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(40*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(529))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(40*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
 
-	MDRV_GFXDECODE(tumbleb)
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_GFXDECODE(tumbleb)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_VIDEO_START(tumblepb)
-	MDRV_VIDEO_UPDATE(jumpkids)
+	MCFG_VIDEO_START(tumblepb)
+	MCFG_VIDEO_UPDATE(jumpkids)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_OKIM6295_ADD("oki", 8000000/8, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.70)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 8000000/8, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.70)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( fncywld )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(tumbleb_state)
+static MACHINE_CONFIG_START( fncywld, tumbleb_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 12000000)
-	MDRV_CPU_PROGRAM_MAP(fncywld_main_map)
-	MDRV_CPU_VBLANK_INT("screen", irq6_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, 12000000)
+	MCFG_CPU_PROGRAM_MAP(fncywld_main_map)
+	MCFG_CPU_VBLANK_INT("screen", irq6_line_hold)
 
-	MDRV_MACHINE_START(tumbleb)
-	MDRV_MACHINE_RESET(tumbleb)
+	MCFG_MACHINE_START(tumbleb)
+	MCFG_MACHINE_RESET(tumbleb)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(529))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(40*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(529))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(40*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
 
-	MDRV_GFXDECODE(fncywld)
-	MDRV_PALETTE_LENGTH(0x800)
+	MCFG_GFXDECODE(fncywld)
+	MCFG_PALETTE_LENGTH(0x800)
 
-	MDRV_VIDEO_START(fncywld)
-	MDRV_VIDEO_UPDATE(fncywld)
+	MCFG_VIDEO_START(fncywld)
+	MCFG_VIDEO_UPDATE(fncywld)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, 32220000/9)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.20)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.20)
+	MCFG_SOUND_ADD("ymsnd", YM2151, 32220000/9)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.20)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.20)
 
-	MDRV_OKIM6295_ADD("oki", 1023924, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 1023924, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 
 
-static void semicom_irqhandler( running_device *device, int irq )
+static void semicom_irqhandler( device_t *device, int irq )
 {
-	tumbleb_state *state = (tumbleb_state *)device->machine->driver_data;
+	tumbleb_state *state = device->machine->driver_data<tumbleb_state>();
 	cpu_set_input_line(state->audiocpu, 0, irq ? ASSERT_LINE : CLEAR_LINE);
 }
 
@@ -2174,11 +2224,11 @@ static const ym2151_interface semicom_ym2151_interface =
 
 static MACHINE_RESET (htchctch)
 {
-	tumbleb_state *state = (tumbleb_state *)machine->driver_data;
+	tumbleb_state *state = machine->driver_data<tumbleb_state>();
 
 	/* copy protection data every reset */
-	UINT16 *PROTDATA = (UINT16*)memory_region(machine, "user1");
-	int i, len = memory_region_length(machine, "user1");
+	UINT16 *PROTDATA = (UINT16*)machine->region("user1")->base();
+	int i, len = machine->region("user1")->bytes();
 
 	for (i = 0; i < len / 2; i++)
 		state->mainram[0x000/2 + i] = PROTDATA[i];
@@ -2186,199 +2236,193 @@ static MACHINE_RESET (htchctch)
 	MACHINE_RESET_CALL(tumbleb);
 }
 
-static MACHINE_DRIVER_START( htchctch )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(tumbleb_state)
+static MACHINE_CONFIG_START( htchctch, tumbleb_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 15000000) /* verified */
-	MDRV_CPU_PROGRAM_MAP(htchctch_main_map)
-	MDRV_CPU_VBLANK_INT("screen", irq6_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, 15000000) /* verified */
+	MCFG_CPU_PROGRAM_MAP(htchctch_main_map)
+	MCFG_CPU_VBLANK_INT("screen", irq6_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 15000000/4) /* verified on dquizgo */
-	MDRV_CPU_PROGRAM_MAP(semicom_sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 15000000/4) /* verified on dquizgo */
+	MCFG_CPU_PROGRAM_MAP(semicom_sound_map)
 
-	MDRV_MACHINE_START(tumbleb)
-	MDRV_MACHINE_RESET(htchctch)
+	MCFG_MACHINE_START(tumbleb)
+	MCFG_MACHINE_RESET(htchctch)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2400)) // ?? cookbib needs it above ~2400 or the Joystick on the How to Play screen is the wrong colour?!
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(40*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2400)) // ?? cookbib needs it above ~2400 or the Joystick on the How to Play screen is the wrong colour?!
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(40*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
 
-	MDRV_GFXDECODE(tumbleb)
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_GFXDECODE(tumbleb)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_VIDEO_START(tumblepb)
-	MDRV_VIDEO_UPDATE(semicom)
+	MCFG_VIDEO_START(tumblepb)
+	MCFG_VIDEO_UPDATE(semicom)
 
 	/* sound hardware - same as hyperpac */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, 3427190)
-	MDRV_SOUND_CONFIG(semicom_ym2151_interface)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.10)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.10)
+	MCFG_SOUND_ADD("ymsnd", YM2151, 3427190)
+	MCFG_SOUND_CONFIG(semicom_ym2151_interface)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.10)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.10)
 
-	MDRV_OKIM6295_ADD("oki", 1024000, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 1024000, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( cookbib )
-	MDRV_IMPORT_FROM(htchctch)
-	MDRV_VIDEO_UPDATE( semicom_altoffsets )
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( cookbib, htchctch )
+	MCFG_VIDEO_UPDATE( semicom_altoffsets )
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( bcstory )
-	MDRV_IMPORT_FROM(htchctch)
-	MDRV_VIDEO_UPDATE(bcstory)
-
-	MDRV_SOUND_REPLACE("ymsnd", YM2151, 3427190)
-	MDRV_SOUND_CONFIG(semicom_ym2151_interface)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.10)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.10)
-MACHINE_DRIVER_END
-
-static MACHINE_DRIVER_START( semibase )
-	MDRV_IMPORT_FROM(bcstory)
-	MDRV_VIDEO_UPDATE(semibase )
-MACHINE_DRIVER_END
-
-static MACHINE_DRIVER_START( sdfight )
-	MDRV_IMPORT_FROM(bcstory)
-	MDRV_VIDEO_START(sdfight)
-	MDRV_VIDEO_UPDATE(sdfight)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( metlsavr )
-	MDRV_IMPORT_FROM(cookbib)
-
-	MDRV_SOUND_REPLACE("ymsnd", YM2151, 3427190)
-	MDRV_SOUND_CONFIG(semicom_ym2151_interface)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.10)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.10)
-MACHINE_DRIVER_END
-
-static MACHINE_DRIVER_START( jumppop )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(tumbleb_state)
+static MACHINE_CONFIG_DERIVED( cookbib_mcu, htchctch )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 16000000)
-	MDRV_CPU_PROGRAM_MAP(jumppop_main_map)
-	MDRV_CPU_VBLANK_INT("screen", irq6_line_hold)
-
-	MDRV_CPU_ADD("audiocpu", Z80, 3500000) /* verified */
-	MDRV_CPU_PROGRAM_MAP(jumppop_sound_map)
-	MDRV_CPU_IO_MAP(jumppop_sound_io_map)
-	MDRV_CPU_PERIODIC_INT(nmi_line_pulse, 1953)	/* measured */
-
-	MDRV_MACHINE_START(tumbleb)
-	MDRV_MACHINE_RESET(tumbleb)
+	MCFG_CPU_ADD("protection", I8052, 16000000)  // AT89C52
+	MCFG_CPU_PROGRAM_MAP(protection_map)
+	MCFG_CPU_IO_MAP(protection_iomap)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(529))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(40*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
+	MCFG_VIDEO_UPDATE( semicom_altoffsets )
+MACHINE_CONFIG_END
 
-	MDRV_GFXDECODE(jumppop)
-	MDRV_PALETTE_LENGTH(1024)
+static MACHINE_CONFIG_DERIVED( bcstory, htchctch )
+	MCFG_VIDEO_UPDATE(bcstory)
 
-	MDRV_VIDEO_START(jumppop)
-	MDRV_VIDEO_UPDATE(jumppop)
+	MCFG_SOUND_REPLACE("ymsnd", YM2151, 3427190)
+	MCFG_SOUND_CONFIG(semicom_ym2151_interface)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.10)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.10)
+MACHINE_CONFIG_END
 
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+static MACHINE_CONFIG_DERIVED( semibase, bcstory )
+	MCFG_VIDEO_UPDATE(semibase )
+MACHINE_CONFIG_END
 
-	MDRV_SOUND_ADD("ymsnd", YM3812, 3500000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.70)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.70)
+static MACHINE_CONFIG_DERIVED( sdfight, bcstory )
+	MCFG_VIDEO_START(sdfight)
+	MCFG_VIDEO_UPDATE(sdfight)
+MACHINE_CONFIG_END
 
-	MDRV_OKIM6295_ADD("oki", 875000, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
-MACHINE_DRIVER_END
 
-static MACHINE_DRIVER_START( suprtrio )
+static MACHINE_CONFIG_DERIVED( metlsavr, cookbib )
 
-	/* driver data */
-	MDRV_DRIVER_DATA(tumbleb_state)
+	MCFG_SOUND_REPLACE("ymsnd", YM2151, 3427190)
+	MCFG_SOUND_CONFIG(semicom_ym2151_interface)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.10)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.10)
+MACHINE_CONFIG_END
+
+static MACHINE_CONFIG_START( jumppop, tumbleb_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 14000000) /* 14mhz should be correct, but lots of sprite flicker later in game */
-	MDRV_CPU_PROGRAM_MAP(suprtrio_main_map)
-	MDRV_CPU_VBLANK_INT("screen", irq6_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, 16000000)
+	MCFG_CPU_PROGRAM_MAP(jumppop_main_map)
+	MCFG_CPU_VBLANK_INT("screen", irq6_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 8000000)
-	MDRV_CPU_PROGRAM_MAP(suprtrio_sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 3500000) /* verified */
+	MCFG_CPU_PROGRAM_MAP(jumppop_sound_map)
+	MCFG_CPU_IO_MAP(jumppop_sound_io_map)
+	MCFG_CPU_PERIODIC_INT(nmi_line_pulse, 1953)	/* measured */
 
-	MDRV_MACHINE_START(tumbleb)
-	MDRV_MACHINE_RESET(tumbleb)
+	MCFG_MACHINE_START(tumbleb)
+	MCFG_MACHINE_RESET(tumbleb)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(529))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(40*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8-1, 31*8-2)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(529))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(40*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
 
-	MDRV_GFXDECODE(suprtrio)
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_GFXDECODE(jumppop)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_VIDEO_START(suprtrio)
-	MDRV_VIDEO_UPDATE(suprtrio)
+	MCFG_VIDEO_START(jumppop)
+	MCFG_VIDEO_UPDATE(jumppop)
+
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+
+	MCFG_SOUND_ADD("ymsnd", YM3812, 3500000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.70)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.70)
+
+	MCFG_OKIM6295_ADD("oki", 875000, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
+MACHINE_CONFIG_END
+
+static MACHINE_CONFIG_START( suprtrio, tumbleb_state )
+
+	/* basic machine hardware */
+	MCFG_CPU_ADD("maincpu", M68000, 14000000) /* 14mhz should be correct, but lots of sprite flicker later in game */
+	MCFG_CPU_PROGRAM_MAP(suprtrio_main_map)
+	MCFG_CPU_VBLANK_INT("screen", irq6_line_hold)
+
+	MCFG_CPU_ADD("audiocpu", Z80, 8000000)
+	MCFG_CPU_PROGRAM_MAP(suprtrio_sound_map)
+
+	MCFG_MACHINE_START(tumbleb)
+	MCFG_MACHINE_RESET(tumbleb)
+
+	/* video hardware */
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(529))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(40*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8-1, 31*8-2)
+
+	MCFG_GFXDECODE(suprtrio)
+	MCFG_PALETTE_LENGTH(1024)
+
+	MCFG_VIDEO_START(suprtrio)
+	MCFG_VIDEO_UPDATE(suprtrio)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_OKIM6295_ADD("oki", 875000, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 875000, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( pangpang )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(tumbleb_state)
+static MACHINE_CONFIG_START( pangpang, tumbleb_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 14000000)
-	MDRV_CPU_PROGRAM_MAP(pangpang_main_map)
-	MDRV_CPU_VBLANK_INT("screen", tumbleb2_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, 14000000)
+	MCFG_CPU_PROGRAM_MAP(pangpang_main_map)
+	MCFG_CPU_VBLANK_INT("screen", tumbleb2_interrupt)
 
-	MDRV_MACHINE_START(tumbleb)
-	MDRV_MACHINE_RESET(tumbleb)
+	MCFG_MACHINE_START(tumbleb)
+	MCFG_MACHINE_RESET(tumbleb)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(58)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(1529))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(40*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(58)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(1529))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(40*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
 
-	MDRV_GFXDECODE(tumbleb)
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_GFXDECODE(tumbleb)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_VIDEO_START(pangpang)
-	MDRV_VIDEO_UPDATE(pangpang)
+	MCFG_VIDEO_START(pangpang)
+	MCFG_VIDEO_UPDATE(pangpang)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_OKIM6295_ADD("oki", 8000000/10, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.70)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 8000000/10, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.70)
+MACHINE_CONFIG_END
 
 /******************************************************************************/
 
@@ -2679,7 +2723,7 @@ ROM_START( metlsavr )
 	ROM_LOAD( "first-2.ua7", 0x00000, 0x10000, CRC(49505edf) SHA1(ea3007f1adbe8e2597ee6201bbd5d07fa9f7c733) )
 
 	ROM_REGION( 0x10000, "cpu2", 0 ) /* Intel 87C52 MCU Code */
-	ROM_LOAD( "87c52.mcu", 0x00000, 0x10000 , NO_DUMP ) /* can't be dumped */
+	ROM_LOAD( "87c52.mcu", 0x00000, 0x2000, NO_DUMP ) /* can't be dumped */
 
 	ROM_REGION16_BE( 0x200, "user1", 0 ) /* Data from Shared RAM */
 	/* this is not a real rom but instead the data extracted from shared ram, the MCU puts it there */
@@ -2715,7 +2759,7 @@ ROM_START( bcstry )
 	ROM_CONTINUE( 0x8000, 0x4000 )
 
 	ROM_REGION( 0x10000, "cpu2", 0 ) /* Intel 87C52 MCU Code */
-	ROM_LOAD( "87c52.mcu", 0x00000, 0x10000 , NO_DUMP ) /* can't be dumped */
+	ROM_LOAD( "87c52.mcu", 0x00000, 0x2000, NO_DUMP ) /* can't be dumped */
 
 	ROM_REGION16_BE( 0x200, "user1", 0 ) /* Data from Shared RAM */
 	/* this is not a real rom but instead the data extracted from shared ram, the MCU puts it there */
@@ -2768,7 +2812,7 @@ ROM_START( bcstrya )
 	ROM_CONTINUE( 0x8000, 0x4000 )
 
 	ROM_REGION( 0x10000, "cpu2", 0 ) /* Intel 87C52 MCU Code */
-	ROM_LOAD( "87c52.mcu", 0x00000, 0x10000 , NO_DUMP ) /* can't be dumped */
+	ROM_LOAD( "87c52.mcu", 0x00000, 0x2000, NO_DUMP ) /* can't be dumped */
 
 	ROM_REGION16_BE( 0x200, "user1", 0 ) /* Data from Shared RAM */
 	/* this is not a real rom but instead the data extracted from shared ram, the MCU puts it there */
@@ -2863,7 +2907,7 @@ ROM_START( htchctch )
 	ROM_LOAD( "p02.b5", 0x00000, 0x10000 , CRC(c5a03186) SHA1(42561ab36e6d7a43828d3094e64bd1229ab893ba) )
 
 	ROM_REGION( 0x10000, "cpu2", 0 ) /* Intel 87C52 MCU Code */
-	ROM_LOAD( "87c52.mcu", 0x00000, 0x10000 , NO_DUMP ) /* can't be dumped */
+	ROM_LOAD( "87c52.mcu", 0x00000, 0x2000, NO_DUMP ) /* can't be dumped */
 
 	ROM_REGION16_BE( 0x200, "user1", 0 ) /* Data from Shared RAM */
 	/* this is not a real rom but instead the data extracted from shared ram, the MCU puts it there */
@@ -2894,7 +2938,7 @@ ROM_START( cookbib )
 	ROM_LOAD( "prg-s.ub5", 0x00000, 0x10000 , CRC(547d6ea3) SHA1(42929e453c4f1c90c29197a9bed953139cfe2873) )
 
 	ROM_REGION( 0x10000, "cpu2", 0 ) /* Intel 87C52 MCU Code */
-	ROM_LOAD( "87c52.mcu", 0x00000, 0x10000 , NO_DUMP ) /* can't be dumped */
+	ROM_LOAD( "87c52.mcu", 0x00000, 0x2000, NO_DUMP ) /* can't be dumped */
 
 	ROM_REGION16_BE( 0x200, "user1", 0 ) /* Data from Shared RAM */
 	/* this is not a real rom but instead the data extracted from shared ram, the MCU puts it there */
@@ -2925,7 +2969,7 @@ ROM_START( chokchok )
 	ROM_LOAD( "ub5.bin", 0x00000, 0x10000 , CRC(30c2171d) SHA1(3954e286d57b955af6ba9b1a0b49c442d7f295ae) )
 
 	ROM_REGION( 0x10000, "cpu2", 0 ) /* Intel 87C52 MCU Code */
-	ROM_LOAD( "87c52.mcu", 0x00000, 0x10000 , NO_DUMP ) /* can't be dumped */
+	ROM_LOAD( "87c52.mcu", 0x00000, 0x2000, NO_DUMP ) /* can't be dumped */
 
 	ROM_REGION16_BE( 0x200, "user1", 0 ) /* Data from Shared RAM */
 	/* this is not a real rom but instead the data extracted from shared ram, the MCU puts it there */
@@ -2962,7 +3006,7 @@ ROM_START( dquizgo )
 	ROM_LOAD( "ub5",    0x00000, 0x10000, CRC(e40481da) SHA1(1c1fabcb67693235eaa6ff59ae12a35854b5564a) )
 
 	ROM_REGION( 0x10000, "cpu2", 0 ) /* Intel 87C52 MCU Code */
-	ROM_LOAD( "87c52.mcu", 0x00000, 0x10000 , NO_DUMP ) /* can't be dumped */
+	ROM_LOAD( "87c52.mcu", 0x00000, 0x2000, NO_DUMP ) /* can't be dumped */
 
 	ROM_REGION16_BE( 0x400, "user1", ROMREGION_ERASE00 ) /* Data from Shared RAM */
 	/* this is not a real rom but instead the data extracted from shared ram, the MCU puts it there */
@@ -3039,7 +3083,7 @@ ROM_START( sdfight )
 	ROM_LOAD( "ua7", 0x00000, 0x10000 , CRC(c3d36da4) SHA1(7290a977bfa9a3d5e0c98a0f589d877e38aa10a1) )
 
 	ROM_REGION( 0x10000, "cpu2", 0 ) /* Intel 87C52 MCU Code */
-	ROM_LOAD( "87c52.mcu", 0x00000, 0x10000 , NO_DUMP ) /* can't be dumped */
+	ROM_LOAD( "87c52.mcu", 0x00000, 0x2000, NO_DUMP ) /* can't be dumped */
 
 	ROM_REGION16_BE( 0x200, "user1", ROMREGION_ERASE00 ) /* Data from Shared RAM */
 	/* this is not a real rom but instead the data extracted from shared ram, the MCU puts it there */
@@ -3131,12 +3175,8 @@ ROM_START( wlstar )
 	ROM_REGION( 0x10000, "audiocpu", 0 ) /* Z80 Code */
 	ROM_LOAD( "ua7", 0x00000, 0x10000, CRC(90cafa5f) SHA1(2d2ba8e395544e49899cac662d87585592b12040) )
 
-	ROM_REGION( 0x10000, "cpu2", 0 ) /* Intel 87C52 MCU Code */
-	ROM_LOAD( "87c52.mcu", 0x00000, 0x10000 , NO_DUMP ) /* can't be dumped */
-
-	ROM_REGION16_BE( 0x400, "user1", ROMREGION_ERASE00 ) /* Data from Shared RAM */
-	/* this is not a real rom but instead the data extracted from shared ram, the MCU puts it there */
-	ROM_LOAD16_WORD( "protdata.bin", 0x00000, 0x200 , CRC(b7ffde5b) SHA1(6c370199e5df9c2e03293d0259612c5c4a9061cf) )
+	ROM_REGION( 0x10000, "protection", 0 ) /* Intel 87C52 MCU Code */
+	ROM_LOAD( "87c52.mcu", 0x00000, 0x2000, CRC(ab5e2a7e) SHA1(9d3dbbbf0fac12ed82184222a077d81243abb39d) ) /* decapped */
 
 	ROM_REGION( 0x040000, "oki", 0 ) /* Samples */
 	ROM_LOAD( "ua1", 0x00000, 0x40000,  CRC(de217d30) SHA1(5d7a6f82b106dd1185c7dcde193177cc46c4782f) )
@@ -3168,12 +3208,8 @@ ROM_START( wondl96 )
 	ROM_REGION( 0x10000, "audiocpu", 0 ) /* Z80 Code */
 	ROM_LOAD( "ub5.bin", 0x00000, 0x10000, CRC(d99d19c4) SHA1(a7fae11275bb156cdbf2805fcc3aec44892d0817) )
 
-	ROM_REGION( 0x10000, "cpu2", 0 ) /* Intel 87C52 MCU Code */
-	ROM_LOAD( "87c52.mcu", 0x00000, 0x10000 , NO_DUMP ) /* can't be dumped */
-
-	ROM_REGION16_BE( 0x400, "user1", ROMREGION_ERASE00 ) /* Data from Shared RAM */
-	/* this is not a real rom but instead the data extracted from shared ram, the MCU puts it there */
-	ROM_LOAD16_WORD( "protdata.bin", 0x00200, 0x200 , CRC(d7578b1e) SHA1(b674005a5e46c602086b596be0358040cc175131) )
+	ROM_REGION( 0x10000, "protection", 0 ) /* Intel 87C52 MCU Code */
+	ROM_LOAD( "87c52.mcu", 0x00000, 0x2000, CRC(6f4c659a) SHA1(7a1453531d9ceb37af21b96becfa9b06bff0a528) ) /* decapped */
 
 	ROM_REGION( 0x040000, "oki", 0 ) /* Samples */
 	ROM_LOAD( "uc1.bin", 0x00000, 0x40000,  CRC(0e7913e6) SHA1(9a44bd7ca4030627a26010583216ce1c8032ee1b) )
@@ -3262,7 +3298,7 @@ ROM_START( semibase )
 	ROM_CONTINUE( 0x8000, 0x4000 )
 
 	ROM_REGION( 0x10000, "cpu2", 0 ) /* Intel 87C52 MCU Code */
-	ROM_LOAD( "87c52.mcu", 0x00000, 0x10000 , NO_DUMP ) /* can't be dumped */
+	ROM_LOAD( "87c52.mcu", 0x00000, 0x2000, NO_DUMP ) /* can't be dumped */
 
 	ROM_REGION16_BE( 0x200, "user1", 0 ) /* Data from Shared RAM */
 	/* this is not a real rom but instead the data extracted from shared ram, the MCU puts it there */
@@ -3309,7 +3345,7 @@ ROM_END
 void tumblepb_patch_code(running_machine *machine, UINT16 offset)
 {
 	/* A hack which enables all Dip Switches effects */
-	UINT16 *RAM = (UINT16 *)memory_region(machine, "maincpu");
+	UINT16 *RAM = (UINT16 *)machine->region("maincpu")->base();
 	RAM[(offset + 0)/2] = 0x0240;
 	RAM[(offset + 2)/2] = 0xffff;	// andi.w  #$f3ff, D0
 }
@@ -3318,8 +3354,8 @@ void tumblepb_patch_code(running_machine *machine, UINT16 offset)
 
 static void tumblepb_gfx1_rearrange(running_machine *machine)
 {
-	UINT8 *rom = memory_region(machine, "gfx1");
-	int len = memory_region_length(machine, "gfx1");
+	UINT8 *rom = machine->region("gfx1")->base();
+	int len = machine->region("gfx1")->bytes();
 	int i;
 
 	/* gfx data is in the wrong order */
@@ -3348,7 +3384,7 @@ static DRIVER_INIT( tumblepb )
 
 static DRIVER_INIT( tumbleb2 )
 {
-	running_device *oki = machine->device("oki");
+	device_t *oki = machine->device("oki");
 
 	tumblepb_gfx1_rearrange(machine);
 
@@ -3376,7 +3412,7 @@ static DRIVER_INIT( fncywld )
 	#if FNCYWLD_HACK
 	/* This is a hack to allow you to use the extra features
        of the 2 first "Unused" Dip Switch (see notes above). */
-	UINT16 *RAM = (UINT16 *)memory_region(machine, "maincpu");
+	UINT16 *RAM = (UINT16 *)machine->region("maincpu")->base();
 	RAM[0x0005fa/2] = 0x4e71;
 	RAM[0x00060a/2] = 0x4e71;
 	#endif
@@ -3401,10 +3437,10 @@ static DRIVER_INIT ( bcstory )
 static DRIVER_INIT( htchctch )
 {
 
-	tumbleb_state *state = (tumbleb_state *)machine->driver_data;
-//  UINT16 *HCROM = (UINT16*)memory_region(machine, "maincpu");
-	UINT16 *PROTDATA = (UINT16*)memory_region(machine, "user1");
-	int i, len = memory_region_length(machine, "user1");
+	tumbleb_state *state = machine->driver_data<tumbleb_state>();
+//  UINT16 *HCROM = (UINT16*)machine->region("maincpu")->base();
+	UINT16 *PROTDATA = (UINT16*)machine->region("user1")->base();
+	int i, len = machine->region("user1")->bytes();
 	/* simulate RAM initialization done by the protection MCU */
 	/* verified on real hardware */
 //  static UINT16 htchctch_mcu68k[] =
@@ -3656,7 +3692,7 @@ static DRIVER_INIT( htchctch )
 
 static void suprtrio_decrypt_code(running_machine *machine)
 {
-	UINT16 *rom = (UINT16 *)memory_region(machine, "maincpu");
+	UINT16 *rom = (UINT16 *)machine->region("maincpu")->base();
 	UINT16 *buf = auto_alloc_array(machine, UINT16, 0x80000/2);
 	int i;
 
@@ -3674,7 +3710,7 @@ static void suprtrio_decrypt_code(running_machine *machine)
 
 static void suprtrio_decrypt_gfx(running_machine *machine)
 {
-	UINT16 *rom = (UINT16 *)memory_region(machine, "gfx1");
+	UINT16 *rom = (UINT16 *)machine->region("gfx1")->base();
 	UINT16 *buf = auto_alloc_array(machine, UINT16, 0x100000/2);
 	int i;
 
@@ -3708,10 +3744,18 @@ static DRIVER_INIT( chokchok )
 
 static DRIVER_INIT( wlstar )
 {
-	DRIVER_INIT_CALL(htchctch);
+	tumblepb_gfx1_rearrange(machine);
 
 	/* slightly different banking */
 	memory_install_write16_handler(cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM), 0x100002, 0x100003, 0, 0, wlstar_tilebank_w);
+
+	protbase = 0x0000;
+}
+
+static DRIVER_INIT( wondl96 )
+{
+	DRIVER_INIT_CALL( wlstar );
+	protbase = 0x0200;
 }
 
 static DRIVER_INIT ( dquizgo )
@@ -3722,22 +3766,22 @@ static DRIVER_INIT ( dquizgo )
 
 /******************************************************************************/
 
-GAME( 1991, tumbleb,  tumblep, tumblepb,  tumblepb, tumblepb, ROT0, "bootleg", "Tumble Pop (bootleg set 1)", GAME_IMPERFECT_SOUND | GAME_SUPPORTS_SAVE  )
-GAME( 1991, tumbleb2, tumblep, tumbleb2,  tumblepb, tumbleb2, ROT0, "bootleg", "Tumble Pop (bootleg set 2)", GAME_IMPERFECT_SOUND | GAME_SUPPORTS_SAVE  ) // PIC is protected, sound simulation not 100%
-GAME( 1993, jumpkids, 0,       jumpkids,  tumblepb, jumpkids, ROT0, "Comad", "Jump Kids", GAME_SUPPORTS_SAVE )
-GAME( 1994, metlsavr, 0,       metlsavr,  metlsavr, chokchok, ROT0, "First Amusement", "Metal Saver", GAME_SUPPORTS_SAVE )
-GAME( 1994, pangpang, 0,       pangpang,  tumblepb, tumbleb2, ROT0, "Dong Gue La Mi Ltd.", "Pang Pang", GAME_IMPERFECT_SOUND | GAME_SUPPORTS_SAVE  ) // PIC is protected, sound simulation not 100%
-GAME( 1994, suprtrio, 0,       suprtrio,  suprtrio, suprtrio, ROT0, "Gameace", "Super Trio", GAME_SUPPORTS_SAVE )
+GAME( 1991, tumbleb,  tumblep, tumblepb,    tumblepb, tumblepb, ROT0, "bootleg", "Tumble Pop (bootleg set 1)", GAME_IMPERFECT_SOUND | GAME_SUPPORTS_SAVE  )
+GAME( 1991, tumbleb2, tumblep, tumbleb2,    tumblepb, tumbleb2, ROT0, "bootleg", "Tumble Pop (bootleg set 2)", GAME_IMPERFECT_SOUND | GAME_SUPPORTS_SAVE  ) // PIC is protected, sound simulation not 100%
+GAME( 1993, jumpkids, 0,       jumpkids,    tumblepb, jumpkids, ROT0, "Comad",    "Jump Kids", GAME_SUPPORTS_SAVE )
+GAME( 1994, metlsavr, 0,       metlsavr,    metlsavr, chokchok, ROT0, "First Amusement", "Metal Saver", GAME_SUPPORTS_SAVE )
+GAME( 1994, pangpang, 0,       pangpang,    tumblepb, tumbleb2, ROT0, "Dong Gue La Mi Ltd.", "Pang Pang", GAME_IMPERFECT_SOUND | GAME_SUPPORTS_SAVE  ) // PIC is protected, sound simulation not 100%
+GAME( 1994, suprtrio, 0,       suprtrio,    suprtrio, suprtrio, ROT0, "Gameace", "Super Trio", GAME_SUPPORTS_SAVE )
 // Should also be 'Magicball Fighting' (c)1994
-GAME( 1995, htchctch, 0,       htchctch,  htchctch, htchctch, ROT0, "SemiCom", "Hatch Catch" , GAME_SUPPORTS_SAVE ) // not 100% sure about gfx offsets
-GAME( 1995, cookbib,  0,       cookbib,   cookbib,  htchctch, ROT0, "SemiCom", "Cookie & Bibi" , GAME_SUPPORTS_SAVE ) // not 100% sure about gfx offsets
-GAME( 1995, chokchok, 0,       cookbib,   chokchok, chokchok, ROT0, "SemiCom", "Choky! Choky!", GAME_IMPERFECT_GRAPHICS | GAME_SUPPORTS_SAVE  ) // corruption during attract mode (tmap disable?)
-GAME( 1995, wlstar,   0,       cookbib,   wlstar,   wlstar,   ROT0, "Mijin", "Wonder League Star - Sok-Magicball Fighting (Korea)", GAME_SUPPORTS_SAVE ) // translates to 'Wonder League Star - Return of Magicball Fighting'
-GAME( 1996, wondl96,  0,       cookbib,   wondl96,  wlstar,   ROT0, "SemiCom", "Wonder League '96 (Korea)", GAME_SUPPORTS_SAVE )
-GAME( 1996, fncywld,  0,       fncywld,   fncywld,  fncywld,  ROT0, "Unico", "Fancy World - Earth of Crisis" , GAME_SUPPORTS_SAVE ) // game says 1996, testmode 1995?
-GAME( 1996, sdfight,  0,       sdfight,   sdfight,  bcstory,  ROT0, "SemiCom", "SD Fighters (Korea)", GAME_SUPPORTS_SAVE )
-GAME( 1997, bcstry,   0,       bcstory,   bcstory,  bcstory,  ROT0, "SemiCom", "B.C. Story (set 1)", GAME_IMPERFECT_GRAPHICS | GAME_SUPPORTS_SAVE ) // gfx offsets?
-GAME( 1997, bcstrya,  bcstry,  bcstory,   bcstory,  bcstory,  ROT0, "SemiCom", "B.C. Story (set 2)", GAME_IMPERFECT_GRAPHICS | GAME_SUPPORTS_SAVE ) // gfx offsets?
-GAME( 1997, semibase, 0,       semibase,  semibase, bcstory,  ROT0, "SemiCom", "MuHanSeungBu (SemiCom Baseball) (Korea)", GAME_IMPERFECT_GRAPHICS | GAME_SUPPORTS_SAVE )// sprite offsets..
-GAME( 1998, dquizgo,  0,       cookbib,   dquizgo,  dquizgo,  ROT0, "SemiCom", "Date Quiz Go Go (Korea)", GAME_IMPERFECT_GRAPHICS | GAME_SUPPORTS_SAVE ) // check layer offsets
-GAME( 2001, jumppop,  0,       jumppop,   jumppop,  0,        ORIENTATION_FLIP_X, "ESD", "Jumping Pop", GAME_SUPPORTS_SAVE )
+GAME( 1995, htchctch, 0,       htchctch,    htchctch, htchctch, ROT0, "SemiCom", "Hatch Catch" , GAME_SUPPORTS_SAVE ) // not 100% sure about gfx offsets
+GAME( 1995, cookbib,  0,       cookbib,     cookbib,  htchctch, ROT0, "SemiCom", "Cookie & Bibi" , GAME_SUPPORTS_SAVE ) // not 100% sure about gfx offsets
+GAME( 1995, chokchok, 0,       cookbib,     chokchok, chokchok, ROT0, "SemiCom", "Choky! Choky!", GAME_IMPERFECT_GRAPHICS | GAME_SUPPORTS_SAVE  ) // corruption during attract mode (tmap disable?)
+GAME( 1995, wlstar,   0,       cookbib_mcu, wlstar,   wlstar,   ROT0, "Mijin",   "Wonder League Star - Sok-Magicball Fighting (Korea)", GAME_SUPPORTS_SAVE ) // translates to 'Wonder League Star - Return of Magicball Fighting'
+GAME( 1996, wondl96,  0,       cookbib_mcu, wondl96,  wondl96,  ROT0, "SemiCom", "Wonder League '96 (Korea)", GAME_SUPPORTS_SAVE )
+GAME( 1996, fncywld,  0,       fncywld,     fncywld,  fncywld,  ROT0, "Unico",   "Fancy World - Earth of Crisis" , GAME_SUPPORTS_SAVE ) // game says 1996, testmode 1995?
+GAME( 1996, sdfight,  0,       sdfight,     sdfight,  bcstory,  ROT0, "SemiCom", "SD Fighters (Korea)", GAME_SUPPORTS_SAVE )
+GAME( 1997, bcstry,   0,       bcstory,     bcstory,  bcstory,  ROT0, "SemiCom", "B.C. Story (set 1)", GAME_IMPERFECT_GRAPHICS | GAME_SUPPORTS_SAVE ) // gfx offsets?
+GAME( 1997, bcstrya,  bcstry,  bcstory,     bcstory,  bcstory,  ROT0, "SemiCom", "B.C. Story (set 2)", GAME_IMPERFECT_GRAPHICS | GAME_SUPPORTS_SAVE ) // gfx offsets?
+GAME( 1997, semibase, 0,       semibase,    semibase, bcstory,  ROT0, "SemiCom", "MuHanSeungBu (SemiCom Baseball) (Korea)", GAME_IMPERFECT_GRAPHICS | GAME_SUPPORTS_SAVE )// sprite offsets..
+GAME( 1998, dquizgo,  0,       cookbib,     dquizgo,  dquizgo,  ROT0, "SemiCom", "Date Quiz Go Go (Korea)", GAME_IMPERFECT_GRAPHICS | GAME_SUPPORTS_SAVE ) // check layer offsets
+GAME( 2001, jumppop,  0,       jumppop,     jumppop,  0,        ORIENTATION_FLIP_X, "ESD", "Jumping Pop", GAME_SUPPORTS_SAVE )

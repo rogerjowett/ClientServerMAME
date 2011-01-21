@@ -90,12 +90,11 @@ Stephh's notes (based on the game M68EC020 code and some tests) :
 
 #define MASTER_CLOCK 32000000
 
-class dreamwld_state
+class dreamwld_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, dreamwld_state(machine)); }
-
-	dreamwld_state(running_machine &machine) { }
+	dreamwld_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT32 *  bg_videoram;
@@ -116,11 +115,11 @@ public:
 
 static void draw_sprites( running_machine *machine, bitmap_t *bitmap, const rectangle *cliprect )
 {
-	dreamwld_state *state = (dreamwld_state *)machine->driver_data;
+	dreamwld_state *state = machine->driver_data<dreamwld_state>();
 	const gfx_element *gfx = machine->gfx[0];
 	UINT32 *source = state->spriteram;
 	UINT32 *finish = state->spriteram + 0x1000 / 4;
-	UINT16 *redirect = (UINT16 *)memory_region(machine, "gfx3");
+	UINT16 *redirect = (UINT16 *)machine->region("gfx3")->base();
 
 	while (source < finish)
 	{
@@ -172,7 +171,7 @@ static void draw_sprites( running_machine *machine, bitmap_t *bitmap, const rect
 
 static WRITE32_HANDLER( dreamwld_bg_videoram_w )
 {
-	dreamwld_state *state = (dreamwld_state *)space->machine->driver_data;
+	dreamwld_state *state = space->machine->driver_data<dreamwld_state>();
 	COMBINE_DATA(&state->bg_videoram[offset]);
 	tilemap_mark_tile_dirty(state->bg_tilemap, offset * 2);
 	tilemap_mark_tile_dirty(state->bg_tilemap, offset * 2 + 1);
@@ -180,7 +179,7 @@ static WRITE32_HANDLER( dreamwld_bg_videoram_w )
 
 static TILE_GET_INFO( get_dreamwld_bg_tile_info )
 {
-	dreamwld_state *state = (dreamwld_state *)machine->driver_data;
+	dreamwld_state *state = machine->driver_data<dreamwld_state>();
 	int tileno, colour;
 	tileno = (tile_index & 1) ? (state->bg_videoram[tile_index >> 1] & 0xffff) : ((state->bg_videoram[tile_index >> 1] >> 16) & 0xffff);
 	colour = tileno >> 13;
@@ -191,7 +190,7 @@ static TILE_GET_INFO( get_dreamwld_bg_tile_info )
 
 static WRITE32_HANDLER( dreamwld_bg2_videoram_w )
 {
-	dreamwld_state *state = (dreamwld_state *)space->machine->driver_data;
+	dreamwld_state *state = space->machine->driver_data<dreamwld_state>();
 	COMBINE_DATA(&state->bg2_videoram[offset]);
 	tilemap_mark_tile_dirty(state->bg2_tilemap, offset * 2);
 	tilemap_mark_tile_dirty(state->bg2_tilemap, offset * 2 + 1);
@@ -199,7 +198,7 @@ static WRITE32_HANDLER( dreamwld_bg2_videoram_w )
 
 static TILE_GET_INFO( get_dreamwld_bg2_tile_info )
 {
-	dreamwld_state *state = (dreamwld_state *)machine->driver_data;
+	dreamwld_state *state = machine->driver_data<dreamwld_state>();
 	UINT16 tileno, colour;
 	tileno = (tile_index & 1) ? (state->bg2_videoram[tile_index >> 1] & 0xffff) : ((state->bg2_videoram[tile_index >> 1] >> 16) & 0xffff);
 	colour = tileno >> 13;
@@ -209,7 +208,7 @@ static TILE_GET_INFO( get_dreamwld_bg2_tile_info )
 
 static VIDEO_START( dreamwld )
 {
-	dreamwld_state *state = (dreamwld_state *)machine->driver_data;
+	dreamwld_state *state = machine->driver_data<dreamwld_state>();
 
 	state->bg_tilemap = tilemap_create(machine, get_dreamwld_bg_tile_info,tilemap_scan_rows, 16, 16, 64,32);
 	state->bg2_tilemap = tilemap_create(machine, get_dreamwld_bg2_tile_info,tilemap_scan_rows, 16, 16, 64,32);
@@ -218,7 +217,7 @@ static VIDEO_START( dreamwld )
 
 static VIDEO_UPDATE( dreamwld )
 {
-	dreamwld_state *state = (dreamwld_state *)screen->machine->driver_data;
+	dreamwld_state *state = screen->machine->driver_data<dreamwld_state>();
 
 	tilemap_set_scrolly(state->bg_tilemap, 0, state->bg_scroll[(0x400 / 4)] + 32);
 	tilemap_set_scrolly(state->bg2_tilemap, 0, state->bg_scroll[(0x400 / 4) + 2] + 32);
@@ -251,10 +250,10 @@ static VIDEO_UPDATE( dreamwld )
 
 static READ32_HANDLER( dreamwld_protdata_r )
 {
-	dreamwld_state *state = (dreamwld_state *)space->machine->driver_data;
+	dreamwld_state *state = space->machine->driver_data<dreamwld_state>();
 
-	UINT8 *protdata = memory_region(space->machine, "user1");
-	size_t protsize = memory_region_length(space->machine, "user1");
+	UINT8 *protdata = space->machine->region("user1")->base();
+	size_t protsize = space->machine->region("user1")->bytes();
 	UINT8 dat = protdata[(state->protindex++) % protsize];
 	return dat << 24;
 }
@@ -262,7 +261,7 @@ static READ32_HANDLER( dreamwld_protdata_r )
 
 static WRITE32_HANDLER( dreamwld_palette_w )
 {
-	dreamwld_state *state = (dreamwld_state *)space->machine->driver_data;
+	dreamwld_state *state = space->machine->driver_data<dreamwld_state>();
 	UINT16 dat;
 	int color;
 
@@ -280,7 +279,7 @@ static void dreamwld_oki_setbank( running_machine *machine, UINT8 chip, UINT8 ba
 {
 	/* 0x30000-0x3ffff is banked.
         banks are at 0x30000,0x40000,0x50000 and 0x60000 in rom */
-	UINT8 *sound = memory_region(machine, chip ? "oki1" : "oki2");
+	UINT8 *sound = machine->region(chip ? "oki1" : "oki2")->base();
 	logerror("OKI%d: set bank %02x\n", chip, bank);
 	memcpy(sound + 0x30000, sound + 0xb0000 + 0x10000 * bank, 0x10000);
 }
@@ -315,10 +314,10 @@ static ADDRESS_MAP_START( dreamwld_map, ADDRESS_SPACE_PROGRAM, 32 )
 	AM_RANGE(0xc00004, 0xc00007) AM_READ_PORT("c00004")
 
 	AM_RANGE(0xc0000c, 0xc0000f) AM_WRITE(dreamwld_6295_0_bank_w) // sfx
-	AM_RANGE(0xc00018, 0xc0001b) AM_DEVREADWRITE8("oki1", okim6295_r, okim6295_w, 0xff000000) // sfx
+	AM_RANGE(0xc00018, 0xc0001b) AM_DEVREADWRITE8_MODERN("oki1", okim6295_device, read, write, 0xff000000) // sfx
 
 	AM_RANGE(0xc0002c, 0xc0002f) AM_WRITE(dreamwld_6295_1_bank_w) // sfx
-	AM_RANGE(0xc00028, 0xc0002b) AM_DEVREADWRITE8("oki2", okim6295_r, okim6295_w, 0xff000000) // sfx
+	AM_RANGE(0xc00028, 0xc0002b) AM_DEVREADWRITE8_MODERN("oki2", okim6295_device, read, write, 0xff000000) // sfx
 
 	AM_RANGE(0xc00030, 0xc00033) AM_READ(dreamwld_protdata_r) // it reads protection data (irq code) from here and puts it at ffd000
 
@@ -403,7 +402,7 @@ GFXDECODE_END
 
 static MACHINE_START( dreamwld )
 {
-	dreamwld_state *state = (dreamwld_state *)machine->driver_data;
+	dreamwld_state *state = machine->driver_data<dreamwld_state>();
 
 	state_save_register_global(machine, state->protindex);
 	state_save_register_global_array(machine, state->tilebank);
@@ -412,50 +411,47 @@ static MACHINE_START( dreamwld )
 
 static MACHINE_RESET( dreamwld )
 {
-	dreamwld_state *state = (dreamwld_state *)machine->driver_data;
+	dreamwld_state *state = machine->driver_data<dreamwld_state>();
 
 	state->tilebankold[0] = state->tilebankold[1] = -1;
 	state->tilebank[0] = state->tilebank[1] = 0;
 	state->protindex = 0;
 }
 
-static MACHINE_DRIVER_START( dreamwld )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(dreamwld_state)
+static MACHINE_CONFIG_START( dreamwld, dreamwld_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68EC020, MASTER_CLOCK/2)
-	MDRV_CPU_PROGRAM_MAP(dreamwld_map)
-	MDRV_CPU_VBLANK_INT("screen", irq4_line_hold) // 4, 5, or 6, all point to the same place
+	MCFG_CPU_ADD("maincpu", M68EC020, MASTER_CLOCK/2)
+	MCFG_CPU_PROGRAM_MAP(dreamwld_map)
+	MCFG_CPU_VBLANK_INT("screen", irq4_line_hold) // 4, 5, or 6, all point to the same place
 
-	MDRV_MACHINE_START(dreamwld)
-	MDRV_MACHINE_RESET(dreamwld)
+	MCFG_MACHINE_START(dreamwld)
+	MCFG_MACHINE_RESET(dreamwld)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(58)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(512,256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 304-1, 0, 224-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(58)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(512,256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 304-1, 0, 224-1)
 
-	MDRV_PALETTE_LENGTH(0x1000)
-	MDRV_GFXDECODE(dreamwld)
+	MCFG_PALETTE_LENGTH(0x1000)
+	MCFG_GFXDECODE(dreamwld)
 
-	MDRV_VIDEO_START(dreamwld)
-	MDRV_VIDEO_UPDATE(dreamwld)
+	MCFG_VIDEO_START(dreamwld)
+	MCFG_VIDEO_UPDATE(dreamwld)
 
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_OKIM6295_ADD("oki1", MASTER_CLOCK/32, OKIM6295_PIN7_LOW)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
+	MCFG_OKIM6295_ADD("oki1", MASTER_CLOCK/32, OKIM6295_PIN7_LOW)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
 
-	MDRV_OKIM6295_ADD("oki2", MASTER_CLOCK/32, OKIM6295_PIN7_LOW)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki2", MASTER_CLOCK/32, OKIM6295_PIN7_LOW)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
+MACHINE_CONFIG_END
 
 
 

@@ -500,6 +500,7 @@
 #include "machine/ticket.h"
 #include "audio/williams.h"
 #include "includes/williams.h"
+#include "machine/nvram.h"
 
 
 #define MASTER_CLOCK		(12000000)
@@ -517,17 +518,17 @@ static ADDRESS_MAP_START( defender_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0xbfff) AM_RAM AM_BASE(&williams_videoram)
 	/* range from 0xc000-0xcfff is mapped programmatically below */
 	AM_RANGE(0xc000, 0xc00f) AM_BASE_GENERIC(paletteram)
-	AM_RANGE(0xc400, 0xc4ff) AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0xc400, 0xc4ff) AM_SHARE("nvram")
 	AM_RANGE(0xc000, 0xcfff) AM_ROMBANK("bank1")
 	AM_RANGE(0xd000, 0xdfff) AM_WRITE(defender_bank_select_w)
 	AM_RANGE(0xd000, 0xffff) AM_ROM
 ADDRESS_MAP_END
 
 
-void defender_install_io_space(const address_space *space)
+void defender_install_io_space(address_space *space)
 {
-	running_device *pia_0 = space->machine->device("pia_0");
-	running_device *pia_1 = space->machine->device("pia_1");
+	device_t *pia_0 = space->machine->device("pia_0");
+	device_t *pia_1 = space->machine->device("pia_1");
 
 	/* this routine dynamically installs the memory mapped above from c000-cfff */
 	memory_install_write_bank    (space, 0xc000, 0xc00f, 0, 0x03e0, "bank4");
@@ -538,7 +539,7 @@ void defender_install_io_space(const address_space *space)
 	memory_install_read8_handler     (space, 0xc800, 0xcbff, 0, 0x03e0, williams_video_counter_r);
 	memory_install_readwrite8_device_handler(space, pia_1, 0xcc00, 0xcc03, 0, 0x03e0, pia6821_r, pia6821_w);
 	memory_install_readwrite8_device_handler(space, pia_0, 0xcc04, 0xcc07, 0, 0x03e0, pia6821_r, pia6821_w);
-	memory_set_bankptr(space->machine, "bank3", space->machine->generic.nvram.v);
+	memory_set_bankptr(space->machine, "bank3", space->machine->driver_data<williams_state>()->m_nvram);
 	memory_set_bankptr(space->machine, "bank4", space->machine->generic.paletteram.v);
 }
 
@@ -560,7 +561,7 @@ static ADDRESS_MAP_START( williams_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0xca00, 0xca07) AM_MIRROR(0x00f8) AM_WRITE(williams_blitter_w)
 	AM_RANGE(0xcb00, 0xcbff) AM_READ(williams_video_counter_r)
 	AM_RANGE(0xcbff, 0xcbff) AM_WRITE(williams_watchdog_reset_w)
-	AM_RANGE(0xcc00, 0xcfff) AM_RAM_WRITE(williams_cmos_w) AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0xcc00, 0xcfff) AM_RAM_WRITE(williams_cmos_w) AM_SHARE("nvram")
 	AM_RANGE(0xd000, 0xffff) AM_ROM
 ADDRESS_MAP_END
 
@@ -575,7 +576,7 @@ static ADDRESS_MAP_START( williams_extra_ram_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0xca00, 0xca07) AM_MIRROR(0x00f8) AM_WRITE(williams_blitter_w)
 	AM_RANGE(0xcb00, 0xcbff) AM_READ(williams_video_counter_r)
 	AM_RANGE(0xcbff, 0xcbff) AM_WRITE(williams_watchdog_reset_w)
-	AM_RANGE(0xcc00, 0xcfff) AM_RAM_WRITE(williams_cmos_w) AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0xcc00, 0xcfff) AM_RAM_WRITE(williams_cmos_w) AM_SHARE("nvram")
 	AM_RANGE(0xd000, 0xdfff) AM_RAM
 	AM_RANGE(0xe000, 0xffff) AM_ROM
 ADDRESS_MAP_END
@@ -604,7 +605,7 @@ static ADDRESS_MAP_START( blaster_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0xca00, 0xca07) AM_MIRROR(0x00f8) AM_WRITE(williams_blitter_w)
 	AM_RANGE(0xcb00, 0xcbff) AM_READ(williams_video_counter_r)
 	AM_RANGE(0xcbff, 0xcbff) AM_WRITE(williams_watchdog_reset_w)
-	AM_RANGE(0xcc00, 0xcfff) AM_RAM_WRITE(williams_cmos_w) AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0xcc00, 0xcfff) AM_RAM_WRITE(williams_cmos_w) AM_SHARE("nvram")
 	AM_RANGE(0xd000, 0xffff) AM_ROM
 ADDRESS_MAP_END
 
@@ -633,7 +634,7 @@ static ADDRESS_MAP_START( williams2_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0xcb80, 0xcb9f) AM_WRITE(defender_video_control_w)
 	AM_RANGE(0xcba0, 0xcbbf) AM_WRITE(williams2_blit_window_enable_w)
 	AM_RANGE(0xcbe0, 0xcbef) AM_READ(williams2_video_counter_r)
-	AM_RANGE(0xcc00, 0xcfff) AM_RAM_WRITE(williams_cmos_w) AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0xcc00, 0xcfff) AM_RAM_WRITE(williams_cmos_w) AM_SHARE("nvram")
 	AM_RANGE(0xd000, 0xffff) AM_ROM
 ADDRESS_MAP_END
 
@@ -655,7 +656,7 @@ static ADDRESS_MAP_START( williams2_extra_ram_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0xcb80, 0xcb9f) AM_WRITE(defender_video_control_w)
 	AM_RANGE(0xcba0, 0xcbbf) AM_WRITE(williams2_blit_window_enable_w)
 	AM_RANGE(0xcbe0, 0xcbef) AM_READ(williams2_video_counter_r)
-	AM_RANGE(0xcc00, 0xcfff) AM_RAM_WRITE(williams_cmos_w) AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0xcc00, 0xcfff) AM_RAM_WRITE(williams_cmos_w) AM_SHARE("nvram")
 	AM_RANGE(0xd000, 0xdfff) AM_RAM
 	AM_RANGE(0xe000, 0xffff) AM_ROM
 ADDRESS_MAP_END
@@ -1426,281 +1427,266 @@ GFXDECODE_END
  *
  *************************************/
 
-static MACHINE_DRIVER_START( defender )
+static MACHINE_CONFIG_START( defender, williams_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6809, MASTER_CLOCK/3/4)
-	MDRV_CPU_PROGRAM_MAP(defender_map)
+	MCFG_CPU_ADD("maincpu", M6809, MASTER_CLOCK/3/4)
+	MCFG_CPU_PROGRAM_MAP(defender_map)
 
-	MDRV_CPU_ADD("soundcpu", M6808, SOUND_CLOCK)
-	MDRV_CPU_PROGRAM_MAP(defender_sound_map)
+	MCFG_CPU_ADD("soundcpu", M6808, SOUND_CLOCK)
+	MCFG_CPU_PROGRAM_MAP(defender_sound_map)
 
-	MDRV_MACHINE_START(defender)
-	MDRV_MACHINE_RESET(defender)
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_MACHINE_START(defender)
+	MCFG_MACHINE_RESET(defender)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
-	MDRV_TIMER_ADD("scan_timer", williams_va11_callback)
-	MDRV_TIMER_ADD("240_timer", williams_count240_callback)
+	MCFG_TIMER_ADD("scan_timer", williams_va11_callback)
+	MCFG_TIMER_ADD("240_timer", williams_count240_callback)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_UPDATE_SCANLINE)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_SCANLINE)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_RAW_PARAMS(MASTER_CLOCK*2/3, 512, 10, 304, 260, 7, 245)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_RAW_PARAMS(MASTER_CLOCK*2/3, 512, 10, 304, 260, 7, 245)
 
-	MDRV_VIDEO_START(williams)
-	MDRV_VIDEO_UPDATE(williams)
-
-	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-
-	MDRV_SOUND_ADD("wmsdac", DAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-
-	/* pia */
-	MDRV_PIA6821_ADD("pia_0", williams_pia_0_intf)
-	MDRV_PIA6821_ADD("pia_1", williams_pia_1_intf)
-	MDRV_PIA6821_ADD("pia_2", williams_snd_pia_intf)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( jin ) // needs a different screen size or the credit text is clipped
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM(defender)
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_VISIBLE_AREA(0, 315, 7, 245)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( williams )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM(defender)
-
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(williams_map)
-
-	MDRV_CPU_MODIFY("soundcpu")
-	MDRV_CPU_PROGRAM_MAP(sound_map)
-
-	MDRV_MACHINE_START(williams)
-	MDRV_MACHINE_RESET(williams)
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_VISIBLE_AREA(6, 298-1, 7, 247-1)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( williams_muxed )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM(williams)
-
-	/* pia */
-	MDRV_PIA6821_MODIFY("pia_0", williams_muxed_pia_0_intf)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( williams_extra_ram )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM(williams)
-
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(williams_extra_ram_map)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( spdball )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM(williams)
-
-	/* pia */
-	MDRV_PIA6821_ADD("pia_3", spdball_pia_3_intf)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( lottofun )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM(williams)
-
-	/* pia */
-	MDRV_PIA6821_MODIFY("pia_0", lottofun_pia_0_intf)
-	MDRV_TICKET_DISPENSER_ADD("ticket", 70, TICKET_MOTOR_ACTIVE_LOW, TICKET_STATUS_ACTIVE_HIGH)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( alienar )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM(defender)
-
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(williams_map)
-
-	MDRV_MACHINE_START(williams)
-	MDRV_MACHINE_RESET(williams)
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_VISIBLE_AREA(6, 298-1, 7, 247-1)
-
-	/* pia */
-	MDRV_PIA6821_MODIFY("pia_0", williams_muxed_pia_0_intf)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( sinistar )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM(williams_extra_ram)
+	MCFG_VIDEO_START(williams)
+	MCFG_VIDEO_UPDATE(williams)
 
 	/* sound hardware */
-	MDRV_SOUND_ADD("cvsd", HC55516, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+
+	MCFG_SOUND_ADD("wmsdac", DAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
 	/* pia */
-	MDRV_PIA6821_MODIFY("pia_0", williams_49way_pia_0_intf)
-	MDRV_PIA6821_MODIFY("pia_2", sinistar_snd_pia_intf)
-MACHINE_DRIVER_END
+	MCFG_PIA6821_ADD("pia_0", williams_pia_0_intf)
+	MCFG_PIA6821_ADD("pia_1", williams_pia_1_intf)
+	MCFG_PIA6821_ADD("pia_2", williams_snd_pia_intf)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( playball )
+static MACHINE_CONFIG_DERIVED( jin, defender ) // needs a different screen size or the credit text is clipped
+	/* basic machine hardware */
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_VISIBLE_AREA(0, 315, 7, 245)
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( williams, defender )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(williams)
+
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(williams_map)
+
+	MCFG_CPU_MODIFY("soundcpu")
+	MCFG_CPU_PROGRAM_MAP(sound_map)
+
+	MCFG_MACHINE_START(williams)
+	MCFG_MACHINE_RESET(williams)
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_VISIBLE_AREA(6, 298-1, 7, 247-1)
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( williams_muxed, williams )
+
+	/* basic machine hardware */
+
+	/* pia */
+	MCFG_PIA6821_MODIFY("pia_0", williams_muxed_pia_0_intf)
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( williams_extra_ram, williams )
+
+	/* basic machine hardware */
+
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(williams_extra_ram_map)
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( spdball, williams )
+
+	/* basic machine hardware */
+
+	/* pia */
+	MCFG_PIA6821_ADD("pia_3", spdball_pia_3_intf)
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( lottofun, williams )
+
+	/* basic machine hardware */
+
+	/* pia */
+	MCFG_PIA6821_MODIFY("pia_0", lottofun_pia_0_intf)
+	MCFG_TICKET_DISPENSER_ADD("ticket", 70, TICKET_MOTOR_ACTIVE_LOW, TICKET_STATUS_ACTIVE_HIGH)
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( alienar, defender )
+
+	/* basic machine hardware */
+
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(williams_map)
+
+	MCFG_MACHINE_START(williams)
+	MCFG_MACHINE_RESET(williams)
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_VISIBLE_AREA(6, 298-1, 7, 247-1)
+
+	/* pia */
+	MCFG_PIA6821_MODIFY("pia_0", williams_muxed_pia_0_intf)
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( sinistar, williams_extra_ram )
+
+	/* basic machine hardware */
+
+	/* sound hardware */
+	MCFG_SOUND_ADD("cvsd", HC55516, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
+
+	/* pia */
+	MCFG_PIA6821_MODIFY("pia_0", williams_49way_pia_0_intf)
+	MCFG_PIA6821_MODIFY("pia_2", sinistar_snd_pia_intf)
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( playball, williams )
+
+	/* basic machine hardware */
 
 	/* video hardware */
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_VISIBLE_AREA(6, 298-1, 8, 239-1)
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_VISIBLE_AREA(6, 298-1, 8, 239-1)
 
 	/* sound hardware */
-	MDRV_SOUND_ADD("cvsd", HC55516, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
+	MCFG_SOUND_ADD("cvsd", HC55516, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
 
 	/* pia */
-	MDRV_PIA6821_MODIFY("pia_1", playball_pia_1_intf)
-	MDRV_PIA6821_MODIFY("pia_2", sinistar_snd_pia_intf)
-MACHINE_DRIVER_END
+	MCFG_PIA6821_MODIFY("pia_1", playball_pia_1_intf)
+	MCFG_PIA6821_MODIFY("pia_2", sinistar_snd_pia_intf)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( blaster )
+static MACHINE_CONFIG_DERIVED( blaster, williams )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(williams)
 
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(blaster_map)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(blaster_map)
 
-	MDRV_MACHINE_START(blaster)
-	MDRV_MACHINE_RESET(blaster)
+	MCFG_MACHINE_START(blaster)
+	MCFG_MACHINE_RESET(blaster)
 
 	/* video hardware */
-	MDRV_VIDEO_START(blaster)
-	MDRV_VIDEO_UPDATE(blaster)
+	MCFG_VIDEO_START(blaster)
+	MCFG_VIDEO_UPDATE(blaster)
 
 	/* pia */
-	MDRV_PIA6821_MODIFY("pia_0", williams_49way_pia_0_intf)
-MACHINE_DRIVER_END
+	MCFG_PIA6821_MODIFY("pia_0", williams_49way_pia_0_intf)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( blastkit )
+static MACHINE_CONFIG_DERIVED( blastkit, blaster )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(blaster)
 
 	/* pia */
-	MDRV_PIA6821_MODIFY("pia_0", williams_49way_muxed_pia_0_intf)
-MACHINE_DRIVER_END
+	MCFG_PIA6821_MODIFY("pia_0", williams_49way_muxed_pia_0_intf)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( williams2 )
+static MACHINE_CONFIG_START( williams2, williams_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6809, MASTER_CLOCK/3/4)
-	MDRV_CPU_PROGRAM_MAP(williams2_map)
+	MCFG_CPU_ADD("maincpu", M6809, MASTER_CLOCK/3/4)
+	MCFG_CPU_PROGRAM_MAP(williams2_map)
 
-	MDRV_CPU_ADD("soundcpu", M6808, MASTER_CLOCK/3)	/* yes, this is different from the older games */
-	MDRV_CPU_PROGRAM_MAP(williams2_sound_map)
+	MCFG_CPU_ADD("soundcpu", M6808, MASTER_CLOCK/3)	/* yes, this is different from the older games */
+	MCFG_CPU_PROGRAM_MAP(williams2_sound_map)
 
-	MDRV_MACHINE_START(williams2)
-	MDRV_MACHINE_RESET(williams2)
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_MACHINE_START(williams2)
+	MCFG_MACHINE_RESET(williams2)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
-	MDRV_TIMER_ADD("scan_timer", williams2_va11_callback)
-	MDRV_TIMER_ADD("254_timer", williams2_endscreen_callback)
+	MCFG_TIMER_ADD("scan_timer", williams2_va11_callback)
+	MCFG_TIMER_ADD("254_timer", williams2_endscreen_callback)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_UPDATE_SCANLINE)
-	MDRV_PALETTE_LENGTH(1024)
-	MDRV_GFXDECODE(williams2)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_SCANLINE)
+	MCFG_PALETTE_LENGTH(1024)
+	MCFG_GFXDECODE(williams2)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_RAW_PARAMS(MASTER_CLOCK*2/3, 512, 8, 284, 260, 8, 248)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_RAW_PARAMS(MASTER_CLOCK*2/3, 512, 8, 284, 260, 8, 248)
 
-	MDRV_VIDEO_START(williams2)
-	MDRV_VIDEO_UPDATE(williams2)
+	MCFG_VIDEO_START(williams2)
+	MCFG_VIDEO_UPDATE(williams2)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("wmsdac", DAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-
-	/* pia */
-	MDRV_PIA6821_ADD("pia_0", williams2_muxed_pia_0_intf)
-	MDRV_PIA6821_ADD("pia_1", williams2_pia_1_intf)
-	MDRV_PIA6821_ADD("pia_2", williams2_snd_pia_intf)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( williams2_extra_ram )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM(williams2)
-
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(williams2_extra_ram_map)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( mysticm )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM(williams2_extra_ram)
+	MCFG_SOUND_ADD("wmsdac", DAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
 	/* pia */
-	MDRV_PIA6821_MODIFY("pia_0", mysticm_pia_0_intf)
-	MDRV_PIA6821_MODIFY("pia_1", mysticm_pia_1_intf)
-MACHINE_DRIVER_END
+	MCFG_PIA6821_ADD("pia_0", williams2_muxed_pia_0_intf)
+	MCFG_PIA6821_ADD("pia_1", williams2_pia_1_intf)
+	MCFG_PIA6821_ADD("pia_2", williams2_snd_pia_intf)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( tshoot )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM(williams2)
-
-	/* pia */
-	MDRV_PIA6821_MODIFY("pia_0", tshoot_pia_0_intf)
-	MDRV_PIA6821_MODIFY("pia_1", tshoot_pia_1_intf)
-	MDRV_PIA6821_MODIFY("pia_2", tshoot_snd_pia_intf)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( joust2 )
+static MACHINE_CONFIG_DERIVED( williams2_extra_ram, williams2 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(williams2)
-	MDRV_DEVICE_REMOVE("mono")
-	MDRV_IMPORT_FROM(williams_cvsd_sound)
 
-	MDRV_MACHINE_START(joust2)
-	MDRV_MACHINE_RESET(joust2)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(williams2_extra_ram_map)
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( mysticm, williams2_extra_ram )
+
+	/* basic machine hardware */
 
 	/* pia */
-	MDRV_PIA6821_MODIFY("pia_1", joust2_pia_1_intf)
-MACHINE_DRIVER_END
+	MCFG_PIA6821_MODIFY("pia_0", mysticm_pia_0_intf)
+	MCFG_PIA6821_MODIFY("pia_1", mysticm_pia_1_intf)
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( tshoot, williams2 )
+
+	/* basic machine hardware */
+
+	/* pia */
+	MCFG_PIA6821_MODIFY("pia_0", tshoot_pia_0_intf)
+	MCFG_PIA6821_MODIFY("pia_1", tshoot_pia_1_intf)
+	MCFG_PIA6821_MODIFY("pia_2", tshoot_snd_pia_intf)
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( joust2, williams2 )
+
+	/* basic machine hardware */
+	MCFG_DEVICE_REMOVE("mono")
+	MCFG_FRAGMENT_ADD(williams_cvsd_sound)
+
+	MCFG_MACHINE_START(joust2)
+	MCFG_MACHINE_RESET(joust2)
+
+	/* pia */
+	MCFG_PIA6821_MODIFY("pia_1", joust2_pia_1_intf)
+MACHINE_CONFIG_END
 
 
 
@@ -2723,7 +2709,7 @@ static DRIVER_INIT( defender )
 
 static DRIVER_INIT( defndjeu )
 {
-	UINT8 *rom = memory_region(machine, "maincpu");
+	UINT8 *rom = machine->region("maincpu")->base();
 	int i;
 
 	CONFIGURE_BLITTER(WILLIAMS_BLITTER_NONE, 0x0000);
@@ -2809,7 +2795,7 @@ static DRIVER_INIT( blastkit )
 
 static DRIVER_INIT( spdball )
 {
-	running_device *pia_3 = machine->device("pia_3");
+	device_t *pia_3 = machine->device("pia_3");
 
 	CONFIGURE_BLITTER(WILLIAMS_BLITTER_SC01, 0xc000);
 

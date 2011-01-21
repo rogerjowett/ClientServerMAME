@@ -52,17 +52,7 @@ Games by Nihon Game/Culture Brain:
 #include "cpu/z80/z80.h"
 #include "sound/ay8910.h"
 #include "sound/dac.h"
-
-/* from video/shangkid.c */
-extern UINT8 *shangkid_videoreg;
-extern int shangkid_gfx_type;
-
-VIDEO_START( shangkid );
-VIDEO_UPDATE( shangkid );
-WRITE8_HANDLER( shangkid_videoram_w );
-
-PALETTE_INIT( dynamski );
-VIDEO_UPDATE( dynamski );
+#include "includes/shangkid.h"
 
 /***************************************************************************************/
 
@@ -144,8 +134,8 @@ static DRIVER_INIT( shangkid )
 	shangkid_gfx_type = 1;
 
 	/* set up banking */
-	memory_configure_bank(machine, "bank1", 0, 2, memory_region(machine, "maincpu") + 0x8000, 0x8000);
-	memory_configure_bank(machine, "bank2", 0, 2, memory_region(machine, "audiocpu") + 0x0000, 0x10000);
+	memory_configure_bank(machine, "bank1", 0, 2, machine->region("maincpu")->base() + 0x8000, 0x8000);
+	memory_configure_bank(machine, "bank2", 0, 2, machine->region("audiocpu")->base() + 0x0000, 0x10000);
 }
 
 /***************************************************************************************/
@@ -257,7 +247,7 @@ static ADDRESS_MAP_START( chinhero_main_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0xb802, 0xb802) AM_READ_PORT("P2")
 	AM_RANGE(0xb803, 0xb803) AM_READ_PORT("P1")
 	AM_RANGE(0xc000, 0xc002) AM_WRITEONLY AM_BASE(&shangkid_videoreg)
-	AM_RANGE(0xd000, 0xdfff) AM_RAM_WRITE(shangkid_videoram_w) AM_BASE_GENERIC(videoram) AM_SHARE("share1")
+	AM_RANGE(0xd000, 0xdfff) AM_RAM_WRITE(shangkid_videoram_w) AM_BASE_MEMBER(shangkid_state, videoram) AM_SHARE("share1")
 	AM_RANGE(0xe000, 0xfdff) AM_RAM AM_SHARE("share2")
 	AM_RANGE(0xfe00, 0xffff) AM_RAM AM_BASE_GENERIC(spriteram) AM_SHARE("share3")
 ADDRESS_MAP_END
@@ -278,7 +268,7 @@ static ADDRESS_MAP_START( shangkid_main_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0xb802, 0xb802) AM_READ_PORT("P2")
 	AM_RANGE(0xb803, 0xb803) AM_READ_PORT("P1")
 	AM_RANGE(0xc000, 0xc002) AM_WRITEONLY AM_BASE(&shangkid_videoreg)
-	AM_RANGE(0xd000, 0xdfff) AM_RAM_WRITE(shangkid_videoram_w) AM_BASE_GENERIC(videoram) AM_SHARE("share1")
+	AM_RANGE(0xd000, 0xdfff) AM_RAM_WRITE(shangkid_videoram_w) AM_BASE_MEMBER(shangkid_state, videoram) AM_SHARE("share1")
 	AM_RANGE(0xe000, 0xfdff) AM_RAM AM_SHARE("share2")
 	AM_RANGE(0xfe00, 0xffff) AM_RAM AM_BASE_GENERIC(spriteram) AM_SHARE("share3")
 ADDRESS_MAP_END
@@ -373,81 +363,80 @@ static const ay8910_interface shangkid_ay8910_interface =
 };
 
 
-static MACHINE_DRIVER_START( chinhero )
+static MACHINE_CONFIG_START( chinhero, shangkid_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, XTAL_18_432MHz/6) /* verified on pcb */
-	MDRV_CPU_PROGRAM_MAP(chinhero_main_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80, XTAL_18_432MHz/6) /* verified on pcb */
+	MCFG_CPU_PROGRAM_MAP(chinhero_main_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("bbx", Z80, XTAL_18_432MHz/6) /* verified on pcb */
-	MDRV_CPU_PROGRAM_MAP(chinhero_bbx_map)
-	MDRV_CPU_IO_MAP(chinhero_bbx_portmap)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("bbx", Z80, XTAL_18_432MHz/6) /* verified on pcb */
+	MCFG_CPU_PROGRAM_MAP(chinhero_bbx_map)
+	MCFG_CPU_IO_MAP(chinhero_bbx_portmap)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80, XTAL_18_432MHz/6) /* verified on pcb */
-	MDRV_CPU_PROGRAM_MAP(chinhero_sound_map)
-	MDRV_CPU_IO_MAP(sound_portmap)
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL_18_432MHz/6) /* verified on pcb */
+	MCFG_CPU_PROGRAM_MAP(chinhero_sound_map)
+	MCFG_CPU_IO_MAP(sound_portmap)
 
-	MDRV_MACHINE_RESET(chinhero)
+	MCFG_MACHINE_RESET(chinhero)
 
-	MDRV_QUANTUM_TIME(HZ(600))
+	MCFG_QUANTUM_TIME(HZ(600))
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(40*8, 28*8)
-	MDRV_SCREEN_VISIBLE_AREA(16, 319-16, 0, 223)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(40*8, 28*8)
+	MCFG_SCREEN_VISIBLE_AREA(16, 319-16, 0, 223)
 
-	MDRV_GFXDECODE(chinhero)
-	MDRV_PALETTE_LENGTH(256)
+	MCFG_GFXDECODE(chinhero)
+	MCFG_PALETTE_LENGTH(256)
 
-	MDRV_PALETTE_INIT(RRRR_GGGG_BBBB)
-	MDRV_VIDEO_START(shangkid)
-	MDRV_VIDEO_UPDATE(shangkid)
+	MCFG_PALETTE_INIT(RRRR_GGGG_BBBB)
+	MCFG_VIDEO_START(shangkid)
+	MCFG_VIDEO_UPDATE(shangkid)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("dac", DAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_SOUND_ADD("dac", DAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MDRV_SOUND_ADD("aysnd", AY8910, XTAL_18_432MHz/12) /* verified on pcb */
-	MDRV_SOUND_CONFIG(chinhero_ay8910_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.10)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("aysnd", AY8910, XTAL_18_432MHz/12) /* verified on pcb */
+	MCFG_SOUND_CONFIG(chinhero_ay8910_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.10)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( shangkid )
+static MACHINE_CONFIG_DERIVED( shangkid, chinhero )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(chinhero)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(shangkid_main_map)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(shangkid_main_map)
 
-	MDRV_CPU_MODIFY("bbx")
-	MDRV_CPU_PROGRAM_MAP(shangkid_bbx_map)
-	MDRV_CPU_IO_MAP(shangkid_bbx_portmap)
+	MCFG_CPU_MODIFY("bbx")
+	MCFG_CPU_PROGRAM_MAP(shangkid_bbx_map)
+	MCFG_CPU_IO_MAP(shangkid_bbx_portmap)
 
-	MDRV_CPU_MODIFY("audiocpu")
-	MDRV_CPU_PROGRAM_MAP(shangkid_sound_map)
+	MCFG_CPU_MODIFY("audiocpu")
+	MCFG_CPU_PROGRAM_MAP(shangkid_sound_map)
 
-	MDRV_MACHINE_RESET(shangkid)
+	MCFG_MACHINE_RESET(shangkid)
 
 	/* video hardware */
-	MDRV_GFXDECODE(shangkid)
+	MCFG_GFXDECODE(shangkid)
 
-	MDRV_SOUND_MODIFY("aysnd")
-	MDRV_SOUND_CONFIG(shangkid_ay8910_interface)
-MACHINE_DRIVER_END
+	MCFG_SOUND_MODIFY("aysnd")
+	MCFG_SOUND_CONFIG(shangkid_ay8910_interface)
+MACHINE_CONFIG_END
 
 
 
 static ADDRESS_MAP_START( dynamski_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0xc000, 0xc7ff) AM_RAM AM_BASE_GENERIC(videoram) /* tilemap */
+	AM_RANGE(0xc000, 0xc7ff) AM_RAM AM_BASE_MEMBER(shangkid_state, videoram) /* tilemap */
 	AM_RANGE(0xc800, 0xcbff) AM_RAM
 	AM_RANGE(0xd000, 0xd3ff) AM_RAM
 	AM_RANGE(0xd800, 0xdbff) AM_RAM
@@ -466,34 +455,34 @@ static ADDRESS_MAP_START( dynamski_portmap, ADDRESS_SPACE_IO, 8 )
 	AM_RANGE(0x00, 0x01) AM_DEVWRITE("aysnd", ay8910_data_address_w)
 ADDRESS_MAP_END
 
-static MACHINE_DRIVER_START( dynamski )
+static MACHINE_CONFIG_START( dynamski, shangkid_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, 3000000) /* ? */
-	MDRV_CPU_PROGRAM_MAP(dynamski_map)
-	MDRV_CPU_IO_MAP(dynamski_portmap)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80, 3000000) /* ? */
+	MCFG_CPU_PROGRAM_MAP(dynamski_map)
+	MCFG_CPU_IO_MAP(dynamski_portmap)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(256+32, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 255+32, 16, 255-16)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(256+32, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 255+32, 16, 255-16)
 
-	MDRV_GFXDECODE(dynamski)
-	MDRV_PALETTE_LENGTH(16*4+16*4)
+	MCFG_GFXDECODE(dynamski)
+	MCFG_PALETTE_LENGTH(16*4+16*4)
 
-	MDRV_PALETTE_INIT(dynamski)
-	MDRV_VIDEO_UPDATE(dynamski)
+	MCFG_PALETTE_INIT(dynamski)
+	MCFG_VIDEO_UPDATE(dynamski)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("aysnd", AY8910, 2000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.10)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("aysnd", AY8910, 2000000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.10)
+MACHINE_CONFIG_END
 
 /***************************************************************************************/
 

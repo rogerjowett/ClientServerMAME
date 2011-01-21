@@ -47,12 +47,11 @@ Limit for help/undo (matta):
 #define	TILE_WIDTH 6
 
 
-class othello_state
+class othello_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, othello_state(machine)); }
-
-	othello_state(running_machine &machine) { }
+	othello_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *  videoram;
@@ -69,22 +68,22 @@ public:
 	int n7751_busy;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *mc6845;
-	running_device *n7751;
-	running_device *ay1;
-	running_device *ay2;
+	device_t *maincpu;
+	device_t *mc6845;
+	device_t *n7751;
+	device_t *ay1;
+	device_t *ay2;
 };
 
 
 static MC6845_UPDATE_ROW( update_row )
 {
-	othello_state *state = (othello_state *)device->machine->driver_data;
+	othello_state *state = device->machine->driver_data<othello_state>();
 	int cx, x;
 	UINT32 data_address;
 	UINT32 tmp;
 
-	const UINT8 *gfx = memory_region(device->machine, "gfx");
+	const UINT8 *gfx = device->machine->region("gfx")->base();
 
 	for(cx = 0; cx < x_count; ++cx)
 	{
@@ -119,7 +118,7 @@ static PALETTE_INIT( othello )
 
 static VIDEO_UPDATE( othello )
 {
-	othello_state *state = (othello_state *)screen->machine->driver_data;
+	othello_state *state = screen->machine->driver_data<othello_state>();
 
 	mc6845_update(state->mc6845, bitmap, cliprect);
 	return 0;
@@ -135,13 +134,13 @@ ADDRESS_MAP_END
 static READ8_HANDLER( unk_87_r )
 {
 	/* n7751_status_r ?  bit 7 = ack/status from device connected  to port 8a? */
-	return mame_rand(space->machine);
+	return space->machine->rand();
 }
 
 static WRITE8_HANDLER( unk_8a_w )
 {
 	/*
-    othello_state *state = (othello_state *)space->machine->driver_data;
+    othello_state *state = space->machine->driver_data<othello_state>();
 
     state->n7751_command = (data & 0x07);
     cpu_set_input_line(state->n7751, 0, ((data & 0x08) == 0) ? ASSERT_LINE : CLEAR_LINE);
@@ -159,12 +158,12 @@ static WRITE8_HANDLER( unk_8c_w )
 
 static READ8_HANDLER( unk_8c_r )
 {
-	return mame_rand(space->machine);
+	return space->machine->rand();
 }
 
 static READ8_HANDLER( sound_ack_r )
 {
-	othello_state *state = (othello_state *)space->machine->driver_data;
+	othello_state *state = space->machine->driver_data<othello_state>();
 	return state->ack_data;
 }
 
@@ -175,7 +174,7 @@ static WRITE8_HANDLER( unk_8f_w )
 
 static WRITE8_HANDLER( tilebank_w )
 {
-	othello_state *state = (othello_state *)space->machine->driver_data;
+	othello_state *state = space->machine->driver_data<othello_state>();
 	state->tile_bank = (data == 0x0f) ? 0x100 : 0x00;
 	logerror("tilebank -> %x\n", data);
 }
@@ -204,19 +203,19 @@ static READ8_HANDLER( latch_r )
 
 static WRITE8_HANDLER( ay_select_w )
 {
-	othello_state *state = (othello_state *)space->machine->driver_data;
+	othello_state *state = space->machine->driver_data<othello_state>();
 	state->ay_select = data;
 }
 
 static WRITE8_HANDLER( ack_w )
 {
-	othello_state *state = (othello_state *)space->machine->driver_data;
+	othello_state *state = space->machine->driver_data<othello_state>();
 	state->ack_data = data;
 }
 
 static WRITE8_HANDLER( ay_address_w )
 {
-	othello_state *state = (othello_state *)space->machine->driver_data;
+	othello_state *state = space->machine->driver_data<othello_state>();
 
 	if (state->ay_select & 1) ay8910_address_w(state->ay1, 0, data);
 	if (state->ay_select & 2) ay8910_address_w(state->ay2, 0, data);
@@ -224,7 +223,7 @@ static WRITE8_HANDLER( ay_address_w )
 
 static WRITE8_HANDLER( ay_data_w )
 {
-	othello_state *state = (othello_state *)space->machine->driver_data;
+	othello_state *state = space->machine->driver_data<othello_state>();
 
 	if (state->ay_select & 1) ay8910_data_w(state->ay1, 0, data);
 	if (state->ay_select & 2) ay8910_data_w(state->ay2, 0, data);
@@ -246,7 +245,7 @@ ADDRESS_MAP_END
 
 static WRITE8_DEVICE_HANDLER( n7751_rom_control_w )
 {
-	othello_state *state = (othello_state *)device->machine->driver_data;
+	othello_state *state = device->machine->driver_data<othello_state>();
 
 	/* P4 - address lines 0-3 */
 	/* P5 - address lines 4-7 */
@@ -281,19 +280,19 @@ static WRITE8_DEVICE_HANDLER( n7751_rom_control_w )
 
 static READ8_HANDLER( n7751_rom_r )
 {
-	othello_state *state = (othello_state *)space->machine->driver_data;
-	return memory_region(space->machine, "n7751data")[state->sound_addr];
+	othello_state *state = space->machine->driver_data<othello_state>();
+	return space->machine->region("n7751data")->base()[state->sound_addr];
 }
 
 static READ8_HANDLER( n7751_command_r )
 {
-	othello_state *state = (othello_state *)space->machine->driver_data;
+	othello_state *state = space->machine->driver_data<othello_state>();
 	return 0x80 | ((state->n7751_command & 0x07) << 4);
 }
 
 static WRITE8_DEVICE_HANDLER( n7751_p2_w )
 {
-	othello_state *state = (othello_state *)device->machine->driver_data;
+	othello_state *state = device->machine->driver_data<othello_state>();
 
 	/* write to P2; low 4 bits go to 8243 */
 	i8243_p2_w(device, offset, data & 0x0f);
@@ -381,7 +380,7 @@ static const mc6845_interface h46505_intf =
 
 static MACHINE_START( othello )
 {
-	othello_state *state = (othello_state *)machine->driver_data;
+	othello_state *state = machine->driver_data<othello_state>();
 
 	state->maincpu = machine->device("maincpu");
 	state->mc6845 = machine->device("crtc");
@@ -399,7 +398,7 @@ static MACHINE_START( othello )
 
 static MACHINE_RESET( othello )
 {
-	othello_state *state = (othello_state *)machine->driver_data;
+	othello_state *state = machine->driver_data<othello_state>();
 
 	state->tile_bank = 0;
 	state->ay_select = 0;
@@ -409,56 +408,53 @@ static MACHINE_RESET( othello )
 	state->n7751_busy = 0;
 }
 
-static MACHINE_DRIVER_START( othello )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(othello_state)
+static MACHINE_CONFIG_START( othello, othello_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu",Z80,XTAL_8MHz/2)
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_IO_MAP(main_portmap)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu",Z80,XTAL_8MHz/2)
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_IO_MAP(main_portmap)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("audiocpu",Z80,XTAL_3_579545MHz)
-	MDRV_CPU_PROGRAM_MAP(audio_map)
-	MDRV_CPU_IO_MAP(audio_portmap)
+	MCFG_CPU_ADD("audiocpu",Z80,XTAL_3_579545MHz)
+	MCFG_CPU_PROGRAM_MAP(audio_map)
+	MCFG_CPU_IO_MAP(audio_portmap)
 
-	MDRV_CPU_ADD("n7751", N7751, XTAL_6MHz)
-	MDRV_CPU_IO_MAP(n7751_portmap)
+	MCFG_CPU_ADD("n7751", N7751, XTAL_6MHz)
+	MCFG_CPU_IO_MAP(n7751_portmap)
 
-	MDRV_I8243_ADD("n7751_8243", NULL, n7751_rom_control_w)
+	MCFG_I8243_ADD("n7751_8243", NULL, n7751_rom_control_w)
 
-	MDRV_MACHINE_START(othello)
-	MDRV_MACHINE_RESET(othello)
+	MCFG_MACHINE_START(othello)
+	MCFG_MACHINE_RESET(othello)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*6, 64*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 64*6-1, 0*8, 64*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*6, 64*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 64*6-1, 0*8, 64*8-1)
 
-	MDRV_PALETTE_LENGTH(0x10)
-	MDRV_PALETTE_INIT(othello)
+	MCFG_PALETTE_LENGTH(0x10)
+	MCFG_PALETTE_INIT(othello)
 
-	MDRV_VIDEO_UPDATE(othello)
+	MCFG_VIDEO_UPDATE(othello)
 
-	MDRV_MC6845_ADD("crtc", H46505, 1000000 /* ? MHz */, h46505_intf)	/* H46505 @ CPU clock */
+	MCFG_MC6845_ADD("crtc", H46505, 1000000 /* ? MHz */, h46505_intf)	/* H46505 @ CPU clock */
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ay1", AY8910, 2000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
+	MCFG_SOUND_ADD("ay1", AY8910, 2000000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
 
-	MDRV_SOUND_ADD("ay2", AY8910, 2000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
+	MCFG_SOUND_ADD("ay2", AY8910, 2000000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
 
-	MDRV_SOUND_ADD("dac", DAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.60)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("dac", DAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.60)
+MACHINE_CONFIG_END
 
 ROM_START( othello )
 	ROM_REGION( 0x10000, "maincpu", 0 )

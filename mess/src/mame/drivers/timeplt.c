@@ -46,8 +46,9 @@
 
 #include "emu.h"
 #include "cpu/z80/z80.h"
-#include "includes/timeplt.h"
 #include "includes/konamipt.h"
+#include "audio/timeplt.h"
+#include "includes/timeplt.h"
 
 #define MASTER_CLOCK         XTAL_18_432MHz
 
@@ -59,7 +60,7 @@
 
 static INTERRUPT_GEN( timeplt_interrupt )
 {
-	timeplt_state *state = (timeplt_state *)device->machine->driver_data;
+	timeplt_state *state = device->machine->driver_data<timeplt_state>();
 
 	if (state->nmi_enable)
 		cpu_set_input_line(device, INPUT_LINE_NMI, ASSERT_LINE);
@@ -68,7 +69,7 @@ static INTERRUPT_GEN( timeplt_interrupt )
 
 static WRITE8_HANDLER( timeplt_nmi_enable_w )
 {
-	timeplt_state *state = (timeplt_state *)space->machine->driver_data;
+	timeplt_state *state = space->machine->driver_data<timeplt_state>();
 
 	state->nmi_enable = data & 1;
 	if (!state->nmi_enable)
@@ -355,14 +356,14 @@ GFXDECODE_END
 
 static MACHINE_START( common )
 {
-	timeplt_state *state = (timeplt_state *)machine->driver_data;
+	timeplt_state *state = machine->driver_data<timeplt_state>();
 
 	state->maincpu = machine->device<cpu_device>("maincpu");
 }
 
 static MACHINE_START( timeplt )
 {
-	timeplt_state *state = (timeplt_state *)machine->driver_data;
+	timeplt_state *state = machine->driver_data<timeplt_state>();
 
 	MACHINE_START_CALL(common);
 
@@ -371,66 +372,61 @@ static MACHINE_START( timeplt )
 
 static MACHINE_RESET( timeplt )
 {
-	timeplt_state *state = (timeplt_state *)machine->driver_data;
+	timeplt_state *state = machine->driver_data<timeplt_state>();
 
 	state->nmi_enable = 0;
 }
 
-static MACHINE_DRIVER_START( timeplt )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(timeplt_state)
+static MACHINE_CONFIG_START( timeplt, timeplt_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, MASTER_CLOCK/3/2)	/* not confirmed, but common for Konami games of the era */
-	MDRV_CPU_PROGRAM_MAP(timeplt_main_map)
-	MDRV_CPU_VBLANK_INT("screen", timeplt_interrupt)
+	MCFG_CPU_ADD("maincpu", Z80, MASTER_CLOCK/3/2)	/* not confirmed, but common for Konami games of the era */
+	MCFG_CPU_PROGRAM_MAP(timeplt_main_map)
+	MCFG_CPU_VBLANK_INT("screen", timeplt_interrupt)
 
-	MDRV_MACHINE_START(timeplt)
-	MDRV_MACHINE_RESET(timeplt)
+	MCFG_MACHINE_START(timeplt)
+	MCFG_MACHINE_RESET(timeplt)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_UPDATE_SCANLINE)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_SCANLINE)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(timeplt)
-	MDRV_PALETTE_LENGTH(32*4+64*4)
+	MCFG_GFXDECODE(timeplt)
+	MCFG_PALETTE_LENGTH(32*4+64*4)
 
-	MDRV_PALETTE_INIT(timeplt)
-	MDRV_VIDEO_START(timeplt)
-	MDRV_VIDEO_UPDATE(timeplt)
+	MCFG_PALETTE_INIT(timeplt)
+	MCFG_VIDEO_START(timeplt)
+	MCFG_VIDEO_UPDATE(timeplt)
 
 	/* sound hardware */
-	MDRV_IMPORT_FROM(timeplt_sound)
-MACHINE_DRIVER_END
+	MCFG_FRAGMENT_ADD(timeplt_sound)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( psurge )
-	MDRV_IMPORT_FROM(timeplt)
-
-	/* basic machine hardware */
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(psurge_main_map)
-	MDRV_CPU_VBLANK_INT("screen", nmi_line_pulse)
-
-	MDRV_MACHINE_START(common)
-	MDRV_MACHINE_RESET(0)
-MACHINE_DRIVER_END
-
-static MACHINE_DRIVER_START( chkun )
-	MDRV_IMPORT_FROM(timeplt)
+static MACHINE_CONFIG_DERIVED( psurge, timeplt )
 
 	/* basic machine hardware */
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(chkun_main_map)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(psurge_main_map)
+	MCFG_CPU_VBLANK_INT("screen", nmi_line_pulse)
 
-	MDRV_VIDEO_START(chkun)
-MACHINE_DRIVER_END
+	MCFG_MACHINE_START(common)
+	MCFG_MACHINE_RESET(0)
+MACHINE_CONFIG_END
+
+static MACHINE_CONFIG_DERIVED( chkun, timeplt )
+
+	/* basic machine hardware */
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(chkun_main_map)
+
+	MCFG_VIDEO_START(chkun)
+MACHINE_CONFIG_END
 
 /*************************************
  *

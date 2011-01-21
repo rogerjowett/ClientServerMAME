@@ -47,13 +47,13 @@ metlclsh:
 
 static WRITE8_HANDLER( metlclsh_cause_irq )
 {
-	metlclsh_state *state = (metlclsh_state *)space->machine->driver_data;
+	metlclsh_state *state = space->machine->driver_data<metlclsh_state>();
 	cpu_set_input_line(state->subcpu, M6809_IRQ_LINE, ASSERT_LINE);
 }
 
 static WRITE8_HANDLER( metlclsh_ack_nmi )
 {
-	metlclsh_state *state = (metlclsh_state *)space->machine->driver_data;
+	metlclsh_state *state = space->machine->driver_data<metlclsh_state>();
 	cpu_set_input_line(state->maincpu, INPUT_LINE_NMI, CLEAR_LINE);
 }
 
@@ -86,19 +86,19 @@ ADDRESS_MAP_END
 
 static WRITE8_HANDLER( metlclsh_cause_nmi2 )
 {
-	metlclsh_state *state = (metlclsh_state *)space->machine->driver_data;
+	metlclsh_state *state = space->machine->driver_data<metlclsh_state>();
 	cpu_set_input_line(state->maincpu, INPUT_LINE_NMI, ASSERT_LINE);
 }
 
 static WRITE8_HANDLER( metlclsh_ack_irq2 )
 {
-	metlclsh_state *state = (metlclsh_state *)space->machine->driver_data;
+	metlclsh_state *state = space->machine->driver_data<metlclsh_state>();
 	cpu_set_input_line(state->subcpu, M6809_IRQ_LINE, CLEAR_LINE);
 }
 
 static WRITE8_HANDLER( metlclsh_ack_nmi2 )
 {
-	metlclsh_state *state = (metlclsh_state *)space->machine->driver_data;
+	metlclsh_state *state = space->machine->driver_data<metlclsh_state>();
 	cpu_set_input_line(state->subcpu, INPUT_LINE_NMI, CLEAR_LINE);
 }
 
@@ -253,9 +253,9 @@ GFXDECODE_END
 
 ***************************************************************************/
 
-static void metlclsh_irqhandler(running_device *device, int linestate)
+static void metlclsh_irqhandler(device_t *device, int linestate)
 {
-	metlclsh_state *state = (metlclsh_state *)device->machine->driver_data;
+	metlclsh_state *state = device->machine->driver_data<metlclsh_state>();
 	cpu_set_input_line(state->maincpu, M6809_IRQ_LINE, linestate);
 }
 
@@ -275,7 +275,7 @@ static INTERRUPT_GEN( metlclsh_interrupt2 )
 
 static MACHINE_START( metlclsh )
 {
-	metlclsh_state *state = (metlclsh_state *)machine->driver_data;
+	metlclsh_state *state = machine->driver_data<metlclsh_state>();
 
 	state->maincpu = machine->device("maincpu");
 	state->subcpu = machine->device("sub");
@@ -286,7 +286,7 @@ static MACHINE_START( metlclsh )
 
 static MACHINE_RESET( metlclsh )
 {
-	metlclsh_state *state = (metlclsh_state *)machine->driver_data;
+	metlclsh_state *state = machine->driver_data<metlclsh_state>();
 
 	flip_screen_set(machine, 0);
 
@@ -294,51 +294,48 @@ static MACHINE_RESET( metlclsh )
 	state->gfxbank = 0;
 }
 
-static MACHINE_DRIVER_START( metlclsh )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(metlclsh_state)
+static MACHINE_CONFIG_START( metlclsh, metlclsh_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6809, 1500000)        // ?
-	MDRV_CPU_PROGRAM_MAP(metlclsh_master_map)
+	MCFG_CPU_ADD("maincpu", M6809, 1500000)        // ?
+	MCFG_CPU_PROGRAM_MAP(metlclsh_master_map)
 	// IRQ by YM3526, NMI by cpu #2
 
-	MDRV_CPU_ADD("sub", M6809, 1500000)        // ?
-	MDRV_CPU_PROGRAM_MAP(metlclsh_slave_map)
-	MDRV_CPU_VBLANK_INT_HACK(metlclsh_interrupt2,2)
+	MCFG_CPU_ADD("sub", M6809, 1500000)        // ?
+	MCFG_CPU_PROGRAM_MAP(metlclsh_slave_map)
+	MCFG_CPU_VBLANK_INT_HACK(metlclsh_interrupt2,2)
 	// IRQ by cpu #1, NMI by coins insertion
 
-	MDRV_MACHINE_START(metlclsh)
-	MDRV_MACHINE_RESET(metlclsh)
+	MCFG_MACHINE_START(metlclsh)
+	MCFG_MACHINE_RESET(metlclsh)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(58)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)	// we're using IPT_VBLANK
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 1*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(58)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)	// we're using IPT_VBLANK
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 1*8, 30*8-1)
 
-	MDRV_GFXDECODE(metlclsh)
-	MDRV_PALETTE_LENGTH(3 * 16)
+	MCFG_GFXDECODE(metlclsh)
+	MCFG_PALETTE_LENGTH(3 * 16)
 
-	MDRV_VIDEO_START(metlclsh)
-	MDRV_VIDEO_UPDATE(metlclsh)
+	MCFG_VIDEO_START(metlclsh)
+	MCFG_VIDEO_UPDATE(metlclsh)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ym1", YM2203, 1500000)
-	MDRV_SOUND_ROUTE(0, "mono", 0.10)
-	MDRV_SOUND_ROUTE(1, "mono", 0.10)
-	MDRV_SOUND_ROUTE(2, "mono", 0.10)
-	MDRV_SOUND_ROUTE(3, "mono", 0.50)
+	MCFG_SOUND_ADD("ym1", YM2203, 1500000)
+	MCFG_SOUND_ROUTE(0, "mono", 0.10)
+	MCFG_SOUND_ROUTE(1, "mono", 0.10)
+	MCFG_SOUND_ROUTE(2, "mono", 0.10)
+	MCFG_SOUND_ROUTE(3, "mono", 0.50)
 
-	MDRV_SOUND_ADD("ym2", YM3526, 3000000)
-	MDRV_SOUND_CONFIG(ym3526_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ym2", YM3526, 3000000)
+	MCFG_SOUND_CONFIG(ym3526_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************

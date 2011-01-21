@@ -4,12 +4,11 @@
 
 *************************************************************************/
 
-class moo_state
+class moo_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, moo_state(machine)); }
-
-	moo_state(running_machine &machine) { }
+	moo_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT16 *    workram;
@@ -27,13 +26,15 @@ public:
 	UINT16      cur_control2;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *audiocpu;
-	running_device *k054539;
-	running_device *k053246;
-	running_device *k053251;
-	running_device *k056832;
-	running_device *k054338;
+	device_t *maincpu;
+	device_t *audiocpu;
+	device_t *k054539;
+	device_t *k053246;
+	device_t *k053251;
+	device_t *k056832;
+	device_t *k054338;
+
+    emu_timer *dmaend_timer;
 };
 
 

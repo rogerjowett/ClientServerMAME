@@ -4,12 +4,11 @@
 
 *************************************************************************/
 
-class dbz_state
+class dbz_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, dbz_state(machine)); }
-
-	dbz_state(running_machine &machine) { }
+	dbz_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT16 *      bg1_videoram;
@@ -24,13 +23,13 @@ public:
 	int           control;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *audiocpu;
-	running_device *k053246;
-	running_device *k053251;
-	running_device *k056832;
-	running_device *k053936_1;
-	running_device *k053936_2;
+	device_t *maincpu;
+	device_t *audiocpu;
+	device_t *k053246;
+	device_t *k053251;
+	device_t *k056832;
+	device_t *k053936_1;
+	device_t *k053936_2;
 };
 
 

@@ -23,6 +23,7 @@ TODO:
 #include "emu.h"
 #include "cpu/z80/z80.h"
 #include "sound/okim6295.h"
+#include "includes/speedspn.h"
 
 /*** README INFO **************************************************************
 
@@ -54,17 +55,6 @@ TCH-SS9.u34     "     /               AB2Bh
 
 ******************************************************************************/
 
-/* in video */
-extern UINT8 *speedspn_attram;
-
-WRITE8_HANDLER( speedspn_vidram_w );
-WRITE8_HANDLER( speedspn_attram_w );
-READ8_HANDLER( speedspn_vidram_r );
-VIDEO_START(speedspn);
-VIDEO_UPDATE(speedspn);
-WRITE8_HANDLER(speedspn_banked_vidram_change);
-WRITE8_HANDLER(speedspn_global_display_w);
-
 static READ8_HANDLER(speedspn_irq_ack_r)
 {
 	// I think this simply acknowledges the IRQ #0, it's read within the handler and the
@@ -76,7 +66,7 @@ static WRITE8_HANDLER(speedspn_banked_rom_change)
 {
 	/* is this weird banking some form of protection? */
 
-	UINT8 *rom = memory_region(space->machine, "maincpu");
+	UINT8 *rom = space->machine->region("maincpu")->base();
 	int addr;
 
 	switch (data)
@@ -145,7 +135,7 @@ static ADDRESS_MAP_START( speedspn_sound_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x7fff) AM_ROM
 	AM_RANGE(0x8000, 0x87ff) AM_RAM
 	AM_RANGE(0x9000, 0x9000) AM_DEVWRITE("oki", oki_banking_w)
-	AM_RANGE(0x9800, 0x9800) AM_DEVREADWRITE("oki", okim6295_r,okim6295_w)
+	AM_RANGE(0x9800, 0x9800) AM_DEVREADWRITE_MODERN("oki", okim6295_device, read, write)
 	AM_RANGE(0xa000, 0xa000) AM_READ(soundlatch_r)
 ADDRESS_MAP_END
 
@@ -277,37 +267,37 @@ GFXDECODE_END
 /*** MACHINE DRIVER **********************************************************/
 
 
-static MACHINE_DRIVER_START( speedspn )
+static MACHINE_CONFIG_START( speedspn, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu",Z80,6000000)		 /* 6 MHz */
-	MDRV_CPU_PROGRAM_MAP(speedspn_map)
-	MDRV_CPU_IO_MAP(speedspn_io_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu",Z80,6000000)		 /* 6 MHz */
+	MCFG_CPU_PROGRAM_MAP(speedspn_map)
+	MCFG_CPU_IO_MAP(speedspn_io_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80,6000000)		 /* 6 MHz */
-	MDRV_CPU_PROGRAM_MAP(speedspn_sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80,6000000)		 /* 6 MHz */
+	MCFG_CPU_PROGRAM_MAP(speedspn_sound_map)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(8*8, 56*8-1, 1*8, 31*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(8*8, 56*8-1, 1*8, 31*8-1)
 
-	MDRV_GFXDECODE(speedspn)
-	MDRV_PALETTE_LENGTH(0x400)
+	MCFG_GFXDECODE(speedspn)
+	MCFG_PALETTE_LENGTH(0x400)
 
-	MDRV_VIDEO_START(speedspn)
-	MDRV_VIDEO_UPDATE(speedspn)
+	MCFG_VIDEO_START(speedspn)
+	MCFG_VIDEO_UPDATE(speedspn)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_OKIM6295_ADD("oki", 1122000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 1122000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 /*** ROM LOADING *************************************************************/
 

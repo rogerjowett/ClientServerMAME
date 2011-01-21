@@ -4,12 +4,11 @@
 
 *************************************************************************/
 
-class mouser_state
+class mouser_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, mouser_state(machine)); }
-
-	mouser_state(running_machine &machine) { }
+	mouser_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *    videoram;
@@ -22,8 +21,8 @@ public:
 	UINT8      nmi_enable;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *audiocpu;
+	device_t *maincpu;
+	device_t *audiocpu;
 };
 
 /*----------- defined in video/mouser.c -----------*/

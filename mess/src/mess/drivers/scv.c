@@ -20,12 +20,11 @@ static WRITE8_HANDLER( scv_cart_ram_w );
 static WRITE8_HANDLER( scv_cart_ram2_w );
 
 
-class scv_state
+class scv_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, scv_state(machine)); }
-
-	scv_state(running_machine &machine) { }
+	scv_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	UINT8	*vram;
 	UINT8	porta;
@@ -39,13 +38,12 @@ public:
 };
 
 
-static UINT8 *scv_vram;
 
 
 static ADDRESS_MAP_START( scv_mem, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE( 0x0000, 0x0fff ) AM_ROM		/* BIOS */
 
-	AM_RANGE( 0x2000, 0x3403 ) AM_RAM AM_BASE( &scv_vram )	/* VRAM + 4 registers */
+	AM_RANGE( 0x2000, 0x3403 ) AM_RAM AM_BASE_MEMBER(scv_state, vram )	/* VRAM + 4 registers */
 
 	AM_RANGE( 0x3600, 0x3600 ) AM_DEVWRITE( "upd1771c", upd1771_w )
 
@@ -153,7 +151,7 @@ INPUT_PORTS_END
 
 static WRITE8_HANDLER( scv_cart_ram_w )
 {
-	scv_state *state = (scv_state *)space->machine->driver_data;
+	scv_state *state = space->machine->driver_data<scv_state>();
 
 	/* Check if cartridge ram is enabled */
 	if ( state->cart_ram_enabled )
@@ -165,7 +163,7 @@ static WRITE8_HANDLER( scv_cart_ram_w )
 
 static WRITE8_HANDLER( scv_cart_ram2_w )
 {
-	scv_state *state = (scv_state *)space->machine->driver_data;
+	scv_state *state = space->machine->driver_data<scv_state>();
 
 	/* Check if cartridge ram is enabled */
 	if ( state->cart_ram_enabled )
@@ -180,7 +178,7 @@ static WRITE8_HANDLER( scv_cart_ram2_w )
 
 static WRITE8_HANDLER( scv_porta_w )
 {
-	scv_state *state = (scv_state *)space->machine->driver_data;
+	scv_state *state = space->machine->driver_data<scv_state>();
 
 	state->porta = data;
 }
@@ -188,7 +186,7 @@ static WRITE8_HANDLER( scv_porta_w )
 
 static READ8_HANDLER( scv_portb_r )
 {
-	scv_state *state = (scv_state *)space->machine->driver_data;
+	scv_state *state = space->machine->driver_data<scv_state>();
 	UINT8 data = 0xff;
 
 	if ( ! ( state->porta & 0x01 ) )
@@ -221,7 +219,7 @@ static READ8_HANDLER( scv_portb_r )
 
 static READ8_HANDLER( scv_portc_r )
 {
-	scv_state *state = (scv_state *)space->machine->driver_data;
+	scv_state *state = space->machine->driver_data<scv_state>();
 	UINT8 data = state->portc;
 
 	data = ( data & 0xfe ) | ( input_port_read( space->machine, "PC0" ) & 0x01 );
@@ -232,7 +230,7 @@ static READ8_HANDLER( scv_portc_r )
 
 static void scv_set_banks( running_machine *machine )
 {
-	scv_state *state = (scv_state *)machine->driver_data;
+	scv_state *state = machine->driver_data<scv_state>();
 
 	state->cart_ram_enabled = false;
 
@@ -303,7 +301,7 @@ static void scv_set_banks( running_machine *machine )
 
 static WRITE8_HANDLER( scv_portc_w )
 {
-	scv_state *state = (scv_state *)space->machine->driver_data;
+	scv_state *state = space->machine->driver_data<scv_state>();
 
 	//logerror("%04x: scv_portc_w: data = 0x%02x\n", cpu_get_pc(space->machine->device("maincpu")), data );
 	state->portc = data;
@@ -315,9 +313,9 @@ static WRITE8_HANDLER( scv_portc_w )
 
 static DEVICE_START( scv_cart )
 {
-	scv_state *state = (scv_state *)device->machine->driver_data;
+	scv_state *state = device->machine->driver_data<scv_state>();
 
-	state->cart_rom = memory_region( device->machine, "cart" );
+	state->cart_rom = device->machine->region( "cart" )->base();
 	state->cart_rom_size = 0;
 	state->cart_ram = NULL;
 	state->cart_ram_size = 0;
@@ -328,14 +326,14 @@ static DEVICE_START( scv_cart )
 
 static DEVICE_IMAGE_LOAD( scv_cart )
 {
-	scv_state *state = (scv_state *)image.device().machine->driver_data;
+	scv_state *state = image.device().machine->driver_data<scv_state>();
 
 	if ( image.software_entry() == NULL )
 	{
-		UINT8 *cart = memory_region( image.device().machine, "cart" );
+		UINT8 *cart = image.device().machine->region( "cart" )->base();
 		int size = image.length();
 
-		if ( size > memory_region_length( image.device().machine, "cart" ) )
+		if ( size > image.device().machine->region( "cart" )->bytes() )
 		{
 			image.seterror( IMAGE_ERROR_UNSPECIFIED, "Unsupported cartridge size" );
 			return IMAGE_INIT_FAIL;
@@ -420,7 +418,7 @@ static PALETTE_INIT( scv )
 
 static TIMER_CALLBACK( scv_vb_callback )
 {
-	scv_state *state = (scv_state *)machine->driver_data;
+	scv_state *state = machine->driver_data<scv_state>();
 	int vpos = machine->primary_screen->vpos();
 
 	switch( vpos )
@@ -450,17 +448,17 @@ INLINE void plot_sprite_part( bitmap_t *bitmap, UINT8 x, UINT8 y, UINT8 pat, UIN
 }
 
 
-INLINE void draw_sprite( bitmap_t *bitmap, UINT8 x, UINT8 y, UINT8 tile_idx, UINT8 col, UINT8 left, UINT8 right, UINT8 top, UINT8 bottom, UINT8 clip_y )
+INLINE void draw_sprite( scv_state *state, bitmap_t *bitmap, UINT8 x, UINT8 y, UINT8 tile_idx, UINT8 col, UINT8 left, UINT8 right, UINT8 top, UINT8 bottom, UINT8 clip_y )
 {
 	int j;
 
 	y += clip_y * 2;
 	for ( j = clip_y * 4; j < 32; j += 4 )
 	{
-		UINT8 pat0 = scv_vram[ tile_idx * 32 + j + 0 ];
-		UINT8 pat1 = scv_vram[ tile_idx * 32 + j + 1 ];
-		UINT8 pat2 = scv_vram[ tile_idx * 32 + j + 2 ];
-		UINT8 pat3 = scv_vram[ tile_idx * 32 + j + 3 ];
+		UINT8 pat0 = state->vram[ tile_idx * 32 + j + 0 ];
+		UINT8 pat1 = state->vram[ tile_idx * 32 + j + 1 ];
+		UINT8 pat2 = state->vram[ tile_idx * 32 + j + 2 ];
+		UINT8 pat3 = state->vram[ tile_idx * 32 + j + 3 ];
 
 		if ( ( top && j < 16 ) || ( bottom && j >= 16 ) )
 		{
@@ -562,13 +560,14 @@ INLINE void draw_block_graph( bitmap_t *bitmap, UINT8 x, UINT8 y, UINT8 col )
 
 static VIDEO_UPDATE( scv )
 {
+	scv_state *state = screen->machine->driver_data<scv_state>();
 	int x, y;
-	UINT8 fg = scv_vram[0x1403] >> 4;
-	UINT8 bg = scv_vram[0x1403] & 0x0f;
-	UINT8 gr_fg = scv_vram[0x1401] >> 4;
-	UINT8 gr_bg = scv_vram[0x1401] & 0x0f;
-	int clip_x = ( scv_vram[0x1402] & 0x0f ) * 2;
-	int clip_y = scv_vram[0x1402] >> 4;
+	UINT8 fg = state->vram[0x1403] >> 4;
+	UINT8 bg = state->vram[0x1403] & 0x0f;
+	UINT8 gr_fg = state->vram[0x1401] >> 4;
+	UINT8 gr_bg = state->vram[0x1401] & 0x0f;
+	int clip_x = ( state->vram[0x1402] & 0x0f ) * 2;
+	int clip_y = state->vram[0x1402] >> 4;
 
 	/* Clear the screen */
 	bitmap_fill( bitmap, cliprect, gr_bg );
@@ -579,29 +578,29 @@ static VIDEO_UPDATE( scv )
 		int text_y = 0;
 
 		if ( y < clip_y )
-			text_y = ( scv_vram[0x1400] & 0x80 ) ? 0 : 1;
+			text_y = ( state->vram[0x1400] & 0x80 ) ? 0 : 1;
 		else
-			text_y = ( scv_vram[0x1400] & 0x80 ) ? 1 : 0;
+			text_y = ( state->vram[0x1400] & 0x80 ) ? 1 : 0;
 
 		for ( x = 0; x < 32; x++ )
 		{
 			int text_x = 0;
-			UINT8 d = scv_vram[ 0x1000 + y * 32 + x ];
+			UINT8 d = state->vram[ 0x1000 + y * 32 + x ];
 
 			if ( x < clip_x )
-				text_x = ( scv_vram[0x1400] & 0x40 ) ? 0 : 1;
+				text_x = ( state->vram[0x1400] & 0x40 ) ? 0 : 1;
 			else
-				text_x = ( scv_vram[0x1400] & 0x40 ) ? 1 : 0;
+				text_x = ( state->vram[0x1400] & 0x40 ) ? 1 : 0;
 
 			if ( text_x && text_y )
 			{
 				/* Text mode */
-				UINT8 *char_data = memory_region( screen->machine, "charrom" ) + ( d & 0x7f ) * 8;
+				UINT8 *char_data = screen->machine->region( "charrom" )->base() + ( d & 0x7f ) * 8;
 				draw_text( bitmap, x * 8, y * 16, char_data, fg, bg );
 			}
 			else
 			{
-				switch ( scv_vram[0x1400] & 0x03 )
+				switch ( state->vram[0x1400] & 0x03 )
 				{
 				case 0x01:		/* Semi graphics mode */
 					draw_semi_graph( bitmap, x * 8    , y * 16     , d & 0x80, gr_fg );
@@ -625,20 +624,20 @@ static VIDEO_UPDATE( scv )
 	}
 
 	/* Draw sprites if enabled */
-	if ( scv_vram[0x1400] & 0x10 )
+	if ( state->vram[0x1400] & 0x10 )
 	{
 		int i;
 
 		for ( i = 0; i < 128; i++ )
 		{
-			UINT8 spr_y = scv_vram[ 0x1200 + i * 4 ] & 0xfe;
-			UINT8 y_32 = scv_vram[ 0x1200 + i * 4 ] & 0x01;		/* Xx32 sprite */
-			UINT8 clip = scv_vram[ 0x1201 + i * 4 ] >> 4;
-			UINT8 col = scv_vram[ 0x1201 + i * 4 ] & 0x0f;
-			UINT8 spr_x = scv_vram[ 0x1202 + i * 4 ] & 0xfe;
-			UINT8 x_32 = scv_vram[ 0x1202 + i * 4 ] & 0x01;		/* 32xX sprite */
-			UINT8 tile_idx = scv_vram[ 0x1203 + i * 4 ] & 0x7f;
-			UINT8 half = scv_vram[ 0x1203 + i * 4] & 0x80;
+			UINT8 spr_y = state->vram[ 0x1200 + i * 4 ] & 0xfe;
+			UINT8 y_32 = state->vram[ 0x1200 + i * 4 ] & 0x01;		/* Xx32 sprite */
+			UINT8 clip = state->vram[ 0x1201 + i * 4 ] >> 4;
+			UINT8 col = state->vram[ 0x1201 + i * 4 ] & 0x0f;
+			UINT8 spr_x = state->vram[ 0x1202 + i * 4 ] & 0xfe;
+			UINT8 x_32 = state->vram[ 0x1202 + i * 4 ] & 0x01;		/* 32xX sprite */
+			UINT8 tile_idx = state->vram[ 0x1203 + i * 4 ] & 0x7f;
+			UINT8 half = state->vram[ 0x1203 + i * 4] & 0x80;
 			UINT8 left = 1;
 			UINT8 right = 1;
 			UINT8 top = 1;
@@ -682,33 +681,33 @@ static VIDEO_UPDATE( scv )
 			}
 
 			/* Check if 2 color sprites are enabled */
-			if ( ( scv_vram[0x1400] & 0x20 ) && ( i & 0x20 ) )
+			if ( ( state->vram[0x1400] & 0x20 ) && ( i & 0x20 ) )
 			{
 				/* 2 color sprite handling */
-				draw_sprite( bitmap, spr_x, spr_y, tile_idx, col, left, right, top, bottom, clip );
+				draw_sprite( state, bitmap, spr_x, spr_y, tile_idx, col, left, right, top, bottom, clip );
 				if ( x_32 || y_32 )
 				{
 					static const UINT8 spr_2col_lut0[16] = { 0, 15, 12, 13, 10, 11, 8, 9, 6, 7, 4, 5, 2, 3, 1, 1 };
 					static const UINT8 spr_2col_lut1[16] = { 0, 1, 8, 11, 2, 3, 10, 9, 4, 5, 12, 13, 6, 7, 14, 15 };
 
-					draw_sprite( bitmap, spr_x, spr_y, tile_idx + 8 * x_32 + y_32, ( i & 0x40 ) ? spr_2col_lut1[col] : spr_2col_lut0[col], left, right, top, bottom, clip );
+					draw_sprite( state, bitmap, spr_x, spr_y, tile_idx + 8 * x_32 + y_32, ( i & 0x40 ) ? spr_2col_lut1[col] : spr_2col_lut0[col], left, right, top, bottom, clip );
 				}
 			}
 			else
 			{
 				/* regular sprite handling */
-				draw_sprite( bitmap, spr_x, spr_y, tile_idx, col, left, right, top, bottom, clip );
+				draw_sprite( state, bitmap, spr_x, spr_y, tile_idx, col, left, right, top, bottom, clip );
 				if ( x_32 )
 				{
-					draw_sprite( bitmap, spr_x + 16, spr_y, tile_idx + 8, col, 1, 1, top, bottom, clip );
+					draw_sprite( state, bitmap, spr_x + 16, spr_y, tile_idx + 8, col, 1, 1, top, bottom, clip );
 				}
 				if ( y_32 )
 				{
 					clip &= 0x07;
-					draw_sprite( bitmap, spr_x, spr_y + 16, tile_idx + 1, col, left, right, 1, 1, clip );
+					draw_sprite( state, bitmap, spr_x, spr_y + 16, tile_idx + 1, col, left, right, 1, 1, clip );
 					if ( x_32 )
 					{
-						draw_sprite( bitmap, spr_x + 16, spr_y + 16, tile_idx + 9, col, 1, 1, 1, 1, clip );
+						draw_sprite( state, bitmap, spr_x + 16, spr_y + 16, tile_idx + 9, col, 1, 1, 1, 1, clip );
 					}
 				}
 			}
@@ -727,7 +726,7 @@ static WRITE_LINE_DEVICE_HANDLER( scv_upd1771_ack_w )
 
 static MACHINE_START( scv )
 {
-	scv_state *state = (scv_state *)machine->driver_data;
+	scv_state *state = machine->driver_data<scv_state>();
 
 	state->vb_timer = timer_alloc( machine, scv_vb_callback, NULL );
 }
@@ -735,7 +734,7 @@ static MACHINE_START( scv )
 
 static MACHINE_RESET( scv )
 {
-	scv_state *state = (scv_state *)machine->driver_data;
+	scv_state *state = machine->driver_data<scv_state>();
 
 	timer_adjust_oneshot( state->vb_timer, machine->primary_screen->time_until_pos(0, 0 ), 0 );
 }
@@ -764,84 +763,82 @@ static const UPD7810_CONFIG scv_cpu_config = { TYPE_7801, NULL };
 static const upd1771_interface scv_upd1771c_config = { DEVCB_LINE( scv_upd1771_ack_w ) };
 
 
-static MACHINE_DRIVER_START( scv )
-	MDRV_DRIVER_DATA( scv_state )
+static MACHINE_CONFIG_START( scv, scv_state )
 
-	MDRV_CPU_ADD( "maincpu", UPD7801, XTAL_4MHz )
-	MDRV_CPU_PROGRAM_MAP( scv_mem )
-	MDRV_CPU_IO_MAP( scv_io )
-	MDRV_CPU_CONFIG( scv_cpu_config )
+	MCFG_CPU_ADD( "maincpu", UPD7801, XTAL_4MHz )
+	MCFG_CPU_PROGRAM_MAP( scv_mem )
+	MCFG_CPU_IO_MAP( scv_io )
+	MCFG_CPU_CONFIG( scv_cpu_config )
 
-	MDRV_MACHINE_START( scv )
-	MDRV_MACHINE_RESET( scv )
+	MCFG_MACHINE_START( scv )
+	MCFG_MACHINE_RESET( scv )
 
-	MDRV_SCREEN_ADD( "screen", RASTER )
-	MDRV_SCREEN_FORMAT( BITMAP_FORMAT_INDEXED16 )
-	MDRV_SCREEN_RAW_PARAMS( XTAL_14_31818MHz/2, 456, 17, 209, 262, 0, 240 )	/* TODO: Verify */
+	MCFG_SCREEN_ADD( "screen", RASTER )
+	MCFG_SCREEN_FORMAT( BITMAP_FORMAT_INDEXED16 )
+	MCFG_SCREEN_RAW_PARAMS( XTAL_14_31818MHz/2, 456, 17, 209, 262, 0, 240 )	/* TODO: Verify */
 
-	MDRV_GFXDECODE(scv)
-	MDRV_PALETTE_LENGTH( 16 )
-	MDRV_PALETTE_INIT( scv )
+	MCFG_GFXDECODE(scv)
+	MCFG_PALETTE_LENGTH( 16 )
+	MCFG_PALETTE_INIT( scv )
 
 	/* Video chip is EPOCH TV-1 */
-	MDRV_VIDEO_UPDATE( scv )
+	MCFG_VIDEO_UPDATE( scv )
 
 	/* Sound is generated by UPD1771C clocked at XTAL_6MHz */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD( "upd1771c", UPD1771C, XTAL_6MHz )
-	MDRV_SOUND_CONFIG( scv_upd1771c_config )
-	MDRV_SOUND_ROUTE( ALL_OUTPUTS, "mono", 1.00 )
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD( "upd1771c", UPD1771C, XTAL_6MHz )
+	MCFG_SOUND_CONFIG( scv_upd1771c_config )
+	MCFG_SOUND_ROUTE( ALL_OUTPUTS, "mono", 1.00 )
 
-	MDRV_CARTSLOT_ADD( "cart" )
-	MDRV_CARTSLOT_EXTENSION_LIST( "bin" )
-	MDRV_CARTSLOT_NOT_MANDATORY
-	MDRV_CARTSLOT_INTERFACE("scv_cart")
-	MDRV_CARTSLOT_START( scv_cart )
-	MDRV_CARTSLOT_LOAD( scv_cart )
+	MCFG_CARTSLOT_ADD( "cart" )
+	MCFG_CARTSLOT_EXTENSION_LIST( "bin" )
+	MCFG_CARTSLOT_NOT_MANDATORY
+	MCFG_CARTSLOT_INTERFACE("scv_cart")
+	MCFG_CARTSLOT_START( scv_cart )
+	MCFG_CARTSLOT_LOAD( scv_cart )
 
 	/* Software lists */
-	MDRV_SOFTWARE_LIST_ADD("cart_list","scv")
-MACHINE_DRIVER_END
+	MCFG_SOFTWARE_LIST_ADD("cart_list","scv")
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( scv_pal )
-	MDRV_DRIVER_DATA( scv_state )
+static MACHINE_CONFIG_START( scv_pal, scv_state )
 
-	MDRV_CPU_ADD( "maincpu", UPD7801, 3780000 )
-	MDRV_CPU_PROGRAM_MAP( scv_mem )
-	MDRV_CPU_IO_MAP( scv_io )
-	MDRV_CPU_CONFIG( scv_cpu_config )
+	MCFG_CPU_ADD( "maincpu", UPD7801, 3780000 )
+	MCFG_CPU_PROGRAM_MAP( scv_mem )
+	MCFG_CPU_IO_MAP( scv_io )
+	MCFG_CPU_CONFIG( scv_cpu_config )
 
-	MDRV_MACHINE_START( scv )
-	MDRV_MACHINE_RESET( scv )
+	MCFG_MACHINE_START( scv )
+	MCFG_MACHINE_RESET( scv )
 
-	MDRV_SCREEN_ADD( "screen", RASTER )
-	MDRV_SCREEN_FORMAT( BITMAP_FORMAT_INDEXED16 )
-	MDRV_SCREEN_RAW_PARAMS( XTAL_13_4MHz/2, 456, 17, 209, 342, 0, 256 )		/* TODO: Verify */
+	MCFG_SCREEN_ADD( "screen", RASTER )
+	MCFG_SCREEN_FORMAT( BITMAP_FORMAT_INDEXED16 )
+	MCFG_SCREEN_RAW_PARAMS( XTAL_13_4MHz/2, 456, 17, 209, 342, 0, 256 )		/* TODO: Verify */
 
-	MDRV_GFXDECODE(scv)
-	MDRV_PALETTE_LENGTH( 16 )
-	MDRV_PALETTE_INIT( scv )
+	MCFG_GFXDECODE(scv)
+	MCFG_PALETTE_LENGTH( 16 )
+	MCFG_PALETTE_INIT( scv )
 
 	/* Video chip is EPOCH TV-1A */
-	MDRV_VIDEO_UPDATE( scv )
+	MCFG_VIDEO_UPDATE( scv )
 
 	/* Sound is generated by UPD1771C clocked at XTAL_6MHz */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD( "upd1771c", UPD1771C, XTAL_6MHz )
-	MDRV_SOUND_CONFIG( scv_upd1771c_config )
-	MDRV_SOUND_ROUTE( ALL_OUTPUTS, "mono", 1.00 )
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD( "upd1771c", UPD1771C, XTAL_6MHz )
+	MCFG_SOUND_CONFIG( scv_upd1771c_config )
+	MCFG_SOUND_ROUTE( ALL_OUTPUTS, "mono", 1.00 )
 
-	MDRV_CARTSLOT_ADD( "cart" )
-	MDRV_CARTSLOT_EXTENSION_LIST( "bin" )
-	MDRV_CARTSLOT_NOT_MANDATORY
-	MDRV_CARTSLOT_INTERFACE("scv_cart")
-	MDRV_CARTSLOT_START( scv_cart )
-	MDRV_CARTSLOT_LOAD( scv_cart )
+	MCFG_CARTSLOT_ADD( "cart" )
+	MCFG_CARTSLOT_EXTENSION_LIST( "bin" )
+	MCFG_CARTSLOT_NOT_MANDATORY
+	MCFG_CARTSLOT_INTERFACE("scv_cart")
+	MCFG_CARTSLOT_START( scv_cart )
+	MCFG_CARTSLOT_LOAD( scv_cart )
 
 	/* Software lists */
-	MDRV_SOFTWARE_LIST_ADD("cart_list","scv")
-MACHINE_DRIVER_END
+	MCFG_SOFTWARE_LIST_ADD("cart_list","scv")
+MACHINE_CONFIG_END
 
 
 /* The same bios is used in both the NTSC and PAL versions of the console */

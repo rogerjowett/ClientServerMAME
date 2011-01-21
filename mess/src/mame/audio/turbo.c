@@ -19,7 +19,7 @@
  *
  *************************************/
 
-static void turbo_update_samples(turbo_state *state, running_device *samples)
+static void turbo_update_samples(turbo_state *state, device_t *samples)
 {
 	/* accelerator sounds */
 	/* BSEL == 3 --> off */
@@ -40,7 +40,7 @@ static int last_sound_a;
 
 static TIMER_CALLBACK( update_sound_a )
 {
-	running_device *discrete = machine->device("discrete");
+	device_t *discrete = machine->device("discrete");
 	int data = param;
 
 	/* missing short crash sample, but I've never seen it triggered */
@@ -73,9 +73,9 @@ if (!((data >> 4) & 1)) mame_printf_debug("/TRIG4\n");
 WRITE8_DEVICE_HANDLER( turbo_sound_a_w )
 {
 #if (!DISCRETE_TEST)
-	running_device *samples = device->machine->device("samples");
+	device_t *samples = device->machine->device("samples");
 #endif
-	turbo_state *state = (turbo_state *)device->machine->driver_data;
+	turbo_state *state = device->machine->driver_data<turbo_state>();
 	UINT8 diff = data ^ state->sound_state[0];
 	state->sound_state[0] = data;
 
@@ -123,8 +123,8 @@ WRITE8_DEVICE_HANDLER( turbo_sound_a_w )
 
 WRITE8_DEVICE_HANDLER( turbo_sound_b_w )
 {
-	running_device *samples = device->machine->device("samples");
-	turbo_state *state = (turbo_state *)device->machine->driver_data;
+	device_t *samples = device->machine->device("samples");
+	turbo_state *state = device->machine->driver_data<turbo_state>();
 	UINT8 diff = data ^ state->sound_state[1];
 	state->sound_state[1] = data;
 
@@ -146,8 +146,8 @@ WRITE8_DEVICE_HANDLER( turbo_sound_b_w )
 
 WRITE8_DEVICE_HANDLER( turbo_sound_c_w )
 {
-	running_device *samples = device->machine->device("samples");
-	turbo_state *state = (turbo_state *)device->machine->driver_data;
+	device_t *samples = device->machine->device("samples");
+	turbo_state *state = device->machine->driver_data<turbo_state>();
 
 	/* OSEL1-2 */
 	state->turbo_osel = (state->turbo_osel & 1) | ((data & 3) << 1);
@@ -193,52 +193,52 @@ static const samples_interface turbo_samples_interface =
 };
 
 
-MACHINE_DRIVER_START( turbo_samples )
+MACHINE_CONFIG_FRAGMENT( turbo_samples )
 
 	/* this is the cockpit speaker configuration */
-	MDRV_SPEAKER_ADD("fspeaker", 0.0, 0.0, 1.0)		/* front */
-	MDRV_SPEAKER_ADD("bspeaker",  0.0, 0.0, -0.5)	/* back */
-	MDRV_SPEAKER_ADD("lspeaker", -0.2, 0.0, 1.0)	/* left */
-	MDRV_SPEAKER_ADD("rspeaker", 0.2, 0.0, 1.0)		/* right */
+	MCFG_SPEAKER_ADD("fspeaker", 0.0, 0.0, 1.0)		/* front */
+	MCFG_SPEAKER_ADD("bspeaker",  0.0, 0.0, -0.5)	/* back */
+	MCFG_SPEAKER_ADD("lspeaker", -0.2, 0.0, 1.0)	/* left */
+	MCFG_SPEAKER_ADD("rspeaker", 0.2, 0.0, 1.0)		/* right */
 
-	MDRV_SOUND_ADD("samples", SAMPLES, 0)
-	MDRV_SOUND_CONFIG(turbo_samples_interface)
+	MCFG_SOUND_ADD("samples", SAMPLES, 0)
+	MCFG_SOUND_CONFIG(turbo_samples_interface)
 
 	/* channel 0 = CRASH.S -> CRASH.S/SM */
-	MDRV_SOUND_ROUTE(0, "fspeaker", 0.25)
+	MCFG_SOUND_ROUTE(0, "fspeaker", 0.25)
 
 	/* channel 1 = TRIG1-4 -> ALARM.M/F/R/L */
-	MDRV_SOUND_ROUTE(1, "fspeaker", 0.25)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.25)
-	MDRV_SOUND_ROUTE(1, "lspeaker",  0.25)
+	MCFG_SOUND_ROUTE(1, "fspeaker", 0.25)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.25)
+	MCFG_SOUND_ROUTE(1, "lspeaker",  0.25)
 
 	/* channel 2 = SLIP/SPIN -> SKID.F/R/L/M */
-	MDRV_SOUND_ROUTE(2, "fspeaker", 0.25)
-	MDRV_SOUND_ROUTE(2, "rspeaker", 0.25)
-	MDRV_SOUND_ROUTE(2, "lspeaker",  0.25)
+	MCFG_SOUND_ROUTE(2, "fspeaker", 0.25)
+	MCFG_SOUND_ROUTE(2, "rspeaker", 0.25)
+	MCFG_SOUND_ROUTE(2, "lspeaker",  0.25)
 
 	/* channel 3 = CRASH.L -> CRASH.L/LM */
-	MDRV_SOUND_ROUTE(3, "bspeaker",  0.25)
+	MCFG_SOUND_ROUTE(3, "bspeaker",  0.25)
 
 	/* channel 4 = AMBU -> AMBULANCE/AMBULANCE.M */
-	MDRV_SOUND_ROUTE(4, "fspeaker", 0.25)
+	MCFG_SOUND_ROUTE(4, "fspeaker", 0.25)
 
 	/* channel 5 = ACCEL+BSEL -> MYCAR.F/W/M + MYCAR0.F/M + MYCAR1.F/M */
-	MDRV_SOUND_ROUTE(5, "fspeaker", 0.25)
-	MDRV_SOUND_ROUTE(5, "bspeaker",  0.25)
+	MCFG_SOUND_ROUTE(5, "fspeaker", 0.25)
+	MCFG_SOUND_ROUTE(5, "bspeaker",  0.25)
 
 	/* channel 6 = OSEL -> OCAR.F/FM */
-	MDRV_SOUND_ROUTE(6, "fspeaker", 0.25)
+	MCFG_SOUND_ROUTE(6, "fspeaker", 0.25)
 
 	/* channel 7 = OSEL -> OCAR.L/LM */
-	MDRV_SOUND_ROUTE(7, "lspeaker",  0.25)
+	MCFG_SOUND_ROUTE(7, "lspeaker",  0.25)
 
 	/* channel 8 = OSEL -> OCAR.R/RM */
-	MDRV_SOUND_ROUTE(8, "rspeaker", 0.25)
+	MCFG_SOUND_ROUTE(8, "rspeaker", 0.25)
 
 	/* channel 9 = OSEL -> OCAR.W/WM */
-	MDRV_SOUND_ROUTE(9, "bspeaker",  0.25)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ROUTE(9, "bspeaker",  0.25)
+MACHINE_CONFIG_END
 
 /*
     Cockpit: CN2 1+2 -> FRONT
@@ -297,7 +297,7 @@ MACHINE_DRIVER_END
 
 WRITE8_DEVICE_HANDLER( subroc3d_sound_a_w )
 {
-	turbo_state *state = (turbo_state *)device->machine->driver_data;
+	turbo_state *state = device->machine->driver_data<turbo_state>();
 	state->sound_state[0] = data;
 
 	/* DIS0-3 contained in bits 0-3 */
@@ -305,7 +305,7 @@ WRITE8_DEVICE_HANDLER( subroc3d_sound_a_w )
 }
 
 
-INLINE void subroc3d_update_volume(running_device *samples, int leftchan, UINT8 dis, UINT8 dir)
+INLINE void subroc3d_update_volume(device_t *samples, int leftchan, UINT8 dis, UINT8 dir)
 {
 	float volume = (float)(15 - dis) / 16.0f;
 	float lvol, rvol;
@@ -327,8 +327,8 @@ INLINE void subroc3d_update_volume(running_device *samples, int leftchan, UINT8 
 
 WRITE8_DEVICE_HANDLER( subroc3d_sound_b_w )
 {
-	running_device *samples = device->machine->device("samples");
-	turbo_state *state = (turbo_state *)device->machine->driver_data;
+	device_t *samples = device->machine->device("samples");
+	turbo_state *state = device->machine->driver_data<turbo_state>();
 	UINT8 diff = data ^ state->sound_state[1];
 	state->sound_state[1] = data;
 
@@ -383,8 +383,8 @@ WRITE8_DEVICE_HANDLER( subroc3d_sound_b_w )
 
 WRITE8_DEVICE_HANDLER( subroc3d_sound_c_w )
 {
-	running_device *samples = device->machine->device("samples");
-	turbo_state *state = (turbo_state *)device->machine->driver_data;
+	device_t *samples = device->machine->device("samples");
+	turbo_state *state = device->machine->driver_data<turbo_state>();
 	UINT8 diff = data ^ state->sound_state[2];
 	state->sound_state[2] = data;
 
@@ -451,44 +451,44 @@ static const samples_interface subroc3d_samples_interface =
 };
 
 
-MACHINE_DRIVER_START( subroc3d_samples )
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+MACHINE_CONFIG_FRAGMENT( subroc3d_samples )
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("samples", SAMPLES, 0)
-	MDRV_SOUND_CONFIG(subroc3d_samples_interface)
+	MCFG_SOUND_ADD("samples", SAMPLES, 0)
+	MCFG_SOUND_CONFIG(subroc3d_samples_interface)
 
 	/* MISSILE in channels 0 and 1 */
-	MDRV_SOUND_ROUTE(0, "lspeaker",  0.25)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.25)
+	MCFG_SOUND_ROUTE(0, "lspeaker",  0.25)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.25)
 
 	/* TORPEDO in channels 2 and 3 */
-	MDRV_SOUND_ROUTE(2, "lspeaker",  0.25)
-	MDRV_SOUND_ROUTE(3, "rspeaker", 0.25)
+	MCFG_SOUND_ROUTE(2, "lspeaker",  0.25)
+	MCFG_SOUND_ROUTE(3, "rspeaker", 0.25)
 
 	/* FIGHTER in channels 4 and 5 */
-	MDRV_SOUND_ROUTE(4, "lspeaker",  0.25)
-	MDRV_SOUND_ROUTE(5, "rspeaker", 0.25)
+	MCFG_SOUND_ROUTE(4, "lspeaker",  0.25)
+	MCFG_SOUND_ROUTE(5, "rspeaker", 0.25)
 
 	/* HIT in channels 6 and 7 */
-	MDRV_SOUND_ROUTE(6, "lspeaker",  0.25)
-	MDRV_SOUND_ROUTE(7, "rspeaker", 0.25)
+	MCFG_SOUND_ROUTE(6, "lspeaker",  0.25)
+	MCFG_SOUND_ROUTE(7, "rspeaker", 0.25)
 
 	/* FIRE sound in channel 8 */
-	MDRV_SOUND_ROUTE(8, "lspeaker",  0.25)
-	MDRV_SOUND_ROUTE(8, "rspeaker", 0.25)
+	MCFG_SOUND_ROUTE(8, "lspeaker",  0.25)
+	MCFG_SOUND_ROUTE(8, "rspeaker", 0.25)
 
 	/* SHIP EXP sound in channel 9 */
-	MDRV_SOUND_ROUTE(9, "lspeaker",  0.25)
-	MDRV_SOUND_ROUTE(9, "rspeaker", 0.25)
+	MCFG_SOUND_ROUTE(9, "lspeaker",  0.25)
+	MCFG_SOUND_ROUTE(9, "rspeaker", 0.25)
 
 	/* ALARM TRIG sound in channel 10 */
-	MDRV_SOUND_ROUTE(10, "lspeaker",  0.25)
-	MDRV_SOUND_ROUTE(10, "rspeaker", 0.25)
+	MCFG_SOUND_ROUTE(10, "lspeaker",  0.25)
+	MCFG_SOUND_ROUTE(10, "rspeaker", 0.25)
 
 	/* PROLOGUE sound in channel 11 */
-	MDRV_SOUND_ROUTE(11, "lspeaker",  0.25)
-	MDRV_SOUND_ROUTE(11, "rspeaker", 0.25)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ROUTE(11, "lspeaker",  0.25)
+	MCFG_SOUND_ROUTE(11, "rspeaker", 0.25)
+MACHINE_CONFIG_END
 
 
 
@@ -498,7 +498,7 @@ MACHINE_DRIVER_END
  *
  *************************************/
 
-static void buckrog_update_samples(turbo_state *state, running_device *samples)
+static void buckrog_update_samples(turbo_state *state, device_t *samples)
 {
 	/* accelerator sounds */
 	if (sample_playing(samples, 5))
@@ -508,8 +508,8 @@ static void buckrog_update_samples(turbo_state *state, running_device *samples)
 
 WRITE8_DEVICE_HANDLER( buckrog_sound_a_w )
 {
-	running_device *samples = device->machine->device("samples");
-	turbo_state *state = (turbo_state *)device->machine->driver_data;
+	device_t *samples = device->machine->device("samples");
+	turbo_state *state = device->machine->driver_data<turbo_state>();
 	UINT8 diff = data ^ state->sound_state[0];
 	state->sound_state[0] = data;
 
@@ -534,8 +534,8 @@ WRITE8_DEVICE_HANDLER( buckrog_sound_a_w )
 
 WRITE8_DEVICE_HANDLER( buckrog_sound_b_w )
 {
-	running_device *samples = device->machine->device("samples");
-	turbo_state *state = (turbo_state *)device->machine->driver_data;
+	device_t *samples = device->machine->device("samples");
+	turbo_state *state = device->machine->driver_data<turbo_state>();
 	UINT8 diff = data ^ state->sound_state[1];
 	state->sound_state[1] = data;
 
@@ -606,12 +606,12 @@ static const samples_interface buckrog_samples_interface =
 };
 
 
-MACHINE_DRIVER_START( buckrog_samples )
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("samples", SAMPLES, 0)
-	MDRV_SOUND_CONFIG(buckrog_samples_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
-MACHINE_DRIVER_END
+MACHINE_CONFIG_FRAGMENT( buckrog_samples )
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("samples", SAMPLES, 0)
+	MCFG_SOUND_CONFIG(buckrog_samples_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+MACHINE_CONFIG_END
 
 
 

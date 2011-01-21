@@ -18,6 +18,7 @@
 ***************************************************************************/
 
 // standard windows headers
+#pragma warning(disable:4917)
 #define CINTERFACE
 #define COBJMACROS
 #define WIN32_LEAN_AND_MEAN

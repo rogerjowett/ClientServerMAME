@@ -22,13 +22,13 @@
  * the NMI input on the main CPU */
 static WRITE8_HANDLER( mouser_nmi_enable_w )
 {
-	mouser_state *state = (mouser_state *)space->machine->driver_data;
+	mouser_state *state = space->machine->driver_data<mouser_state>();
 	state->nmi_enable = data;
 }
 
 static INTERRUPT_GEN( mouser_nmi_interrupt )
 {
-	mouser_state *state = (mouser_state *)device->machine->driver_data;
+	mouser_state *state = device->machine->driver_data<mouser_state>();
 
 	if (BIT(state->nmi_enable, 0))
 		nmi_line_pulse(device);
@@ -38,14 +38,14 @@ static INTERRUPT_GEN( mouser_nmi_interrupt )
 
 static WRITE8_HANDLER( mouser_sound_interrupt_w )
 {
-	mouser_state *state = (mouser_state *)space->machine->driver_data;
+	mouser_state *state = space->machine->driver_data<mouser_state>();
 	state->sound_byte = data;
 	cpu_set_input_line(state->audiocpu, 0, HOLD_LINE);
 }
 
 static READ8_HANDLER( mouser_sound_byte_r )
 {
-	mouser_state *state = (mouser_state *)space->machine->driver_data;
+	mouser_state *state = space->machine->driver_data<mouser_state>();
 	return state->sound_byte;
 }
 
@@ -173,7 +173,7 @@ GFXDECODE_END
 
 static MACHINE_START( mouser )
 {
-	mouser_state *state = (mouser_state *)machine->driver_data;
+	mouser_state *state = machine->driver_data<mouser_state>();
 
 	state->maincpu = machine->device("maincpu");
 	state->audiocpu = machine->device("audiocpu");
@@ -184,53 +184,50 @@ static MACHINE_START( mouser )
 
 static MACHINE_RESET( mouser )
 {
-	mouser_state *state = (mouser_state *)machine->driver_data;
+	mouser_state *state = machine->driver_data<mouser_state>();
 
 	state->sound_byte = 0;
 	state->nmi_enable = 0;
 }
 
-static MACHINE_DRIVER_START( mouser )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(mouser_state)
+static MACHINE_CONFIG_START( mouser, mouser_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, 4000000)	/* 4 MHz ? */
-	MDRV_CPU_PROGRAM_MAP(mouser_map)
-	MDRV_CPU_VBLANK_INT("screen", mouser_nmi_interrupt) /* NMI is masked externally */
+	MCFG_CPU_ADD("maincpu", Z80, 4000000)	/* 4 MHz ? */
+	MCFG_CPU_PROGRAM_MAP(mouser_map)
+	MCFG_CPU_VBLANK_INT("screen", mouser_nmi_interrupt) /* NMI is masked externally */
 
-	MDRV_CPU_ADD("audiocpu", Z80, 4000000)	/* ??? */
-	MDRV_CPU_PROGRAM_MAP(mouser_sound_map)
-	MDRV_CPU_IO_MAP(mouser_sound_io_map)
-	MDRV_CPU_VBLANK_INT_HACK(nmi_line_pulse,4) /* ??? This controls the sound tempo */
+	MCFG_CPU_ADD("audiocpu", Z80, 4000000)	/* ??? */
+	MCFG_CPU_PROGRAM_MAP(mouser_sound_map)
+	MCFG_CPU_IO_MAP(mouser_sound_io_map)
+	MCFG_CPU_VBLANK_INT_HACK(nmi_line_pulse,4) /* ??? This controls the sound tempo */
 
-	MDRV_MACHINE_START(mouser)
-	MDRV_MACHINE_RESET(mouser)
+	MCFG_MACHINE_START(mouser)
+	MCFG_MACHINE_RESET(mouser)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(mouser)
-	MDRV_PALETTE_LENGTH(64)
+	MCFG_GFXDECODE(mouser)
+	MCFG_PALETTE_LENGTH(64)
 
-	MDRV_PALETTE_INIT(mouser)
-	MDRV_VIDEO_UPDATE(mouser)
+	MCFG_PALETTE_INIT(mouser)
+	MCFG_VIDEO_UPDATE(mouser)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ay1", AY8910, 4000000/2)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_SOUND_ADD("ay1", AY8910, 4000000/2)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MDRV_SOUND_ADD("ay2", AY8910, 4000000/2)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ay2", AY8910, 4000000/2)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 
 ROM_START( mouser )
@@ -286,12 +283,12 @@ static DRIVER_INIT( mouser )
 	/* Decode the opcodes */
 
 	offs_t i;
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
-	UINT8 *rom = memory_region(machine, "maincpu");
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	UINT8 *rom = machine->region("maincpu")->base();
 	UINT8 *decrypted = auto_alloc_array(machine, UINT8, 0x6000);
-	UINT8 *table = memory_region(machine, "user1");
+	UINT8 *table = machine->region("user1")->base();
 
-	memory_set_decrypted_region(space, 0x0000, 0x5fff, decrypted);
+	space->set_decrypted_region(0x0000, 0x5fff, decrypted);
 
 	for (i = 0; i < 0x6000; i++)
 	{

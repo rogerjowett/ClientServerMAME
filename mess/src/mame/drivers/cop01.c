@@ -68,14 +68,14 @@ Mighty Guy board layout:
 
 static WRITE8_HANDLER( cop01_sound_command_w )
 {
-	cop01_state *state = (cop01_state *)space->machine->driver_data;
+	cop01_state *state = space->machine->driver_data<cop01_state>();
 	soundlatch_w(space, offset, data);
 	cpu_set_input_line_and_vector(state->audiocpu, 0, HOLD_LINE, 0xff);
 }
 
 static READ8_HANDLER( cop01_sound_command_r )
 {
-	cop01_state *state = (cop01_state *)space->machine->driver_data;
+	cop01_state *state = space->machine->driver_data<cop01_state>();
 	int res = (soundlatch_r(space, offset) & 0x7f) << 1;
 
 	/* bit 0 seems to be a timer */
@@ -156,7 +156,7 @@ ADDRESS_MAP_END
 /* this just gets some garbage out of the YM3526 */
 static READ8_HANDLER( kludge )
 {
-	cop01_state *state = (cop01_state *)space->machine->driver_data;
+	cop01_state *state = space->machine->driver_data<cop01_state>();
 	return state->timer++;
 }
 
@@ -414,7 +414,7 @@ GFXDECODE_END
 
 static MACHINE_START( cop01 )
 {
-	cop01_state *state = (cop01_state *)machine->driver_data;
+	cop01_state *state = machine->driver_data<cop01_state>();
 
 	state->audiocpu = machine->device<cpu_device>("audiocpu");
 
@@ -425,7 +425,7 @@ static MACHINE_START( cop01 )
 
 static MACHINE_RESET( cop01 )
 {
-	cop01_state *state = (cop01_state *)machine->driver_data;
+	cop01_state *state = machine->driver_data<cop01_state>();
 
 	state->pulse = 0;
 	state->timer = 0;
@@ -436,91 +436,85 @@ static MACHINE_RESET( cop01 )
 }
 
 
-static MACHINE_DRIVER_START( cop01 )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(cop01_state)
+static MACHINE_CONFIG_START( cop01, cop01_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, 4000000)	/* ???? */
-	MDRV_CPU_PROGRAM_MAP(cop01_map)
-	MDRV_CPU_IO_MAP(io_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80, 4000000)	/* ???? */
+	MCFG_CPU_PROGRAM_MAP(cop01_map)
+	MCFG_CPU_IO_MAP(io_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 3000000)	/* ???? */
-	MDRV_CPU_PROGRAM_MAP(sound_map)
-	MDRV_CPU_IO_MAP(audio_io_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 3000000)	/* ???? */
+	MCFG_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_IO_MAP(audio_io_map)
 
-	MDRV_MACHINE_START(cop01)
-	MDRV_MACHINE_RESET(cop01)
+	MCFG_MACHINE_START(cop01)
+	MCFG_MACHINE_RESET(cop01)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(cop01)
-	MDRV_PALETTE_LENGTH(16+8*16+16*16)
+	MCFG_GFXDECODE(cop01)
+	MCFG_PALETTE_LENGTH(16+8*16+16*16)
 
-	MDRV_PALETTE_INIT(cop01)
-	MDRV_VIDEO_START(cop01)
-	MDRV_VIDEO_UPDATE(cop01)
+	MCFG_PALETTE_INIT(cop01)
+	MCFG_VIDEO_START(cop01)
+	MCFG_VIDEO_UPDATE(cop01)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ay1", AY8910, 1500000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
+	MCFG_SOUND_ADD("ay1", AY8910, 1500000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
 
-	MDRV_SOUND_ADD("ay2", AY8910, 1500000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
+	MCFG_SOUND_ADD("ay2", AY8910, 1500000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
 
-	MDRV_SOUND_ADD("ay3", AY8910, 1500000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ay3", AY8910, 1500000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( mightguy )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(cop01_state)
+static MACHINE_CONFIG_START( mightguy, cop01_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, 4000000)	/* ???? */
-	MDRV_CPU_PROGRAM_MAP(cop01_map)
-	MDRV_CPU_IO_MAP(mightguy_io_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80, 4000000)	/* ???? */
+	MCFG_CPU_PROGRAM_MAP(cop01_map)
+	MCFG_CPU_IO_MAP(mightguy_io_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 3000000)	/* ???? */
-	MDRV_CPU_PROGRAM_MAP(sound_map)
-	MDRV_CPU_IO_MAP(mightguy_audio_io_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 3000000)	/* ???? */
+	MCFG_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_IO_MAP(mightguy_audio_io_map)
 
-	MDRV_MACHINE_START(cop01)
-	MDRV_MACHINE_RESET(cop01)
+	MCFG_MACHINE_START(cop01)
+	MCFG_MACHINE_RESET(cop01)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(cop01)
-	MDRV_PALETTE_LENGTH(16+8*16+16*16)
+	MCFG_GFXDECODE(cop01)
+	MCFG_PALETTE_LENGTH(16+8*16+16*16)
 
-	MDRV_PALETTE_INIT(cop01)
-	MDRV_VIDEO_START(cop01)
-	MDRV_VIDEO_UPDATE(cop01)
+	MCFG_PALETTE_INIT(cop01)
+	MCFG_VIDEO_START(cop01)
+	MCFG_VIDEO_UPDATE(cop01)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM3526, 4000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM3526, 4000000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 
@@ -647,7 +641,7 @@ static DRIVER_INIT( mightguy )
 #if MIGHTGUY_HACK
 	/* This is a hack to fix the game code to get a fully working
        "Starting Area" fake Dip Switch */
-	UINT8 *RAM = (UINT8 *)memory_region(machine, "maincpu");
+	UINT8 *RAM = (UINT8 *)machine->region("maincpu")->base();
 	RAM[0x00e4] = 0x07;	// rlca
 	RAM[0x00e5] = 0x07;	// rlca
 	RAM[0x00e6] = 0x07;	// rlca

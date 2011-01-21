@@ -124,7 +124,7 @@
 
 static UINT8 keypad_r (running_machine *machine)
 {
-	micronic_state *state = (micronic_state *)machine->driver_data;
+	micronic_state *state = machine->driver_data<micronic_state>();
 	static const char *const bitnames[] = {"BIT0", "BIT1", "BIT2", "BIT3", "BIT4", "BIT5"};
 	UINT8 port, bit, data = 0;
 
@@ -135,32 +135,32 @@ static UINT8 keypad_r (running_machine *machine)
 	return data;
 }
 
-READ8_HANDLER( kp_r )
+static READ8_HANDLER( kp_r )
 {
 	return  keypad_r(space->machine);
 }
 
-READ8_HANDLER( status_flag_r )
+static READ8_HANDLER( status_flag_r )
 {
-	micronic_state *state = (micronic_state *)space->machine->driver_data;
+	micronic_state *state = space->machine->driver_data<micronic_state>();
 	return  state->status_flag;
 }
 
-WRITE8_HANDLER( status_flag_w )
+static WRITE8_HANDLER( status_flag_w )
 {
-	micronic_state *state = (micronic_state *)space->machine->driver_data;
+	micronic_state *state = space->machine->driver_data<micronic_state>();
 	state->status_flag = data;
 }
 
-WRITE8_HANDLER( kp_matrix_w )
+static WRITE8_HANDLER( kp_matrix_w )
 {
-	micronic_state *state = (micronic_state *)space->machine->driver_data;
+	micronic_state *state = space->machine->driver_data<micronic_state>();
 	state->kp_matrix = data;
 }
 
-WRITE8_HANDLER( beep_w )
+static WRITE8_HANDLER( beep_w )
 {
-	micronic_state *state = (micronic_state *)space->machine->driver_data;
+	micronic_state *state = space->machine->driver_data<micronic_state>();
 	UINT16 frequency = 0;
 
 	beep_set_state(state->speaker, (data) ? 1 : 0);
@@ -188,12 +188,12 @@ WRITE8_HANDLER( beep_w )
 	beep_set_frequency(state->speaker, frequency);
 }
 
-READ8_HANDLER( irq_flag_r )
+static READ8_HANDLER( irq_flag_r )
 {
 	return (input_port_read(space->machine, "BACKBATTERY")<<4) | (input_port_read(space->machine, "MAINBATTERY")<<3) | (keypad_r(space->machine) ? 0 : 1);
 }
 
-WRITE8_HANDLER( bank_select_w )
+static WRITE8_HANDLER( bank_select_w )
 {
 	if (data < 2)
 	{
@@ -207,9 +207,9 @@ WRITE8_HANDLER( bank_select_w )
 	}
 }
 
-WRITE8_HANDLER( lcd_contrast_w )
+static WRITE8_HANDLER( lcd_contrast_w )
 {
-	micronic_state *state = (micronic_state *)space->machine->driver_data;
+	micronic_state *state = space->machine->driver_data<micronic_state>();
 
 	state->lcd_contrast = data;
 }
@@ -219,9 +219,9 @@ WRITE8_HANDLER( lcd_contrast_w )
     RTC-146818
 ***************************************************************************/
 
-void set_146818_periodic_irq(running_machine *machine, UINT8 data)
+static void set_146818_periodic_irq(running_machine *machine, UINT8 data)
 {
-	micronic_state *state = (micronic_state *)machine->driver_data;
+	micronic_state *state = machine->driver_data<micronic_state>();
 
 	attotime timer_per = ATTOTIME_IN_SEC(0);
 
@@ -248,37 +248,37 @@ void set_146818_periodic_irq(running_machine *machine, UINT8 data)
 	timer_adjust_periodic(state->rtc_periodic_irq, timer_per, 0, timer_per);
 }
 
-WRITE8_HANDLER( rtc_address_w )
+static WRITE8_HANDLER( rtc_address_w )
 {
-	micronic_state *state = (micronic_state *)space->machine->driver_data;
+	micronic_state *state = space->machine->driver_data<micronic_state>();
 	state->rtc_address = data;
-
-	mc146818_port_w(space, 0, data);
+	mc146818_device *rtc = space->machine->device<mc146818_device>("rtc");
+	rtc->write(*space, 0, data);
 }
 
-READ8_HANDLER( rtc_data_r )
+static READ8_HANDLER( rtc_data_r )
 {
-	micronic_state *state = (micronic_state *)space->machine->driver_data;
+	micronic_state *state = space->machine->driver_data<micronic_state>();
 	UINT8 data = 0;
-
+	mc146818_device *rtc = space->machine->device<mc146818_device>("rtc");
 	switch(state->rtc_address & 0x3f)
 	{
 		case 0x0c:
-			data = state->irq_flags | mc146818_port_r(space, 1);
+			data = state->irq_flags | rtc->read(*space, 1);
 			state->irq_flags = 0;
 			break;
 		default:
-			data = mc146818_port_r(space, 1);
+			data = rtc->read(*space, 1);
 	}
 
 	return data;
 }
 
-WRITE8_HANDLER( rtc_data_w )
+static WRITE8_HANDLER( rtc_data_w )
 {
-	micronic_state *state = (micronic_state *)space->machine->driver_data;
-
-	mc146818_port_w(space, 1, data);
+	micronic_state *state = space->machine->driver_data<micronic_state>();
+	mc146818_device *rtc = space->machine->device<mc146818_device>("rtc");
+	rtc->write(*space, 1, data);
 
 	switch(state->rtc_address & 0x3f)
 	{
@@ -293,7 +293,7 @@ WRITE8_HANDLER( rtc_data_w )
 
 static TIMER_CALLBACK( rtc_periodic_irq )
 {
-	micronic_state *state = (micronic_state *)machine->driver_data;
+	micronic_state *state = machine->driver_data<micronic_state>();
 
 	if (state->periodic_irq)
 		cputag_set_input_line(machine, Z80_TAG, 0, HOLD_LINE);
@@ -319,8 +319,8 @@ static ADDRESS_MAP_START(micronic_io, ADDRESS_SPACE_IO, 8)
 	AM_RANGE(0x02, 0x02) AM_WRITE(kp_matrix_w)
 
 	/* hd61830 */
-	AM_RANGE(0x03, 0x03) AM_DEVREADWRITE(HD61830_TAG, hd61830_data_r, hd61830_data_w)
-	AM_RANGE(0x23, 0x23) AM_DEVREADWRITE(HD61830_TAG, hd61830_status_r, hd61830_control_w)
+	AM_RANGE(0x03, 0x03) AM_DEVREADWRITE_MODERN(HD61830_TAG, hd61830_device, data_r, data_w)
+	AM_RANGE(0x23, 0x23) AM_DEVREADWRITE_MODERN(HD61830_TAG, hd61830_device, status_r, control_w)
 
 	/* rtc-146818 */
 	AM_RANGE(0x08, 0x08) AM_WRITE(rtc_address_w)
@@ -397,22 +397,20 @@ INPUT_PORTS_END
 
 static NVRAM_HANDLER( micronic )
 {
-	micronic_state *state = (micronic_state *)machine->driver_data;
+	micronic_state *state = machine->driver_data<micronic_state>();
 	UINT8 reg_a = 0, reg_b = 0;
 
 	if (read_or_write)
 	{
 		mame_fwrite(file, state->ram, 0x8000);
 		mame_fwrite(file, messram_get_ptr(machine->device("messram")), 224*1024);
-		mc146818_save_stream(file);
 	}
 	else
 	{
 		if (file)
 		{
 			mame_fread(file, state->ram, 0x8000);
-			mame_fread(file, messram_get_ptr(machine->device("messram")), 224*1024);
-			mc146818_load_stream(file);
+			mame_fread(file, messram_get_ptr(machine->device("messram")), 224*1024);			
 
 			/* reload register A and B for restore the periodic irq state */
 			mame_fseek(file, 0x4000a, SEEK_SET);
@@ -440,35 +438,37 @@ static VIDEO_START( micronic )
 
 static VIDEO_UPDATE( micronic )
 {
-	micronic_state *state = (micronic_state *)screen->machine->driver_data;
+	micronic_state *state = screen->machine->driver_data<micronic_state>();
 
-	hd61830_update(state->hd61830, bitmap, cliprect);
+	state->hd61830->update_screen(bitmap, cliprect);
 
 	return 0;
 }
 
+static HD61830_INTERFACE( lcdc_intf )
+{
+	SCREEN_TAG,
+	DEVCB_NULL
+};
+
 static MACHINE_START( micronic )
 {
-	micronic_state *state = (micronic_state *)machine->driver_data;
+	micronic_state *state = machine->driver_data<micronic_state>();
 
 	/* find devices */
-	state->hd61830 = machine->device(HD61830_TAG);
+	state->hd61830 = machine->device<hd61830_device>(HD61830_TAG);
 	state->speaker = machine->device("beep");
 
 	/* ROM banks */
-	memory_configure_bank(machine, "bank1", 0x00, 0x02, memory_region(machine, Z80_TAG), 0x10000);
+	memory_configure_bank(machine, "bank1", 0x00, 0x02, machine->region(Z80_TAG)->base(), 0x10000);
 
 	/* RAM banks */
 	memory_configure_bank(machine, "bank1", 0x02, 0x07, messram_get_ptr(machine->device("messram")), 0x8000);
 
 	state->rtc_periodic_irq = timer_alloc(machine, rtc_periodic_irq, 0);
-
-	mc146818_init(machine, MC146818_IGNORE_CENTURY);
-
 	/* register for state saving */
 //  state_save_register_global(machine, state->);
 }
-
 
 static MACHINE_RESET( micronic )
 {
@@ -476,46 +476,45 @@ static MACHINE_RESET( micronic )
 	memory_unmap_write(cputag_get_address_space(machine, Z80_TAG, ADDRESS_SPACE_PROGRAM), 0x0000, 0x7fff, 0, 0);
 }
 
-static MACHINE_DRIVER_START( micronic )
-	MDRV_DRIVER_DATA(micronic_state)
-
+static MACHINE_CONFIG_START( micronic, micronic_state )
 	/* basic machine hardware */
-    MDRV_CPU_ADD(Z80_TAG, Z80, XTAL_3_579545MHz)
-    MDRV_CPU_PROGRAM_MAP(micronic_mem)
-    MDRV_CPU_IO_MAP(micronic_io)
+    MCFG_CPU_ADD(Z80_TAG, Z80, XTAL_3_579545MHz)
+    MCFG_CPU_PROGRAM_MAP(micronic_mem)
+    MCFG_CPU_IO_MAP(micronic_io)
 
-    MDRV_MACHINE_START(micronic)
-	MDRV_MACHINE_RESET(micronic)
+    MCFG_MACHINE_START(micronic)
+	MCFG_MACHINE_RESET(micronic)
 
     /* video hardware */
-	MDRV_SCREEN_ADD(SCREEN_TAG, LCD)
-	MDRV_SCREEN_REFRESH_RATE(80)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(120, 64)	//6x20, 8x8
-	MDRV_SCREEN_VISIBLE_AREA(0, 120-1, 0, 64-1)
+	MCFG_SCREEN_ADD(SCREEN_TAG, LCD)
+	MCFG_SCREEN_REFRESH_RATE(80)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(120, 64)	//6x20, 8x8
+	MCFG_SCREEN_VISIBLE_AREA(0, 120-1, 0, 64-1)
 
-	MDRV_DEFAULT_LAYOUT(layout_lcd)
+	MCFG_DEFAULT_LAYOUT(layout_lcd)
 
-	MDRV_PALETTE_LENGTH(2)
-	MDRV_PALETTE_INIT(micronic)
+	MCFG_PALETTE_LENGTH(2)
+	MCFG_PALETTE_INIT(micronic)
 
-    MDRV_VIDEO_START(micronic)
-    MDRV_VIDEO_UPDATE(micronic)
+    MCFG_VIDEO_START(micronic)
+    MCFG_VIDEO_UPDATE(micronic)
 
-	MDRV_HD61830_ADD(HD61830_TAG, XTAL_4_9152MHz/2/2, SCREEN_TAG)
+	MCFG_HD61830_ADD(HD61830_TAG, XTAL_4_9152MHz/2/2, lcdc_intf)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO( "mono" )
-	MDRV_SOUND_ADD( "beep", BEEP, 0 )
-	MDRV_SOUND_ROUTE( ALL_OUTPUTS, "mono", 1.00 )
+	MCFG_SPEAKER_STANDARD_MONO( "mono" )
+	MCFG_SOUND_ADD( "beep", BEEP, 0 )
+	MCFG_SOUND_ROUTE( ALL_OUTPUTS, "mono", 1.00 )
 
 	/* ram banks */
-	MDRV_RAM_ADD("messram")
-	MDRV_RAM_DEFAULT_SIZE("224K")
+	MCFG_RAM_ADD("messram")
+	MCFG_RAM_DEFAULT_SIZE("224K")
 
-	MDRV_NVRAM_HANDLER(micronic)
-
-MACHINE_DRIVER_END
+	MCFG_NVRAM_HANDLER(micronic)
+	
+	MCFG_MC146818_ADD( "rtc", MC146818_IGNORE_CENTURY )
+MACHINE_CONFIG_END
 
 /* ROM definition */
 ROM_START( micronic )

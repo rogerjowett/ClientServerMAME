@@ -167,7 +167,7 @@ static const UINT16 w_mask[8] =
 static hdc_t hdc;
 
 
-static int get_id_from_device( running_device *device )
+static int get_id_from_device( device_t *device )
 {
 	int id = -1;
 
@@ -540,7 +540,7 @@ static void store_registers(running_machine *machine)
 	if (! (hdc.w[1] & w1_transfer_inhibit))
 		for (i=0; i<real_word_count; i++)
 		{
-			memory_write_word_16be(cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM),dma_address, buffer[i]);
+			cputag_get_address_space(machine,"maincpu", ADDRESS_SPACE_PROGRAM)->write_word(dma_address, buffer[i]);
 			dma_address = (dma_address + 2) & 0x1ffffe;
 		}
 
@@ -695,7 +695,7 @@ static void read_data(running_machine *machine)
 		if (! (hdc.w[1] & w1_transfer_inhibit))
 			for (i=0; i<bytes_read; i+=2)
 			{
-				memory_write_word_16be(cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM),dma_address, (((int) buffer[i]) << 8) | buffer[i+1]);
+				cputag_get_address_space(machine,"maincpu", ADDRESS_SPACE_PROGRAM)->write_word(dma_address, (((int) buffer[i]) << 8) | buffer[i+1]);
 				dma_address = (dma_address + 2) & 0x1ffffe;
 			}
 
@@ -791,7 +791,7 @@ static void write_data(running_machine *machine)
 		/* DMA */
 		for (i=0; (i<byte_count) && (i<hdc.d[dsk_sel].bytes_per_sector); i+=2)
 		{
-			word = memory_read_word_16be(cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM),dma_address);
+			word = cputag_get_address_space(machine,"maincpu", ADDRESS_SPACE_PROGRAM)->read_word(dma_address);
 			buffer[i] = word >> 8;
 			buffer[i+1] = word & 0xff;
 
@@ -898,7 +898,7 @@ static void unformatted_read(running_machine *machine)
 	if (! (hdc.w[1] & w1_transfer_inhibit))
 		for (i=0; i<real_word_count; i++)
 		{
-			memory_write_word_16be(cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM),dma_address, buffer[i]);
+			cputag_get_address_space(machine,"maincpu", ADDRESS_SPACE_PROGRAM)->write_word(dma_address, buffer[i]);
 			dma_address = (dma_address + 2) & 0x1ffffe;
 		}
 
@@ -1042,14 +1042,14 @@ static const struct harddisk_callback_config ti990_harddisk_config =
 	DEVICE_IMAGE_UNLOAD_NAME( ti990_hd )
 };
 
-MACHINE_DRIVER_START( ti990_hdc )
-	MDRV_DEVICE_ADD( "harddisk1", HARDDISK, 0 )
-	MDRV_DEVICE_CONFIG( ti990_harddisk_config )
-	MDRV_DEVICE_ADD( "harddisk2", HARDDISK, 0 )
-	MDRV_DEVICE_CONFIG( ti990_harddisk_config )
-	MDRV_DEVICE_ADD( "harddisk3", HARDDISK, 0 )
-	MDRV_DEVICE_CONFIG( ti990_harddisk_config )
-	MDRV_DEVICE_ADD( "harddisk4", HARDDISK, 0 )
-	MDRV_DEVICE_CONFIG( ti990_harddisk_config )
-MACHINE_DRIVER_END
+MACHINE_CONFIG_FRAGMENT( ti990_hdc )
+	MCFG_DEVICE_ADD( "harddisk1", HARDDISK, 0 )
+	MCFG_DEVICE_CONFIG( ti990_harddisk_config )
+	MCFG_DEVICE_ADD( "harddisk2", HARDDISK, 0 )
+	MCFG_DEVICE_CONFIG( ti990_harddisk_config )
+	MCFG_DEVICE_ADD( "harddisk3", HARDDISK, 0 )
+	MCFG_DEVICE_CONFIG( ti990_harddisk_config )
+	MCFG_DEVICE_ADD( "harddisk4", HARDDISK, 0 )
+	MCFG_DEVICE_CONFIG( ti990_harddisk_config )
+MACHINE_CONFIG_END
 

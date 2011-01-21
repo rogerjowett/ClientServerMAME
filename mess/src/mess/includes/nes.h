@@ -64,12 +64,11 @@ typedef struct
 typedef void (*nes_prg_callback)(running_machine *machine, int start, int bank);
 typedef void (*nes_chr_callback)(running_machine *machine, int start, int bank, int source);
 
-class nes_state
+class nes_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, nes_state(machine)); }
-
-	nes_state(running_machine &machine) { }
+	nes_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* input_related - this part has to be cleaned up (e.g. in_2 and in_3 are not really necessary here...) */
 	nes_input in_0, in_1, in_2, in_3;
@@ -91,7 +90,7 @@ public:
 	UINT8 mmc5_high_chr;
 	UINT8 mmc5_split_scr;
 	UINT8 *extended_ntram;
-	
+
 	UINT8 mmc5_last_chr_a;
 	UINT16 mmc5_vrom_regA[8];
 	UINT16 mmc5_vrom_regB[4];
@@ -121,10 +120,10 @@ public:
 	nes_chr_callback    mmc3_chr_cb;
 
 	/* devices */
-	running_device      *maincpu;
-	running_device      *ppu;
-	running_device      *sound;
-	running_device      *cart;
+	device_t      *maincpu;
+	device_t      *ppu;
+	device_t      *sound;
+	device_t      *cart;
 
 	/* misc region to be allocated at init */
 	// variables which don't change at run-time
@@ -264,7 +263,7 @@ DRIVER_INIT( famicom );
 READ8_HANDLER( nes_IN0_r );
 READ8_HANDLER( nes_IN1_r );
 
-int nes_ppu_vidaccess( running_device *device, int address, int data );
+int nes_ppu_vidaccess( device_t *device, int address, int data );
 
 void nes_partialhash(char *dest, const unsigned char *data, unsigned long length, unsigned int functions);
 

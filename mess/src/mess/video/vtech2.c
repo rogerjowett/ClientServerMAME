@@ -14,12 +14,7 @@
 #define BORDER_H	64
 #define BORDER_V	32
 
-/* from machine/laser350.c */
-//extern int laser_latch;
-
 /* public */
-char laser_frame_message[64+1];
-int laser_frame_time = 0;
 
 /*
  *  when in text mode (bit 3 of I/O area = 0)
@@ -44,12 +39,9 @@ int laser_frame_time = 0;
  *      0 1 1 1 GR1 bank 7 1E000-1FFFF
  *      1 1 1 1 GR1 bank 3 0E000-0FFFF
  */
-static int laser_bg_mode = 0;
-static int laser_two_color = 0;
 
 VIDEO_START( laser )
 {
-	machine->generic.videoram_size = 0x04000;
 }
 
 static const int offs_2[192] = {
@@ -123,16 +115,18 @@ static const int offs_0[96] = {
 
 VIDEO_UPDATE( laser )
 {
+	vtech2_state *state = screen->machine->driver_data<vtech2_state>();
+	UINT8 *videoram = state->videoram;
 	int offs, x, y;
 	int full_refresh = 1;
 
 	if( full_refresh )
-		bitmap_fill(bitmap, cliprect, ((laser_bg_mode >> 4) & 15)<<1);
+		bitmap_fill(bitmap, cliprect, ((state->laser_bg_mode >> 4) & 15)<<1);
 
-	if (laser_latch & 0x08)
+	if (state->laser_latch & 0x08)
 	{
 		/* graphics modes */
-		switch (laser_bg_mode & 7)
+		switch (state->laser_bg_mode & 7)
         {
 		case  0:
 		case  1:
@@ -145,10 +139,10 @@ VIDEO_UPDATE( laser )
 				offs = offs_2[y];
 				for( x = 0; x < 80; x++, offs++ )
 				{
-					int sx, sy, code, color = laser_two_color;
+					int sx, sy, code, color = state->laser_two_color;
 					sy = BORDER_V/2 + y;
 					sx = BORDER_H/2 + x * 8;
-					code = screen->machine->generic.videoram.u8[offs];
+					code = videoram[offs];
 					drawgfx_opaque(bitmap,cliprect,screen->machine->gfx[2],code,color,0,0,sx,sy);
 				}
 			}
@@ -167,8 +161,8 @@ VIDEO_UPDATE( laser )
 					int sx, sy, code, color;
 					sy = BORDER_V/2 + y;
 					sx = BORDER_H/2 + x * 16;
-					code = screen->machine->generic.videoram.u8[offs];
-					color = screen->machine->generic.videoram.u8[offs+1];
+					code = videoram[offs];
+					color = videoram[offs+1];
 					drawgfx_opaque(bitmap,cliprect,screen->machine->gfx[3],code,color,0,0,sx,sy);
 				}
 			}
@@ -187,7 +181,7 @@ VIDEO_UPDATE( laser )
 					int sx, sy, code;
 					sy = BORDER_V/2 + y;
 					sx = BORDER_H/2 + x * 8;
-					code = screen->machine->generic.videoram.u8[offs];
+					code = videoram[offs];
 					drawgfx_opaque(bitmap,cliprect,screen->machine->gfx[5],code,0,0,0,sx,sy);
 				}
 			}
@@ -207,7 +201,7 @@ VIDEO_UPDATE( laser )
 					int sx, sy, code;
 					sy = BORDER_V/2 + y * 2;
 					sx = BORDER_H/2 + x * 8;
-					code = screen->machine->generic.videoram.u8[offs];
+					code = videoram[offs];
 					drawgfx_opaque(bitmap,cliprect,screen->machine->gfx[6],code,0,0,0,sx,sy);
 				}
 			}
@@ -223,10 +217,10 @@ VIDEO_UPDATE( laser )
 				offs = offs_1[y];
 				for( x = 0; x < 40; x++, offs++ )
 				{
-					int sx, sy, code, color = laser_two_color;
+					int sx, sy, code, color = state->laser_two_color;
 					sy = BORDER_V/2 + y;
 					sx = BORDER_H/2 + x * 16;
-					code = screen->machine->generic.videoram.u8[offs];
+					code = videoram[offs];
 					drawgfx_opaque(bitmap,cliprect,screen->machine->gfx[3],code,color,0,0,sx,sy);
 				}
 			}
@@ -245,8 +239,8 @@ VIDEO_UPDATE( laser )
 					int sx, sy, code, color;
 					sy = BORDER_V/2 + y;
 					sx = BORDER_H/2 + x * 32;
-					code = screen->machine->generic.videoram.u8[offs];
-					color = screen->machine->generic.videoram.u8[offs+1];
+					code = videoram[offs];
+					color = videoram[offs+1];
 					drawgfx_opaque(bitmap,cliprect,screen->machine->gfx[4],code,color,0,0,sx,sy);
 				}
 			}
@@ -256,7 +250,7 @@ VIDEO_UPDATE( laser )
 	else
 	{
 		/* text modes */
-		if (laser_bg_mode & 1)
+		if (state->laser_bg_mode & 1)
 		{
 			/* 80 columns text mode */
 			for( y = 0; y < 24; y++ )
@@ -264,10 +258,10 @@ VIDEO_UPDATE( laser )
 				offs = ((y & 7) << 8) + ((y >> 3) * 80);
 				for( x = 0; x < 80; x++, offs++ )
 				{
-					int sx, sy, code, color = laser_two_color;
+					int sx, sy, code, color = state->laser_two_color;
 					sy = BORDER_V/2 + y * 8;
 					sx = BORDER_H/2 + x * 8;
-					code = screen->machine->generic.videoram.u8[0x3800+offs];
+					code = videoram[0x3800+offs];
 					drawgfx_opaque(bitmap,cliprect,screen->machine->gfx[0],code,color,0,0,sx,sy);
 				}
 			}
@@ -283,35 +277,37 @@ VIDEO_UPDATE( laser )
 					int sx, sy, code, color = 0;
 					sy = BORDER_V/2 + y * 8;
 					sx = BORDER_H/2 + x * 16;
-					code = screen->machine->generic.videoram.u8[0x3800+offs];
-					color = screen->machine->generic.videoram.u8[0x3801+offs];
+					code = videoram[0x3800+offs];
+					color = videoram[0x3801+offs];
 					drawgfx_opaque(bitmap,cliprect,screen->machine->gfx[1],code,color,0,0,sx,sy);
 				}
 			}
 		}
 	}
 
-	if( laser_frame_time > 0 )
+	if( state->laser_frame_time > 0 )
 	{
-		popmessage("%s", laser_frame_message);
+		popmessage("%s", state->laser_frame_message);
 	}
 	return 0;
 }
 
 WRITE8_HANDLER( laser_bg_mode_w )
 {
-    if (laser_bg_mode != data)
+	vtech2_state *state = space->machine->driver_data<vtech2_state>();
+    if (state->laser_bg_mode != data)
     {
-        laser_bg_mode = data;
+        state->laser_bg_mode = data;
 		logerror("laser border:$%X mode:$%X\n", data >> 4, data & 15);
     }
 }
 
 WRITE8_HANDLER( laser_two_color_w )
 {
-	if (laser_two_color != data)
+	vtech2_state *state = space->machine->driver_data<vtech2_state>();
+	if (state->laser_two_color != data)
 	{
-		laser_two_color = data;
+		state->laser_two_color = data;
 		logerror("laser foreground:$%X background:$%X\n", data >> 4, data & 15);
     }
 }

@@ -5,12 +5,11 @@
 **************************************************************************/
 
 
-class dcheese_state
+class dcheese_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, dcheese_state(machine)); }
-
-	dcheese_state(running_machine &machine) { }
+	dcheese_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* video-related */
 	UINT16   blitter_color[2];
@@ -28,9 +27,9 @@ public:
 	UINT8    sound_msb_latch;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *audiocpu;
-	running_device *bsmt;
+	device_t *maincpu;
+	device_t *audiocpu;
+	device_t *bsmt;
 };
 
 

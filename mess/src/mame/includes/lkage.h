@@ -1,10 +1,9 @@
 
-class lkage_state
+class lkage_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, lkage_state(machine)); }
-
-	lkage_state(running_machine &machine) { }
+	lkage_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	UINT8 *      scroll;
 	UINT8 *      vreg;
@@ -14,7 +13,9 @@ public:
 
 	/* video-related */
 	tilemap_t *bg_tilemap, *fg_tilemap, *tx_tilemap;
-	UINT8 bg_tile_bank, fg_tile_bank;
+	UINT8 bg_tile_bank, fg_tile_bank, tx_tile_bank;
+
+	int sprite_dx;
 
 	/* misc */
 	int sound_nmi_enable, pending_nmi;
@@ -31,9 +32,9 @@ public:
 	int mcu_ready;	/* cpu data/mcu ready status */
 
 	/* devices */
-	running_device *maincpu;
-	running_device *audiocpu;
-	running_device *mcu;
+	device_t *maincpu;
+	device_t *audiocpu;
+	device_t *mcu;
 };
 
 /*----------- defined in machine/lkage.c -----------*/

@@ -10,10 +10,10 @@ struct _tia_state
 	void *chip;
 };
 
-INLINE tia_state *get_safe_token(running_device *device)
+INLINE tia_state *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
-	assert(device->type() == SOUND_TIA);
+	assert(device->type() == TIA);
 	return (tia_state *)downcast<legacy_device_base *>(device)->token();
 }
 

@@ -48,12 +48,11 @@ enum
 	IKBD_MOUSE_PHASE_NEGATIVE
 };
 
-class atarist_state
+class atarist_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, atarist_state(machine)); }
-
-	atarist_state(running_machine &machine) { }
+	atarist_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory state */
 	UINT8 mmu;
@@ -140,11 +139,11 @@ public:
 	int dmasnd_active;
 
 	/* devices */
-	running_device *mc68901;
-	running_device *lmc1992;
-	running_device *wd1772;
-	running_device *centronics;
-	running_device *rs232;
+	device_t *mc68901;
+	device_t *lmc1992;
+	device_t *wd1772;
+	device_t *centronics;
+	device_t *rs232;
 
 	/* timers */
 	emu_timer *glue_timer;

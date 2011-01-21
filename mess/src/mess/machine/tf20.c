@@ -5,7 +5,7 @@
     Dual floppy drive with HX-20 factory option
 
 
-    Status: Boots from system disk, missing µPD7201 emulation
+    Status: Boots from system disk, missing ??PD7201 emulation
 
 ***************************************************************************/
 
@@ -33,11 +33,11 @@
 typedef struct _tf20_state tf20_state;
 struct _tf20_state
 {
-	running_device *ram;
-	running_device *upd765a;
-	running_device *upd7201;
-	running_device *floppy_0;
-	running_device *floppy_1;
+	device_t *ram;
+	device_t *upd765a;
+	device_t *upd7201;
+	device_t *floppy_0;
+	device_t *floppy_1;
 };
 
 
@@ -45,7 +45,7 @@ struct _tf20_state
     INLINE FUNCTIONS
 *****************************************************************************/
 
-INLINE tf20_state *get_safe_token(running_device *device)
+INLINE tf20_state *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
 	assert(device->type() == TF20);
@@ -73,7 +73,7 @@ static TIMER_DEVICE_CALLBACK( serial_clock )
 static READ8_HANDLER( tf20_rom_disable )
 {
 	tf20_state *tf20 = get_safe_token(space->cpu->owner());
-	const address_space *prg = cpu_get_address_space(space->cpu, ADDRESS_SPACE_PROGRAM);
+	address_space *prg = cpu_get_address_space(space->cpu, ADDRESS_SPACE_PROGRAM);
 
 	/* switch in ram */
 	memory_install_ram(prg, 0x0000, 0x7fff, 0, 0, messram_get_ptr(tf20->ram));
@@ -270,7 +270,7 @@ static UPD7201_INTERFACE( tf20_upd7201_intf )
 static const upd765_interface tf20_upd765a_intf =
 {
 	DEVCB_CPU_INPUT_LINE("tf20", INPUT_LINE_IRQ0),
-	NULL,
+	DEVCB_NULL,
 	NULL,
 	UPD765_RDY_PIN_NOT_CONNECTED,
 	{FLOPPY_0, FLOPPY_1, NULL, NULL}
@@ -288,25 +288,25 @@ static const floppy_config tf20_floppy_config =
 	NULL
 };
 
-static MACHINE_DRIVER_START( tf20 )
-	MDRV_CPU_ADD("tf20", Z80, XTAL_CR1 / 2) /* uPD780C */
-	MDRV_CPU_PROGRAM_MAP(tf20_mem)
-	MDRV_CPU_IO_MAP(tf20_io)
+static MACHINE_CONFIG_FRAGMENT( tf20 )
+	MCFG_CPU_ADD("tf20", Z80, XTAL_CR1 / 2) /* uPD780C */
+	MCFG_CPU_PROGRAM_MAP(tf20_mem)
+	MCFG_CPU_IO_MAP(tf20_io)
 
 	/* 64k internal ram */
-	MDRV_RAM_ADD("ram")
-	MDRV_RAM_DEFAULT_SIZE("64k")
+	MCFG_RAM_ADD("ram")
+	MCFG_RAM_DEFAULT_SIZE("64k")
 
 	/* upd765a floppy controller */
-	MDRV_UPD765A_ADD("5a", tf20_upd765a_intf)
+	MCFG_UPD765A_ADD("5a", tf20_upd765a_intf)
 
 	/* upd7201 serial interface */
-	MDRV_UPD7201_ADD("3a", XTAL_CR1 / 2, tf20_upd7201_intf)
-	MDRV_TIMER_ADD_PERIODIC("serial_timer", serial_clock, HZ(XTAL_CR2 / 128))
+	MCFG_UPD7201_ADD("3a", XTAL_CR1 / 2, tf20_upd7201_intf)
+	MCFG_TIMER_ADD_PERIODIC("serial_timer", serial_clock, HZ(XTAL_CR2 / 128))
 
 	/* 2 floppy drives */
-	MDRV_FLOPPY_2_DRIVES_ADD(tf20_floppy_config)
-MACHINE_DRIVER_END
+	MCFG_FLOPPY_2_DRIVES_ADD(tf20_floppy_config)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************
@@ -326,8 +326,8 @@ ROM_END
 static DEVICE_START( tf20 )
 {
 	tf20_state *tf20 = get_safe_token(device);
-	running_device *cpu = device->subdevice("tf20");
-	const address_space *prg = cpu_get_address_space(cpu, ADDRESS_SPACE_PROGRAM);
+	device_t *cpu = device->subdevice("tf20");
+	address_space *prg = cpu_get_address_space(cpu, ADDRESS_SPACE_PROGRAM);
 
 	cpu_set_irq_callback(cpu, tf20_irq_ack);
 
@@ -350,8 +350,8 @@ static DEVICE_START( tf20 )
 
 static DEVICE_RESET( tf20 )
 {
-	running_device *cpu = device->subdevice("tf20");
-	const address_space *prg = cpu_get_address_space(cpu, ADDRESS_SPACE_PROGRAM);
+	device_t *cpu = device->subdevice("tf20");
+	address_space *prg = cpu_get_address_space(cpu, ADDRESS_SPACE_PROGRAM);
 
 	/* enable rom */
 	memory_install_rom(prg, 0x0000, 0x07ff, 0, 0x7800, cpu->region()->base());
@@ -366,7 +366,7 @@ DEVICE_GET_INFO( tf20 )
 		case DEVINFO_INT_INLINE_CONFIG_BYTES:	info->i = 0;									break;
 
 		/* --- the following bits of info are returned as pointers --- */
-		case DEVINFO_PTR_MACHINE_CONFIG:		info->machine_config = MACHINE_DRIVER_NAME(tf20);	break;
+		case DEVINFO_PTR_MACHINE_CONFIG:		info->machine_config = MACHINE_CONFIG_NAME(tf20);	break;
 		case DEVINFO_PTR_ROM_REGION:			info->romregion = ROM_NAME(tf20);				break;
 
 		/* --- the following bits of info are returned as pointers to data or functions --- */

@@ -15,12 +15,16 @@
 #include <gtk/gtk.h>
 
 #include "dview.h"
+#include "osdsdl.h"
+#include "debugger.h"
 #include "debug/dvdisasm.h"
 #include "debug/dvmemory.h"
 #include "debug/dvstate.h"
 #include "debug-intf.h"
 #include "debug-sup.h"
 #include "debug-cb.h"
+
+#include "config.h"
 
 //============================================================
 //  PARAMETERS
@@ -71,9 +75,36 @@ struct _win_i {
 	edit					ed;
 	running_machine *		machine;	// machine
 	DView *					views[MAX_VIEWS];
-	running_device *		cpu;	// current CPU
+	device_t *		cpu;	// current CPU
 };
 
+struct windowState
+{
+    windowState() : type(0),
+                    sizeX(-1), sizeY(-1),
+                    positionX(-1), positionY(-1) { }
+    ~windowState() { }
+
+    void loadFromXmlDataNode(xml_data_node* wnode)
+    {
+        if (!wnode) return;
+
+        type = xml_get_attribute_int(wnode, "type", type);
+
+        sizeX = xml_get_attribute_int(wnode, "size_x", sizeX);
+        sizeY = xml_get_attribute_int(wnode, "size_y", sizeY);
+        positionX = xml_get_attribute_int(wnode, "position_x", positionX);
+        positionY = xml_get_attribute_int(wnode, "position_y", positionY);
+    }
+
+    int type;
+    int sizeX;
+    int sizeY;
+    int positionX;
+    int positionY;
+};
+windowState windowStateArray[64];
+int windowStateCount = 0;
 
 //============================================================
 //  LOCAL VARIABLES
@@ -86,6 +117,9 @@ static win_i *win_list;
 //============================================================
 
 static void debugmain_init(running_machine *machine);
+static void memorywin_new(running_machine *machine);
+static void disasmwin_new(running_machine *machine);
+static void logwin_new(running_machine *machine);
 
 
 //============================================================
@@ -402,7 +436,7 @@ static void disasmview_update_checks(win_i *info)
 {
 	DView *disasm;
 	assert(info != NULL);
-	assert(info->type == WIN_TYPE_MAIN);
+	// assert(info->type == WIN_TYPE_MAIN);
 
 	disasm = get_view(info, DVT_DISASSEMBLY);
 
@@ -418,7 +452,7 @@ static void disasmview_update_checks(win_i *info)
 //  debugmain_set_cpu
 //============================================================
 
-static void debugmain_set_cpu(running_device *device)
+static void debugmain_set_cpu(device_t *device)
 {
 	win_i *dmain = get_first_win_i(WIN_TYPE_MAIN);
 	DView *dv;
@@ -444,29 +478,130 @@ static void debugmain_set_cpu(running_device *device)
 }
 
 
+//============================================================
+//  configuration_load
+//============================================================
+
+static void configuration_load(running_machine *machine, int config_type, xml_data_node *parentnode)
+{
+	xml_data_node *wnode;
+
+	/* we only care about game files */
+	if (config_type != CONFIG_TYPE_GAME)
+		return;
+
+	/* might not have any data */
+	if (parentnode == NULL)
+		return;
+
+	/* configuration load */
+	int i = 0;
+	for (wnode = xml_get_sibling(parentnode->child, "window"); wnode != NULL; wnode = xml_get_sibling(wnode->next, "window"))
+	{
+		windowStateArray[i].loadFromXmlDataNode(wnode);
+		i++;
+	}
+	windowStateCount = i;
+}
 
 //============================================================
-//  osd_wait_for_debugger
+//  configuration_save
 //============================================================
 
-void osd_wait_for_debugger(running_device *device, int firststop)
+static void configuration_save(running_machine *machine, int config_type, xml_data_node *parentnode)
+{
+	/* we only care about game files */
+	if (config_type != CONFIG_TYPE_GAME)
+		return;
+
+	// Loop over all the nodes
+	for(win_i *p = win_list; p != NULL; p = p->next)
+	{
+		/* create a node */
+		xml_data_node *debugger_node;
+		debugger_node = xml_add_child(parentnode, "window", NULL);
+
+		xml_set_attribute_int(debugger_node, "type", p->type);
+
+		if (debugger_node != NULL)
+		{
+			int x, y;
+			gtk_window_get_position(GTK_WINDOW(p->win), &x, &y);
+			xml_set_attribute_int(debugger_node, "position_x", x);
+			xml_set_attribute_int(debugger_node, "position_y", y);
+
+			gtk_window_get_size(GTK_WINDOW(p->win), &x, &y);
+			xml_set_attribute_int(debugger_node, "size_x", x);
+			xml_set_attribute_int(debugger_node, "size_y", y);
+		}
+	}
+}
+
+
+//============================================================
+//  sdl_osd_interface::init_debugger
+//============================================================
+
+void sdl_osd_interface::init_debugger()
+{
+	/* register callbacks */
+	config_register(&machine(), "debugger", configuration_load, configuration_save);
+}
+
+
+//============================================================
+//  wait_for_debugger
+//============================================================
+
+void sdl_osd_interface::wait_for_debugger(device_t &device, bool firststop)
 {
 	win_i *dmain = get_first_win_i(WIN_TYPE_MAIN);
-	// create a console window
+
+	// Create a console window if one doesn't already exist
 	if(!dmain)
 	{
 		// GTK init should probably be done earlier
 		gtk_init(0, 0);
-		debugmain_init(device->machine);
+		debugmain_init(&machine());
+
+		// Resize the main window
+		for (int i = 0; i < windowStateCount; i++)
+		{
+			if (windowStateArray[i].type == WIN_TYPE_MAIN)
+			{
+				gtk_window_move(GTK_WINDOW(win_list->win), windowStateArray[i].positionX, windowStateArray[i].positionY);
+				gtk_window_resize(GTK_WINDOW(win_list->win), windowStateArray[i].sizeX, windowStateArray[i].sizeY);
+			}
+		}
+
+		// Respawn and reposition every other window
+		for (int i = 0; i < windowStateCount; i++)
+		{
+			if (!windowStateArray[i].type || windowStateArray[i].type == WIN_TYPE_MAIN)
+			    continue;
+
+			switch (windowStateArray[i].type)
+			{
+				case WIN_TYPE_MEMORY: memorywin_new(&machine()); break;
+				case WIN_TYPE_DISASM: disasmwin_new(&machine()); break;
+				case WIN_TYPE_LOG:    logwin_new(&machine()); break;
+				default: break;
+			}
+
+			gtk_window_move(GTK_WINDOW(win_list->win), windowStateArray[i].positionX, windowStateArray[i].positionY);
+			gtk_window_resize(GTK_WINDOW(win_list->win), windowStateArray[i].sizeX, windowStateArray[i].sizeY);
+		}
+
+		// Bring focus back to the main window
+		gtk_window_present(GTK_WINDOW(get_first_win_i(WIN_TYPE_MAIN)->win));
 	}
 
 	// update the views in the console to reflect the current CPU
-	debugmain_set_cpu(device);
+	debugmain_set_cpu(&device);
 
 	debugwin_show(1);
 	gtk_main_iteration();
 }
-
 
 
 //============================================================
@@ -481,7 +616,6 @@ void debugwin_update_during_game(running_machine *machine)
 		gtk_main_iteration_do(FALSE);
 	}
 }
-
 
 
 //============================================================
@@ -631,7 +765,7 @@ static void memorywin_new(running_machine *machine)
 {
 	win_i *mem;
 	int item, cursel;
-	running_device *curcpu = debug_cpu_get_visible_cpu(machine);
+	device_t *curcpu = debug_cpu_get_visible_cpu(machine);
 	GtkComboBox *		zone_w;
 
 	mem = add_win_i(machine, WIN_TYPE_MEMORY);
@@ -725,7 +859,7 @@ static void disasmwin_new(running_machine *machine)
 {
 	win_i *dis;
 	int item, cursel;
-	running_device *curcpu = debug_cpu_get_visible_cpu(machine);
+	device_t *curcpu = debug_cpu_get_visible_cpu(machine);
 	GtkComboBox 		*cpu_w;
 	astring title;
 
@@ -992,7 +1126,7 @@ void on_run_to_cursor_activate(GtkWidget *win)
 		if (debug_cpu_get_visible_cpu(info->machine) == disasm->view->source()->device())
 		{
 			offs_t address = downcast<debug_view_disasm *>(disasm->view)->selected_address();
-			command.printf("go %X", address);
+			command.printf("go 0x%X", address);
 			debug_console_execute_command(info->machine, command, 1);
 		}
 	}
@@ -1033,9 +1167,9 @@ on_set_breakpoint_at_cursor_activate(GtkWidget *win)
 }
 
 gboolean
-on_disasm_button_press_event           (GtkWidget       *widget,
-                                        GdkEventButton  *event,
-                                        gpointer         user_data)
+on_disasm_button_press_event(GtkWidget       *widget,
+                             GdkEventButton  *event,
+                             gpointer         user_data)
 {
 	DView *info = (DView *) widget;
 	LOG(("gef %f %f %p %p\n", event->x, event->y, info, widget));
@@ -1055,17 +1189,17 @@ on_disasm_button_press_event           (GtkWidget       *widget,
 }
 
 gboolean
-on_memoryview_button_press_event           (GtkWidget       *widget,
-                                        GdkEventButton  *event,
-                                        gpointer         user_data)
+on_memoryview_button_press_event(GtkWidget       *widget,
+                                 GdkEventButton  *event,
+                                 gpointer         user_data)
 {
 	return on_disasm_button_press_event(widget, event, user_data);
 }
 
 gboolean
-on_memoryview_key_press_event             (GtkWidget   *widget,
-                                                        GdkEventKey *event,
-                                                        gpointer     user_data)
+on_memoryview_key_press_event(GtkWidget   *widget,
+                              GdkEventKey *event,
+                              gpointer     user_data)
 {
 	DView *info = (DView *) widget;
 	//printf("%s\n", event->string);
@@ -1140,13 +1274,23 @@ on_memoryview_key_press_event             (GtkWidget   *widget,
 
 #else
 
-#include "emu.h"
+#include <SDL/SDL.h>
+#include <SDL/SDL_version.h>
 
-// win32 stubs for linking
-void osd_wait_for_debugger(running_device *device, int firststop)
+#include "emu.h"
+#include "osdepend.h"
+#include "osdsdl.h"
+
+ // win32 stubs for linking
+void sdl_osd_interface::init_debugger()
 {
 }
 
+void sdl_osd_interface::wait_for_debugger(device_t &device, bool firststop)
+{
+}
+
+// win32 stubs for linking
 void debugwin_update_during_game(running_machine *machine)
 {
 }

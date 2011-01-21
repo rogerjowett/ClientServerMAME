@@ -4912,7 +4912,7 @@ static void stv_vdp2_draw_rotation_screen(running_machine *machine, bitmap_t *bi
 		stv2_current_tilemap.window_control = 0;
 		fade_control = stv2_current_tilemap.fade_control;
 		stv2_current_tilemap.fade_control = 0;
-		profiler_mark_start(PROFILER_USER1);
+		g_profiler.start(PROFILER_USER1);
 		if ( LOG_VDP2 ) logerror( "Checking for cached RBG bitmap, cache_dirty = %d, memcmp() = %d\n", stv_rbg_cache_data.is_cache_dirty, memcmp(&stv_rbg_cache_data.layer_data[iRP-1],&stv2_current_tilemap,sizeof(stv2_current_tilemap)));
 		if ( (stv_rbg_cache_data.is_cache_dirty & iRP) ||
 			memcmp(&stv_rbg_cache_data.layer_data[iRP-1],&stv2_current_tilemap,sizeof(stv2_current_tilemap)) != 0 )
@@ -4931,7 +4931,7 @@ static void stv_vdp2_draw_rotation_screen(running_machine *machine, bitmap_t *bi
 				stv_rbg_cache_data.map_offset_max[iRP-1], stv_rbg_cache_data.tile_offset_min[iRP-1], stv_rbg_cache_data.tile_offset_max[iRP-1] );
 		}
 
-		profiler_mark_end();
+		g_profiler.stop();
 
 		stv2_current_tilemap.colour_calculation_enabled = colour_calculation_enabled;
 		if ( colour_calculation_enabled )
@@ -4952,9 +4952,9 @@ static void stv_vdp2_draw_rotation_screen(running_machine *machine, bitmap_t *bi
 
 		stv2_current_tilemap.fade_control = fade_control;
 
-		profiler_mark_start(PROFILER_USER2);
+		g_profiler.start(PROFILER_USER2);
 		stv_vdp2_copy_roz_bitmap(bitmap, stv_vdp2_roz_bitmap[iRP-1], &mycliprect, iRP, planesizex, planesizey, planerenderedsizex, planerenderedsizey );
-		profiler_mark_end();
+		g_profiler.stop();
 	}
 
 }
@@ -6458,7 +6458,7 @@ static void stv_dump_ram()
 	fp=fopen("68k.dmp", "w+b");
 	if (fp)
 	{
-		fwrite(memory_region(machine, REGION_CPU3), 0x100000, 1, fp);
+		fwrite(machine->region(REGION_CPU3)->base(), 0x100000, 1, fp);
 		fclose(fp);
 	}
 }

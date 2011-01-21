@@ -66,25 +66,25 @@ static struct {
 } aga;
 
 
-MACHINE_DRIVER_START( pcvideo_aga )
-	MDRV_SCREEN_ADD( AGA_SCREEN_NAME, RASTER )
-	MDRV_SCREEN_FORMAT( BITMAP_FORMAT_INDEXED16 )
-	MDRV_SCREEN_RAW_PARAMS( XTAL_14_31818MHz,912,0,640,262,0,200 )
-	MDRV_PALETTE_LENGTH( CGA_PALETTE_SETS * 16 )
+MACHINE_CONFIG_FRAGMENT( pcvideo_aga )
+	MCFG_SCREEN_ADD( AGA_SCREEN_NAME, RASTER )
+	MCFG_SCREEN_FORMAT( BITMAP_FORMAT_INDEXED16 )
+	MCFG_SCREEN_RAW_PARAMS( XTAL_14_31818MHz,912,0,640,262,0,200 )
+	MCFG_PALETTE_LENGTH( CGA_PALETTE_SETS * 16 )
 
-	MDRV_PALETTE_INIT( pc_aga )
+	MCFG_PALETTE_INIT( pc_aga )
 
-	MDRV_MC6845_ADD( AGA_MC6845_NAME, MC6845, XTAL_14_31818MHz/8, mc6845_aga_intf )
+	MCFG_MC6845_ADD( AGA_MC6845_NAME, MC6845, XTAL_14_31818MHz/8, mc6845_aga_intf )
 
-	MDRV_VIDEO_START( pc_aga )
-	MDRV_VIDEO_UPDATE( mc6845_aga )
-MACHINE_DRIVER_END
+	MCFG_VIDEO_START( pc_aga )
+	MCFG_VIDEO_UPDATE( mc6845_aga )
+MACHINE_CONFIG_END
 
 
-MACHINE_DRIVER_START( pcvideo_pc200 )
-	MDRV_IMPORT_FROM( pcvideo_aga )
-	MDRV_VIDEO_START( pc200 )
-MACHINE_DRIVER_END
+MACHINE_CONFIG_FRAGMENT( pcvideo_pc200 )
+	MCFG_FRAGMENT_ADD( pcvideo_aga )
+	MCFG_VIDEO_START( pc200 )
+MACHINE_CONFIG_END
 
 
 /* Initialise the cga palette */
@@ -124,6 +124,7 @@ static WRITE_LINE_DEVICE_HANDLER( aga_vsync_changed ) {
 
 /* colors need fixing in the mda_text_* functions ! */
 static MC6845_UPDATE_ROW( mda_text_inten_update_row ) {
+	UINT8 *videoram = pc_videoram;
 	UINT16	*p = BITMAP_ADDR16( bitmap, y, 0 );
 	UINT16	chr_base = ( ra & 0x08 ) ? 0x800 | ( ra & 0x07 ) : ra;
 	int i;
@@ -131,8 +132,8 @@ static MC6845_UPDATE_ROW( mda_text_inten_update_row ) {
 	if ( y == 0 ) logerror("mda_text_inten_update_row\n");
 	for ( i = 0; i < x_count; i++ ) {
 		UINT16 offset = ( ( ma + i ) << 1 ) & 0x0FFF;
-		UINT8 chr = device->machine->generic.videoram.u8[ offset ];
-		UINT8 attr = device->machine->generic.videoram.u8[ offset + 1 ];
+		UINT8 chr = videoram[ offset ];
+		UINT8 attr = videoram[ offset + 1 ];
 		UINT8 data = aga.mda_chr_gen[ chr_base + chr * 8 ];
 		UINT8 fg = ( attr & 0x08 ) ? 3 : 2;
 		UINT8 bg = 0;
@@ -182,6 +183,7 @@ static MC6845_UPDATE_ROW( mda_text_inten_update_row ) {
 
 
 static MC6845_UPDATE_ROW( mda_text_blink_update_row ) {
+	UINT8 *videoram = pc_videoram;
 	UINT16	*p = BITMAP_ADDR16( bitmap, y, 0 );
 	UINT16	chr_base = ( ra & 0x08 ) ? 0x800 | ( ra & 0x07 ) : ra;
 	int i;
@@ -189,8 +191,8 @@ static MC6845_UPDATE_ROW( mda_text_blink_update_row ) {
 	if ( y == 0 ) logerror("mda_text_blink_update_row\n");
 	for ( i = 0; i < x_count; i++ ) {
 		UINT16 offset = ( ( ma + i ) << 1 ) & 0x0FFF;
-		UINT8 chr = device->machine->generic.videoram.u8[ offset ];
-		UINT8 attr = device->machine->generic.videoram.u8[ offset + 1 ];
+		UINT8 chr = videoram[ offset ];
+		UINT8 attr = videoram[ offset + 1 ];
 		UINT8 data = aga.mda_chr_gen[ chr_base + chr * 8 ];
 		UINT8 fg = ( attr & 0x08 ) ? 3 : 2;
 		UINT8 bg = 0;
@@ -241,14 +243,15 @@ static MC6845_UPDATE_ROW( mda_text_blink_update_row ) {
 
 
 static MC6845_UPDATE_ROW( cga_text_inten_update_row ) {
+	UINT8 *videoram = pc_videoram;
 	UINT16  *p = BITMAP_ADDR16(bitmap, y, 0);
 	int i;
 
 	if ( y == 0 ) logerror("cga_text_inten_update_row\n");
 	for ( i = 0; i < x_count; i++ ) {
 		UINT16 offset = ( ( ma + i ) << 1 ) & 0x3fff;
-		UINT8 chr = device->machine->generic.videoram.u8[ offset ];
-		UINT8 attr = device->machine->generic.videoram.u8[ offset +1 ];
+		UINT8 chr = videoram[ offset ];
+		UINT8 attr = videoram[ offset +1 ];
 		UINT8 data = aga.cga_chr_gen[ chr * 16 + ra ];
 		UINT16 fg = attr & 0x0F;
 		UINT16 bg = ( attr >> 4 ) & 0x07;
@@ -269,14 +272,15 @@ static MC6845_UPDATE_ROW( cga_text_inten_update_row ) {
 }
 
 static MC6845_UPDATE_ROW( cga_text_inten_alt_update_row ) {
+	UINT8 *videoram = pc_videoram;
 	UINT16  *p = BITMAP_ADDR16(bitmap, y, 0);
 	int i;
 
 	if ( y == 0 ) logerror("cga_text_inten_alt_update_row\n");
 	for ( i = 0; i < x_count; i++ ) {
 		UINT16 offset = ( ( ma + i ) << 1 ) & 0x3fff;
-		UINT8 chr = device->machine->generic.videoram.u8[ offset ];
-		UINT8 attr = device->machine->generic.videoram.u8[ offset +1 ];
+		UINT8 chr = videoram[ offset ];
+		UINT8 attr = videoram[ offset +1 ];
 		UINT8 data = aga.cga_chr_gen[ chr * 16 + ra ];
 		UINT16 fg = attr & 0x0F;
 
@@ -296,13 +300,14 @@ static MC6845_UPDATE_ROW( cga_text_inten_alt_update_row ) {
 }
 
 static MC6845_UPDATE_ROW( cga_text_blink_update_row ) {
+	UINT8 *videoram = pc_videoram;
 	UINT16	*p = BITMAP_ADDR16(bitmap, y, 0);
 	int i;
 
 	for ( i = 0; i < x_count; i++ ) {
 		UINT16 offset = ( ( ma + i ) << 1 ) & 0x3fff;
-		UINT8 chr = device->machine->generic.videoram.u8[ offset ];
-		UINT8 attr = device->machine->generic.videoram.u8[ offset +1 ];
+		UINT8 chr = videoram[ offset ];
+		UINT8 attr = videoram[ offset +1 ];
 		UINT8 data = aga.cga_chr_gen[ chr * 16 + ra ];
 		UINT16 fg = attr & 0x0F;
 		UINT16 bg = attr >> 4;
@@ -327,14 +332,15 @@ static MC6845_UPDATE_ROW( cga_text_blink_update_row ) {
 }
 
 static MC6845_UPDATE_ROW( cga_text_blink_alt_update_row ) {
+	UINT8 *videoram = pc_videoram;
 	UINT16  *p = BITMAP_ADDR16(bitmap, y, 0);
 	int i;
 
 	if ( y == 0 ) logerror("cga_text_blink_alt_update_row\n");
 	for ( i = 0; i < x_count; i++ ) {
 		UINT16 offset = ( ( ma + i ) << 1 ) & 0x3fff;
-		UINT8 chr = device->machine->generic.videoram.u8[ offset ];
-		UINT8 attr = device->machine->generic.videoram.u8[ offset +1 ];
+		UINT8 chr = videoram[ offset ];
+		UINT8 attr = videoram[ offset +1 ];
 		UINT8 data = aga.cga_chr_gen[ chr * 16 + ra ];
 		UINT16 fg = attr & 0x07;
 		UINT16 bg = 0;
@@ -360,20 +366,21 @@ static MC6845_UPDATE_ROW( cga_text_blink_alt_update_row ) {
 }
 
 static MC6845_UPDATE_ROW( cga_gfx_4bppl_update_row ) {
+	UINT8 *videoram = pc_videoram;
 	UINT16  *p = BITMAP_ADDR16(bitmap, y, 0);
 	int i;
 
 	if ( y == 0 ) logerror("cga_gfx_4bppl_update_row\n");
 	for ( i = 0; i < x_count; i++ ) {
 		UINT16 offset = ( ( ( ma + i ) << 1 ) & 0x1fff ) | ( ( y & 1 ) << 13 );
-		UINT8 data = device->machine->generic.videoram.u8[ offset ];
+		UINT8 data = videoram[ offset ];
 
 		*p = data >> 4; p++;
 		*p = data >> 4; p++;
 		*p = data & 0x0F; p++;
 		*p = data & 0x0F; p++;
 
-		data = device->machine->generic.videoram.u8[ offset + 1 ];
+		data = videoram[ offset + 1 ];
 
 		*p = data >> 4; p++;
 		*p = data >> 4; p++;
@@ -383,13 +390,14 @@ static MC6845_UPDATE_ROW( cga_gfx_4bppl_update_row ) {
 }
 
 static MC6845_UPDATE_ROW( cga_gfx_4bpph_update_row ) {
+	UINT8 *videoram = pc_videoram;
 	UINT16  *p = BITMAP_ADDR16(bitmap, y, 0);
 	int i;
 
 	if ( y == 0 ) logerror("cga_gfx_4bpph_update_row\n");
 	for ( i = 0; i < x_count; i++ ) {
 		UINT16 offset = ( ( ( ma + i ) << 1 ) & 0x1fff ) | ( ( y & 1 ) << 13 );
-		UINT8 data = device->machine->generic.videoram.u8[ offset ];
+		UINT8 data = videoram[ offset ];
 
 		*p = data >> 4; p++;
 		*p = data >> 4; p++;
@@ -400,7 +408,7 @@ static MC6845_UPDATE_ROW( cga_gfx_4bpph_update_row ) {
 		*p = data & 0x0F; p++;
 		*p = data & 0x0F; p++;
 
-		data = device->machine->generic.videoram.u8[ offset + 1 ];
+		data = videoram[ offset + 1 ];
 
 		*p = data >> 4; p++;
 		*p = data >> 4; p++;
@@ -414,20 +422,21 @@ static MC6845_UPDATE_ROW( cga_gfx_4bpph_update_row ) {
 }
 
 static MC6845_UPDATE_ROW( cga_gfx_2bpp_update_row ) {
+	UINT8 *videoram = pc_videoram;
 	UINT16  *p = BITMAP_ADDR16(bitmap, y, 0);
 	int i;
 
 //  if ( y == 0 ) logerror("cga_gfx_2bpp_update_row\n");
 	for ( i = 0; i < x_count; i++ ) {
 		UINT16 offset = ( ( ( ma + i ) << 1 ) & 0x1fff ) | ( ( y & 1 ) << 13 );
-		UINT8 data = device->machine->generic.videoram.u8[ offset ];
+		UINT8 data = videoram[ offset ];
 
 		*p = aga.cga_palette_lut_2bpp[ ( data >> 6 ) & 0x03 ]; p++;
 		*p = aga.cga_palette_lut_2bpp[ ( data >> 4 ) & 0x03 ]; p++;
 		*p = aga.cga_palette_lut_2bpp[ ( data >> 2 ) & 0x03 ]; p++;
 		*p = aga.cga_palette_lut_2bpp[   data        & 0x03 ]; p++;
 
-		data = device->machine->generic.videoram.u8[ offset+1 ];
+		data = videoram[ offset+1 ];
 
 		*p = aga.cga_palette_lut_2bpp[ ( data >> 6 ) & 0x03 ]; p++;
 		*p = aga.cga_palette_lut_2bpp[ ( data >> 4 ) & 0x03 ]; p++;
@@ -437,6 +446,7 @@ static MC6845_UPDATE_ROW( cga_gfx_2bpp_update_row ) {
 }
 
 static MC6845_UPDATE_ROW( cga_gfx_1bpp_update_row ) {
+	UINT8 *videoram = pc_videoram;
 	UINT16  *p = BITMAP_ADDR16(bitmap, y, 0);
 	UINT8	fg = aga.cga_color_select & 0x0F;
 	int i;
@@ -444,7 +454,7 @@ static MC6845_UPDATE_ROW( cga_gfx_1bpp_update_row ) {
 	if ( y == 0 ) logerror("cga_gfx_1bpp_update_row\n");
 	for ( i = 0; i < x_count; i++ ) {
 		UINT16 offset = ( ( ( ma + i ) << 1 ) & 0x1fff ) | ( ( ra & 1 ) << 13 );
-		UINT8 data = device->machine->generic.videoram.u8[ offset ];
+		UINT8 data = videoram[ offset ];
 
 		*p = ( data & 0x80 ) ? fg : 0; p++;
 		*p = ( data & 0x40 ) ? fg : 0; p++;
@@ -455,7 +465,7 @@ static MC6845_UPDATE_ROW( cga_gfx_1bpp_update_row ) {
 		*p = ( data & 0x02 ) ? fg : 0; p++;
 		*p = ( data & 0x01 ) ? fg : 0; p++;
 
-		data = device->machine->generic.videoram.u8[ offset + 1 ];
+		data = videoram[ offset + 1 ];
 
 		*p = ( data & 0x80 ) ? fg : 0; p++;
 		*p = ( data & 0x40 ) ? fg : 0; p++;
@@ -479,7 +489,7 @@ static READ8_HANDLER ( pc_aga_mda_r )
 	UINT8 data = 0xFF;
 
 	if ( aga.mode == AGA_MONO ) {
-		running_device *devconf = space->machine->device(MDA_MC6845_NAME);
+		device_t *devconf = space->machine->device(MDA_MC6845_NAME);
 		switch( offset )
 		{
 		case 0: case 2: case 4: case 6:
@@ -501,7 +511,7 @@ static READ8_HANDLER ( pc_aga_mda_r )
 static WRITE8_HANDLER ( pc_aga_mda_w )
 {
 	if ( aga.mode == AGA_MONO ) {
-		running_device *devconf = space->machine->device(AGA_MC6845_NAME);
+		device_t *devconf = space->machine->device(AGA_MC6845_NAME);
 		switch( offset )
 		{
 			case 0: case 2: case 4: case 6:
@@ -534,7 +544,7 @@ static READ8_HANDLER ( pc_aga_cga_r )
 	UINT8 data = 0xFF;
 
 	if ( aga.mode == AGA_COLOR ) {
-		running_device *devconf = space->machine->device(AGA_MC6845_NAME);
+		device_t *devconf = space->machine->device(AGA_MC6845_NAME);
 		switch( offset ) {
 		case 0: case 2: case 4: case 6:
 			/* return last written mc6845 address value here? */
@@ -580,7 +590,7 @@ static void pc_aga_set_palette_luts(void) {
 static WRITE8_HANDLER ( pc_aga_cga_w )
 {
 	if ( aga.mode == AGA_COLOR ) {
-		running_device *devconf = space->machine->device(AGA_MC6845_NAME);
+		device_t *devconf = space->machine->device(AGA_MC6845_NAME);
 
 		switch(offset) {
 		case 0: case 2: case 4: case 6:
@@ -661,7 +671,7 @@ static WRITE16_HANDLER ( pc16le_aga_cga_w ) { write16le_with_write8_handler(pc_a
 
 void pc_aga_set_mode(running_machine *machine, AGA_MODE mode)
 {
-	running_device *devconf = machine->device(AGA_MC6845_NAME);
+	device_t *devconf = machine->device(AGA_MC6845_NAME);
 
 	aga.mode = mode;
 
@@ -680,7 +690,7 @@ void pc_aga_set_mode(running_machine *machine, AGA_MODE mode)
 
 VIDEO_START( pc_aga )
 {
-	const address_space *space = cpu_get_address_space( machine->firstcpu, ADDRESS_SPACE_IO );
+	address_space *space = cpu_get_address_space( machine->firstcpu, ADDRESS_SPACE_IO );
 	int buswidth = device_memory(machine->firstcpu)->space_config(AS_PROGRAM)->m_databus_width;
 
 	switch(buswidth)
@@ -707,14 +717,14 @@ VIDEO_START( pc_aga )
 	memset( &aga, 0, sizeof( aga ) );
 
 	aga.mode = AGA_COLOR;
-	aga.mda_chr_gen = memory_region(machine, "gfx1") + 0x1000;
-	aga.cga_chr_gen = memory_region(machine, "gfx1");
+	aga.mda_chr_gen = machine->region("gfx1")->base() + 0x1000;
+	aga.cga_chr_gen = machine->region("gfx1")->base();
 }
 
 
 VIDEO_START( pc200 )
 {
-	const address_space *space = cpu_get_address_space( machine->firstcpu, ADDRESS_SPACE_IO );
+	address_space *space = cpu_get_address_space( machine->firstcpu, ADDRESS_SPACE_IO );
 	int buswidth;
 
 	VIDEO_START_CALL(pc_aga);
@@ -737,14 +747,14 @@ VIDEO_START( pc200 )
 			break;
 	}
 
-	aga.mda_chr_gen = memory_region(machine, "gfx1");
-	aga.cga_chr_gen = memory_region(machine, "gfx1") + 0x1000;
+	aga.mda_chr_gen = machine->region("gfx1")->base();
+	aga.cga_chr_gen = machine->region("gfx1")->base() + 0x1000;
 }
 
 
 static VIDEO_UPDATE( mc6845_aga )
 {
-	running_device *devconf = screen->machine->device(AGA_MC6845_NAME);
+	device_t *devconf = screen->machine->device(AGA_MC6845_NAME);
 	mc6845_update( devconf, bitmap, cliprect);
 
 	return 0;
@@ -767,12 +777,13 @@ WRITE8_HANDLER ( pc_aga_videoram_w )
 
  READ8_HANDLER( pc_aga_videoram_r )
 {
+	UINT8 *videoram = pc_videoram;
 	switch (aga.mode) {
 	case AGA_COLOR:
-		if (offset>=0x8000) return space->machine->generic.videoram.u8[offset-0x8000];
+		if (offset>=0x8000) return videoram[offset-0x8000];
 		return 0;
 	case AGA_MONO:
-		return space->machine->generic.videoram.u8[offset];
+		return videoram[offset];
 	case AGA_OFF: break;
 	}
 	return 0;
@@ -780,13 +791,14 @@ WRITE8_HANDLER ( pc_aga_videoram_w )
 
 READ8_HANDLER( pc200_videoram_r )
 {
+	UINT8 *videoram = pc_videoram;
 	switch (aga.mode)
 	{
 		default:
-			if (offset>=0x8000) return space->machine->generic.videoram.u8[offset-0x8000];
+			if (offset>=0x8000) return videoram[offset-0x8000];
 			return 0;
 		case AGA_MONO:
-			return space->machine->generic.videoram.u8[offset];
+			return videoram[offset];
 	}
 	return 0;
 }

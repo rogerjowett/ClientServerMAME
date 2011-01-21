@@ -13,12 +13,11 @@
 #define AM2910_TAG		"11d"
 #define SCREEN_TAG		"screen"
 
-class cgc7900_state
+class cgc7900_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, cgc7900_state(machine)); }
-
-	cgc7900_state(running_machine &machine) { }
+	cgc7900_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* interrupt state */
 	UINT16 int_mask;
@@ -39,6 +38,7 @@ public:
 	UINT16 color_status_bg;
 	UINT16 roll_overlay;
 	int blink;
+	UINT16* chrom_ram;
 };
 
 /*----------- defined in video/cgc7900.c -----------*/
@@ -48,6 +48,6 @@ WRITE16_HANDLER( cgc7900_z_mode_w );
 WRITE16_HANDLER( cgc7900_color_status_w );
 READ16_HANDLER( cgc7900_sync_r );
 
-MACHINE_DRIVER_EXTERN( cgc7900_video );
+MACHINE_CONFIG_EXTERN( cgc7900_video );
 
 #endif

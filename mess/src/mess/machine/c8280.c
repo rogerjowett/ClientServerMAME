@@ -36,26 +36,26 @@ struct _c8280_t
 	int address;						/* bus address - 8 */
 
 	/* devices */
-	running_device *cpu_dos;
-	running_device *cpu_fdc;
-	running_device *riot0;
-	running_device *riot1;
-	running_device *bus;
-	running_device *image[2];
+	device_t *cpu_dos;
+	device_t *cpu_fdc;
+	device_t *riot0;
+	device_t *riot1;
+	device_t *bus;
+	device_t *image[2];
 };
 
 /***************************************************************************
     INLINE FUNCTIONS
 ***************************************************************************/
 
-INLINE c8280_t *get_safe_token(running_device *device)
+INLINE c8280_t *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
 	assert(device->type() == C8280);
 	return (c8280_t *)downcast<legacy_device_base *>(device)->token();
 }
 
-INLINE c8280_config *get_safe_config(running_device *device)
+INLINE c8280_config *get_safe_config(device_t *device)
 {
 	assert(device != NULL);
 	assert(device->type() == C8280);
@@ -154,18 +154,18 @@ static const floppy_config c8280_floppy_config =
     MACHINE_DRIVER( c8280 )
 -------------------------------------------------*/
 
-static MACHINE_DRIVER_START( c8280 )
-	MDRV_CPU_ADD(M6502_DOS_TAG, M6502, 1000000)
-	MDRV_CPU_PROGRAM_MAP(c8280_dos_map)
+static MACHINE_CONFIG_FRAGMENT( c8280 )
+	MCFG_CPU_ADD(M6502_DOS_TAG, M6502, 1000000)
+	MCFG_CPU_PROGRAM_MAP(c8280_dos_map)
 
-	MDRV_RIOT6532_ADD(M6532_0_TAG, 1000000, riot0_intf)
-	MDRV_RIOT6532_ADD(M6532_1_TAG, 1000000, riot1_intf)
+	MCFG_RIOT6532_ADD(M6532_0_TAG, 1000000, riot0_intf)
+	MCFG_RIOT6532_ADD(M6532_1_TAG, 1000000, riot1_intf)
 
-	MDRV_CPU_ADD(M6502_FDC_TAG, M6502, 1000000)
-	MDRV_CPU_PROGRAM_MAP(c8280_fdc_map)
+	MCFG_CPU_ADD(M6502_FDC_TAG, M6502, 1000000)
+	MCFG_CPU_PROGRAM_MAP(c8280_fdc_map)
 
-	MDRV_FLOPPY_2_DRIVES_ADD(c8280_floppy_config)
-MACHINE_DRIVER_END
+	MCFG_FLOPPY_2_DRIVES_ADD(c8280_floppy_config)
+MACHINE_CONFIG_END
 
 /*-------------------------------------------------
     ROM( c8280 )
@@ -222,7 +222,7 @@ DEVICE_GET_INFO( c8280 )
 
 		/* --- the following bits of info are returned as pointers --- */
 		case DEVINFO_PTR_ROM_REGION:					info->romregion = ROM_NAME(c8280);							break;
-		case DEVINFO_PTR_MACHINE_CONFIG:				info->machine_config = MACHINE_DRIVER_NAME(c8280);			break;
+		case DEVINFO_PTR_MACHINE_CONFIG:				info->machine_config = MACHINE_CONFIG_NAME(c8280);			break;
 
 		/* --- the following bits of info are returned as pointers to data or functions --- */
 		case DEVINFO_FCT_START:							info->start = DEVICE_START_NAME(c8280);						break;

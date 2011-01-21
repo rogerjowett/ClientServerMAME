@@ -50,15 +50,15 @@ static UINT16 decrypt(UINT16 data, int address, int select_xor)
 void deco102_decrypt_cpu(running_machine *machine, const char *cputag, int address_xor, int data_select_xor, int opcode_select_xor)
 {
 	int i;
-	const address_space *space = cputag_get_address_space(machine, cputag, ADDRESS_SPACE_PROGRAM);
-	UINT16 *rom = (UINT16 *)memory_region(machine, cputag);
-	int size = memory_region_length(machine, cputag);
+	address_space *space = cputag_get_address_space(machine, cputag, ADDRESS_SPACE_PROGRAM);
+	UINT16 *rom = (UINT16 *)machine->region(cputag)->base();
+	int size = machine->region(cputag)->bytes();
 	UINT16 *opcodes = auto_alloc_array(machine, UINT16, size / 2);
 	UINT16 *buf = auto_alloc_array(machine, UINT16, size / 2);
 
 	memcpy(buf, rom, size);
 
-	memory_set_decrypted_region(space, 0, size - 1, opcodes);
+	space->set_decrypted_region(0, size - 1, opcodes);
 	m68k_set_encrypted_opcode_range(machine->device(cputag), 0, size);
 
 	for (i = 0; i < size / 2; i++)

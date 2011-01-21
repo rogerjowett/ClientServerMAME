@@ -28,7 +28,7 @@ TODO:
 
 static WRITE16_HANDLER( soundcommand_w )
 {
-	galspnbl_state *state = (galspnbl_state *)space->machine->driver_data;
+	galspnbl_state *state = space->machine->driver_data<galspnbl_state>();
 
 	if (ACCESSING_BITS_0_7)
 	{
@@ -65,7 +65,7 @@ ADDRESS_MAP_END
 static ADDRESS_MAP_START( audio_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0xefff) AM_ROM
 	AM_RANGE(0xf000, 0xf7ff) AM_RAM
-	AM_RANGE(0xf800, 0xf800) AM_DEVREADWRITE("oki", okim6295_r, okim6295_w)
+	AM_RANGE(0xf800, 0xf800) AM_DEVREADWRITE_MODERN("oki", okim6295_device, read, write)
 	AM_RANGE(0xf810, 0xf811) AM_DEVWRITE("ymsnd", ym3812_w)
 	AM_RANGE(0xfc00, 0xfc00) AM_NOP	/* irq ack ?? */
 	AM_RANGE(0xfc20, 0xfc20) AM_READ(soundlatch_r)
@@ -188,9 +188,9 @@ GFXDECODE_END
 
 
 
-static void irqhandler( running_device *device, int linestate )
+static void irqhandler( device_t *device, int linestate )
 {
-	galspnbl_state *state = (galspnbl_state *)device->machine->driver_data;
+	galspnbl_state *state = device->machine->driver_data<galspnbl_state>();
 	cpu_set_input_line(state->audiocpu, 0, linestate);
 }
 
@@ -202,51 +202,48 @@ static const ym3812_interface ym3812_config =
 
 static MACHINE_START( galspnbl )
 {
-	galspnbl_state *state = (galspnbl_state *)machine->driver_data;
+	galspnbl_state *state = machine->driver_data<galspnbl_state>();
 
 	state->audiocpu = machine->device("audiocpu");
 }
 
-static MACHINE_DRIVER_START( galspnbl )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(galspnbl_state)
+static MACHINE_CONFIG_START( galspnbl, galspnbl_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 10000000)	/* 10 MHz ??? */
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_VBLANK_INT("screen", irq3_line_hold)/* also has vector for 6, but it does nothing */
+	MCFG_CPU_ADD("maincpu", M68000, 10000000)	/* 10 MHz ??? */
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_VBLANK_INT("screen", irq3_line_hold)/* also has vector for 6, but it does nothing */
 
-	MDRV_CPU_ADD("audiocpu", Z80, 4000000)	/* 4 MHz ??? */
-	MDRV_CPU_PROGRAM_MAP(audio_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 4000000)	/* 4 MHz ??? */
+	MCFG_CPU_PROGRAM_MAP(audio_map)
 								/* NMI is caused by the main CPU */
 
-	MDRV_MACHINE_START(galspnbl)
+	MCFG_MACHINE_START(galspnbl)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(512, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 512-1, 16, 240-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(512, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 512-1, 16, 240-1)
 
-	MDRV_GFXDECODE(galspnbl)
-	MDRV_PALETTE_LENGTH(1024 + 32768)
+	MCFG_GFXDECODE(galspnbl)
+	MCFG_PALETTE_LENGTH(1024 + 32768)
 
-	MDRV_PALETTE_INIT(galspnbl)
-	MDRV_VIDEO_UPDATE(galspnbl)
+	MCFG_PALETTE_INIT(galspnbl)
+	MCFG_VIDEO_UPDATE(galspnbl)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM3812, 3579545)
-	MDRV_SOUND_CONFIG(ym3812_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM3812, 3579545)
+	MCFG_SOUND_CONFIG(ym3812_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-	MDRV_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 
 

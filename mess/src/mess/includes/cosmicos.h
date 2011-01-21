@@ -1,7 +1,7 @@
 #ifndef __COSMICOS__
 #define __COSMICOS__
 
-#include "cpu/cdp1802/cdp1802.h"
+#include "cpu/cosmac/cosmac.h"
 
 #define CDP1802_TAG		"ic19"
 #define CDP1864_TAG		"ic3"
@@ -28,15 +28,19 @@ enum
 	LED_CASSETTE
 };
 
-class cosmicos_state
+class cosmicos_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, cosmicos_state(machine)); }
+	cosmicos_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config),
+		  m_maincpu(*this, CDP1802_TAG)
+	{ }
 
-	cosmicos_state(running_machine &machine) { }
+	required_device<cosmac_device> m_maincpu;
 
 	/* CPU state */
-	cdp1802_control_mode cdp1802_mode;
+	int wait;
+	int clear;
 	int sc1;
 
 	/* memory state */
@@ -58,10 +62,10 @@ public:
 	int video_on;
 
 	/* devices */
-	running_device *dm9368;
-	running_device *cdp1864;
-	running_device *cassette;
-	running_device *speaker;
+	device_t *dm9368;
+	device_t *cdp1864;
+	device_t *cassette;
+	device_t *speaker;
 };
 
 #endif

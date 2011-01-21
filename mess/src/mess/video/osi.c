@@ -24,13 +24,13 @@ static PALETTE_INIT( osi630 )
 
 static VIDEO_START( osi600 )
 {
-	osi_state *state = (osi_state *)machine->driver_data;
+	osi_state *state = machine->driver_data<osi_state>();
 	UINT16 addr;
 
 	/* randomize video memory contents */
 	for (addr = 0; addr < OSI600_VIDEORAM_SIZE; addr++)
 	{
-		state->video_ram[addr] = mame_rand(machine) & 0xff;
+		state->video_ram[addr] = machine->rand() & 0xff;
 	}
 
 	/* randomize color memory contents */
@@ -38,7 +38,7 @@ static VIDEO_START( osi600 )
 	{
 		for (addr = 0; addr < OSI630_COLORRAM_SIZE; addr++)
 		{
-			state->color_ram[addr] = mame_rand(machine) & 0x0f;
+			state->color_ram[addr] = machine->rand() & 0x0f;
 		}
 	}
 }
@@ -47,7 +47,7 @@ static VIDEO_START( osi600 )
 
 static VIDEO_UPDATE( osi600 )
 {
-	osi_state *state = (osi_state *)screen->machine->driver_data;
+	osi_state *state = screen->machine->driver_data<osi_state>();
 
 	int y, bit, sx;
 
@@ -63,7 +63,7 @@ static VIDEO_UPDATE( osi600 )
 			{
 				UINT8 videoram_data = state->video_ram[videoram_addr];
 				UINT16 charrom_addr = ((videoram_data << 3) | line) & 0x7ff;
-				UINT8 charrom_data = memory_region(screen->machine, "chargen")[charrom_addr];
+				UINT8 charrom_data = screen->machine->region("chargen")->base()[charrom_addr];
 
 				for (bit = 0; bit < 8; bit++)
 				{
@@ -96,7 +96,7 @@ static VIDEO_UPDATE( osi600 )
 			{
 				UINT8 videoram_data = state->video_ram[videoram_addr];
 				UINT16 charrom_addr = ((videoram_data << 3) | line) & 0x7ff;
-				UINT8 charrom_data = memory_region(screen->machine, "chargen")[charrom_addr];
+				UINT8 charrom_data = screen->machine->region("chargen")->base()[charrom_addr];
 
 				for (bit = 0; bit < 8; bit++)
 				{
@@ -124,7 +124,7 @@ static VIDEO_UPDATE( osi600 )
 
 static VIDEO_UPDATE( uk101 )
 {
-	osi_state *state = (osi_state *)screen->machine->driver_data;
+	osi_state *state = screen->machine->driver_data<osi_state>();
 
 	int y, bit, sx;
 
@@ -138,7 +138,7 @@ static VIDEO_UPDATE( uk101 )
 		{
 			UINT8 videoram_data = state->video_ram[videoram_addr++];
 			UINT16 charrom_addr = ((videoram_data << 3) | line) & 0x7ff;
-			UINT8 charrom_data = memory_region(screen->machine, "chargen")[charrom_addr];
+			UINT8 charrom_data = screen->machine->region("chargen")->base()[charrom_addr];
 
 			for (bit = 0; bit < 8; bit++)
 			{
@@ -154,44 +154,44 @@ static VIDEO_UPDATE( uk101 )
 
 /* Machine Drivers */
 
-MACHINE_DRIVER_START( osi600_video )
-	MDRV_SCREEN_ADD(SCREEN_TAG, RASTER)
-	MDRV_SCREEN_REFRESH_RATE(X1/256/256) // 60 Hz
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 64*8-1, 0, 32*8-1)
+MACHINE_CONFIG_FRAGMENT( osi600_video )
+	MCFG_SCREEN_ADD(SCREEN_TAG, RASTER)
+	MCFG_SCREEN_REFRESH_RATE(X1/256/256) // 60 Hz
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 64*8-1, 0, 32*8-1)
 
-	MDRV_PALETTE_LENGTH(2)
-	MDRV_PALETTE_INIT(black_and_white)
+	MCFG_PALETTE_LENGTH(2)
+	MCFG_PALETTE_INIT(black_and_white)
 
-	MDRV_VIDEO_START(osi600)
-	MDRV_VIDEO_UPDATE(osi600)
-MACHINE_DRIVER_END
+	MCFG_VIDEO_START(osi600)
+	MCFG_VIDEO_UPDATE(osi600)
+MACHINE_CONFIG_END
 
-MACHINE_DRIVER_START( uk101_video )
-	MDRV_SCREEN_ADD(SCREEN_TAG, RASTER)
-	MDRV_SCREEN_REFRESH_RATE(50)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 16*16)
-	MDRV_SCREEN_VISIBLE_AREA(0, 64*8-1, 0, 16*16-1)
+MACHINE_CONFIG_FRAGMENT( uk101_video )
+	MCFG_SCREEN_ADD(SCREEN_TAG, RASTER)
+	MCFG_SCREEN_REFRESH_RATE(50)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 16*16)
+	MCFG_SCREEN_VISIBLE_AREA(0, 64*8-1, 0, 16*16-1)
 
-	MDRV_PALETTE_LENGTH(2)
-	MDRV_PALETTE_INIT(black_and_white)
+	MCFG_PALETTE_LENGTH(2)
+	MCFG_PALETTE_INIT(black_and_white)
 
-	MDRV_VIDEO_START(osi600)
-	MDRV_VIDEO_UPDATE(uk101)
-MACHINE_DRIVER_END
+	MCFG_VIDEO_START(osi600)
+	MCFG_VIDEO_UPDATE(uk101)
+MACHINE_CONFIG_END
 
-MACHINE_DRIVER_START( osi630_video )
-	MDRV_SCREEN_ADD(SCREEN_TAG, RASTER)
-	MDRV_SCREEN_REFRESH_RATE(X1/256/256) // 60 Hz
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 16*16)
-	MDRV_SCREEN_VISIBLE_AREA(0, 64*8-1, 0, 16*16-1)
+MACHINE_CONFIG_FRAGMENT( osi630_video )
+	MCFG_SCREEN_ADD(SCREEN_TAG, RASTER)
+	MCFG_SCREEN_REFRESH_RATE(X1/256/256) // 60 Hz
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 16*16)
+	MCFG_SCREEN_VISIBLE_AREA(0, 64*8-1, 0, 16*16-1)
 
-	MDRV_PALETTE_LENGTH(8+2)
-	MDRV_PALETTE_INIT(osi630)
+	MCFG_PALETTE_LENGTH(8+2)
+	MCFG_PALETTE_INIT(osi630)
 
-	MDRV_VIDEO_START(osi600)
-	MDRV_VIDEO_UPDATE(osi600)
-MACHINE_DRIVER_END
+	MCFG_VIDEO_START(osi600)
+	MCFG_VIDEO_UPDATE(osi600)
+MACHINE_CONFIG_END

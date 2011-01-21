@@ -118,6 +118,7 @@
 #include "cpu/m6502/m6502.h"
 #include "deprecat.h"
 #include "sound/pokey.h"
+#include "machine/nvram.h"
 #include "includes/cloak.h"
 
 static int cloak_nvram_enabled;
@@ -167,7 +168,7 @@ static WRITE8_HANDLER( cloak_nvram_enable_w )
 
 static ADDRESS_MAP_START( master_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x03ff) AM_RAM
-	AM_RANGE(0x0400, 0x07ff) AM_RAM_WRITE(cloak_videoram_w) AM_BASE_GENERIC(videoram)
+	AM_RANGE(0x0400, 0x07ff) AM_RAM_WRITE(cloak_videoram_w) AM_BASE_MEMBER(cloak_state, videoram)
 	AM_RANGE(0x0800, 0x0fff) AM_RAM AM_SHARE("share1")
 	AM_RANGE(0x1000, 0x100f) AM_DEVREADWRITE("pokey1", pokey_r, pokey_w)		/* DSW0 also */
 	AM_RANGE(0x1800, 0x180f) AM_DEVREADWRITE("pokey2", pokey_r, pokey_w)		/* DSW1 also */
@@ -175,7 +176,7 @@ static ADDRESS_MAP_START( master_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x2200, 0x2200) AM_READ_PORT("P2")
 	AM_RANGE(0x2400, 0x2400) AM_READ_PORT("SYSTEM")
 	AM_RANGE(0x2600, 0x2600) AM_WRITE(cloak_custom_w)
-	AM_RANGE(0x2800, 0x29ff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0x2800, 0x29ff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0x2f00, 0x2fff) AM_NOP
 	AM_RANGE(0x3000, 0x30ff) AM_RAM AM_BASE_SIZE_GENERIC(spriteram)
 	AM_RANGE(0x3200, 0x327f) AM_WRITE(cloak_paletteram_w)
@@ -330,46 +331,46 @@ static const pokey_interface pokey_interface_2 =
  *
  *************************************/
 
-static MACHINE_DRIVER_START( cloak )
+static MACHINE_CONFIG_START( cloak, cloak_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6502, 1000000)		/* 1 MHz ???? */
-	MDRV_CPU_PROGRAM_MAP(master_map)
-	MDRV_CPU_VBLANK_INT_HACK(irq0_line_hold, 4)
+	MCFG_CPU_ADD("maincpu", M6502, 1000000)		/* 1 MHz ???? */
+	MCFG_CPU_PROGRAM_MAP(master_map)
+	MCFG_CPU_VBLANK_INT_HACK(irq0_line_hold, 4)
 
-	MDRV_CPU_ADD("slave", M6502, 1250000)		/* 1.25 MHz ???? */
-	MDRV_CPU_PROGRAM_MAP(slave_map)
-	MDRV_CPU_VBLANK_INT_HACK(irq0_line_hold, 2)
+	MCFG_CPU_ADD("slave", M6502, 1250000)		/* 1.25 MHz ???? */
+	MCFG_CPU_PROGRAM_MAP(slave_map)
+	MCFG_CPU_VBLANK_INT_HACK(irq0_line_hold, 2)
 
-	MDRV_QUANTUM_TIME(HZ(1000))
+	MCFG_QUANTUM_TIME(HZ(1000))
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 3*8, 32*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 3*8, 32*8-1)
 
-	MDRV_GFXDECODE(cloak)
-	MDRV_PALETTE_LENGTH(64)
+	MCFG_GFXDECODE(cloak)
+	MCFG_PALETTE_LENGTH(64)
 
-	MDRV_VIDEO_START(cloak)
-	MDRV_VIDEO_UPDATE(cloak)
+	MCFG_VIDEO_START(cloak)
+	MCFG_VIDEO_UPDATE(cloak)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("pokey1", POKEY, XTAL_10MHz/8)		/* Accurate to recording */
-	MDRV_SOUND_CONFIG(pokey_interface_1)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_SOUND_ADD("pokey1", POKEY, XTAL_10MHz/8)		/* Accurate to recording */
+	MCFG_SOUND_CONFIG(pokey_interface_1)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MDRV_SOUND_ADD("pokey2", POKEY, XTAL_10MHz/8)		/* Accurate to recording */
-	MDRV_SOUND_CONFIG(pokey_interface_2)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("pokey2", POKEY, XTAL_10MHz/8)		/* Accurate to recording */
+	MCFG_SOUND_CONFIG(pokey_interface_2)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 
 

@@ -147,19 +147,19 @@ enum
 //  CPU DEVICE CONFIGURATION MACROS
 //**************************************************************************
 
-#define MDRV_CPU_ADD MDRV_DEVICE_ADD
-#define MDRV_CPU_MODIFY MDRV_DEVICE_MODIFY
-#define MDRV_CPU_REPLACE MDRV_DEVICE_REPLACE
+#define MCFG_CPU_ADD MCFG_DEVICE_ADD
+#define MCFG_CPU_MODIFY MCFG_DEVICE_MODIFY
+#define MCFG_CPU_REPLACE MCFG_DEVICE_REPLACE
 
-#define MDRV_CPU_CLOCK MDRV_DEVICE_CLOCK
-#define MDRV_CPU_CONFIG MDRV_DEVICE_CONFIG
+#define MCFG_CPU_CLOCK MCFG_DEVICE_CLOCK
+#define MCFG_CPU_CONFIG MCFG_DEVICE_CONFIG
 
-#define MDRV_CPU_PROGRAM_MAP MDRV_DEVICE_PROGRAM_MAP
-#define MDRV_CPU_DATA_MAP MDRV_DEVICE_DATA_MAP
-#define MDRV_CPU_IO_MAP MDRV_DEVICE_IO_MAP
+#define MCFG_CPU_PROGRAM_MAP MCFG_DEVICE_PROGRAM_MAP
+#define MCFG_CPU_DATA_MAP MCFG_DEVICE_DATA_MAP
+#define MCFG_CPU_IO_MAP MCFG_DEVICE_IO_MAP
 
-#define MDRV_CPU_VBLANK_INT MDRV_DEVICE_VBLANK_INT
-#define MDRV_CPU_PERIODIC_INT MDRV_DEVICE_PERIODIC_INT
+#define MCFG_CPU_VBLANK_INT MCFG_DEVICE_VBLANK_INT
+#define MCFG_CPU_PERIODIC_INT MCFG_DEVICE_PERIODIC_INT
 
 
 
@@ -304,7 +304,6 @@ const device_type name = basename##_device_config::static_alloc_device_config
 #define cpu_set_input_line_vector			device_set_input_line_vector
 #define cpu_set_input_line_and_vector		device_set_input_line_and_vector
 #define cpu_set_irq_callback				device_set_irq_callback
-#define cpu_spin_until_int					device_spin_until_int
 
 #define cpu_get_address_space				device_get_space
 
@@ -320,11 +319,6 @@ const device_type name = basename##_device_config::static_alloc_device_config
 #define cputag_get_address_space(mach, tag, spc)						downcast<cpu_device *>((mach)->device(tag))->space(spc)
 #define cputag_get_clock(mach, tag)										(mach)->device(tag)->unscaled_clock()
 #define cputag_set_clock(mach, tag, clock)								(mach)->device(tag)->set_unscaled_clock(clock)
-#define cputag_clocks_to_attotime(mach, tag, clocks)					(mach)->device(tag)->clocks_to_attotime(clocks)
-#define cputag_attotime_to_clocks(mach, tag, duration)					(mach)->device(tag)->attotime_to_clocks(duration)
-
-#define cputag_suspend(mach, tag, reason, eat)							device_suspend((mach)->device(tag), reason, eat)
-#define cputag_resume(mach, tag, reason)								device_resume((mach)->device(tag), reason)
 
 #define cputag_set_input_line(mach, tag, line, state)					downcast<cpu_device *>((mach)->device(tag))->set_input_line(line, state)
 #define cputag_set_input_line_and_vector(mach, tag, line, state, vec)	downcast<cpu_device *>((mach)->device(tag))->set_input_line_and_vector(line, state, vec)
@@ -384,14 +378,14 @@ union cpuinfo
 	cpu_string_io_func		import_string;				// CPUINFO_FCT_IMPORT_STRING
 	cpu_string_io_func		export_string;				// CPUINFO_FCT_EXPORT_STRING
 	int *					icount;						// CPUINFO_PTR_INSTRUCTION_COUNTER
-	const addrmap8_token *	internal_map8;				// DEVINFO_PTR_INTERNAL_MEMORY_MAP
-	const addrmap16_token *	internal_map16;				// DEVINFO_PTR_INTERNAL_MEMORY_MAP
-	const addrmap32_token *	internal_map32;				// DEVINFO_PTR_INTERNAL_MEMORY_MAP
-	const addrmap64_token *	internal_map64;				// DEVINFO_PTR_INTERNAL_MEMORY_MAP
-	const addrmap8_token *	default_map8;				// DEVINFO_PTR_DEFAULT_MEMORY_MAP
-	const addrmap16_token *	default_map16;				// DEVINFO_PTR_DEFAULT_MEMORY_MAP
-	const addrmap32_token *	default_map32;				// DEVINFO_PTR_DEFAULT_MEMORY_MAP
-	const addrmap64_token *	default_map64;				// DEVINFO_PTR_DEFAULT_MEMORY_MAP
+	address_map_constructor	internal_map8;				// DEVINFO_PTR_INTERNAL_MEMORY_MAP
+	address_map_constructor	internal_map16;				// DEVINFO_PTR_INTERNAL_MEMORY_MAP
+	address_map_constructor	internal_map32;				// DEVINFO_PTR_INTERNAL_MEMORY_MAP
+	address_map_constructor	internal_map64;				// DEVINFO_PTR_INTERNAL_MEMORY_MAP
+	address_map_constructor	default_map8;				// DEVINFO_PTR_DEFAULT_MEMORY_MAP
+	address_map_constructor	default_map16;				// DEVINFO_PTR_DEFAULT_MEMORY_MAP
+	address_map_constructor	default_map32;				// DEVINFO_PTR_DEFAULT_MEMORY_MAP
+	address_map_constructor	default_map64;				// DEVINFO_PTR_DEFAULT_MEMORY_MAP
 };
 
 
@@ -426,7 +420,7 @@ protected:
 public:
 	// basic information getters
 	virtual const rom_entry *rom_region() const { return reinterpret_cast<const rom_entry *>(get_legacy_config_ptr(DEVINFO_PTR_ROM_REGION)); }
-	virtual const machine_config_token *machine_config_tokens() const { return reinterpret_cast<const machine_config_token *>(get_legacy_config_ptr(DEVINFO_PTR_MACHINE_CONFIG)); }
+	virtual machine_config_constructor machine_config_additions() const { return reinterpret_cast<machine_config_constructor>(get_legacy_config_ptr(DEVINFO_PTR_MACHINE_CONFIG)); }
 
 protected:
 	// device_config_execute_interface overrides
@@ -542,6 +536,7 @@ protected:
 
 	UINT64					m_state_io;					// temporary buffer for state I/O
 	bool					m_using_legacy_state;		// true if we are using the old-style state access
+	bool					m_inited;
 };
 
 

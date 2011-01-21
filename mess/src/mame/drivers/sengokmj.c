@@ -56,9 +56,7 @@ RSSENGO2.72   chr.
 #include "audio/seibu.h"
 #include "sound/3812intf.h"
 #include "includes/sei_crtc.h"
-
-extern UINT16 *seibucrtc_sc0vram,*seibucrtc_sc1vram,*seibucrtc_sc2vram,*seibucrtc_sc3vram;
-extern UINT16 *seibucrtc_vregs;
+#include "machine/nvram.h"
 
 static UINT16 sengokumj_mux_data;
 static UINT8 hopper_io;
@@ -104,7 +102,7 @@ static READ16_HANDLER( sengokmj_system_r )
 
 static ADDRESS_MAP_START( sengokmj_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x00000, 0x07fff) AM_RAM
-	AM_RANGE(0x08000, 0x09fff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0x08000, 0x09fff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0x0c000, 0x0c7ff) AM_RAM_WRITE(seibucrtc_sc0vram_w) AM_BASE(&seibucrtc_sc0vram)
 	AM_RANGE(0x0c800, 0x0cfff) AM_RAM_WRITE(seibucrtc_sc1vram_w) AM_BASE(&seibucrtc_sc1vram)
 	AM_RANGE(0x0d000, 0x0d7ff) AM_RAM_WRITE(seibucrtc_sc2vram_w) AM_BASE(&seibucrtc_sc2vram)
@@ -278,36 +276,36 @@ static INTERRUPT_GEN( sengokmj_interrupt )
 	cpu_set_input_line_and_vector(device,0,HOLD_LINE,0xc8/4);
 }
 
-static MACHINE_DRIVER_START( sengokmj )
+static MACHINE_CONFIG_START( sengokmj, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", V30, 16000000/2) /* V30-8 */
-	MDRV_CPU_PROGRAM_MAP(sengokmj_map)
-	MDRV_CPU_IO_MAP(sengokmj_io_map)
-	MDRV_CPU_VBLANK_INT("screen", sengokmj_interrupt)
+	MCFG_CPU_ADD("maincpu", V30, 16000000/2) /* V30-8 */
+	MCFG_CPU_PROGRAM_MAP(sengokmj_map)
+	MCFG_CPU_IO_MAP(sengokmj_io_map)
+	MCFG_CPU_VBLANK_INT("screen", sengokmj_interrupt)
 
 	SEIBU_SOUND_SYSTEM_CPU(14318180/4)
 
-	MDRV_MACHINE_RESET(seibu_sound)
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_MACHINE_RESET(seibu_sound)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0, 320-1, 16, 256-1) //TODO: dynamic resolution
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0, 320-1, 16, 256-1) //TODO: dynamic resolution
 
-	MDRV_GFXDECODE(sengokmj)
-	MDRV_PALETTE_LENGTH(0x800)
+	MCFG_GFXDECODE(sengokmj)
+	MCFG_PALETTE_LENGTH(0x800)
 
-	MDRV_VIDEO_START(seibu_crtc)
-	MDRV_VIDEO_UPDATE(seibu_crtc)
+	MCFG_VIDEO_START(seibu_crtc)
+	MCFG_VIDEO_UPDATE(seibu_crtc)
 
 	/* sound hardware */
 	SEIBU_SOUND_SYSTEM_YM3812_INTERFACE(14318180/4,1320000)
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
 
 ROM_START( sengokmj )

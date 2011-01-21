@@ -217,6 +217,7 @@ U145        1Brown          PAL14H4CN
 #include "cpu/z80/z80.h"
 #include "sound/ay8910.h"
 #include "machine/8255ppi.h"
+#include "machine/nvram.h"
 
 /*************************************
  *
@@ -479,7 +480,7 @@ static PALETTE_INIT( sms )
  *************************************/
 
 static ADDRESS_MAP_START( sms_map, ADDRESS_SPACE_PROGRAM, 8 )
-	AM_RANGE(0x00000, 0x007ff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0x00000, 0x007ff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0x00800, 0x00803) AM_DEVREADWRITE("ppi8255_0", ppi8255_r, ppi8255_w)
 	AM_RANGE(0x01000, 0x01007) AM_WRITE(video_w)
 	AM_RANGE(0x01800, 0x01803) AM_READWRITE(link_r, link_w)
@@ -490,7 +491,7 @@ static ADDRESS_MAP_START( sms_map, ADDRESS_SPACE_PROGRAM, 8 )
 ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( sureshot_map, ADDRESS_SPACE_PROGRAM, 8 )
-	AM_RANGE(0x00000, 0x007ff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0x00000, 0x007ff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0x02000, 0x02007) AM_WRITE(video_w)
 	AM_RANGE(0x03000, 0x03003) AM_DEVREADWRITE("ppi8255_0", ppi8255_r, ppi8255_w)
 	AM_RANGE(0x03800, 0x03803) AM_READWRITE(link_r, link_w)
@@ -515,7 +516,7 @@ ADDRESS_MAP_END
 
 static MACHINE_START( sms )
 {
-	memory_configure_bank(machine, "bank1", 0, 16, memory_region(machine, "questions"), 0x4000);
+	memory_configure_bank(machine, "bank1", 0, 16, machine->region("questions")->base(), 0x4000);
 
 	state_save_register_global(machine, communication_port_status);
 	state_save_register_global_array(machine, communication_port);
@@ -532,52 +533,51 @@ static MACHINE_RESET( sms )
 	communication_port_status = 0;
 }
 
-static MACHINE_DRIVER_START( sms )
-	MDRV_CPU_ADD("maincpu", I8088, XTAL_24MHz/8)
-	MDRV_CPU_PROGRAM_MAP(sms_map)
+static MACHINE_CONFIG_START( sms, driver_device )
+	MCFG_CPU_ADD("maincpu", I8088, XTAL_24MHz/8)
+	MCFG_CPU_PROGRAM_MAP(sms_map)
 
-	MDRV_CPU_ADD("soundcpu", Z80, XTAL_16MHz/8)
-	MDRV_CPU_PROGRAM_MAP(sub_map)
+	MCFG_CPU_ADD("soundcpu", Z80, XTAL_16MHz/8)
+	MCFG_CPU_PROGRAM_MAP(sub_map)
 
-	MDRV_QUANTUM_TIME(HZ(6000))
+	MCFG_QUANTUM_TIME(HZ(6000))
 
-	MDRV_MACHINE_START(sms)
-	MDRV_MACHINE_RESET(sms)
+	MCFG_MACHINE_START(sms)
+	MCFG_MACHINE_RESET(sms)
 
-	MDRV_PPI8255_ADD( "ppi8255_0", ppi8255_intf[0] )
-	MDRV_PPI8255_ADD( "ppi8255_1", ppi8255_intf[1] )
+	MCFG_PPI8255_ADD( "ppi8255_0", ppi8255_intf[0] )
+	MCFG_PPI8255_ADD( "ppi8255_1", ppi8255_intf[1] )
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(0x1b0, 0x100)
-	MDRV_SCREEN_VISIBLE_AREA(0, 0x1af, 0, 0xff)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(0x1b0, 0x100)
+	MCFG_SCREEN_VISIBLE_AREA(0, 0x1af, 0, 0xff)
 
-	MDRV_PALETTE_LENGTH(8)
+	MCFG_PALETTE_LENGTH(8)
 
-	MDRV_PALETTE_INIT(sms)
-	MDRV_VIDEO_START(sms)
-	MDRV_VIDEO_UPDATE(sms)
+	MCFG_PALETTE_INIT(sms)
+	MCFG_VIDEO_START(sms)
+	MCFG_VIDEO_UPDATE(sms)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("aysnd", AY8910, XTAL_16MHz/8)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("aysnd", AY8910, XTAL_16MHz/8)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START(sureshot)
-	MDRV_IMPORT_FROM(sms)
+static MACHINE_CONFIG_DERIVED( sureshot, sms )
 
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(sureshot_map)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(sureshot_map)
 
-	MDRV_MACHINE_START(sureshot)
-MACHINE_DRIVER_END
+	MCFG_MACHINE_START(sureshot)
+MACHINE_CONFIG_END
 
 /*************************************
  *

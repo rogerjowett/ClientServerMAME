@@ -10,34 +10,34 @@ VDP:    HD46505SP (6845) (CRT controller)
 Custom: TC17G032AP-0246 (blitter)
 
 ---------------------------------------------------------------------------------------------------------------------
-Year + Game              Main Board   Sub Board    CPU   Sound                      Clock Color Notes
+Year + Game                Main Board   Sub Board    CPU   Sound                      Clock Color Notes
 ---------------------------------------------------------------------------------------------------------------------
-88 Hana no Mai           D1610088L1                Z80   AY8912 YM2203        M5205       PROM
-88 Hana Kochou           D201901L2    D201901L1-0  Z80   AY8912 YM2203        M5205       PROM
-89 Hana Oriduru          D2304268L                 Z80   AY8912        YM2413 M5205       RAM
-89 Dragon Punch          D24?                      Z80          YM2203                    PROM
-89 Mj Friday             D2607198L1                Z80                 YM2413             PROM
-89 Mj Gekisha            D2809218L-1  D2809218L-2  TLCS                YM2413             PROM  Battery
-89 Sports Match          D31?                      Z80          YM2203                    PROM
-90 Jong Tou Ki           D1505178-A   D2711078L-B  Z80*2 AY8912 YM2203        M5205       PROM  2 x Blitter
-90 Mj Campus Hunting     D3312108L1-1 D23SUB1      Z80   AY8912        YM2413 M5205       RAM
-90 Hana Jingi            no number    D3312108L1-2 Z80   AY8912        YM2413 M5205       RAM
-90 7jigen no Youseitachi D3707198L1   D23SUB1      Z80   AY8912        YM2413 M5205       RAM
-90 Mj Electron Base                                Z80   AY8912        YM2413             RAM
-90 Mj X-Tal/Diamond 7    D4005208L1-1 D23SUB       Z80   AY8912        YM2413 M5205       RAM
-90 Neruton Haikujiradan  D4005208L1-1 D4508308L-2  Z80   AY8912        YM2413 M5205       RAM
-91 Mj Dial Q2            D5212298L-1               Z80                 YM2413             PROM
-91 Mj Yarunara           D5512068L1-1 D4508308L-2  Z80   AY8912        YM2413 M5205 M6242 RAM   NL-001
-91 Hana wo Yaraneba!     D5512068L1-1 D4508308L-2  Z80   AY8912        YM2413 M5205 M6242 RAM   NL-001, Battery
-91 Mj Angels             D5512068L1-1 D6107068L-1  Z80   AY8912        YM2413 M5205       RAM
-91 Mj Comic Gekijou V.1  D5512068L1-1 D6107068L-1  Z80   AY8912        YM2413 M5205 M6242 RAM   NL-001, Battery
-91 Mj Tenkaigen                                    TLCS  AY8910        YM2413       M6242 RAM   Protection, Battery
-92 Quiz TV Gassyuukoku   D5512068L1-2 D6410288L-1  Z80   AY8912        YM2413 M5205       RAM
-92 Hanafuda Hana Tengoku D6502208L1   D6107068L-1  Z80   AY8910        YM2413       M6242 RAM
-94 Mj Reach (bootleg)    bootleg                   TLCS  AY8910        YM2413       M6242 PROM  Battery
-94 Maya                                            Z80          YM2203                    PROM
-96 Mj Raijinhai DX       D10010318L1  D10502168    TLCS  AY8910                     M6242 PROM  Undumped TMP91P640 Code, Battery
-9? Inca                                            Z80          YM2203                    PROM
+88 Hana no Mai             D1610088L1                Z80   AY8912 YM2203        M5205       PROM
+88 Hana Kochou             D201901L2    D201901L1-0  Z80   AY8912 YM2203        M5205       PROM
+89 Hana Oriduru            D2304268L                 Z80   AY8912        YM2413 M5205       RAM
+89 Dragon Punch            D24?                      Z80          YM2203                    PROM
+89 Mj Friday               D2607198L1                Z80                 YM2413             PROM
+89 Mj Gekisha              D2809218L-1  D2809218L-2  TLCS                YM2413             PROM  Battery
+89 Sports Match            D31?                      Z80          YM2203                    PROM
+90 Jong Tou Ki             D1505178-A   D2711078L-B  Z80*2 AY8912 YM2203        M5205       PROM  2 x Blitter
+90 Mj Campus Hunting       D3312108L1-1 D23SUB1      Z80   AY8912        YM2413 M5205       RAM
+90 Hana Jingi              no number    D3312108L1-2 Z80   AY8912        YM2413 M5205       RAM
+90 7jigen no Youseitachi   D3707198L1   D23SUB1      Z80   AY8912        YM2413 M5205       RAM
+90 Mj Electron Base                                  Z80   AY8912        YM2413             RAM
+90 Mj X-Tal/Diamond 7      D4005208L1-1 D23SUB       Z80   AY8912        YM2413 M5205       RAM
+90 Mj Neruton Haikujiradan D4005208L1-1 D4508308L-2  Z80   AY8912        YM2413 M5205       RAM
+91 Mj Dial Q2              D5212298L-1               Z80                 YM2413             PROM
+91 Mj Yarunara             D5512068L1-1 D4508308L-2  Z80   AY8912        YM2413 M5205 M6242 RAM   NL-001
+91 Hana wo Yaraneba!       D5512068L1-1 D4508308L-2  Z80   AY8912        YM2413 M5205 M6242 RAM   NL-001, Battery
+91 Mj Angels               D5512068L1-1 D6107068L-1  Z80   AY8912        YM2413 M5205       RAM
+91 Mj Comic Gekijou V.1    D5512068L1-1 D6107068L-1  Z80   AY8912        YM2413 M5205 M6242 RAM   NL-001, Battery
+91 Mj Tenkaigen                                      TLCS  AY8910        YM2413       M6242 RAM   Protection, Battery
+92 Quiz TV Gassyuukoku     D5512068L1-2 D6410288L-1  Z80   AY8912        YM2413 M5205       RAM
+92 Hanafuda Hana Tengoku   D6502208L1   D6107068L-1  Z80   AY8910        YM2413       M6242 RAM
+94 Mj Reach (bootleg)      bootleg                   TLCS  AY8910        YM2413       M6242 PROM  Battery
+94 Maya                                              Z80          YM2203                    PROM
+96 Mj Raijinhai DX         D10010318L1  D10502168    TLCS  AY8910                     M6242 PROM  Undumped TMP91P640 Code, Battery
+9? Inca                                              Z80          YM2203                    PROM
 ---------------------------------------------------------------------------------------------------------------------
 
 Notes:
@@ -82,6 +82,7 @@ TODO:
 #include "sound/3812intf.h"
 #include "sound/msm5205.h"
 #include "sound/2413intf.h"
+#include "machine/nvram.h"
 #include "rendlay.h"
 
 /***************************************************************************
@@ -100,35 +101,35 @@ TODO:
 /* It runs in IM 0, thus needs an opcode on the data bus */
 void sprtmtch_update_irq( running_machine *machine )
 {
-	dynax_state *state = (dynax_state *)machine->driver_data;
+	dynax_state *state = machine->driver_data<dynax_state>();
 	int irq = (state->sound_irq ? 0x08 : 0) | ((state->vblank_irq) ? 0x10 : 0) | ((state->blitter_irq) ? 0x20 : 0) ;
 	cpu_set_input_line_and_vector(state->maincpu, 0, irq ? ASSERT_LINE : CLEAR_LINE, 0xc7 | irq); /* rst $xx */
 }
 
 static WRITE8_HANDLER( dynax_vblank_ack_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	state->vblank_irq = 0;
 	sprtmtch_update_irq(space->machine);
 }
 
 static WRITE8_HANDLER( dynax_blitter_ack_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	state->blitter_irq = 0;
 	sprtmtch_update_irq(space->machine);
 }
 
 static INTERRUPT_GEN( sprtmtch_vblank_interrupt )
 {
-	dynax_state *state = (dynax_state *)device->machine->driver_data;
+	dynax_state *state = device->machine->driver_data<dynax_state>();
 	state->vblank_irq = 1;
 	sprtmtch_update_irq(device->machine);
 }
 
-static void sprtmtch_sound_callback( running_device *device, int state )
+static void sprtmtch_sound_callback( device_t *device, int state )
 {
-	dynax_state *driver_state = (dynax_state *)device->machine->driver_data;
+	dynax_state *driver_state = device->machine->driver_data<dynax_state>();
 	driver_state->sound_irq = state;
 	sprtmtch_update_irq(device->machine);
 }
@@ -141,35 +142,35 @@ static void sprtmtch_sound_callback( running_device *device, int state )
 /* It runs in IM 0, thus needs an opcode on the data bus */
 void jantouki_update_irq(running_machine *machine)
 {
-	dynax_state *state = (dynax_state *)machine->driver_data;
+	dynax_state *state = machine->driver_data<dynax_state>();
 	int irq = ((state->blitter_irq) ? 0x08 : 0) | ((state->blitter2_irq) ? 0x10 : 0) | ((state->vblank_irq) ? 0x20 : 0) ;
 	cpu_set_input_line_and_vector(state->maincpu, 0, irq ? ASSERT_LINE : CLEAR_LINE, 0xc7 | irq); /* rst $xx */
 }
 
 static WRITE8_HANDLER( jantouki_vblank_ack_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	state->vblank_irq = 0;
 	jantouki_update_irq(space->machine);
 }
 
 static WRITE8_HANDLER( jantouki_blitter_ack_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	state->blitter_irq = data;
 	jantouki_update_irq(space->machine);
 }
 
 static WRITE8_HANDLER( jantouki_blitter2_ack_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	state->blitter2_irq = data;
 	jantouki_update_irq(space->machine);
 }
 
 static INTERRUPT_GEN( jantouki_vblank_interrupt )
 {
-	dynax_state *state = (dynax_state *)device->machine->driver_data;
+	dynax_state *state = device->machine->driver_data<dynax_state>();
 	state->vblank_irq = 1;
 	jantouki_update_irq(device->machine);
 }
@@ -181,28 +182,28 @@ static INTERRUPT_GEN( jantouki_vblank_interrupt )
 
 static void jantouki_sound_update_irq(running_machine *machine)
 {
-	dynax_state *state = (dynax_state *)machine->driver_data;
+	dynax_state *state = machine->driver_data<dynax_state>();
 	int irq = ((state->sound_irq) ? 0x08 : 0) | ((state->soundlatch_irq) ? 0x10 : 0) | ((state->sound_vblank_irq) ? 0x20 : 0) ;
 	cpu_set_input_line_and_vector(state->soundcpu, 0, irq ? ASSERT_LINE : CLEAR_LINE, 0xc7 | irq); /* rst $xx */
 }
 
 static INTERRUPT_GEN( jantouki_sound_vblank_interrupt )
 {
-	dynax_state *state = (dynax_state *)device->machine->driver_data;
+	dynax_state *state = device->machine->driver_data<dynax_state>();
 	state->sound_vblank_irq = 1;
 	jantouki_sound_update_irq(device->machine);
 }
 
 static WRITE8_HANDLER( jantouki_sound_vblank_ack_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	state->sound_vblank_irq = 0;
 	jantouki_sound_update_irq(space->machine);
 }
 
-static void jantouki_sound_callback(running_device *device, int state)
+static void jantouki_sound_callback(device_t *device, int state)
 {
-	dynax_state *driver_state = (dynax_state *)device->machine->driver_data;
+	dynax_state *driver_state = device->machine->driver_data<dynax_state>();
 	driver_state->sound_irq = state;
 	jantouki_sound_update_irq(device->machine);
 }
@@ -238,7 +239,7 @@ static READ8_HANDLER( ret_ff )
 
 static READ8_HANDLER( hanamai_keyboard_0_r )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	int res = 0x3f;
 
 	/* the game reads all rows at once (keyb = 0) to check if a key is pressed */
@@ -253,7 +254,7 @@ static READ8_HANDLER( hanamai_keyboard_0_r )
 
 static READ8_HANDLER( hanamai_keyboard_1_r )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	int res = 0x3f;
 
 	/* the game reads all rows at once (keyb = 0) to check if a key is pressed */
@@ -268,7 +269,7 @@ static READ8_HANDLER( hanamai_keyboard_1_r )
 
 static WRITE8_HANDLER( hanamai_keyboard_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	state->keyb = data;
 }
 
@@ -286,8 +287,8 @@ static WRITE8_HANDLER( jantouki_sound_rombank_w )
 
 static WRITE8_HANDLER( hnoridur_rombank_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
-	int bank_n = (memory_region_length(space->machine, "maincpu") - 0x10000) / 0x8000;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
+	int bank_n = (space->machine->region("maincpu")->bytes() - 0x10000) / 0x8000;
 
 	//logerror("%04x: rom bank = %02x\n", cpu_get_pc(space->cpu), data);
 	if (data < bank_n)
@@ -300,14 +301,14 @@ static WRITE8_HANDLER( hnoridur_rombank_w )
 
 static WRITE8_HANDLER( hnoridur_palbank_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	state->palbank = data & 0x0f;
 	dynax_blit_palbank_w(space, 0, data);
 }
 
 static WRITE8_HANDLER( hnoridur_palette_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 
 	switch (state->hnoridur_bank)
 	{
@@ -326,7 +327,7 @@ static WRITE8_HANDLER( hnoridur_palette_w )
 		// hnoridur: R/W RAM
 		case 0x18:
 		{
-			UINT8 *RAM = memory_region(space->machine, "maincpu") + 0x10000 + state->hnoridur_bank * 0x8000;
+			UINT8 *RAM = space->machine->region("maincpu")->base() + 0x10000 + state->hnoridur_bank * 0x8000;
 			RAM[offset] = data;
 			return;
 		}
@@ -348,7 +349,7 @@ static WRITE8_HANDLER( hnoridur_palette_w )
 
 static WRITE8_HANDLER( yarunara_palette_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	int addr = 512 * state->palbank + offset;
 
 	switch (state->hnoridur_bank)
@@ -380,7 +381,7 @@ static WRITE8_HANDLER( yarunara_palette_w )
 
 static WRITE8_HANDLER( nanajign_palette_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 
 	switch (state->hnoridur_bank)
 	{
@@ -408,9 +409,9 @@ static WRITE8_HANDLER( nanajign_palette_w )
 }
 
 
-static void adpcm_int( running_device *device )
+static void adpcm_int( device_t *device )
 {
-	dynax_state *state = (dynax_state *)device->machine->driver_data;
+	dynax_state *state = device->machine->driver_data<dynax_state>();
 	msm5205_data_w(device, state->msm5205next >> 4);
 	state->msm5205next <<= 4;
 
@@ -423,9 +424,9 @@ static void adpcm_int( running_device *device )
 	}
 }
 
-static void adpcm_int_cpu1( running_device *device )
+static void adpcm_int_cpu1( device_t *device )
 {
-	dynax_state *state = (dynax_state *)device->machine->driver_data;
+	dynax_state *state = device->machine->driver_data<dynax_state>();
 	msm5205_data_w(device, state->msm5205next >> 4);
 	state->msm5205next <<= 4;
 
@@ -440,20 +441,20 @@ static void adpcm_int_cpu1( running_device *device )
 
 static WRITE8_HANDLER( adpcm_data_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	state->msm5205next = data;
 }
 
 static WRITE8_DEVICE_HANDLER( adpcm_reset_w )
 {
-	dynax_state *state = (dynax_state *)device->machine->driver_data;
+	dynax_state *state = device->machine->driver_data<dynax_state>();
 	state->resetkludge = data & 1;
 	msm5205_reset_w(device, ~data & 1);
 }
 
 static MACHINE_RESET( adpcm )
 {
-	dynax_state *state = (dynax_state *)machine->driver_data;
+	dynax_state *state = machine->driver_data<dynax_state>();
 	/* start with the MSM5205 reset */
 	state->resetkludge = 0;
 	msm5205_reset_w(machine->device("msm"), 1);
@@ -471,34 +472,34 @@ static WRITE8_HANDLER( yarunara_layer_half2_w )
 
 static ADDRESS_MAP_START( sprtmtch_mem_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE( 0x0000, 0x6fff ) AM_ROM
-	AM_RANGE( 0x7000, 0x7fff ) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE( 0x7000, 0x7fff ) AM_RAM AM_SHARE("nvram")
 	AM_RANGE( 0x8000, 0xffff ) AM_ROMBANK("bank1")
 ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( hnoridur_mem_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE( 0x0000, 0x6fff ) AM_ROM
-	AM_RANGE( 0x7000, 0x7fff ) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE( 0x7000, 0x7fff ) AM_RAM AM_SHARE("nvram")
 	AM_RANGE( 0x8000, 0xffff ) AM_READ_BANK("bank1") AM_WRITE(hnoridur_palette_w)
 ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( mcnpshnt_mem_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE( 0x0000, 0x5fff ) AM_ROM
 	AM_RANGE( 0x6000, 0x6fff ) AM_RAM
-	AM_RANGE( 0x7000, 0x7fff ) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE( 0x7000, 0x7fff ) AM_RAM AM_SHARE("nvram")
 	AM_RANGE( 0x8000, 0xffff ) AM_READ_BANK("bank1") AM_WRITE(hnoridur_palette_w)
 ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( nanajign_mem_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE( 0x0000, 0x5fff ) AM_ROM
 	AM_RANGE( 0x6000, 0x6fff ) AM_RAM
-	AM_RANGE( 0x7000, 0x7fff ) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE( 0x7000, 0x7fff ) AM_RAM AM_SHARE("nvram")
 	AM_RANGE( 0x8000, 0x80ff ) AM_WRITE(nanajign_palette_w)
 	AM_RANGE( 0x8000, 0xffff ) AM_ROMBANK("bank1")
 ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( mjdialq2_mem_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE( 0x0800, 0x0fff ) AM_RAM
-	AM_RANGE( 0x1000, 0x1fff ) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE( 0x1000, 0x1fff ) AM_RAM AM_SHARE("nvram")
 	AM_RANGE( 0x0000, 0x7fff ) AM_ROM
 	AM_RANGE( 0x8000, 0xffff ) AM_ROMBANK("bank1")
 ADDRESS_MAP_END
@@ -506,7 +507,7 @@ ADDRESS_MAP_END
 static ADDRESS_MAP_START( yarunara_mem_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE( 0x0000, 0x5fff ) AM_ROM
 	AM_RANGE( 0x6000, 0x6fff ) AM_RAM
-	AM_RANGE( 0x7000, 0x7fff ) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE( 0x7000, 0x7fff ) AM_RAM AM_SHARE("nvram")
 	AM_RANGE( 0x8000, 0xffff ) AM_ROMBANK("bank1")
 	AM_RANGE( 0x8000, 0x81ff ) AM_WRITE(yarunara_palette_w)	// Palette or RTC
 ADDRESS_MAP_END
@@ -514,7 +515,7 @@ ADDRESS_MAP_END
 static ADDRESS_MAP_START( jantouki_mem_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE( 0x0000, 0x5fff ) AM_ROM
 	AM_RANGE( 0x6000, 0x6fff ) AM_RAM
-	AM_RANGE( 0x7000, 0x7fff ) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE( 0x7000, 0x7fff ) AM_RAM AM_SHARE("nvram")
 	AM_RANGE( 0x8000, 0xffff ) AM_ROMBANK("bank1")
 ADDRESS_MAP_END
 
@@ -608,7 +609,7 @@ ADDRESS_MAP_END
 
 static WRITE8_HANDLER( hjingi_bank_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	state->hnoridur_bank = data;
 }
 
@@ -619,13 +620,13 @@ static WRITE8_HANDLER( hjingi_lockout_w )
 
 static WRITE8_HANDLER( hjingi_hopper_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	state->hopper = data & 0x01;
 }
 
 static UINT8 hjingi_hopper_bit( running_machine *machine )
 {
-	dynax_state *state = (dynax_state *)machine->driver_data;
+	dynax_state *state = machine->driver_data<dynax_state>();
 	return (state->hopper && !(machine->primary_screen->frame_number() % 10)) ? 0 : (1 << 6);
 }
 
@@ -641,7 +642,7 @@ static READ8_HANDLER( hjingi_keyboard_1_r )
 
 static ADDRESS_MAP_START( hjingi_mem_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE( 0x0000, 0x01ff ) AM_ROM
-	AM_RANGE( 0x0200, 0x1fff ) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE( 0x0200, 0x1fff ) AM_RAM AM_SHARE("nvram")
 	AM_RANGE( 0x2000, 0x7fff ) AM_ROM
 	AM_RANGE( 0x8000, 0xffff ) AM_READ_BANK("bank1") AM_WRITE(hnoridur_palette_w)
 ADDRESS_MAP_END
@@ -705,7 +706,7 @@ ADDRESS_MAP_END
 
 static WRITE8_HANDLER( yarunara_input_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 
 	switch (offset)
 	{
@@ -720,7 +721,7 @@ static WRITE8_HANDLER( yarunara_input_w )
 
 static READ8_HANDLER( yarunara_input_r )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	static const char *const keynames0[] = { "KEY0", "KEY1", "KEY2", "KEY3", "KEY4" };
 	static const char *const keynames1[] = { "KEY5", "KEY6", "KEY7", "KEY8", "KEY9" };
 
@@ -765,7 +766,7 @@ static READ8_HANDLER( yarunara_input_r )
 
 static WRITE8_HANDLER( yarunara_rombank_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	memory_set_bank(space->machine, "bank1", data);
 
 	state->hnoridur_bank = data;
@@ -961,13 +962,13 @@ ADDRESS_MAP_END
 
 static READ8_HANDLER( jantouki_soundlatch_ack_r )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	return (state->soundlatch_ack) ? 0x80 : 0;
 }
 
 static WRITE8_HANDLER( jantouki_soundlatch_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 
 	state->soundlatch_ack = 1;
 	state->soundlatch_full = 1;
@@ -1026,7 +1027,7 @@ ADDRESS_MAP_END
 
 static WRITE8_HANDLER( jantouki_soundlatch_ack_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	state->soundlatch_ack = data;
 	state->soundlatch_irq = 0;
 	jantouki_sound_update_irq(space->machine);
@@ -1034,14 +1035,14 @@ static WRITE8_HANDLER( jantouki_soundlatch_ack_w )
 
 static READ8_HANDLER( jantouki_soundlatch_r )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	state->soundlatch_full = 0;
 	return state->latch;
 }
 
 static READ8_HANDLER( jantouki_soundlatch_status_r )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	return (state->soundlatch_full) ? 0 : 0x80;
 }
 
@@ -1072,7 +1073,7 @@ static READ8_HANDLER( mjelctrn_keyboard_1_r )
 
 static READ8_HANDLER( mjelctrn_dsw_r )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	int dsw = (state->keyb & 0xc0) >> 6;
 	static const char *const dswnames[] = { "DSW0", "DSW1", "DSW3", "DSW4" };
 
@@ -1081,7 +1082,7 @@ static READ8_HANDLER( mjelctrn_dsw_r )
 
 static WRITE8_HANDLER( mjelctrn_blitter_ack_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	state->blitter_irq = 0;
 }
 
@@ -1130,20 +1131,20 @@ ADDRESS_MAP_END
 
 static WRITE8_HANDLER( htengoku_select_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	state->input_sel = data;
 	state->keyb = 0;
 }
 
 static WRITE8_DEVICE_HANDLER( htengoku_dsw_w )
 {
-	dynax_state *state = (dynax_state *)device->machine->driver_data;
+	dynax_state *state = device->machine->driver_data<dynax_state>();
 	state->dsw_sel = data;
 }
 
 static READ8_DEVICE_HANDLER( htengoku_dsw_r )
 {
-	dynax_state *state = (dynax_state *)device->machine->driver_data;
+	dynax_state *state = device->machine->driver_data<dynax_state>();
 	if (!BIT(state->dsw_sel, 0))	return input_port_read(device->machine, "DSW0");
 	if (!BIT(state->dsw_sel, 1))	return input_port_read(device->machine, "DSW1");
 	if (!BIT(state->dsw_sel, 2))	return input_port_read(device->machine, "DSW2");
@@ -1156,7 +1157,7 @@ static READ8_DEVICE_HANDLER( htengoku_dsw_r )
 
 static WRITE8_HANDLER( htengoku_coin_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 
 	switch (state->input_sel)
 	{
@@ -1181,7 +1182,7 @@ static WRITE8_HANDLER( htengoku_coin_w )
 
 static READ8_HANDLER( htengoku_input_r )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	static const char *const keynames0[] = { "KEY0", "KEY1", "KEY2", "KEY3", "KEY4" };
 	static const char *const keynames1[] = { "KEY5", "KEY6", "KEY7", "KEY8", "KEY9" };
 
@@ -1197,7 +1198,7 @@ static READ8_HANDLER( htengoku_input_r )
 
 static READ8_HANDLER( htengoku_coin_r )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 
 	switch (state->input_sel)
 	{
@@ -1212,7 +1213,7 @@ static READ8_HANDLER( htengoku_coin_r )
 
 static WRITE8_HANDLER( htengoku_rombank_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 
 	memory_set_bank(space->machine, "bank1", data & 0x07);
 	state->hnoridur_bank = data;
@@ -1275,7 +1276,7 @@ ADDRESS_MAP_END
 
 static WRITE8_HANDLER( tenkai_ipsel_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	switch (offset)
 	{
 	case 0:	state->input_sel = data;
@@ -1289,7 +1290,7 @@ static WRITE8_HANDLER( tenkai_ipsel_w )
 
 static WRITE8_HANDLER( tenkai_ip_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 
 	switch (state->input_sel)
 	{
@@ -1311,7 +1312,7 @@ static WRITE8_HANDLER( tenkai_ip_w )
 
 static READ8_HANDLER( tenkai_ip_r )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	static const char *const keynames0[] = { "KEY0", "KEY1", "KEY2", "KEY3", "KEY4" };
 	//static const char *const keynames1[] = { "KEY5", "KEY6", "KEY7", "KEY8", "KEY9" };
 
@@ -1361,13 +1362,13 @@ static READ8_HANDLER( tenkai_ip_r )
 
 static WRITE8_DEVICE_HANDLER( tenkai_dswsel_w )
 {
-	dynax_state *state = (dynax_state *)device->machine->driver_data;
+	dynax_state *state = device->machine->driver_data<dynax_state>();
 	state->dsw_sel = data;
 }
 
 static READ8_DEVICE_HANDLER( tenkai_dsw_r )
 {
-	dynax_state *state = (dynax_state *)device->machine->driver_data;
+	dynax_state *state = device->machine->driver_data<dynax_state>();
 
 	if (!BIT(state->dsw_sel, 0)) return input_port_read(device->machine, "DSW0");
 	if (!BIT(state->dsw_sel, 1)) return input_port_read(device->machine, "DSW1");
@@ -1381,13 +1382,13 @@ static READ8_DEVICE_HANDLER( tenkai_dsw_r )
 
 static READ8_HANDLER( tenkai_palette_r )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	return state->palette_ram[512 * state->palbank + offset];
 }
 
 static WRITE8_HANDLER( tenkai_palette_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	int addr = 512 * state->palbank + offset;
 	state->palette_ram[addr] = data;
 
@@ -1403,8 +1404,8 @@ static WRITE8_HANDLER( tenkai_palette_w )
 
 static void tenkai_update_rombank( running_machine *machine )
 {
-	dynax_state *state = (dynax_state *)machine->driver_data;
-	state->romptr = memory_region(machine, "maincpu") + 0x10000 + 0x8000 * state->rombank;
+	dynax_state *state = machine->driver_data<dynax_state>();
+	state->romptr = machine->region("maincpu")->base() + 0x10000 + 0x8000 * state->rombank;
 //  logerror("rombank = %02x\n", state->rombank);
 }
 
@@ -1415,26 +1416,26 @@ static READ8_HANDLER( tenkai_p3_r )
 
 static WRITE8_HANDLER( tenkai_p3_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	state->rombank = ((data & 0x04) << 1) | (state->rombank & 0x07);
 	tenkai_update_rombank(space->machine);
 }
 static WRITE8_HANDLER( tenkai_p4_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	state->rombank = (state->rombank & 0x08) | ((data & 0x0e) >> 1);
 	tenkai_update_rombank(space->machine);
 }
 
 static READ8_HANDLER( tenkai_p5_r )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	return state->tenkai_p5_val;
 }
 
 static WRITE8_HANDLER( tenkai_p6_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	state->tenkai_p5_val &= 0x0f;
 
 	if (data & 0x0f)
@@ -1443,7 +1444,7 @@ static WRITE8_HANDLER( tenkai_p6_w )
 
 static WRITE8_HANDLER( tenkai_p7_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	state->tenkai_p5_val &= 0xf0;
 
 	if (data & 0x03)
@@ -1452,7 +1453,7 @@ static WRITE8_HANDLER( tenkai_p7_w )
 
 static WRITE8_HANDLER( tenkai_p8_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	state->rombank = ((data & 0x08) << 1) | (state->rombank & 0x0f);
 	tenkai_update_rombank(space->machine);
 }
@@ -1464,7 +1465,7 @@ static READ8_HANDLER( tenkai_p8_r )
 
 static READ8_HANDLER( tenkai_8000_r )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 
 	if (state->rombank < 0x10)
 		return state->romptr[offset];
@@ -1479,7 +1480,7 @@ static READ8_HANDLER( tenkai_8000_r )
 
 static WRITE8_HANDLER( tenkai_8000_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 
 	if ((state->rombank == 0x10) && (offset < 0x10))
 	{
@@ -1497,20 +1498,20 @@ static WRITE8_HANDLER( tenkai_8000_w )
 
 static void tenkai_show_6c( running_machine *machine )
 {
-//    dynax_state *state = (dynax_state *)machine->driver_data;
+//    dynax_state *state = machine->driver_data<dynax_state>();
 //    popmessage("%02x %02x", state->tenkai_6c, state->tenkai_70);
 }
 
 static WRITE8_HANDLER( tenkai_6c_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	state->tenkai_6c = data;
 	tenkai_show_6c(space->machine);
 }
 
 static WRITE8_HANDLER( tenkai_70_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	state->tenkai_70 = data;
 	tenkai_show_6c(space->machine);
 }
@@ -1529,7 +1530,7 @@ static WRITE8_HANDLER( tenkai_blit_romregion_w )
 static ADDRESS_MAP_START( tenkai_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(  0x0000,  0x5fff ) AM_ROM
 	AM_RANGE(  0x6000,  0x6fff ) AM_RAM
-	AM_RANGE(  0x7000,  0x7fff ) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(  0x7000,  0x7fff ) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(  0x8000,  0xffff ) AM_READWRITE(tenkai_8000_r, tenkai_8000_w)
 	AM_RANGE( 0x10000, 0x10000 ) AM_DEVREAD("aysnd", ay8910_r)		// AY8910
 	AM_RANGE( 0x10008, 0x10008 ) AM_DEVWRITE("aysnd", ay8910_data_w)	//
@@ -1569,7 +1570,7 @@ ADDRESS_MAP_END
 
 static READ8_HANDLER( gekisha_keyboard_0_r )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	int res = 0x3f;
 
 	if (!BIT(state->keyb, 0)) res &= input_port_read(space->machine, "KEY0");
@@ -1582,7 +1583,7 @@ static READ8_HANDLER( gekisha_keyboard_0_r )
 }
 static READ8_HANDLER( gekisha_keyboard_1_r )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	int res = 0x3f;
 
 	if (!BIT(state->keyb, 0)) res &= input_port_read(space->machine, "KEY5");
@@ -1601,28 +1602,28 @@ static READ8_HANDLER( gekisha_keyboard_1_r )
 
 static WRITE8_HANDLER( gekisha_hopper_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	state->gekisha_val[offset] = data;
 //  popmessage("%02x %02x", gekisha_val[0], gekisha_val[1]);
 }
 
 static void gekisha_set_rombank( running_machine *machine, UINT8 data )
 {
-	dynax_state *state = (dynax_state *)machine->driver_data;
+	dynax_state *state = machine->driver_data<dynax_state>();
 	state->rombank = data;
-	state->romptr = memory_region(machine, "maincpu") + 0x8000 + state->rombank * 0x8000;
+	state->romptr = machine->region("maincpu")->base() + 0x8000 + state->rombank * 0x8000;
 }
 
 static WRITE8_HANDLER( gekisha_p4_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 	state->gekisha_rom_enable = !BIT(data, 3);
 	gekisha_set_rombank(space->machine, BIT(data, 2));
 }
 
 static READ8_HANDLER( gekisha_8000_r )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 
 	if (state->gekisha_rom_enable)
 		return state->romptr[offset];
@@ -1644,7 +1645,7 @@ static READ8_HANDLER( gekisha_8000_r )
 
 static WRITE8_HANDLER( gekisha_8000_w )
 {
-	dynax_state *state = (dynax_state *)space->machine->driver_data;
+	dynax_state *state = space->machine->driver_data<dynax_state>();
 
 	if (!state->gekisha_rom_enable)
 	{
@@ -1701,7 +1702,7 @@ static WRITE8_HANDLER( gekisha_8000_w )
 
 static ADDRESS_MAP_START( gekisha_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(  0x0000,  0x6fff ) AM_ROM
-	AM_RANGE(  0x7000,  0x7fff ) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(  0x7000,  0x7fff ) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(  0x8000,  0xffff ) AM_READWRITE(gekisha_8000_r, gekisha_8000_w)
 ADDRESS_MAP_END
 
@@ -4202,7 +4203,7 @@ INPUT_PORTS_END
 
 static MACHINE_START( dynax )
 {
-	dynax_state *state = (dynax_state *)machine->driver_data;
+	dynax_state *state = machine->driver_data<dynax_state>();
 
 	state->maincpu = machine->device("maincpu");
 	state->soundcpu = machine->device("soundcpu");
@@ -4242,7 +4243,7 @@ static MACHINE_START( dynax )
 
 static MACHINE_RESET( dynax )
 {
-	dynax_state *state = (dynax_state *)machine->driver_data;
+	dynax_state *state = machine->driver_data<dynax_state>();
 
 	if (machine->device("msm") != NULL)
 		MACHINE_RESET_CALL(adpcm);
@@ -4282,7 +4283,7 @@ static MACHINE_RESET( dynax )
 
 static MACHINE_START( hanamai )
 {
-	UINT8 *ROM = memory_region(machine, "maincpu");
+	UINT8 *ROM = machine->region("maincpu")->base();
 	memory_configure_bank(machine, "bank1", 0, 0x10, &ROM[0x8000], 0x8000);
 
 	MACHINE_START_CALL(dynax);
@@ -4290,8 +4291,8 @@ static MACHINE_START( hanamai )
 
 static MACHINE_START( hnoridur )
 {
-	UINT8 *ROM = memory_region(machine, "maincpu");
-	int bank_n = (memory_region_length(machine, "maincpu") - 0x10000) / 0x8000;
+	UINT8 *ROM = machine->region("maincpu")->base();
+	int bank_n = (machine->region("maincpu")->bytes() - 0x10000) / 0x8000;
 
 	memory_configure_bank(machine, "bank1", 0, bank_n, &ROM[0x10000], 0x8000);
 
@@ -4300,7 +4301,7 @@ static MACHINE_START( hnoridur )
 
 static MACHINE_START( htengoku )
 {
-	UINT8 *ROM = memory_region(machine, "maincpu");
+	UINT8 *ROM = machine->region("maincpu")->base();
 
 	memory_configure_bank(machine, "bank1", 0, 8, &ROM[0x10000], 0x8000);
 
@@ -4332,53 +4333,50 @@ static const msm5205_interface hanamai_msm5205_interface =
 
 
 
-static MACHINE_DRIVER_START( hanamai )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(dynax_state)
+static MACHINE_CONFIG_START( hanamai, dynax_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu",Z80,22000000 / 4)	/* 5.5MHz */
-	MDRV_CPU_PROGRAM_MAP(sprtmtch_mem_map)
-	MDRV_CPU_IO_MAP(hanamai_io_map)
-	MDRV_CPU_VBLANK_INT("screen", sprtmtch_vblank_interrupt)	/* IM 0 needs an opcode on the data bus */
+	MCFG_CPU_ADD("maincpu",Z80,22000000 / 4)	/* 5.5MHz */
+	MCFG_CPU_PROGRAM_MAP(sprtmtch_mem_map)
+	MCFG_CPU_IO_MAP(hanamai_io_map)
+	MCFG_CPU_VBLANK_INT("screen", sprtmtch_vblank_interrupt)	/* IM 0 needs an opcode on the data bus */
 
-	MDRV_MACHINE_START(hanamai)
-	MDRV_MACHINE_RESET(dynax)
+	MCFG_MACHINE_START(hanamai)
+	MCFG_MACHINE_RESET(dynax)
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(512, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 512-1-4, 16+8, 255-8)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(512, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 512-1-4, 16+8, 255-8)
 
-	MDRV_PALETTE_LENGTH(512)
+	MCFG_PALETTE_LENGTH(512)
 
-	MDRV_PALETTE_INIT(sprtmtch)			// static palette
-	MDRV_VIDEO_START(hanamai)
-	MDRV_VIDEO_UPDATE(hanamai)
+	MCFG_PALETTE_INIT(sprtmtch)			// static palette
+	MCFG_VIDEO_START(hanamai)
+	MCFG_VIDEO_UPDATE(hanamai)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("aysnd", AY8910, 22000000 / 8)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.20)
+	MCFG_SOUND_ADD("aysnd", AY8910, 22000000 / 8)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.20)
 
-	MDRV_SOUND_ADD("ymsnd", YM2203, 22000000 / 8)
-	MDRV_SOUND_CONFIG(hanamai_ym2203_interface)
-	MDRV_SOUND_ROUTE(0, "mono", 0.20)
-	MDRV_SOUND_ROUTE(1, "mono", 0.20)
-	MDRV_SOUND_ROUTE(2, "mono", 0.20)
-	MDRV_SOUND_ROUTE(3, "mono", 0.50)
+	MCFG_SOUND_ADD("ymsnd", YM2203, 22000000 / 8)
+	MCFG_SOUND_CONFIG(hanamai_ym2203_interface)
+	MCFG_SOUND_ROUTE(0, "mono", 0.20)
+	MCFG_SOUND_ROUTE(1, "mono", 0.20)
+	MCFG_SOUND_ROUTE(2, "mono", 0.20)
+	MCFG_SOUND_ROUTE(3, "mono", 0.50)
 
-	MDRV_SOUND_ADD("msm", MSM5205, 384000)
-	MDRV_SOUND_CONFIG(hanamai_msm5205_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("msm", MSM5205, 384000)
+	MCFG_SOUND_CONFIG(hanamai_msm5205_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 
@@ -4393,98 +4391,92 @@ static const ay8910_interface hnoridur_ay8910_interface =
 	DEVCB_INPUT_PORT("DSW0")		/* Port A Read: DSW */
 };
 
-static MACHINE_DRIVER_START( hnoridur )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(dynax_state)
+static MACHINE_CONFIG_START( hnoridur, dynax_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu",Z80,22000000 / 4)	/* 5.5MHz */
-	MDRV_CPU_PROGRAM_MAP(hnoridur_mem_map)
-	MDRV_CPU_IO_MAP(hnoridur_io_map)
-	MDRV_CPU_VBLANK_INT("screen", sprtmtch_vblank_interrupt)	/* IM 0 needs an opcode on the data bus */
+	MCFG_CPU_ADD("maincpu",Z80,22000000 / 4)	/* 5.5MHz */
+	MCFG_CPU_PROGRAM_MAP(hnoridur_mem_map)
+	MCFG_CPU_IO_MAP(hnoridur_io_map)
+	MCFG_CPU_VBLANK_INT("screen", sprtmtch_vblank_interrupt)	/* IM 0 needs an opcode on the data bus */
 
-	MDRV_MACHINE_START(hnoridur)
-	MDRV_MACHINE_RESET(dynax)
+	MCFG_MACHINE_START(hnoridur)
+	MCFG_MACHINE_RESET(dynax)
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(512, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 512-1-4, 16, 256-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(512, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 512-1-4, 16, 256-1)
 
-	MDRV_PALETTE_LENGTH(16*256)
+	MCFG_PALETTE_LENGTH(16*256)
 
-	MDRV_VIDEO_START(hnoridur)
-	MDRV_VIDEO_UPDATE(hnoridur)
+	MCFG_VIDEO_START(hnoridur)
+	MCFG_VIDEO_UPDATE(hnoridur)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("aysnd", AY8910, 22000000 / 16)
-	MDRV_SOUND_CONFIG(hnoridur_ay8910_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.20)
+	MCFG_SOUND_ADD("aysnd", AY8910, 22000000 / 16)
+	MCFG_SOUND_CONFIG(hnoridur_ay8910_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.20)
 
-	MDRV_SOUND_ADD("ymsnd", YM2413, 3579545)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM2413, 3579545)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-	MDRV_SOUND_ADD("msm", MSM5205, 384000)
-	MDRV_SOUND_CONFIG(hanamai_msm5205_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("msm", MSM5205, 384000)
+	MCFG_SOUND_CONFIG(hanamai_msm5205_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************
                                 Hana Jingi
 ***************************************************************************/
 
-static MACHINE_DRIVER_START( hjingi )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(dynax_state)
+static MACHINE_CONFIG_START( hjingi, dynax_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu",Z80, XTAL_22MHz / 4)
-	MDRV_CPU_PROGRAM_MAP(hjingi_mem_map)
-	MDRV_CPU_IO_MAP(hjingi_io_map)
-	MDRV_CPU_VBLANK_INT("screen", sprtmtch_vblank_interrupt)	/* IM 0 needs an opcode on the data bus */
+	MCFG_CPU_ADD("maincpu",Z80, XTAL_22MHz / 4)
+	MCFG_CPU_PROGRAM_MAP(hjingi_mem_map)
+	MCFG_CPU_IO_MAP(hjingi_io_map)
+	MCFG_CPU_VBLANK_INT("screen", sprtmtch_vblank_interrupt)	/* IM 0 needs an opcode on the data bus */
 
-	MDRV_MACHINE_START(hnoridur)
-	MDRV_MACHINE_RESET(dynax)
+	MCFG_MACHINE_START(hnoridur)
+	MCFG_MACHINE_RESET(dynax)
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(512, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 512-1-4, 16, 256-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(512, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 512-1-4, 16, 256-1)
 
-	MDRV_PALETTE_LENGTH(16*256)
+	MCFG_PALETTE_LENGTH(16*256)
 
-	MDRV_VIDEO_START(hnoridur)
-	MDRV_VIDEO_UPDATE(hnoridur)
+	MCFG_VIDEO_START(hnoridur)
+	MCFG_VIDEO_UPDATE(hnoridur)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("aysnd", AY8910, XTAL_22MHz / 16)
-	MDRV_SOUND_CONFIG(hnoridur_ay8910_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.20)
+	MCFG_SOUND_ADD("aysnd", AY8910, XTAL_22MHz / 16)
+	MCFG_SOUND_CONFIG(hnoridur_ay8910_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.20)
 
-	MDRV_SOUND_ADD("ymsnd", YM2413, XTAL_3_579545MHz )
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM2413, XTAL_3_579545MHz )
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-	MDRV_SOUND_ADD("msm", MSM5205, XTAL_384kHz )
-	MDRV_SOUND_CONFIG(hanamai_msm5205_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("msm", MSM5205, XTAL_384kHz )
+	MCFG_SOUND_CONFIG(hanamai_msm5205_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************
@@ -4504,101 +4496,94 @@ static const ym2203_interface sprtmtch_ym2203_interface =
 	sprtmtch_sound_callback,	/* IRQ handler */
 };
 
-static MACHINE_DRIVER_START( sprtmtch )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(dynax_state)
+static MACHINE_CONFIG_START( sprtmtch, dynax_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80,22000000 / 4)	/* 5.5MHz */
-	MDRV_CPU_PROGRAM_MAP(sprtmtch_mem_map)
-	MDRV_CPU_IO_MAP(sprtmtch_io_map)
-	MDRV_CPU_VBLANK_INT("screen", sprtmtch_vblank_interrupt)	/* IM 0 needs an opcode on the data bus */
+	MCFG_CPU_ADD("maincpu", Z80,22000000 / 4)	/* 5.5MHz */
+	MCFG_CPU_PROGRAM_MAP(sprtmtch_mem_map)
+	MCFG_CPU_IO_MAP(sprtmtch_io_map)
+	MCFG_CPU_VBLANK_INT("screen", sprtmtch_vblank_interrupt)	/* IM 0 needs an opcode on the data bus */
 
-	MDRV_MACHINE_START(hanamai)
-	MDRV_MACHINE_RESET(dynax)
+	MCFG_MACHINE_START(hanamai)
+	MCFG_MACHINE_RESET(dynax)
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(512, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 512-1, 16, 256-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(512, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 512-1, 16, 256-1)
 
-	MDRV_PALETTE_LENGTH(512)
+	MCFG_PALETTE_LENGTH(512)
 
-	MDRV_PALETTE_INIT(sprtmtch)			// static palette
-	MDRV_VIDEO_START(sprtmtch)
-	MDRV_VIDEO_UPDATE(sprtmtch)
+	MCFG_PALETTE_INIT(sprtmtch)			// static palette
+	MCFG_VIDEO_START(sprtmtch)
+	MCFG_VIDEO_UPDATE(sprtmtch)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM2203, 22000000 / 8)
-	MDRV_SOUND_CONFIG(sprtmtch_ym2203_interface)
-	MDRV_SOUND_ROUTE(0, "mono", 0.20)
-	MDRV_SOUND_ROUTE(1, "mono", 0.20)
-	MDRV_SOUND_ROUTE(2, "mono", 0.20)
-	MDRV_SOUND_ROUTE(3, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2203, 22000000 / 8)
+	MCFG_SOUND_CONFIG(sprtmtch_ym2203_interface)
+	MCFG_SOUND_ROUTE(0, "mono", 0.20)
+	MCFG_SOUND_ROUTE(1, "mono", 0.20)
+	MCFG_SOUND_ROUTE(2, "mono", 0.20)
+	MCFG_SOUND_ROUTE(3, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************
                             Mahjong Friday
 ***************************************************************************/
 
-static MACHINE_DRIVER_START( mjfriday )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(dynax_state)
+static MACHINE_CONFIG_START( mjfriday, dynax_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu",Z80,24000000/4)	/* 6 MHz? */
-	MDRV_CPU_PROGRAM_MAP(sprtmtch_mem_map)
-	MDRV_CPU_IO_MAP(mjfriday_io_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu",Z80,24000000/4)	/* 6 MHz? */
+	MCFG_CPU_PROGRAM_MAP(sprtmtch_mem_map)
+	MCFG_CPU_IO_MAP(mjfriday_io_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_MACHINE_START(hanamai)
-	MDRV_MACHINE_RESET(dynax)
+	MCFG_MACHINE_START(hanamai)
+	MCFG_MACHINE_RESET(dynax)
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(256, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 256-1, 16, 256-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(256, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 256-1, 16, 256-1)
 
-	MDRV_PALETTE_LENGTH(512)
+	MCFG_PALETTE_LENGTH(512)
 
-	MDRV_PALETTE_INIT(sprtmtch)			// static palette
-	MDRV_VIDEO_START(mjdialq2)
-	MDRV_VIDEO_UPDATE(mjdialq2)
+	MCFG_PALETTE_INIT(sprtmtch)			// static palette
+	MCFG_VIDEO_START(mjdialq2)
+	MCFG_VIDEO_UPDATE(mjdialq2)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM2413, 24000000/6)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2413, 24000000/6)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************
                             Mahjong Dial Q2
 ***************************************************************************/
 
-static MACHINE_DRIVER_START( mjdialq2 )
+static MACHINE_CONFIG_DERIVED( mjdialq2, mjfriday )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM( mjfriday )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(mjdialq2_mem_map)
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(mjdialq2_mem_map)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************
@@ -4611,7 +4596,7 @@ MACHINE_DRIVER_END
 
 static INTERRUPT_GEN( yarunara_clock_interrupt )
 {
-	dynax_state *state = (dynax_state *)device->machine->driver_data;
+	dynax_state *state = device->machine->driver_data<dynax_state>();
 	state->yarunara_clk_toggle ^= 1;
 
 	if (state->yarunara_clk_toggle == 1)
@@ -4622,52 +4607,47 @@ static INTERRUPT_GEN( yarunara_clock_interrupt )
 	sprtmtch_update_irq(device->machine);
 }
 
-static MACHINE_DRIVER_START( yarunara )
+static MACHINE_CONFIG_DERIVED( yarunara, hnoridur )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM( hnoridur )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(yarunara_mem_map)
-	MDRV_CPU_IO_MAP(yarunara_io_map)
-	MDRV_CPU_PERIODIC_INT(yarunara_clock_interrupt, 60)	// RTC
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(yarunara_mem_map)
+	MCFG_CPU_IO_MAP(yarunara_io_map)
+	MCFG_CPU_PERIODIC_INT(yarunara_clock_interrupt, 60)	// RTC
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_REPLACE_0FILL("nvram")
 
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_VISIBLE_AREA(0, 336-1, 8, 256-1-8-1)
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_VISIBLE_AREA(0, 336-1, 8, 256-1-8-1)
 
 	/* devices */
-	MDRV_MSM6242_ADD("rtc")
-MACHINE_DRIVER_END
+	MCFG_MSM6242_ADD("rtc")
+MACHINE_CONFIG_END
 
 
 /***************************************************************************
                             Mahjong Campus Hunting
 ***************************************************************************/
 
-static MACHINE_DRIVER_START( mcnpshnt )
+static MACHINE_CONFIG_DERIVED( mcnpshnt, hnoridur )
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(mcnpshnt_mem_map)
+	MCFG_CPU_IO_MAP(mcnpshnt_io_map)
 
-	MDRV_IMPORT_FROM( hnoridur )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(mcnpshnt_mem_map)
-	MDRV_CPU_IO_MAP(mcnpshnt_io_map)
-
-	MDRV_VIDEO_START(mcnpshnt)	// different priorities
-MACHINE_DRIVER_END
+	MCFG_VIDEO_START(mcnpshnt)	// different priorities
+MACHINE_CONFIG_END
 
 
 /***************************************************************************
                             7jigen
 ***************************************************************************/
 
-static MACHINE_DRIVER_START( nanajign )
-
-	MDRV_IMPORT_FROM( hnoridur )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(nanajign_mem_map)
-	MDRV_CPU_IO_MAP(nanajign_io_map)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( nanajign, hnoridur )
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(nanajign_mem_map)
+	MCFG_CPU_IO_MAP(nanajign_io_map)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************
@@ -4694,9 +4674,9 @@ static const msm5205_interface jantouki_msm5205_interface =
 
 static MACHINE_START( jantouki )
 {
-	dynax_state *state = (dynax_state *)machine->driver_data;
-	UINT8 *MAIN = memory_region(machine, "maincpu");
-	UINT8 *SOUND = memory_region(machine, "soundcpu");
+	dynax_state *state = machine->driver_data<dynax_state>();
+	UINT8 *MAIN = machine->region("maincpu")->base();
+	UINT8 *SOUND = machine->region("soundcpu")->base();
 
 	memory_configure_bank(machine, "bank1", 0, 0x10, &MAIN[0x8000],  0x8000);
 	memory_configure_bank(machine, "bank2", 0, 12,   &SOUND[0x8000], 0x8000);
@@ -4707,69 +4687,66 @@ static MACHINE_START( jantouki )
 	MACHINE_START_CALL(dynax);
 }
 
-static MACHINE_DRIVER_START( jantouki )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(dynax_state)
+static MACHINE_CONFIG_START( jantouki, dynax_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu",Z80,22000000 / 4)	/* 5.5MHz */
-	MDRV_CPU_PROGRAM_MAP(jantouki_mem_map)
-	MDRV_CPU_IO_MAP(jantouki_io_map)
-	MDRV_CPU_VBLANK_INT("top", jantouki_vblank_interrupt)	/* IM 0 needs an opcode on the data bus */
+	MCFG_CPU_ADD("maincpu",Z80,22000000 / 4)	/* 5.5MHz */
+	MCFG_CPU_PROGRAM_MAP(jantouki_mem_map)
+	MCFG_CPU_IO_MAP(jantouki_io_map)
+	MCFG_CPU_VBLANK_INT("top", jantouki_vblank_interrupt)	/* IM 0 needs an opcode on the data bus */
 
-	MDRV_CPU_ADD("soundcpu",Z80,22000000 / 4)	/* 5.5MHz */
-	MDRV_CPU_PROGRAM_MAP(jantouki_sound_mem_map)
-	MDRV_CPU_IO_MAP(jantouki_sound_io_map)
-	MDRV_CPU_VBLANK_INT("top", jantouki_sound_vblank_interrupt)	/* IM 0 needs an opcode on the data bus */
+	MCFG_CPU_ADD("soundcpu",Z80,22000000 / 4)	/* 5.5MHz */
+	MCFG_CPU_PROGRAM_MAP(jantouki_sound_mem_map)
+	MCFG_CPU_IO_MAP(jantouki_sound_io_map)
+	MCFG_CPU_VBLANK_INT("top", jantouki_sound_vblank_interrupt)	/* IM 0 needs an opcode on the data bus */
 
-	MDRV_MACHINE_START(jantouki)
-	MDRV_MACHINE_RESET(dynax)
+	MCFG_MACHINE_START(jantouki)
+	MCFG_MACHINE_RESET(dynax)
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	/* video hardware */
-	MDRV_PALETTE_LENGTH(512)
-	MDRV_DEFAULT_LAYOUT(layout_dualhuov)
+	MCFG_PALETTE_LENGTH(512)
+	MCFG_DEFAULT_LAYOUT(layout_dualhuov)
 
-	MDRV_SCREEN_ADD("top", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_SIZE(512, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 512-1, 16, 256-1)
+	MCFG_SCREEN_ADD("top", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_SIZE(512, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 512-1, 16, 256-1)
 
-	MDRV_SCREEN_ADD("bottom", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_SIZE(512, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 512-1, 16, 256-1)
+	MCFG_SCREEN_ADD("bottom", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_SIZE(512, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 512-1, 16, 256-1)
 
-	MDRV_PALETTE_INIT(sprtmtch)			// static palette
-	MDRV_VIDEO_START(jantouki)
-	MDRV_VIDEO_UPDATE(jantouki)
+	MCFG_PALETTE_INIT(sprtmtch)			// static palette
+	MCFG_VIDEO_START(jantouki)
+	MCFG_VIDEO_UPDATE(jantouki)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("aysnd", AY8910, 22000000 / 8)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.20)
+	MCFG_SOUND_ADD("aysnd", AY8910, 22000000 / 8)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.20)
 
-	MDRV_SOUND_ADD("ymsnd", YM2203, 22000000 / 8)
-	MDRV_SOUND_CONFIG(jantouki_ym2203_interface)
-	MDRV_SOUND_ROUTE(0, "mono", 0.20)
-	MDRV_SOUND_ROUTE(1, "mono", 0.20)
-	MDRV_SOUND_ROUTE(2, "mono", 0.20)
-	MDRV_SOUND_ROUTE(3, "mono", 0.50)
+	MCFG_SOUND_ADD("ymsnd", YM2203, 22000000 / 8)
+	MCFG_SOUND_CONFIG(jantouki_ym2203_interface)
+	MCFG_SOUND_ROUTE(0, "mono", 0.20)
+	MCFG_SOUND_ROUTE(1, "mono", 0.20)
+	MCFG_SOUND_ROUTE(2, "mono", 0.20)
+	MCFG_SOUND_ROUTE(3, "mono", 0.50)
 
-	MDRV_SOUND_ADD("msm", MSM5205, 384000)
-	MDRV_SOUND_CONFIG(jantouki_msm5205_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SOUND_ADD("msm", MSM5205, 384000)
+	MCFG_SOUND_CONFIG(jantouki_msm5205_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
 	/* devices */
-	MDRV_MSM6242_ADD("rtc")
-MACHINE_DRIVER_END
+	MCFG_MSM6242_ADD("rtc")
+MACHINE_CONFIG_END
 
 
 /***************************************************************************
@@ -4781,14 +4758,14 @@ MACHINE_DRIVER_END
     0xf8 is vblank  */
 void mjelctrn_update_irq( running_machine *machine )
 {
-	dynax_state *state = (dynax_state *)machine->driver_data;
+	dynax_state *state = machine->driver_data<dynax_state>();
 	state->blitter_irq = 1;
 	cpu_set_input_line_and_vector(state->maincpu, 0, HOLD_LINE, 0xfa);
 }
 
 static INTERRUPT_GEN( mjelctrn_vblank_interrupt )
 {
-	dynax_state *state = (dynax_state *)device->machine->driver_data;
+	dynax_state *state = device->machine->driver_data<dynax_state>();
 
 	// This is a kludge to avoid losing blitter interrupts
 	// there should be a vblank ack mechanism
@@ -4796,16 +4773,14 @@ static INTERRUPT_GEN( mjelctrn_vblank_interrupt )
 		cpu_set_input_line_and_vector(device, 0, HOLD_LINE, 0xf8);
 }
 
-static MACHINE_DRIVER_START( mjelctrn )
+static MACHINE_CONFIG_DERIVED( mjelctrn, hnoridur )
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(nanajign_mem_map)
+	MCFG_CPU_IO_MAP(mjelctrn_io_map)
+	MCFG_CPU_VBLANK_INT("screen", mjelctrn_vblank_interrupt)	/* IM 2 needs a vector on the data bus */
 
-	MDRV_IMPORT_FROM( hnoridur )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(nanajign_mem_map)
-	MDRV_CPU_IO_MAP(mjelctrn_io_map)
-	MDRV_CPU_VBLANK_INT("screen", mjelctrn_vblank_interrupt)	/* IM 2 needs a vector on the data bus */
-
-	MDRV_VIDEO_START(mjelctrn)
-MACHINE_DRIVER_END
+	MCFG_VIDEO_START(mjelctrn)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************
@@ -4818,14 +4793,14 @@ MACHINE_DRIVER_END
     0x46 is a periodic irq? */
 void neruton_update_irq( running_machine *machine )
 {
-	dynax_state *state = (dynax_state *)machine->driver_data;
+	dynax_state *state = machine->driver_data<dynax_state>();
 	state->blitter_irq = 1;
 	cpu_set_input_line_and_vector(state->maincpu, 0, HOLD_LINE, 0x42);
 }
 
 static INTERRUPT_GEN( neruton_vblank_interrupt )
 {
-	dynax_state *state = (dynax_state *)device->machine->driver_data;
+	dynax_state *state = device->machine->driver_data<dynax_state>();
 
 	// This is a kludge to avoid losing blitter interrupts
 	// there should be a vblank ack mechanism
@@ -4838,14 +4813,12 @@ static INTERRUPT_GEN( neruton_vblank_interrupt )
 	}
 }
 
-static MACHINE_DRIVER_START( neruton )
+static MACHINE_CONFIG_DERIVED( neruton, mjelctrn )
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_VBLANK_INT_HACK(neruton_vblank_interrupt,1+10)	/* IM 2 needs a vector on the data bus */
 
-	MDRV_IMPORT_FROM( mjelctrn )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_VBLANK_INT_HACK(neruton_vblank_interrupt,1+10)	/* IM 2 needs a vector on the data bus */
-
-	MDRV_VIDEO_START(neruton)
-MACHINE_DRIVER_END
+	MCFG_VIDEO_START(neruton)
+MACHINE_CONFIG_END
 
 /***************************************************************************
                                     Mahjong X-Tal 7
@@ -4856,7 +4829,7 @@ MACHINE_DRIVER_END
     0x40 is vblank  */
 static INTERRUPT_GEN( majxtal7_vblank_interrupt )
 {
-	dynax_state *state = (dynax_state *)device->machine->driver_data;
+	dynax_state *state = device->machine->driver_data<dynax_state>();
 
 	// This is a kludge to avoid losing blitter interrupts
 	// there should be a vblank ack mechanism
@@ -4865,13 +4838,11 @@ static INTERRUPT_GEN( majxtal7_vblank_interrupt )
 	cpu_set_input_line_and_vector(device, 0, HOLD_LINE, 0x40);
 }
 
-static MACHINE_DRIVER_START( majxtal7 )
+static MACHINE_CONFIG_DERIVED( majxtal7, neruton )
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_VBLANK_INT("screen", majxtal7_vblank_interrupt)	/* IM 2 needs a vector on the data bus */
 
-	MDRV_IMPORT_FROM( neruton )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_VBLANK_INT("screen", majxtal7_vblank_interrupt)	/* IM 2 needs a vector on the data bus */
-
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
 
 /***************************************************************************
@@ -4887,50 +4858,47 @@ static const ay8910_interface htengoku_ay8910_interface =
 	DEVCB_NULL,						DEVCB_HANDLER(htengoku_dsw_w)		// W
 };
 
-static MACHINE_DRIVER_START( htengoku )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(dynax_state)
+static MACHINE_CONFIG_START( htengoku, dynax_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu",Z80,20000000 / 4)
-	MDRV_CPU_PROGRAM_MAP(yarunara_mem_map)
-	MDRV_CPU_IO_MAP(htengoku_io_map)
-	MDRV_CPU_VBLANK_INT("screen", sprtmtch_vblank_interrupt)	/* IM 0 needs an opcode on the data bus */
-	MDRV_CPU_PERIODIC_INT(yarunara_clock_interrupt, 60)	// RTC
+	MCFG_CPU_ADD("maincpu",Z80,20000000 / 4)
+	MCFG_CPU_PROGRAM_MAP(yarunara_mem_map)
+	MCFG_CPU_IO_MAP(htengoku_io_map)
+	MCFG_CPU_VBLANK_INT("screen", sprtmtch_vblank_interrupt)	/* IM 0 needs an opcode on the data bus */
+	MCFG_CPU_PERIODIC_INT(yarunara_clock_interrupt, 60)	// RTC
 
-	MDRV_MACHINE_START(htengoku)
-	MDRV_MACHINE_RESET(dynax)
+	MCFG_MACHINE_START(htengoku)
+	MCFG_MACHINE_RESET(dynax)
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(512, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 336-1, 0+8, 256-1-8)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(512, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 336-1, 0+8, 256-1-8)
 
-	MDRV_PALETTE_LENGTH(16*256)
+	MCFG_PALETTE_LENGTH(16*256)
 
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_ALWAYS_UPDATE)
-	MDRV_VIDEO_START(htengoku)
-	MDRV_VIDEO_UPDATE(htengoku)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_ALWAYS_UPDATE)
+	MCFG_VIDEO_START(htengoku)
+	MCFG_VIDEO_UPDATE(htengoku)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("aysnd", AY8910, 20000000 / 16)
-	MDRV_SOUND_CONFIG(htengoku_ay8910_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.20)
+	MCFG_SOUND_ADD("aysnd", AY8910, 20000000 / 16)
+	MCFG_SOUND_CONFIG(htengoku_ay8910_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.20)
 
-	MDRV_SOUND_ADD("ymsnd", YM2413, 3579545)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM2413, 3579545)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
 	/* devices */
-	MDRV_MSM6242_ADD("rtc")
-MACHINE_DRIVER_END
+	MCFG_MSM6242_ADD("rtc")
+MACHINE_CONFIG_END
 
 
 /***************************************************************************
@@ -4968,54 +4936,50 @@ static MACHINE_START( tenkai )
 	state_save_register_postload(machine, tenkai_bank_postload, NULL);
 }
 
-static MACHINE_DRIVER_START( tenkai )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(dynax_state)
+static MACHINE_CONFIG_START( tenkai, dynax_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu",TMP91640, 21472700 / 2)
-	MDRV_CPU_PROGRAM_MAP(tenkai_map)
-	MDRV_CPU_IO_MAP(tenkai_io_map)
-	MDRV_CPU_VBLANK_INT_HACK(tenkai_interrupt,3)
+	MCFG_CPU_ADD("maincpu",TMP91640, 21472700 / 2)
+	MCFG_CPU_PROGRAM_MAP(tenkai_map)
+	MCFG_CPU_IO_MAP(tenkai_io_map)
+	MCFG_CPU_VBLANK_INT_HACK(tenkai_interrupt,3)
 
-	MDRV_MACHINE_START(tenkai)
-	MDRV_MACHINE_RESET(dynax)
+	MCFG_MACHINE_START(tenkai)
+	MCFG_MACHINE_RESET(dynax)
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(512, 256)
-	MDRV_SCREEN_VISIBLE_AREA(4, 512-1, 4, 255-8-4)	// hide first 4 horizontal pixels (see scroll of gal 4 in test mode)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(512, 256)
+	MCFG_SCREEN_VISIBLE_AREA(4, 512-1, 4, 255-8-4)	// hide first 4 horizontal pixels (see scroll of gal 4 in test mode)
 
-	MDRV_PALETTE_LENGTH(16*256)
+	MCFG_PALETTE_LENGTH(16*256)
 
-	MDRV_VIDEO_START(mjelctrn)
-	MDRV_VIDEO_UPDATE(hnoridur)
+	MCFG_VIDEO_START(mjelctrn)
+	MCFG_VIDEO_UPDATE(hnoridur)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("aysnd", AY8910, 22000000 / 16)
-	MDRV_SOUND_CONFIG(tenkai_ay8910_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.20)
+	MCFG_SOUND_ADD("aysnd", AY8910, 22000000 / 16)
+	MCFG_SOUND_CONFIG(tenkai_ay8910_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.20)
 
-	MDRV_SOUND_ADD("ymsnd", YM2413, 3579545)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM2413, 3579545)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
 	/* devices */
-	MDRV_MSM6242_ADD("rtc")
-MACHINE_DRIVER_END
+	MCFG_MSM6242_ADD("rtc")
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( majrjhdx )
-	MDRV_IMPORT_FROM( tenkai )
-	MDRV_PALETTE_LENGTH(512)
-	MDRV_PALETTE_INIT(sprtmtch)			// static palette
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( majrjhdx, tenkai )
+	MCFG_PALETTE_LENGTH(512)
+	MCFG_PALETTE_INIT(sprtmtch)			// static palette
+MACHINE_CONFIG_END
 
 /***************************************************************************
                                 Mahjong Gekisha
@@ -5023,7 +4987,7 @@ MACHINE_DRIVER_END
 
 static STATE_POSTLOAD( gekisha_bank_postload )
 {
-	dynax_state *state = (dynax_state *)machine->driver_data;
+	dynax_state *state = machine->driver_data<dynax_state>();
 
 	gekisha_set_rombank(machine, state->rombank);
 }
@@ -5042,45 +5006,42 @@ static MACHINE_RESET( gekisha )
 	gekisha_set_rombank(machine, 0);
 }
 
-static MACHINE_DRIVER_START( gekisha )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(dynax_state)
+static MACHINE_CONFIG_START( gekisha, dynax_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu",TMP90841, XTAL_10MHz )	// ?
-	MDRV_CPU_PROGRAM_MAP(gekisha_map)
-	MDRV_CPU_IO_MAP(gekisha_io_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu",TMP90841, XTAL_10MHz )	// ?
+	MCFG_CPU_PROGRAM_MAP(gekisha_map)
+	MCFG_CPU_IO_MAP(gekisha_io_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_MACHINE_START(gekisha)
-	MDRV_MACHINE_RESET(gekisha)
+	MCFG_MACHINE_START(gekisha)
+	MCFG_MACHINE_RESET(gekisha)
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(256, 256)
-	MDRV_SCREEN_VISIBLE_AREA(2, 256-1, 16, 256-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(256, 256)
+	MCFG_SCREEN_VISIBLE_AREA(2, 256-1, 16, 256-1)
 
-	MDRV_PALETTE_LENGTH(512)
-	MDRV_PALETTE_INIT(sprtmtch)			// static palette
-	MDRV_VIDEO_START(mjdialq2)
-	MDRV_VIDEO_UPDATE(mjdialq2)
+	MCFG_PALETTE_LENGTH(512)
+	MCFG_PALETTE_INIT(sprtmtch)			// static palette
+	MCFG_VIDEO_START(mjdialq2)
+	MCFG_VIDEO_UPDATE(mjdialq2)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("aysnd", AY8910, XTAL_24MHz / 16)	// ?
-	MDRV_SOUND_CONFIG(tenkai_ay8910_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.20)
+	MCFG_SOUND_ADD("aysnd", AY8910, XTAL_24MHz / 16)	// ?
+	MCFG_SOUND_CONFIG(tenkai_ay8910_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.20)
 
-	MDRV_SOUND_ADD("ymsnd", YM2413, XTAL_24MHz / 8)	// ?
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2413, XTAL_24MHz / 8)	// ?
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************
@@ -5424,7 +5385,7 @@ ROM_END
 static DRIVER_INIT( blktouch )
 {
 	// fearsome encryption ;-)
-	UINT8	*src = (UINT8 *)memory_region(machine, "maincpu");
+	UINT8	*src = (UINT8 *)machine->region("maincpu")->base();
 	int i;
 
 	for (i = 0; i < 0x90000; i++)
@@ -5433,7 +5394,7 @@ static DRIVER_INIT( blktouch )
 
 	}
 
-	src = (UINT8 *)memory_region(machine, "gfx1");
+	src = (UINT8 *)machine->region("gfx1")->base();
 
 	for (i = 0; i < 0xc0000; i++)
 	{
@@ -5446,8 +5407,8 @@ static DRIVER_INIT( maya )
 {
 	/* Address lines scrambling on 1 z80 rom */
 	int i;
-	UINT8	*gfx = (UINT8 *)memory_region(machine, "gfx1");
-	UINT8	*rom = memory_region(machine, "maincpu") + 0x28000, *end = rom + 0x10000;
+	UINT8	*gfx = (UINT8 *)machine->region("gfx1")->base();
+	UINT8	*rom = machine->region("maincpu")->base() + 0x28000, *end = rom + 0x10000;
 	for ( ; rom < end; rom += 8)
 	{
 		UINT8 temp[8];
@@ -6164,8 +6125,8 @@ ROM_END
 static DRIVER_INIT( mjelct3 )
 {
 	int i;
-	UINT8	*rom = memory_region(machine, "maincpu");
-	size_t  size = memory_region_length(machine, "maincpu");
+	UINT8	*rom = machine->region("maincpu")->base();
+	size_t  size = machine->region("maincpu")->bytes();
 	UINT8	*rom1 = auto_alloc_array(machine, UINT8, size);
 
 	memcpy(rom1, rom, size);
@@ -6177,8 +6138,8 @@ static DRIVER_INIT( mjelct3 )
 static DRIVER_INIT( mjelct3a )
 {
 	int i, j;
-	UINT8	*rom = memory_region(machine, "maincpu");
-	size_t  size = memory_region_length(machine, "maincpu");
+	UINT8	*rom = machine->region("maincpu")->base();
+	size_t  size = machine->region("maincpu")->bytes();
 	UINT8	*rom1 = auto_alloc_array(machine, UINT8, size);
 
 	memcpy(rom1, rom, size);
@@ -6217,7 +6178,7 @@ static DRIVER_INIT( mjelct3a )
 
 /***************************************************************************
 
-Neruton Haikujiradan
+Mahjong Neruton Haikujiradan (Rev. B?)
 (c)1990 Dynax / Yukiyoshi Tokoro (Illustration)
 D4005208L1-1
 D4508308L-2 (sub board)
@@ -6264,9 +6225,48 @@ HD46505SP (6845)
 
 ROM_START( neruton )
 	ROM_REGION( 0x50000, "maincpu", 0 )	// Z80 Code
-	ROM_LOAD( "4501b.1a", 0x000000, 0x020000, CRC(0e53eeee) SHA1(883138618a11295bfac148da4a092e01d92229b3) )
-	ROM_RELOAD(           0x010000, 0x020000 )
-	ROM_LOAD( "4502.3a",  0x030000, 0x020000, CRC(c296293f) SHA1(466e87f7eca102568f1f00c6ba77dacc3df300dd) )
+	ROM_LOAD( "4501b.1a", 0x00000, 0x20000, CRC(0e53eeee) SHA1(883138618a11295bfac148da4a092e01d92229b3) )
+	ROM_RELOAD(           0x10000, 0x20000 )
+	ROM_LOAD( "4502.3a",  0x30000, 0x20000, CRC(c296293f) SHA1(466e87f7eca102568f1f00c6ba77dacc3df300dd) )
+
+	ROM_REGION( 0x100000, "gfx1", 0 )	// blitter data
+	ROM_LOAD( "4511.11a", 0x00000, 0x20000, CRC(c4a96b6e) SHA1(15a6776509e0d30929f6a261798afe7dc0401d4e) )
+	ROM_LOAD( "4512.13a", 0x20000, 0x20000, CRC(d7ebbcb9) SHA1(b8edd8b93eca8d36056c02f8b69ff8313c9ab120) )
+	ROM_LOAD( "4513.14a", 0x40000, 0x20000, CRC(e3bed454) SHA1(03a66d31b8f41abc4ce83ebe22f8d14414d92152) )
+	ROM_LOAD( "4514.15a", 0x60000, 0x20000, CRC(ee258483) SHA1(8c685fee4eaff5978f0ec222c33d55123a8fa496) )
+	ROM_LOAD( "4515.17a", 0x80000, 0x20000, CRC(3bce0ca1) SHA1(1d0bb379077c52a63aa982bbe77f89df7b5b7b14) )
+	ROM_LOAD( "4516.18a", 0xa0000, 0x20000, CRC(ee6b7e3b) SHA1(5290fad850c7a52039cd9d26082bff8615bf3797) )
+	ROM_LOAD( "4517.19a", 0xc0000, 0x20000, CRC(b31f9694) SHA1(f22fc44908be4f1ef8dada57860f95ee74495605) )
+	ROM_LOAD( "4519.18c", 0xe0000, 0x20000, CRC(68aca5f3) SHA1(f03328362777e6d536f730bc3b52371d5daca54e) )
+
+	ROM_REGION( 0x40000, "gfx2", 0 )	// blitter data
+	ROM_LOAD( "4520.19c", 0x00000, 0x20000, CRC(7bb2b298) SHA1(643d21f6a45640bad5ec84af9745339487a7408c) )
+	ROM_LOAD( "4518.17c", 0x20000, 0x20000, CRC(fa88668e) SHA1(fce80a8badacf39f30c36952cbe0a1491b8faef1) )
+
+	ROM_REGION( 0x100000, "gfx3", 0 )	// blitter data
+	ROM_LOAD( "4510.4b",  0x00000, 0x20000, CRC(455305a1) SHA1(103e1eaac485b37786a1d1d411819788ed385467) )
+	ROM_LOAD( "4509.3b",  0x20000, 0x20000, CRC(4e1e6a2d) SHA1(04c71dd11594921142b6aa9554c0fe1b40254463) )
+	ROM_LOAD( "4508.2b",  0x40000, 0x20000, CRC(5c451ed4) SHA1(59a27ddfae541cb61dafb32bdb5de8ddbc5abb8d) )
+	ROM_LOAD( "4507.1b",  0x60000, 0x20000, CRC(106e6133) SHA1(d08deb17ea82fe43e458a11eea26ce98c26c51c1) )
+	ROM_LOAD( "4506.4a",  0x80000, 0x20000, CRC(6eac8b3c) SHA1(70dbe3af582384571872e7b6b51df4192daed227) )
+	ROM_LOAD( "4505.3a",  0xa0000, 0x20000, CRC(6f9fd275) SHA1(123a928dcb60624d61a55b2fef25156975ba26c9) )
+	ROM_LOAD( "4504.2a",  0xc0000, 0x20000, CRC(7b3387af) SHA1(403cf67287469ae6ce9a7f662f6d82f62dac349b) )
+	ROM_LOAD( "4503.1a",  0xe0000, 0x20000, CRC(dcbe2805) SHA1(713edd2e3c950bc689446441eb85197bb7b1eb89) )
+ROM_END
+
+/***************************************************************************
+
+Mahjong Neruton Haikujiradan (Rev. A?) [Mahjong Crimson-Whales]
+
+Only one rom differs from neruton: 4501a.1a (4501b.1a in neruton)
+
+***************************************************************************/
+
+ROM_START( nerutona )
+	ROM_REGION( 0x50000, "maincpu", 0 )	// Z80 Code
+	ROM_LOAD( "4501a.1a", 0x00000, 0x20000, CRC(82361a95) SHA1(360fa767dc1515bf853458e95e321fc66f8dcf47) )
+	ROM_RELOAD(           0x10000, 0x20000 )
+	ROM_LOAD( "4502.3a",  0x30000, 0x20000, CRC(c296293f) SHA1(466e87f7eca102568f1f00c6ba77dacc3df300dd) )
 
 	ROM_REGION( 0x100000, "gfx1", 0 )	// blitter data
 	ROM_LOAD( "4511.11a", 0x00000, 0x20000, CRC(c4a96b6e) SHA1(15a6776509e0d30929f6a261798afe7dc0401d4e) )
@@ -7240,7 +7240,8 @@ GAME( 1990, mjelct3,  mjelctrn, mjelctrn, mjelct3,  mjelct3,  ROT180, "Dynax",  
 GAME( 1990, mjelct3a, mjelctrn, mjelctrn, mjelct3,  mjelct3a, ROT180, "Dynax",                    "Mahjong Electron Base (parts 2 & 3, alt., Japan)",              GAME_SUPPORTS_SAVE )
 GAME( 1993, mjelctrb, mjelctrn, mjelctrn, mjelct3,  mjelct3,  ROT180, "bootleg",                  "Mahjong Electron Base (parts 2 & 4, Japan, bootleg)",           GAME_SUPPORTS_SAVE )
 GAME( 1990, majxtal7, 0,        majxtal7, majxtal7, mjelct3,  ROT180, "Dynax",                    "Mahjong X-Tal 7 - Crystal Mahjong / Mahjong Diamond 7 (Japan)", GAME_IMPERFECT_GRAPHICS | GAME_SUPPORTS_SAVE )
-GAME( 1990, neruton,  0,        neruton,  neruton,  mjelct3,  ROT180, "Dynax / Yukiyoshi Tokoro", "Mahjong Neruton Haikujiradan (Japan)",                          GAME_IMPERFECT_GRAPHICS | GAME_SUPPORTS_SAVE )
+GAME( 1990, neruton,  0,        neruton,  neruton,  mjelct3,  ROT180, "Dynax / Yukiyoshi Tokoro", "Mahjong Neruton Haikujiradan (Japan, Rev. B?)",                 GAME_IMPERFECT_GRAPHICS | GAME_SUPPORTS_SAVE )
+GAME( 1990, nerutona, neruton,  neruton,  neruton,  mjelct3,  ROT180, "Dynax / Yukiyoshi Tokoro", "Mahjong Neruton Haikujiradan (Japan, Rev. A?)",                 GAME_IMPERFECT_GRAPHICS | GAME_SUPPORTS_SAVE )
 GAME( 1991, hanayara, 0,        yarunara, hanayara, 0,        ROT180, "Dynax",                    "Hana wo Yaraneba! (Japan)",                                     GAME_SUPPORTS_SAVE )
 GAME( 1991, mjcomv1,  0,        yarunara, yarunara, 0,        ROT180, "Dynax",                    "Mahjong Comic Gekijou Vol.1 (Japan)",                           GAME_SUPPORTS_SAVE )
 GAME( 1991, tenkai,   0,        tenkai,   tenkai,   0,        ROT0,   "Dynax",                    "Mahjong Tenkaigen",                                             GAME_SUPPORTS_SAVE )

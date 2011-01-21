@@ -29,7 +29,7 @@ struct _pf10_state
     INLINE FUNCTIONS
 *****************************************************************************/
 
-INLINE pf10_state *get_safe_token(running_device *device)
+INLINE pf10_state *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
 	assert(device->type() == PF10);
@@ -61,19 +61,19 @@ ADDRESS_MAP_END
 static const upd765_interface pf10_upd765a_intf =
 {
 	DEVCB_NULL, /* interrupt line */
-	NULL,
+	DEVCB_NULL,
 	NULL,
 	UPD765_RDY_PIN_NOT_CONNECTED, /* ??? */
 	{NULL, NULL, NULL, NULL}
 };
 
-static MACHINE_DRIVER_START( pf10 )
-	MDRV_CPU_ADD("pf10", M6803, XTAL_2_4576MHz / 4 /* ??? */) /* HD63A03 */
-	MDRV_CPU_PROGRAM_MAP(pf10_mem)
-	MDRV_CPU_IO_MAP(pf10_io)
+static MACHINE_CONFIG_FRAGMENT( pf10 )
+	MCFG_CPU_ADD("pf10", M6803, XTAL_2_4576MHz / 4 /* ??? */) /* HD63A03 */
+	MCFG_CPU_PROGRAM_MAP(pf10_mem)
+	MCFG_CPU_IO_MAP(pf10_io)
 
-	MDRV_UPD765A_ADD("upd765a", pf10_upd765a_intf)
-MACHINE_DRIVER_END
+	MCFG_UPD765A_ADD("upd765a", pf10_upd765a_intf)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************
@@ -110,7 +110,7 @@ DEVICE_GET_INFO( pf10 )
 		case DEVINFO_INT_INLINE_CONFIG_BYTES:	info->i = 0;									break;
 
 		/* --- the following bits of info are returned as pointers --- */
-		case DEVINFO_PTR_MACHINE_CONFIG:		info->machine_config = MACHINE_DRIVER_NAME(pf10);	break;
+		case DEVINFO_PTR_MACHINE_CONFIG:		info->machine_config = MACHINE_CONFIG_NAME(pf10);	break;
 		case DEVINFO_PTR_ROM_REGION:			info->romregion = ROM_NAME(pf10);				break;
 
 		/* --- the following bits of info are returned as pointers to data or functions --- */

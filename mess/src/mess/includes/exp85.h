@@ -8,19 +8,18 @@
 #define CASSETTE_TAG	"cassette"
 #define SPEAKER_TAG		"speaker"
 
-class exp85_state
+class exp85_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, exp85_state(machine)); }
-
-	exp85_state(running_machine &machine) { }
+	exp85_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* cassette state */
 	int tape_control;
 
 	/* devices */
-	running_device *cassette;
-	running_device *speaker;
+	device_t *cassette;
+	device_t *speaker;
 };
 
 #endif

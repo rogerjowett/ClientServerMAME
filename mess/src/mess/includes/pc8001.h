@@ -12,12 +12,11 @@
 #define SCREEN_TAG		"screen"
 #define SPEAKER_TAG		"speaker"
 
-class pc8001_state
+class pc8001_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, pc8001_state(machine)); }
-
-	pc8001_state(running_machine &machine) { }
+	pc8001_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* video state */
 	UINT8 *char_rom;
@@ -25,12 +24,12 @@ public:
 	int color;
 
 	/* devices */
-	running_device *i8257;
-	running_device *upd1990a;
-	running_device *upd3301;
-	running_device *cassette;
-	running_device *centronics;
-	running_device *speaker;
+	device_t *i8257;
+	device_t *upd1990a;
+	device_t *upd3301;
+	device_t *cassette;
+	device_t *centronics;
+	device_t *speaker;
 };
 
 #endif

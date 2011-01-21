@@ -12,12 +12,18 @@
 #include "machine/6522via.h"
 #include "devices/cartslot.h"
 
-class pet_state
+typedef struct
+{
+	int bank; /* rambank to be switched in 0x9000 */
+	int rom; /* rom socket 6502? at 0x9000 */
+} spet_t;
+
+
+class pet_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, pet_state(machine)); }
-
-	pet_state(running_machine &machine) { }
+	pet_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	int pet_basic1; /* basic version 1 for quickloader */
 	int superpet;
@@ -26,6 +32,16 @@ public:
 	int pia0_irq;
 	int pia1_irq;
 	int via_irq;
+	UINT8 *videoram;
+	int font;
+	UINT8 *memory;
+	UINT8 *supermemory;
+	UINT8 *pet80_bank1_base;
+	int keyline_select;
+	emu_timer *datasette1_timer;
+	emu_timer *datasette2_timer;
+	spet_t spet;
+	int pia_level;
 };
 
 /*----------- defined in video/pet.c -----------*/
@@ -42,15 +58,11 @@ WRITE_LINE_DEVICE_HANDLER( pet_display_enable_changed );
 
 /*----------- defined in machine/pet.c -----------*/
 
-extern int pet_font;
 extern const via6522_interface pet_via;
 extern const pia6821_interface pet_pia0;
 extern const pia6821_interface petb_pia0;
 extern const pia6821_interface pet_pia1;
 
-extern UINT8 *pet_memory;
-extern UINT8 *pet_videoram;
-extern UINT8 *superpet_memory;
 
 WRITE8_HANDLER(cbm8096_w);
 extern READ8_HANDLER(superpet_r);
@@ -63,7 +75,7 @@ DRIVER_INIT( superpet );
 MACHINE_RESET( pet );
 INTERRUPT_GEN( pet_frame_interrupt );
 
-MACHINE_DRIVER_EXTERN( pet_cartslot );
-MACHINE_DRIVER_EXTERN( pet4_cartslot );
+MACHINE_CONFIG_EXTERN( pet_cartslot );
+MACHINE_CONFIG_EXTERN( pet4_cartslot );
 
 #endif /* PET_H_ */

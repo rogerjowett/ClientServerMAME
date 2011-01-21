@@ -9,23 +9,21 @@
 #define DM9368_H_TAG	"a8"
 #define CASSETTE_TAG	"cassette"
 
-class elf2_state
+class elf2_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, elf2_state(machine)); }
-
-	elf2_state(running_machine &machine) { }
+	elf2_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* display state */
-	int cdp1861_efx;				/* EFx */
 	UINT8 data;
 
 	/* devices */
-	running_device *cdp1861;
-	running_device *mm74c923;
-	running_device *dm9368_l;
-	running_device *dm9368_h;
-	running_device *cassette;
+	device_t *cdp1861;
+	device_t *mm74c923;
+	device_t *dm9368_l;
+	device_t *dm9368_h;
+	device_t *cassette;
 };
 
 #endif

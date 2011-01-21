@@ -10,7 +10,6 @@
 #include "emu.h"
 #include "includes/starwars.h"
 #include "machine/x2212.h"
-#include "video/avgdvg.h"
 
 
 /* Control select values for ADC_R */
@@ -69,9 +68,11 @@ static TIMER_CALLBACK( math_run_clear )
  *
  *************************************/
 
-WRITE8_DEVICE_HANDLER( starwars_nstore_w )
+WRITE8_HANDLER( starwars_nstore_w )
 {
-	x2212_store(device, data & 0x01);
+	space->machine->device<x2212_device>("x2212")->store(0);
+	space->machine->device<x2212_device>("x2212")->store(1);
+	space->machine->device<x2212_device>("x2212")->store(0);
 }
 
 /*************************************
@@ -113,7 +114,7 @@ WRITE8_HANDLER( starwars_out_w )
 			break;
 
 		case 7:		/* NVRAM array recall */
-			x2212_array_recall(space->machine->device("x2212"), data >> 7);
+			space->machine->device<x2212_device>("x2212")->recall(~data & 0x80);
 			break;
 	}
 }
@@ -171,7 +172,7 @@ WRITE8_HANDLER( starwars_adc_select_w )
 
 void starwars_mproc_init(running_machine *machine)
 {
-	UINT8 *src = memory_region(machine, "user2");
+	UINT8 *src = machine->region("user2")->base();
 	int cnt, val;
 
 	PROM_STR = auto_alloc_array(machine, UINT8, 1024);
@@ -400,7 +401,7 @@ READ8_HANDLER( starwars_prng_r )
      */
 
 	/* Use MAME's PRNG for now */
-	return mame_rand(space->machine);
+	return space->machine->rand();
 }
 
 

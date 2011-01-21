@@ -976,7 +976,8 @@ static DWORD RunMAME(int nGameIndex, const play_options *playopts)
 	options_set_string(mame_opts, OPTION_GAMENAME, drivers[nGameIndex]->name, OPTION_PRIORITY_CMDLINE);
 	// Time the game run.
 	time(&start);
-	mame_execute(mame_opts);
+	windows_osd_interface osd;
+	mame_execute(osd, mame_opts);
 	// Calc the duration
 	time(&end);
 	elapsedtime = end - start;
@@ -4869,14 +4870,13 @@ static const TCHAR *GamePicker_GetItemString(HWND hwndPicker, int nItem, int nCo
 
 		case COLUMN_TYPE:
 			{
-				machine_config *config = global_alloc(machine_config(drivers[nItem]->machine_config));
+				machine_config config(*drivers[nItem]);
 				/* Vector/Raster */
-				if (isDriverVector(config))
+				if (isDriverVector(&config))
 					s = TEXT("Vector");
 				else
 					s = TEXT("Raster");
 
-				global_free(config);
 			}
 			break;
 
@@ -5358,13 +5358,10 @@ static int GamePicker_Compare(HWND hwndPicker, int index1, int index2, int sort_
 
 	case COLUMN_TYPE:
 		{
-			machine_config *config1 = global_alloc(machine_config(drivers[index1]->machine_config));
-			machine_config *config2 = global_alloc(machine_config(drivers[index2]->machine_config));
-
-			value = isDriverVector(config1) - isDriverVector(config2);
-
-			global_free(config1);
-			global_free(config2);
+			machine_config config1(*drivers[index1]);
+			machine_config config2(*drivers[index2]);
+			
+			value = isDriverVector(&config1) - isDriverVector(&config2);
 		}
 		break;
 

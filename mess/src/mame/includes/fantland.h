@@ -1,11 +1,10 @@
 
 
-class fantland_state
+class fantland_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, fantland_state(machine)); }
-
-	fantland_state(running_machine &machine) { }
+	fantland_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 //  UINT8 *    spriteram;   // currently directly used in a 16bit map...
@@ -21,11 +20,11 @@ public:
 	int        adpcm_nibble[4];
 
 	/* devices */
-	running_device *audio_cpu;
-	running_device *msm1;
-	running_device *msm2;
-	running_device *msm3;
-	running_device *msm4;
+	device_t *audio_cpu;
+	device_t *msm1;
+	device_t *msm2;
+	device_t *msm3;
+	device_t *msm4;
 };
 
 

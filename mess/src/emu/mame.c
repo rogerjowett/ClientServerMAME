@@ -149,7 +149,7 @@ int mame_is_valid_machine(running_machine *machine)
     mame_execute - run the core emulation
 -------------------------------------------------*/
 
-int mame_execute(core_options *options)
+int mame_execute(osd_interface &osd, core_options *options)
 {
 	bool firstgame = true;
 	bool firstrun = true;
@@ -189,10 +189,10 @@ int mame_execute(core_options *options)
 		}
 
 		// create the machine configuration
-		const machine_config *config = global_alloc(machine_config(driver->machine_config));
+		const machine_config *config = global_alloc(machine_config(*driver));
 
 		// create the machine structure and driver
-		running_machine *machine = global_alloc(running_machine(*driver, *config, *options, started_empty));
+		running_machine *machine = global_alloc(running_machine(*config, osd, *options, started_empty));
 
 		// looooong term: remove this
 		global_machine = machine;
@@ -235,6 +235,17 @@ core_options *mame_options(void)
 	return mame_opts;
 }
 
+
+
+/*-------------------------------------------------
+    set_mame_options - set mame options, used by
+    validate option
+-------------------------------------------------*/
+
+void set_mame_options(core_options *options)
+{
+	mame_opts = options;
+}
 
 
 /***************************************************************************
@@ -304,6 +315,8 @@ void mame_printf_error(const char *format, ...)
 	va_start(argptr, format);
 	(*output_cb[OUTPUT_CHANNEL_ERROR])(output_cb_param[OUTPUT_CHANNEL_ERROR], format, argptr);
 	va_end(argptr);
+	fflush(stdout);
+	fflush(stderr);
 }
 
 
@@ -327,6 +340,8 @@ void mame_printf_warning(const char *format, ...)
 	va_start(argptr, format);
 	(*output_cb[OUTPUT_CHANNEL_WARNING])(output_cb_param[OUTPUT_CHANNEL_WARNING], format, argptr);
 	va_end(argptr);
+	fflush(stdout);
+	fflush(stderr);
 }
 
 
@@ -350,6 +365,8 @@ void mame_printf_info(const char *format, ...)
 	va_start(argptr, format);
 	(*output_cb[OUTPUT_CHANNEL_INFO])(output_cb_param[OUTPUT_CHANNEL_INFO], format, argptr);
 	va_end(argptr);
+	fflush(stdout);
+	fflush(stderr);
 }
 
 
@@ -377,6 +394,8 @@ void mame_printf_verbose(const char *format, ...)
 	va_start(argptr, format);
 	(*output_cb[OUTPUT_CHANNEL_VERBOSE])(output_cb_param[OUTPUT_CHANNEL_VERBOSE], format, argptr);
 	va_end(argptr);
+	fflush(stdout);
+	fflush(stderr);
 }
 
 
@@ -405,6 +424,8 @@ void mame_printf_debug(const char *format, ...)
 	va_start(argptr, format);
 	(*output_cb[OUTPUT_CHANNEL_DEBUG])(output_cb_param[OUTPUT_CHANNEL_DEBUG], format, argptr);
 	va_end(argptr);
+	fflush(stdout);
+	fflush(stderr);
 }
 
 
@@ -429,6 +450,8 @@ void mame_printf_log(const char *format, ...)
 	va_start(argptr, format);
 	(*output_cb[OUTPUT_CHANNEL_LOG])(output_cb_param[OUTPUT_CHANNEL_LOG], format, argptr);
 	va_end(argptr);
+	fflush(stdout);
+	fflush(stderr);
 }
 #endif
 
@@ -503,12 +526,11 @@ void mame_parse_ini_files(core_options *options, const game_driver *driver)
 		parse_ini_file(options, "debug", OPTION_PRIORITY_DEBUG_INI);
 
 	/* if we have a valid game driver, parse game-specific INI files */
-	if (driver != NULL)
+	if (driver != NULL && driver != &GAME_NAME(empty))
 	{
 #ifndef MESS
 		const game_driver *parent = driver_get_clone(driver);
 		const game_driver *gparent = (parent != NULL) ? driver_get_clone(parent) : NULL;
-		machine_config *config;
 
 		/* parse "vertical.ini" or "horizont.ini" */
 		if (driver->flags & ORIENTATION_SWAP_XY)
@@ -517,14 +539,15 @@ void mame_parse_ini_files(core_options *options, const game_driver *driver)
 			parse_ini_file(options, "horizont", OPTION_PRIORITY_ORIENTATION_INI);
 
 		/* parse "vector.ini" for vector games */
-		config = global_alloc(machine_config(driver->machine_config));
-		for (const screen_device_config *devconfig = screen_first(*config); devconfig != NULL; devconfig = screen_next(devconfig))
+		{
+			machine_config config(*driver);
+			for (const screen_device_config *devconfig = config.first_screen(); devconfig != NULL; devconfig = devconfig->next_screen())
 			if (devconfig->screen_type() == SCREEN_TYPE_VECTOR)
 			{
 				parse_ini_file(options, "vector", OPTION_PRIORITY_VECTOR_INI);
 				break;
 			}
-		global_free(config);
+		}
 
 		/* next parse "source/<sourcefile>.ini"; if that doesn't exist, try <sourcefile>.ini */
 		astring sourcename;
@@ -553,7 +576,12 @@ void mame_parse_ini_files(core_options *options, const game_driver *driver)
 static int parse_ini_file(core_options *options, const char *name, int priority)
 {
 	file_error filerr;
-	mame_file *file;
+	mame_file *file = NULL;
+
+	/* update game name so depending callback options could be added */
+	if (priority==OPTION_PRIORITY_DRIVER_INI) {
+		options_force_option_callback(options, OPTION_GAMENAME, name, priority);
+	}
 
 	/* don't parse if it has been disabled */
 	if (!options_get_bool(options, OPTION_READCONFIG))
@@ -564,11 +592,6 @@ static int parse_ini_file(core_options *options, const char *name, int priority)
 	filerr = mame_fopen_options(options, SEARCHPATH_INI, fname, OPEN_FLAG_READ, &file);
 	if (filerr != FILERR_NONE)
 		return FALSE;
-
-	/* update game name so depending callback options could be added */
-	if (priority==OPTION_PRIORITY_DRIVER_INI) {
-		options_force_option_callback(options, OPTION_GAMENAME, name, priority);
-	}
 
 	/* parse the file and close it */
 	mame_printf_verbose("Parsing %s.ini\n", name);

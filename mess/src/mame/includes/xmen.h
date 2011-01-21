@@ -1,10 +1,9 @@
 
-class xmen_state
+class xmen_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, xmen_state(machine)); }
-
-	xmen_state(running_machine &machine) { }
+	xmen_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 //  UINT16 *   paletteram;    // currently this uses generic palette handling
@@ -27,14 +26,14 @@ public:
 	UINT8       sound_curbank;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *audiocpu;
-	running_device *k054539;
-	running_device *k052109;
-	running_device *k053246;
-	running_device *k053251;
-	running_device *lscreen;
-	running_device *rscreen;
+	device_t *maincpu;
+	device_t *audiocpu;
+	device_t *k054539;
+	device_t *k052109;
+	device_t *k053246;
+	device_t *k053251;
+	device_t *lscreen;
+	device_t *rscreen;
 };
 
 /*----------- defined in video/xmen.c -----------*/

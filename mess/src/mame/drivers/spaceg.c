@@ -173,12 +173,11 @@ Notes:
  *
  *************************************/
 
-class spaceg_state
+class spaceg_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, spaceg_state(machine)); }
-
-	spaceg_state(running_machine &machine) { }
+	spaceg_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	UINT8 *  videoram;
 	UINT8 *  unkram;
@@ -222,7 +221,7 @@ static PALETTE_INIT( spaceg )
 
 static WRITE8_HANDLER( zvideoram_w )
 {
-	spaceg_state *state = (spaceg_state *)space->machine->driver_data;
+	spaceg_state *state = space->machine->driver_data<spaceg_state>();
 	int col;
 
 	col = state->unkram[0x400];
@@ -257,7 +256,7 @@ static WRITE8_HANDLER( zvideoram_w )
 
 static READ8_HANDLER(spaceg_colorram_r)
 {
-	spaceg_state *state = (spaceg_state *)space->machine->driver_data;
+	spaceg_state *state = space->machine->driver_data<spaceg_state>();
 	int rgbcolor;
 
 	if (offset < 0x400)
@@ -289,7 +288,7 @@ static READ8_HANDLER(spaceg_colorram_r)
 
 static VIDEO_UPDATE( spaceg )
 {
-	spaceg_state *state = (spaceg_state *)screen->machine->driver_data;
+	spaceg_state *state = screen->machine->driver_data<spaceg_state>();
 	offs_t offs;
 
 	for (offs = 0; offs < 0x2000; offs++)
@@ -397,43 +396,40 @@ INPUT_PORTS_END
  *
  *************************************/
 
-static MACHINE_DRIVER_START( spaceg )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(spaceg_state)
+static MACHINE_CONFIG_START( spaceg, spaceg_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80,2500000)		 /* 2.5 MHz */
-	MDRV_CPU_PROGRAM_MAP(spaceg_map)
-	MDRV_CPU_VBLANK_INT("screen", nmi_line_pulse)	/* 60 Hz NMIs (verified) */
+	MCFG_CPU_ADD("maincpu", Z80,2500000)		 /* 2.5 MHz */
+	MCFG_CPU_PROGRAM_MAP(spaceg_map)
+	MCFG_CPU_VBLANK_INT("screen", nmi_line_pulse)	/* 60 Hz NMIs (verified) */
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(256, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 255, 32, 255)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(256, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 255, 32, 255)
 
-	MDRV_PALETTE_LENGTH(16+128-16)
-	MDRV_PALETTE_INIT( spaceg )
-	MDRV_VIDEO_UPDATE( spaceg )
+	MCFG_PALETTE_LENGTH(16+128-16)
+	MCFG_PALETTE_INIT( spaceg )
+	MCFG_VIDEO_UPDATE( spaceg )
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-//  MDRV_SOUND_ADD("sn1", SN76496, 15468480/4)
-//  MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+//  MCFG_SOUND_ADD("sn1", SN76496, 15468480/4)
+//  MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-//  MDRV_SOUND_ADD("sn2", SN76496, 15468480/4)
-//  MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+//  MCFG_SOUND_ADD("sn2", SN76496, 15468480/4)
+//  MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-//  MDRV_SOUND_ADD("sn3", SN76496, 15468480/4)
-//  MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+//  MCFG_SOUND_ADD("sn3", SN76496, 15468480/4)
+//  MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-//  MDRV_SOUND_ADD("dac", DAC, 0)
-//  MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+//  MCFG_SOUND_ADD("dac", DAC, 0)
+//  MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 /*************************************

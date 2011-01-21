@@ -159,7 +159,7 @@
 static void lfkp(int mask)
 {
 	int A;
-	UINT8 *RAM = memory_region(machine, "maincpu");
+	UINT8 *RAM = machine->region("maincpu")->base();
 
 
 	for (A = 0x0000;A < 0x8000-14;A++)
@@ -217,13 +217,13 @@ static void sega_decode(running_machine *machine, const char *cputag, const UINT
 {
 	int A;
 
-	const address_space *space = cputag_get_address_space(machine, cputag, ADDRESS_SPACE_PROGRAM);
-	int length = memory_region_length(machine, cputag);
+	address_space *space = cputag_get_address_space(machine, cputag, ADDRESS_SPACE_PROGRAM);
+	int length = machine->region(cputag)->bytes();
 	int cryptlen = MIN(length, 0x8000);
-	UINT8 *rom = memory_region(machine, cputag);
+	UINT8 *rom = machine->region(cputag)->base();
 	UINT8 *decrypted = auto_alloc_array(machine, UINT8, 0xc000);
 
-	memory_set_decrypted_region(space, 0x0000, cryptlen - 1, decrypted);
+	space->set_decrypted_region(0x0000, cryptlen - 1, decrypted);
 
 	for (A = 0x0000;A < cryptlen;A++)
 	{
@@ -439,8 +439,8 @@ void toprollr_decode(running_machine *machine, const char *cputag, const char *r
 
 	int A;
 
-	const address_space *space = cputag_get_address_space(machine, cputag, ADDRESS_SPACE_PROGRAM);
-	UINT8 *rom = memory_region(machine, regiontag);
+	address_space *space = cputag_get_address_space(machine, cputag, ADDRESS_SPACE_PROGRAM);
+	UINT8 *rom = machine->region(regiontag)->base();
 	int bankstart;
 	decrypted = auto_alloc_array(machine, UINT8, 0x6000*3);
 
@@ -471,9 +471,9 @@ void toprollr_decode(running_machine *machine, const char *cputag, const char *r
 		rom[A+bankstart] = (src & ~0xa8) | (convtable[2*row+1][col] ^ xorval);
 	}
 
-	memory_configure_bank(machine, "bank1",0,3, memory_region(machine, regiontag),0x6000);
+	memory_configure_bank(machine, "bank1",0,3, machine->region(regiontag)->base(),0x6000);
 	memory_configure_bank_decrypted(machine, "bank1",0,3,decrypted,0x6000);
-	memory_set_decrypted_region(space, 0x0000, 0x5fff, decrypted);
+	space->set_decrypted_region(0x0000, 0x5fff, decrypted);
 	memory_set_bank(space->machine, "bank1", 0);
 }
 
@@ -797,8 +797,8 @@ void jongkyo_decode(running_machine *machine, const char *cputag)
 
 	int A;
 
-	const address_space *space = cputag_get_address_space(machine, cputag, ADDRESS_SPACE_PROGRAM);
-	UINT8 *rom = memory_region(machine, cputag);
+	address_space *space = cputag_get_address_space(machine, cputag, ADDRESS_SPACE_PROGRAM);
+	UINT8 *rom = machine->region(cputag)->base();
 	decrypted = auto_alloc_array(machine, UINT8, 0x9000);
 
 	for (A = 0x0000;A < 0x9000;A++)
@@ -830,9 +830,9 @@ void jongkyo_decode(running_machine *machine, const char *cputag)
 		rom[A] = (src & ~0xa8) | (convtable[2*row+1][col] ^ xorval);
 	}
 
-	memory_configure_bank(machine, "bank1",0,8, memory_region(machine, cputag)+0x7000,0x0400);
+	memory_configure_bank(machine, "bank1",0,8, machine->region(cputag)->base()+0x7000,0x0400);
 	memory_configure_bank_decrypted(machine, "bank1",0,8,decrypted+0x7000,0x0400);
-	memory_set_decrypted_region(space, 0x0000, 0x6bff, decrypted);
+	space->set_decrypted_region(0x0000, 0x6bff, decrypted);
 	memory_set_bank(space->machine, "bank1", 0);
 }
 

@@ -41,12 +41,11 @@ static void draw_char(running_machine *machine, UINT8 x, UINT8 y, UINT8 char_pos
 static void draw_point(running_machine *machine, UINT8 x, UINT8 y, UINT8 color);
 static void draw_udk(running_machine *machine);
 
-class t6834_state
+class t6834_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, t6834_state(machine)); }
-
-	t6834_state(running_machine &machine) { }
+	t6834_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* General */
 	UINT8 *ram;
@@ -69,6 +68,7 @@ public:
 	emu_timer *beep_clear;
 
 	/* LCD */
+	UINT8 cursor_blink;
 	UINT8 lcd_on;
 	UINT8 lcd_map[32][120];
 	UINT8 scroll_min;
@@ -97,7 +97,7 @@ public:
 	emu_timer *kb_clear;
 
 	/* Printer */
-	running_device *printer;
+	device_t *printer;
 	UINT8 send_bit;
 	UINT8 char_code;
 	UINT8 printer_buffer[0xff];
@@ -113,7 +113,7 @@ static void t6834_cmd (running_machine *machine, UINT8 cmd)
 {
 	UINT16 address;
 	UINT8 p1, p2, p3, p4, i;
-	t6834_state *state = (t6834_state *)machine->driver_data;
+	t6834_state *state = machine->driver_data<t6834_state>();
 
 	switch (cmd)
 	{
@@ -351,7 +351,7 @@ static void t6834_cmd (running_machine *machine, UINT8 cmd)
 		break;
 
 	case 0x1c:	//udc Init
-		memcpy(&state->udc, (UINT8*)memory_region(machine, "gfx1"), memory_region_length(machine, "gfx1"));
+		memcpy(&state->udc, (UINT8*)machine->region("gfx1")->base(), machine->region("gfx1")->bytes());
 		break;
 
 	case 0x1d:	//Pgm Write
@@ -500,7 +500,7 @@ static void t6834_cmd (running_machine *machine, UINT8 cmd)
 
 static void receive_from_t6834 (running_machine *machine)
 {
-	t6834_state *state = (t6834_state *)machine->driver_data;
+	t6834_state *state = machine->driver_data<t6834_state>();
 
 	state->regs_r[0]  = 0x40;
 	state->regs_r[1]  = state->out_data[state->out_pos];
@@ -510,7 +510,7 @@ static void receive_from_t6834 (running_machine *machine)
 
 static void ack_from_t6834 (running_machine *machine)
 {
-	t6834_state *state = (t6834_state *)machine->driver_data;
+	t6834_state *state = machine->driver_data<t6834_state>();
 
 	state->out_pos++;
 	state->regs_r[2] &= 0xfe;
@@ -524,7 +524,7 @@ static void ack_from_t6834 (running_machine *machine)
 
 static void send_to_t6834 (running_machine *machine)
 {
-	t6834_state *state = (t6834_state *)machine->driver_data;
+	t6834_state *state = machine->driver_data<t6834_state>();
 
 	if (!state->in_size)
 	{
@@ -597,7 +597,7 @@ static void send_to_t6834 (running_machine *machine)
 ****************************************************/
 static void send_to_printer(running_machine *machine)
 {
-	t6834_state *state = (t6834_state *)machine->driver_data;
+	t6834_state *state = machine->driver_data<t6834_state>();
 	UINT16 char_pos = 0;
 	UINT16 text_color = 0;
 	UINT16 text_size = 1;
@@ -660,7 +660,7 @@ static void send_to_printer(running_machine *machine)
 
 static void keyboard_scan(running_machine *machine)
 {
-	t6834_state *state = (t6834_state *)machine->driver_data;
+	t6834_state *state = machine->driver_data<t6834_state>();
 	static const char *const keynames[] = { "ROW0", "ROW1", "ROW2", "ROW3", "ROW4", "ROW5", "ROW6", "ROW7", "ROW8"};
 	UINT8 row, col, val, kb_table = 0;
 	UINT16 f_ptr = 0;
@@ -767,7 +767,7 @@ static void keyboard_scan(running_machine *machine)
 
 static void irq_exec(running_machine *machine)
 {
-	t6834_state *state = (t6834_state *)machine->driver_data;
+	t6834_state *state = machine->driver_data<t6834_state>();
 
 	if (state->kb_size)
 	{
@@ -777,7 +777,7 @@ static void irq_exec(running_machine *machine)
 		state->kb_size--;
 		state->regs_r[2] |= 0x01;
 		cputag_set_input_line(machine, "maincpu", NSC800_RSTA, ASSERT_LINE);
-		timer_adjust_oneshot(state->irq_clear, cputag_clocks_to_attotime(machine, "maincpu", 500), 0);
+		timer_adjust_oneshot(state->irq_clear, machine->device<cpu_device>("maincpu")->cycles_to_attotime(500), 0);
 		return;
 	}
 	else if (state->kb_brk)
@@ -787,7 +787,7 @@ static void irq_exec(running_machine *machine)
 		state->regs_r[2] |= 0x01;
 		state->kb_brk = 0;
 		cputag_set_input_line(machine, "maincpu", NSC800_RSTA, ASSERT_LINE );
-		timer_adjust_oneshot(state->irq_clear, cputag_clocks_to_attotime(machine, "maincpu", 500), 0);
+		timer_adjust_oneshot(state->irq_clear, machine->device<cpu_device>("maincpu")->cycles_to_attotime(500), 0);
 		return;
 	}
 	else if ( state->z80_irq&1 )
@@ -795,7 +795,7 @@ static void irq_exec(running_machine *machine)
 		receive_from_t6834 (machine);
 		state->z80_irq &= ~1;
 		cputag_set_input_line(machine, "maincpu", NSC800_RSTA, ASSERT_LINE);
-		timer_adjust_oneshot(state->irq_clear, cputag_clocks_to_attotime(machine, "maincpu", 500), 0);
+		timer_adjust_oneshot(state->irq_clear, machine->device<cpu_device>("maincpu")->cycles_to_attotime(500), 0);
 		return;
 	}
 }
@@ -807,7 +807,7 @@ static void irq_exec(running_machine *machine)
 
 static void draw_char(running_machine *machine, UINT8 x, UINT8 y, UINT8 char_pos)
 {
-	t6834_state *state = (t6834_state *)machine->driver_data;
+	t6834_state *state = machine->driver_data<t6834_state>();
 	UINT8 cl;
 
 	if(x < 20 && y < 4)
@@ -825,7 +825,7 @@ static void draw_char(running_machine *machine, UINT8 x, UINT8 y, UINT8 char_pos
 
 static void draw_point(running_machine *machine, UINT8 x, UINT8 y, UINT8 color)
 {
-	t6834_state *state = (t6834_state *)machine->driver_data;
+	t6834_state *state = machine->driver_data<t6834_state>();
 	if((x) < 120 && (y) < 32)
 		state->lcd_map[y][x] = color;
 }
@@ -833,7 +833,7 @@ static void draw_point(running_machine *machine, UINT8 x, UINT8 y, UINT8 color)
 
 static void draw_udk(running_machine *machine)
 {
-	t6834_state *state = (t6834_state *)machine->driver_data;
+	t6834_state *state = machine->driver_data<t6834_state>();
 	UINT8 i, x, j;
 
 	for(i = 0, x = 0; i < 5; i++)
@@ -856,10 +856,9 @@ static PALETTE_INIT( x07 )
 
 static VIDEO_UPDATE( x07 )
 {
-	t6834_state *state = (t6834_state *)screen->machine->driver_data;
-	static UINT8 cursor_blink = 0;
+	t6834_state *state = screen->machine->driver_data<t6834_state>();
 
-	cursor_blink++;
+	state->cursor_blink++;
 
 	if (state->lcd_on)
 		for(int y = 0; y < 4; y++)
@@ -868,7 +867,7 @@ static VIDEO_UPDATE( x07 )
 			for(int x = 0; x < 20; x++)
 			{
 				int px = x * 6;
-				if(state->cur_on && (cursor_blink & 0x20) && state->cur_x == x && state->cur_y == y)
+				if(state->cur_on && (state->cursor_blink & 0x20) && state->cur_x == x && state->cur_y == y)
 				{
 					for(int l = 0; l < 8; l++)
 					{
@@ -906,7 +905,7 @@ static VIDEO_UPDATE( x07 )
 
 static READ8_HANDLER( x07_IO_r )
 {
-	t6834_state *state = (t6834_state *)space->machine->driver_data;
+	t6834_state *state = space->machine->driver_data<t6834_state>();
 	UINT32 val = 0xff;
 
 	switch(offset)
@@ -956,7 +955,7 @@ static READ8_HANDLER( x07_IO_r )
 
 static WRITE8_HANDLER( x07_IO_w )
 {
-	t6834_state *state = (t6834_state *)space->machine->driver_data;
+	t6834_state *state = space->machine->driver_data<t6834_state>();
 
 	switch(offset)
 	{
@@ -977,7 +976,7 @@ static WRITE8_HANDLER( x07_IO_w )
 		state->enable_k7=((data & 0x0c) == 8) ? 1 : 0;
 		if((data & 0x0e) == 0x0e)
 		{
-			running_device *speaker = space->machine->device("beep");
+			device_t *speaker = space->machine->device("beep");
 
 			beep_set_state(speaker, 1);
 			beep_set_frequency(speaker, 192000 / (state->regs_w[2] | (state->regs_w[3] << 8)));
@@ -1113,7 +1112,7 @@ INPUT_PORTS_END
 
 static NVRAM_HANDLER( x07 )
 {
-	t6834_state *state = (t6834_state *)machine->driver_data;
+	t6834_state *state = machine->driver_data<t6834_state>();
 
 	if (read_or_write)
 	{
@@ -1135,7 +1134,7 @@ static NVRAM_HANDLER( x07 )
 			for(int i = 0; i < 12; i++)
 				strcpy((char*)state->t6834_ram + udk_ptr[i], udk_ini[i]);
 
-			memcpy(&state->udc, (UINT8*)memory_region(machine, "gfx1"), memory_region_length(machine, "gfx1"));
+			memcpy(&state->udc, (UINT8*)machine->region("gfx1")->base(), machine->region("gfx1")->bytes());
 		}
 	}
 }
@@ -1148,13 +1147,13 @@ static TIMER_CALLBACK( irq_clear )
 
 static TIMER_CALLBACK( beep_stop )
 {
-	running_device *speaker = machine->device("beep");
+	device_t *speaker = machine->device("beep");
 	beep_set_state(speaker, 0);
 }
 
 static TIMER_CALLBACK( keyboard_clear )
 {
-	t6834_state *state = (t6834_state *)machine->driver_data;
+	t6834_state *state = machine->driver_data<t6834_state>();
 
 	state->kb_wait = 0;
 }
@@ -1182,7 +1181,7 @@ GFXDECODE_END
 
 static MACHINE_START( x07 )
 {
-	t6834_state *state = (t6834_state *)machine->driver_data;
+	t6834_state *state = machine->driver_data<t6834_state>();
 
 	state->irq_clear = timer_alloc(machine, irq_clear, 0);
 	state->beep_clear = timer_alloc(machine, beep_stop, 0);
@@ -1236,7 +1235,7 @@ static MACHINE_START( x07 )
 
 static MACHINE_RESET( x07 )
 {
-	t6834_state *state = (t6834_state *)machine->driver_data;
+	t6834_state *state = machine->driver_data<t6834_state>();
 
 	cpu_set_reg(machine->device("maincpu"), Z80_PC, 0xc3c3);
 
@@ -1284,44 +1283,42 @@ static MACHINE_RESET( x07 )
 	state->regs_r[2] = input_port_read(machine, "CARDBATTERY");
 }
 
-static MACHINE_DRIVER_START( x07 )
-
-	MDRV_DRIVER_DATA(t6834_state)
+static MACHINE_CONFIG_START( x07, t6834_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", NSC800, XTAL_15_36MHz / 4)
-	MDRV_CPU_PROGRAM_MAP(x07_mem)
-	MDRV_CPU_IO_MAP(x07_io)
+	MCFG_CPU_ADD("maincpu", NSC800, XTAL_15_36MHz / 4)
+	MCFG_CPU_PROGRAM_MAP(x07_mem)
+	MCFG_CPU_IO_MAP(x07_io)
 
-	MDRV_MACHINE_START(x07)
-	MDRV_MACHINE_RESET(x07)
+	MCFG_MACHINE_START(x07)
+	MCFG_MACHINE_RESET(x07)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("lcd", LCD)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(120, 32)
-	MDRV_SCREEN_VISIBLE_AREA(0, 120-1, 0, 32-1)
-	MDRV_PALETTE_LENGTH(2)
-	MDRV_PALETTE_INIT(x07)
-	MDRV_DEFAULT_LAYOUT(layout_lcd)
-	MDRV_GFXDECODE(x07)
-	MDRV_VIDEO_UPDATE(x07)
+	MCFG_SCREEN_ADD("lcd", LCD)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(120, 32)
+	MCFG_SCREEN_VISIBLE_AREA(0, 120-1, 0, 32-1)
+	MCFG_PALETTE_LENGTH(2)
+	MCFG_PALETTE_INIT(x07)
+	MCFG_DEFAULT_LAYOUT(layout_lcd)
+	MCFG_GFXDECODE(x07)
+	MCFG_VIDEO_UPDATE(x07)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO( "mono" )
-	MDRV_SOUND_ADD( "beep", BEEP, 0 )
-	MDRV_SOUND_ROUTE( ALL_OUTPUTS, "mono", 1.00 )
+	MCFG_SPEAKER_STANDARD_MONO( "mono" )
+	MCFG_SOUND_ADD( "beep", BEEP, 0 )
+	MCFG_SOUND_ROUTE( ALL_OUTPUTS, "mono", 1.00 )
 
 	/* printer */
-	MDRV_PRINTER_ADD("printer")
+	MCFG_PRINTER_ADD("printer")
 
-	MDRV_TIMER_ADD_PERIODIC("keyboard", keyboard_poll, USEC(2500))
+	MCFG_TIMER_ADD_PERIODIC("keyboard", keyboard_poll, USEC(2500))
 
-	MDRV_NVRAM_HANDLER(x07)
+	MCFG_NVRAM_HANDLER(x07)
 
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
 /* ROM definition */
 ROM_START( x07 )

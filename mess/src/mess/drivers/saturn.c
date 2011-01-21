@@ -245,12 +245,12 @@ struct stv_irq_t
 	UINT8 abus;
 }stv_irq;
 
-static void dma_direct_lv0(const address_space *space);	/*DMA level 0 direct transfer function*/
-static void dma_direct_lv1(const address_space *space);   /*DMA level 1 direct transfer function*/
-static void dma_direct_lv2(const address_space *space);   /*DMA level 2 direct transfer function*/
-static void dma_indirect_lv0(const address_space *space); /*DMA level 0 indirect transfer function*/
-static void dma_indirect_lv1(const address_space *space); /*DMA level 1 indirect transfer function*/
-static void dma_indirect_lv2(const address_space *space); /*DMA level 2 indirect transfer function*/
+static void dma_direct_lv0(address_space *space);	/*DMA level 0 direct transfer function*/
+static void dma_direct_lv1(address_space *space);   /*DMA level 1 direct transfer function*/
+static void dma_direct_lv2(address_space *space);   /*DMA level 2 direct transfer function*/
+static void dma_indirect_lv0(address_space *space); /*DMA level 0 indirect transfer function*/
+static void dma_indirect_lv1(address_space *space); /*DMA level 1 indirect transfer function*/
+static void dma_indirect_lv2(address_space *space); /*DMA level 2 indirect transfer function*/
 
 
 int minit_boost,sinit_boost;
@@ -488,7 +488,7 @@ static void smpc_intbackhelper(running_machine *machine)
 	intback_stage++;
 }
 
-static UINT8 stv_SMPC_r8(const address_space *space, int offset)
+static UINT8 stv_SMPC_r8(address_space *space, int offset)
 {
 	int return_data;
 
@@ -545,7 +545,7 @@ static UINT8 stv_SMPC_r8(const address_space *space, int offset)
 	return return_data;
 }
 
-static void stv_SMPC_w8(const address_space *space, int offset, UINT8 data)
+static void stv_SMPC_w8(address_space *space, int offset, UINT8 data)
 {
 	system_time systime;
 	UINT8 last;
@@ -1293,7 +1293,7 @@ static TIMER_CALLBACK( dma_lv2_ended )
 	D2MV_0;
 }
 
-static void dma_direct_lv0(const address_space *space)
+static void dma_direct_lv0(address_space *space)
 {
 	static UINT32 tmp_src,tmp_dst,tmp_size;
 	if(LOG_SCU) logerror("DMA lv 0 transfer START\n"
@@ -1367,18 +1367,18 @@ static void dma_direct_lv0(const address_space *space)
 	for (; scu_size_0 > 0; scu_size_0-=scu_dst_add_0)
 	{
 		if(scu_dst_add_0 == 2)
-			memory_write_word(space,scu_dst_0,memory_read_word(space,scu_src_0));
+			space->write_word(scu_dst_0,space->read_word(scu_src_0));
 		else if(scu_dst_add_0 == 8)
 		{
-			memory_write_word(space,scu_dst_0,memory_read_word(space,scu_src_0));
-			memory_write_word(space,scu_dst_0+2,memory_read_word(space,scu_src_0));
-			memory_write_word(space,scu_dst_0+4,memory_read_word(space,scu_src_0+2));
-			memory_write_word(space,scu_dst_0+6,memory_read_word(space,scu_src_0+2));
+			space->write_word(scu_dst_0,space->read_word(scu_src_0));
+			space->write_word(scu_dst_0+2,space->read_word(scu_src_0));
+			space->write_word(scu_dst_0+4,space->read_word(scu_src_0+2));
+			space->write_word(scu_dst_0+6,space->read_word(scu_src_0+2));
 		}
 		else
 		{
-			memory_write_word(space,scu_dst_0,memory_read_word(space,scu_src_0));
-			memory_write_word(space,scu_dst_0+2,memory_read_word(space,scu_src_0+2));
+			space->write_word(scu_dst_0,space->read_word(scu_src_0));
+			space->write_word(scu_dst_0+2,space->read_word(scu_src_0+2));
 		}
 
 		scu_dst_0+=scu_dst_add_0;
@@ -1402,7 +1402,7 @@ static void dma_direct_lv0(const address_space *space)
 	}
 }
 
-static void dma_direct_lv1(const address_space *space)
+static void dma_direct_lv1(address_space *space)
 {
 	static UINT32 tmp_src,tmp_dst,tmp_size;
 	if(LOG_SCU) logerror("DMA lv 1 transfer START\n"
@@ -1476,11 +1476,11 @@ static void dma_direct_lv1(const address_space *space)
 	for (; scu_size_1 > 0; scu_size_1-=scu_dst_add_1)
 	{
 		if(scu_dst_add_1 == 2)
-			memory_write_word(space,scu_dst_1,memory_read_word(space,scu_src_1));
+			space->write_word(scu_dst_1,space->read_word(scu_src_1));
 		else
 		{
-			memory_write_word(space,scu_dst_1,memory_read_word(space,scu_src_1));
-			memory_write_word(space,scu_dst_1+2,memory_read_word(space,scu_src_1+2));
+			space->write_word(scu_dst_1,space->read_word(scu_src_1));
+			space->write_word(scu_dst_1+2,space->read_word(scu_src_1+2));
 		}
 
 		scu_dst_1+=scu_dst_add_1;
@@ -1503,7 +1503,7 @@ static void dma_direct_lv1(const address_space *space)
 	}
 }
 
-static void dma_direct_lv2(const address_space *space)
+static void dma_direct_lv2(address_space *space)
 {
 	static UINT32 tmp_src,tmp_dst,tmp_size;
 	if(LOG_SCU) logerror("DMA lv 2 transfer START\n"
@@ -1577,11 +1577,11 @@ static void dma_direct_lv2(const address_space *space)
 	for (; scu_size_2 > 0; scu_size_2-=scu_dst_add_2)
 	{
 		if(scu_dst_add_2 == 2)
-			memory_write_word(space,scu_dst_2,memory_read_word(space,scu_src_2));
+			space->write_word(scu_dst_2,space->read_word(scu_src_2));
 		else
 		{
-			memory_write_word(space,scu_dst_2,memory_read_word(space,scu_src_2));
-			memory_write_word(space,scu_dst_2+2,memory_read_word(space,scu_src_2+2));
+			space->write_word(scu_dst_2,space->read_word(scu_src_2));
+			space->write_word(scu_dst_2+2,space->read_word(scu_src_2+2));
 		}
 
 		scu_dst_2+=scu_dst_add_2;
@@ -1604,7 +1604,7 @@ static void dma_direct_lv2(const address_space *space)
 	}
 }
 
-static void dma_indirect_lv0(const address_space *space)
+static void dma_indirect_lv0(address_space *space)
 {
 	/*Helper to get out of the cycle*/
 	UINT8 job_done = 0;
@@ -1621,9 +1621,9 @@ static void dma_indirect_lv0(const address_space *space)
 		tmp_src = scu_index_0;
 
 		/*Thanks for Runik of Saturnin for pointing this out...*/
-		scu_size_0 = memory_read_dword(space,scu_index_0);
-		scu_src_0 =  memory_read_dword(space,scu_index_0+8);
-		scu_dst_0 =  memory_read_dword(space,scu_index_0+4);
+		scu_size_0 = space->read_dword(scu_index_0);
+		scu_src_0 =  space->read_dword(scu_index_0+8);
+		scu_dst_0 =  space->read_dword(scu_index_0+4);
 
 		/*Indirect Mode end factor*/
 		if(scu_src_0 & 0x80000000)
@@ -1647,7 +1647,7 @@ static void dma_indirect_lv0(const address_space *space)
 		for (; scu_size_0 > 0; scu_size_0-=scu_dst_add_0)
 		{
 			if(scu_dst_add_0 == 2)
-				memory_write_word(space,scu_dst_0,memory_read_word(space,scu_src_0));
+				space->write_word(scu_dst_0,space->read_word(scu_src_0));
 			else
 			{
 				/* some games, eg columns97 are a bit weird, I'm not sure this is correct
@@ -1655,15 +1655,15 @@ static void dma_indirect_lv0(const address_space *space)
                   can't access 2 byte boundaries, and the end of the sprite list never gets marked,
                   the length of the transfer is also set to a 2 byte boundary, maybe the add values
                   should be different, I don't know */
-				memory_write_word(space,scu_dst_0,memory_read_word(space,scu_src_0));
-				memory_write_word(space,scu_dst_0+2,memory_read_word(space,scu_src_0+2));
+				space->write_word(scu_dst_0,space->read_word(scu_src_0));
+				space->write_word(scu_dst_0+2,space->read_word(scu_src_0+2));
 			}
 			scu_dst_0+=scu_dst_add_0;
 			scu_src_0+=scu_src_add_0;
 		}
 
-		//if(DRUP(0))   memory_write_dword(space,tmp_src+8,scu_src_0|job_done ? 0x80000000 : 0);
-		//if(DWUP(0)) memory_write_dword(space,tmp_src+4,scu_dst_0);
+		//if(DRUP(0))   space->write_dword(tmp_src+8,scu_src_0|job_done ? 0x80000000 : 0);
+		//if(DWUP(0)) space->write_dword(tmp_src+4,scu_dst_0);
 
 		scu_index_0 = tmp_src+0xc;
 
@@ -1672,7 +1672,7 @@ static void dma_indirect_lv0(const address_space *space)
 	timer_set(space->machine, ATTOTIME_IN_USEC(300), NULL, 0, dma_lv0_ended);
 }
 
-static void dma_indirect_lv1(const address_space *space)
+static void dma_indirect_lv1(address_space *space)
 {
 	/*Helper to get out of the cycle*/
 	UINT8 job_done = 0;
@@ -1688,9 +1688,9 @@ static void dma_indirect_lv1(const address_space *space)
 	do{
 		tmp_src = scu_index_1;
 
-		scu_size_1 = memory_read_dword(space,scu_index_1);
-		scu_src_1 =  memory_read_dword(space,scu_index_1+8);
-		scu_dst_1 =  memory_read_dword(space,scu_index_1+4);
+		scu_size_1 = space->read_dword(scu_index_1);
+		scu_src_1 =  space->read_dword(scu_index_1+8);
+		scu_dst_1 =  space->read_dword(scu_index_1+4);
 
 		/*Indirect Mode end factor*/
 		if(scu_src_1 & 0x80000000)
@@ -1716,7 +1716,7 @@ static void dma_indirect_lv1(const address_space *space)
 		{
 
 			if(scu_dst_add_1 == 2)
-				memory_write_word(space,scu_dst_1,memory_read_word(space,scu_src_1));
+				space->write_word(scu_dst_1,space->read_word(scu_src_1));
 			else
 			{
 				/* some games, eg columns97 are a bit weird, I'm not sure this is correct
@@ -1724,15 +1724,15 @@ static void dma_indirect_lv1(const address_space *space)
                   can't access 2 byte boundaries, and the end of the sprite list never gets marked,
                   the length of the transfer is also set to a 2 byte boundary, maybe the add values
                   should be different, I don't know */
-				memory_write_word(space,scu_dst_1,memory_read_word(space,scu_src_1));
-				memory_write_word(space,scu_dst_1+2,memory_read_word(space,scu_src_1+2));
+				space->write_word(scu_dst_1,space->read_word(scu_src_1));
+				space->write_word(scu_dst_1+2,space->read_word(scu_src_1+2));
 			}
 			scu_dst_1+=scu_dst_add_1;
 			scu_src_1+=scu_src_add_1;
 		}
 
-		//if(DRUP(1))   memory_write_dword(space,tmp_src+8,scu_src_1|job_done ? 0x80000000 : 0);
-		//if(DWUP(1)) memory_write_dword(space,tmp_src+4,scu_dst_1);
+		//if(DRUP(1))   space->write_dword(tmp_src+8,scu_src_1|job_done ? 0x80000000 : 0);
+		//if(DWUP(1)) space->write_dword(tmp_src+4,scu_dst_1);
 
 		scu_index_1 = tmp_src+0xc;
 
@@ -1741,7 +1741,7 @@ static void dma_indirect_lv1(const address_space *space)
 	timer_set(space->machine, ATTOTIME_IN_USEC(300), NULL, 0, dma_lv1_ended);
 }
 
-static void dma_indirect_lv2(const address_space *space)
+static void dma_indirect_lv2(address_space *space)
 {
 	/*Helper to get out of the cycle*/
 	UINT8 job_done = 0;
@@ -1757,9 +1757,9 @@ static void dma_indirect_lv2(const address_space *space)
 	do{
 		tmp_src = scu_index_2;
 
-		scu_size_2 = memory_read_dword(space,scu_index_2);
-		scu_src_2 =  memory_read_dword(space,scu_index_2+8);
-		scu_dst_2 =  memory_read_dword(space,scu_index_2+4);
+		scu_size_2 = space->read_dword(scu_index_2);
+		scu_src_2 =  space->read_dword(scu_index_2+8);
+		scu_dst_2 =  space->read_dword(scu_index_2+4);
 
 		/*Indirect Mode end factor*/
 		if(scu_src_2 & 0x80000000)
@@ -1783,7 +1783,7 @@ static void dma_indirect_lv2(const address_space *space)
 		for (; scu_size_2 > 0; scu_size_2-=scu_dst_add_2)
 		{
 			if(scu_dst_add_2 == 2)
-				memory_write_word(space,scu_dst_2,memory_read_word(space,scu_src_2));
+				space->write_word(scu_dst_2,space->read_word(scu_src_2));
 			else
 			{
 				/* some games, eg columns97 are a bit weird, I'm not sure this is correct
@@ -1791,16 +1791,16 @@ static void dma_indirect_lv2(const address_space *space)
                   can't access 2 byte boundaries, and the end of the sprite list never gets marked,
                   the length of the transfer is also set to a 2 byte boundary, maybe the add values
                   should be different, I don't know */
-				memory_write_word(space,scu_dst_2,memory_read_word(space,scu_src_2));
-				memory_write_word(space,scu_dst_2+2,memory_read_word(space,scu_src_2+2));
+				space->write_word(scu_dst_2,space->read_word(scu_src_2));
+				space->write_word(scu_dst_2+2,space->read_word(scu_src_2+2));
 			}
 
 			scu_dst_2+=scu_dst_add_2;
 			scu_src_2+=scu_src_add_2;
 		}
 
-		//if(DRUP(2))   memory_write_dword(space,tmp_src+8,scu_src_2|job_done ? 0x80000000 : 0);
-		//if(DWUP(2)) memory_write_dword(space,tmp_src+4,scu_dst_2);
+		//if(DRUP(2))   space->write_dword(tmp_src+8,scu_src_2|job_done ? 0x80000000 : 0);
+		//if(DWUP(2)) space->write_dword(tmp_src+4,scu_dst_2);
 
 		scu_index_2 = tmp_src+0xc;
 
@@ -1827,7 +1827,7 @@ static READ32_HANDLER( stv_sh2_soundram_r )
 
 static READ32_HANDLER( stv_scsp_regs_r32 )
 {
-	running_device *scsp = space->machine->device("scsp");
+	device_t *scsp = space->machine->device("scsp");
 
 	offset <<= 1;
 	return (scsp_r(scsp, offset+1, 0xffff) | (scsp_r(scsp, offset, 0xffff)<<16));
@@ -1835,7 +1835,7 @@ static READ32_HANDLER( stv_scsp_regs_r32 )
 
 static WRITE32_HANDLER( stv_scsp_regs_w32 )
 {
-	running_device *scsp = space->machine->device("scsp");
+	device_t *scsp = space->machine->device("scsp");
 
 	offset <<= 1;
 	scsp_w(scsp, offset, data>>16, mem_mask >> 16);
@@ -2353,7 +2353,7 @@ GFXDECODE_END
 static const sh2_cpu_core sh2_conf_master = { 0 };
 static const sh2_cpu_core sh2_conf_slave  = { 1 };
 
-static void scsp_irq(running_device *device, int irq)
+static void scsp_irq(device_t *device, int irq)
 {
 	// don't bother the 68k if it's off
 	if (!en_68k)
@@ -2382,54 +2382,54 @@ static const scsp_interface saturn_scsp_interface =
 	scsp_irq
 };
 
-static MACHINE_DRIVER_START( saturn )
+static MACHINE_CONFIG_START( saturn, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", SH2, MASTER_CLOCK_352/2) // 28.6364 MHz
-	MDRV_CPU_PROGRAM_MAP(saturn_mem)
-	MDRV_CPU_VBLANK_INT("screen",stv_interrupt)
-	MDRV_CPU_CONFIG(sh2_conf_master)
+	MCFG_CPU_ADD("maincpu", SH2, MASTER_CLOCK_352/2) // 28.6364 MHz
+	MCFG_CPU_PROGRAM_MAP(saturn_mem)
+	MCFG_CPU_VBLANK_INT("screen",stv_interrupt)
+	MCFG_CPU_CONFIG(sh2_conf_master)
 
-	MDRV_CPU_ADD("slave", SH2, MASTER_CLOCK_352/2) // 28.6364 MHz
-	MDRV_CPU_PROGRAM_MAP(saturn_mem)
-	MDRV_CPU_CONFIG(sh2_conf_slave)
+	MCFG_CPU_ADD("slave", SH2, MASTER_CLOCK_352/2) // 28.6364 MHz
+	MCFG_CPU_PROGRAM_MAP(saturn_mem)
+	MCFG_CPU_CONFIG(sh2_conf_slave)
 
-	MDRV_CPU_ADD("audiocpu", M68000, MASTER_CLOCK_352/5) //11.46 MHz
-	MDRV_CPU_PROGRAM_MAP(sound_mem)
+	MCFG_CPU_ADD("audiocpu", M68000, MASTER_CLOCK_352/5) //11.46 MHz
+	MCFG_CPU_PROGRAM_MAP(sound_mem)
 
-	MDRV_MACHINE_START(saturn)
-	MDRV_MACHINE_RESET(saturn)
+	MCFG_MACHINE_START(saturn)
+	MCFG_MACHINE_RESET(saturn)
 
-	MDRV_NVRAM_HANDLER(saturn)
+	MCFG_NVRAM_HANDLER(saturn)
 
-	MDRV_TIMER_ADD("scan_timer", hblank_in_irq)
-	MDRV_TIMER_ADD("t1_timer", timer1_irq)
-	MDRV_TIMER_ADD("vbout_timer", vblank_out_irq)
-	MDRV_TIMER_ADD("sector_timer", stv_sector_cb)
+	MCFG_TIMER_ADD("scan_timer", hblank_in_irq)
+	MCFG_TIMER_ADD("t1_timer", timer1_irq)
+	MCFG_TIMER_ADD("vbout_timer", vblank_out_irq)
+	MCFG_TIMER_ADD("sector_timer", stv_sector_cb)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(192))	// guess, needed to force video update after V-Blank OUT interrupt
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB15)
-	MDRV_SCREEN_SIZE(704*2, 512*2)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 703, 0*8, 511) // we need to use a resolution as high as the max size it can change to
-	MDRV_PALETTE_LENGTH(2048+(2048*2))//standard palette + extra memory for rgb brightness.
-	MDRV_GFXDECODE(saturn)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(192))	// guess, needed to force video update after V-Blank OUT interrupt
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB15)
+	MCFG_SCREEN_SIZE(704*2, 512*2)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 703, 0*8, 511) // we need to use a resolution as high as the max size it can change to
+	MCFG_PALETTE_LENGTH(2048+(2048*2))//standard palette + extra memory for rgb brightness.
+	MCFG_GFXDECODE(saturn)
 
-	MDRV_VIDEO_START(stv_vdp2)
-	MDRV_VIDEO_UPDATE(stv_vdp2)
+	MCFG_VIDEO_START(stv_vdp2)
+	MCFG_VIDEO_UPDATE(stv_vdp2)
 
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("scsp", SCSP, 0)
-	MDRV_SOUND_CONFIG(saturn_scsp_interface)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("scsp", SCSP, 0)
+	MCFG_SOUND_CONFIG(saturn_scsp_interface)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
 
-	MDRV_CDROM_ADD( "cdrom" )
-	MDRV_CARTSLOT_ADD("cart")
-MACHINE_DRIVER_END
+	MCFG_CDROM_ADD( "cdrom" )
+	MCFG_CARTSLOT_ADD("cart")
+MACHINE_CONFIG_END
 
 
 /* Japanese Saturn */

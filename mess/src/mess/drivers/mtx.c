@@ -211,7 +211,7 @@ INPUT_PORTS_END
 
 static TIMER_DEVICE_CALLBACK( ctc_tick )
 {
-	mtx_state *state = (mtx_state *)timer.machine->driver_data;
+	mtx_state *state = timer.machine->driver_data<mtx_state>();
 
 	z80ctc_trg1_w(state->z80ctc, 1);
 	z80ctc_trg1_w(state->z80ctc, 0 );
@@ -221,7 +221,7 @@ static TIMER_DEVICE_CALLBACK( ctc_tick )
 
 static WRITE_LINE_DEVICE_HANDLER( ctc_trg1_w )
 {
-	mtx_state *driver_state = (mtx_state *)device->machine->driver_data;
+	mtx_state *driver_state = device->machine->driver_data<mtx_state>();
 
 	if (driver_state->z80dart != NULL)
 	{
@@ -232,7 +232,7 @@ static WRITE_LINE_DEVICE_HANDLER( ctc_trg1_w )
 
 static WRITE_LINE_DEVICE_HANDLER( ctc_trg2_w )
 {
-	mtx_state *driver_state = (mtx_state *)device->machine->driver_data;
+	mtx_state *driver_state = device->machine->driver_data<mtx_state>();
 
 	if (driver_state->z80dart != NULL)
 	{
@@ -258,13 +258,16 @@ static Z80DART_INTERFACE( dart_intf )
 	0,
 	0,
 	0,
+	0,
 
 	DEVCB_NULL,
 	DEVCB_NULL,
 	DEVCB_NULL,
 	DEVCB_NULL,
 	DEVCB_NULL,
+	DEVCB_NULL,
 
+	DEVCB_NULL,
 	DEVCB_NULL,
 	DEVCB_NULL,
 	DEVCB_NULL,
@@ -301,7 +304,7 @@ static const z80_daisy_config rs128_daisy_chain[] =
 
 static TIMER_DEVICE_CALLBACK( cassette_tick )
 {
-	mtx_state *state = (mtx_state *)timer.machine->driver_data;
+	mtx_state *state = timer.machine->driver_data<mtx_state>();
 	int data = (cassette_input(state->cassette) > +0.0) ? 0 : 1;
 
 	z80ctc_trg3_w(state->z80ctc, data);
@@ -320,80 +323,77 @@ static const cassette_config mtx_cassette_config =
 ***************************************************************************/
 
 /*-------------------------------------------------
-    MACHINE_DRIVER_START( mtx512 )
+    MACHINE_CONFIG_START( mtx512, mtx_state )
 -------------------------------------------------*/
 
-static MACHINE_DRIVER_START( mtx512 )
-	MDRV_DRIVER_DATA(mtx_state)
+static MACHINE_CONFIG_START( mtx512, mtx_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD(Z80_TAG, Z80, XTAL_4MHz)
-	MDRV_CPU_PROGRAM_MAP(mtx_mem)
-	MDRV_CPU_IO_MAP(mtx_io)
-	MDRV_CPU_VBLANK_INT(SCREEN_TAG, mtx_interrupt)
-	MDRV_CPU_CONFIG(mtx_daisy_chain)
+	MCFG_CPU_ADD(Z80_TAG, Z80, XTAL_4MHz)
+	MCFG_CPU_PROGRAM_MAP(mtx_mem)
+	MCFG_CPU_IO_MAP(mtx_io)
+	MCFG_CPU_VBLANK_INT(SCREEN_TAG, mtx_interrupt)
+	MCFG_CPU_CONFIG(mtx_daisy_chain)
 
-	MDRV_MACHINE_START(mtx512)
-	MDRV_MACHINE_RESET(mtx512)
+	MCFG_MACHINE_START(mtx512)
+	MCFG_MACHINE_RESET(mtx512)
 
 	/* video hardware */
-	MDRV_IMPORT_FROM(tms9928a)
-	MDRV_SCREEN_MODIFY(SCREEN_TAG)
-	MDRV_SCREEN_REFRESH_RATE(50)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
+	MCFG_FRAGMENT_ADD(tms9928a)
+	MCFG_SCREEN_MODIFY(SCREEN_TAG)
+	MCFG_SCREEN_REFRESH_RATE(50)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD(SN76489A_TAG, SN76489A, XTAL_4MHz)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD(SN76489A_TAG, SN76489A, XTAL_4MHz)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
 
 	/* devices */
-	MDRV_Z80CTC_ADD(Z80CTC_TAG, XTAL_4MHz, ctc_intf )
-	MDRV_TIMER_ADD_PERIODIC("z80ctc_timer", ctc_tick, HZ(XTAL_4MHz/13))
-	MDRV_CENTRONICS_ADD(CENTRONICS_TAG, standard_centronics)
-	MDRV_SNAPSHOT_ADD("snapshot", mtx, "mtb", 0.5)
-	MDRV_CASSETTE_ADD(CASSETTE_TAG, mtx_cassette_config)
-	MDRV_TIMER_ADD_PERIODIC("cassette_timer", cassette_tick, HZ(44100))
+	MCFG_Z80CTC_ADD(Z80CTC_TAG, XTAL_4MHz, ctc_intf )
+	MCFG_TIMER_ADD_PERIODIC("z80ctc_timer", ctc_tick, HZ(XTAL_4MHz/13))
+	MCFG_CENTRONICS_ADD(CENTRONICS_TAG, standard_centronics)
+	MCFG_SNAPSHOT_ADD("snapshot", mtx, "mtb", 0.5)
+	MCFG_CASSETTE_ADD(CASSETTE_TAG, mtx_cassette_config)
+	MCFG_TIMER_ADD_PERIODIC("cassette_timer", cassette_tick, HZ(44100))
 
 	/* internal ram */
-	MDRV_RAM_ADD("messram")
-	MDRV_RAM_DEFAULT_SIZE("64K")
-	MDRV_RAM_EXTRA_OPTIONS("96K,128K,160K,192K,224K,256K,288K,320K,352K,384K,416K,448K,480K,512K")
-MACHINE_DRIVER_END
+	MCFG_RAM_ADD("messram")
+	MCFG_RAM_DEFAULT_SIZE("64K")
+	MCFG_RAM_EXTRA_OPTIONS("96K,128K,160K,192K,224K,256K,288K,320K,352K,384K,416K,448K,480K,512K")
+MACHINE_CONFIG_END
 
 /*-------------------------------------------------
-    MACHINE_DRIVER_START( mtx500 )
+    MACHINE_CONFIG_DERIVED( mtx500, mtx512 )
 -------------------------------------------------*/
 
-static MACHINE_DRIVER_START( mtx500 )
-	MDRV_IMPORT_FROM(mtx512)
+static MACHINE_CONFIG_DERIVED( mtx500, mtx512 )
 
 	/* internal ram */
-	MDRV_RAM_MODIFY("messram")
-	MDRV_RAM_DEFAULT_SIZE("32K")
-	MDRV_RAM_EXTRA_OPTIONS("64K,96K,128K,160K,192K,224K,256K,288K,320K,352K,384K,416K,448K,480K,512K")
-MACHINE_DRIVER_END
+	MCFG_RAM_MODIFY("messram")
+	MCFG_RAM_DEFAULT_SIZE("32K")
+	MCFG_RAM_EXTRA_OPTIONS("64K,96K,128K,160K,192K,224K,256K,288K,320K,352K,384K,416K,448K,480K,512K")
+MACHINE_CONFIG_END
 
 /*-------------------------------------------------
-    MACHINE_DRIVER_START( rs128 )
+    MACHINE_CONFIG_DERIVED( rs128, mtx512 )
 -------------------------------------------------*/
 
-static MACHINE_DRIVER_START( rs128 )
-	MDRV_IMPORT_FROM(mtx512)
+static MACHINE_CONFIG_DERIVED( rs128, mtx512 )
 
 	/* basic machine hardware */
-	MDRV_CPU_MODIFY(Z80_TAG)
-	MDRV_CPU_IO_MAP(rs128_io)
-	MDRV_CPU_CONFIG(rs128_daisy_chain)
+	MCFG_CPU_MODIFY(Z80_TAG)
+	MCFG_CPU_IO_MAP(rs128_io)
+	MCFG_CPU_CONFIG(rs128_daisy_chain)
 
 	/* devices */
-	MDRV_Z80DART_ADD(Z80DART_TAG, XTAL_4MHz, dart_intf)
+	MCFG_Z80DART_ADD(Z80DART_TAG, XTAL_4MHz, dart_intf)
 
 	/* internal ram */
-	MDRV_RAM_MODIFY("messram")
-	MDRV_RAM_DEFAULT_SIZE("128K")
-	MDRV_RAM_EXTRA_OPTIONS("160K,192K,224K,256K,288K,320K,352K,384K,416K,448K,480K,512K")
-MACHINE_DRIVER_END
+	MCFG_RAM_MODIFY("messram")
+	MCFG_RAM_DEFAULT_SIZE("128K")
+	MCFG_RAM_EXTRA_OPTIONS("160K,192K,224K,256K,288K,320K,352K,384K,416K,448K,480K,512K")
+MACHINE_CONFIG_END
 
 /***************************************************************************
     ROMS
@@ -429,6 +429,6 @@ ROM_END
 ***************************************************************************/
 
 /*    YEAR  NAME      PARENT    COMPAT  MACHINE   INPUT     INIT    COMPANY          FULLNAME   FLAGS */
-COMP( 1983, mtx512,   0,		0,		mtx512,   mtx512,   0,		"Memotech Ltd.", "MTX 512", 0 )
-COMP( 1983, mtx500,   mtx512,   0,      mtx500,   mtx512,   0,		"Memotech Ltd.", "MTX 500", 0 )
-COMP( 1984, rs128,    mtx512,   0,      rs128,    mtx512,   0,		"Memotech Ltd.", "RS 128",  0 )
+COMP( 1983, mtx512,   0,		0,      mtx512,   mtx512,   0,		"Memotech Ltd", "MTX 512", 0 )
+COMP( 1983, mtx500,   mtx512,   0,      mtx500,   mtx512,   0,		"Memotech Ltd", "MTX 500", 0 )
+COMP( 1984, rs128,    mtx512,   0,      rs128,    mtx512,   0,		"Memotech Ltd", "RS 128",  0 )

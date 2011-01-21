@@ -148,13 +148,13 @@ Region byte at offset 0x031:
 
 static READ16_HANDLER( color_ram_word_r )
 {
-	slapshot_state *state = (slapshot_state *)space->machine->driver_data;
+	slapshot_state *state = space->machine->driver_data<slapshot_state>();
 	return state->color_ram[offset];
 }
 
 static WRITE16_HANDLER( color_ram_word_w )
 {
-	slapshot_state *state = (slapshot_state *)space->machine->driver_data;
+	slapshot_state *state = space->machine->driver_data<slapshot_state>();
 	int r,g,b;
 	COMBINE_DATA(&state->color_ram[offset]);
 
@@ -175,7 +175,7 @@ static WRITE16_HANDLER( color_ram_word_w )
 
 static TIMER_CALLBACK( slapshot_interrupt6 )
 {
-	slapshot_state *state = (slapshot_state *)machine->driver_data;
+	slapshot_state *state = machine->driver_data<slapshot_state>();
 	cpu_set_input_line(state->maincpu, 6, HOLD_LINE);
 }
 
@@ -193,7 +193,7 @@ static INTERRUPT_GEN( slapshot_interrupt )
 
 static READ16_HANDLER( slapshot_service_input_r )
 {
-	slapshot_state *state = (slapshot_state *)space->machine->driver_data;
+	slapshot_state *state = space->machine->driver_data<slapshot_state>();
 	switch (offset)
 	{
 		case 0x03:
@@ -233,7 +233,7 @@ static WRITE16_HANDLER( opwolf3_adc_req_w )
 		output_set_value("Player2_Gun_Recoil",0);
 	break;
 	}
-	slapshot_state *state = (slapshot_state *)space->machine->driver_data;
+	slapshot_state *state = space->machine->driver_data<slapshot_state>();
 
 	/* 4 writes a frame - one for each analogue port */
 	cpu_set_input_line(state->maincpu, 3, HOLD_LINE);
@@ -245,13 +245,13 @@ static WRITE16_HANDLER( opwolf3_adc_req_w )
 
 static void reset_sound_region( running_machine *machine )
 {
-	slapshot_state *state = (slapshot_state *)machine->driver_data;
+	slapshot_state *state = machine->driver_data<slapshot_state>();
 	memory_set_bank(machine, "bank10", state->banknum);
 }
 
 static WRITE8_HANDLER( sound_bankswitch_w )
 {
-	slapshot_state *state = (slapshot_state *)space->machine->driver_data;
+	slapshot_state *state = space->machine->driver_data<slapshot_state>();
 	state->banknum = data & 7;
 	reset_sound_region(space->machine);
 }
@@ -263,7 +263,7 @@ static WRITE8_HANDLER( sound_bankswitch_w )
 
 static WRITE16_HANDLER( slapshot_msb_sound_w )
 {
-	slapshot_state *state = (slapshot_state *)space->machine->driver_data;
+	slapshot_state *state = space->machine->driver_data<slapshot_state>();
 	if (offset == 0)
 		tc0140syt_port_w(state->tc0140syt, 0, (data >> 8) & 0xff);
 	else if (offset == 1)
@@ -277,7 +277,7 @@ static WRITE16_HANDLER( slapshot_msb_sound_w )
 
 static READ16_HANDLER( slapshot_msb_sound_r )
 {
-	slapshot_state *state = (slapshot_state *)space->machine->driver_data;
+	slapshot_state *state = space->machine->driver_data<slapshot_state>();
 	if (offset == 1)
 		return ((tc0140syt_comm_r(state->tc0140syt, 0) & 0xff) << 8);
 	else
@@ -490,9 +490,9 @@ GFXDECODE_END
 **************************************************************/
 
 /* handler called by the YM2610 emulator when the internal timers cause an IRQ */
-static void irqhandler( running_device *device, int irq )
+static void irqhandler( device_t *device, int irq )
 {
-	slapshot_state *state = (slapshot_state *)device->machine->driver_data;
+	slapshot_state *state = device->machine->driver_data<slapshot_state>();
 	cpu_set_input_line(state->audiocpu, 0, irq ? ASSERT_LINE : CLEAR_LINE);
 }
 
@@ -534,9 +534,9 @@ static STATE_POSTLOAD( slapshot_postload )
 
 static MACHINE_START( slapshot )
 {
-	slapshot_state *state = (slapshot_state *)machine->driver_data;
+	slapshot_state *state = machine->driver_data<slapshot_state>();
 
-	memory_configure_bank(machine, "bank10", 0, 4, memory_region(machine, "audiocpu") + 0xc000, 0x4000);
+	memory_configure_bank(machine, "bank10", 0, 4, machine->region("audiocpu")->base() + 0xc000, 0x4000);
 
 	state->maincpu = machine->device("maincpu");
 	state->audiocpu = machine->device("audiocpu");
@@ -551,109 +551,103 @@ static MACHINE_START( slapshot )
 }
 
 
-static MACHINE_DRIVER_START( slapshot )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(slapshot_state)
+static MACHINE_CONFIG_START( slapshot, slapshot_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 14346000)	/* 28.6860 MHz / 2 ??? */
-	MDRV_CPU_PROGRAM_MAP(slapshot_map)
-	MDRV_CPU_VBLANK_INT("screen", slapshot_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, 14346000)	/* 28.6860 MHz / 2 ??? */
+	MCFG_CPU_PROGRAM_MAP(slapshot_map)
+	MCFG_CPU_VBLANK_INT("screen", slapshot_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z80,32000000/8)	/* 4 MHz */
-	MDRV_CPU_PROGRAM_MAP(opwolf3_z80_sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80,32000000/8)	/* 4 MHz */
+	MCFG_CPU_PROGRAM_MAP(opwolf3_z80_sound_map)
 
-	MDRV_QUANTUM_TIME(HZ(600))
+	MCFG_QUANTUM_TIME(HZ(600))
 
-	MDRV_MACHINE_START(slapshot)
+	MCFG_MACHINE_START(slapshot)
 
-	MDRV_TC0640FIO_ADD("tc0640fio", slapshot_io_intf)
+	MCFG_TC0640FIO_ADD("tc0640fio", slapshot_io_intf)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(40*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(40*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(slapshot)
-	MDRV_PALETTE_LENGTH(8192)
+	MCFG_GFXDECODE(slapshot)
+	MCFG_PALETTE_LENGTH(8192)
 
-	MDRV_VIDEO_START(slapshot)
-	MDRV_VIDEO_EOF(taito_no_buffer)
-	MDRV_VIDEO_UPDATE(slapshot)
+	MCFG_VIDEO_START(slapshot)
+	MCFG_VIDEO_EOF(taito_no_buffer)
+	MCFG_VIDEO_UPDATE(slapshot)
 
-	MDRV_TC0480SCP_ADD("tc0480scp", slapshot_tc0480scp_intf)
-	MDRV_TC0360PRI_ADD("tc0360pri")
+	MCFG_TC0480SCP_ADD("tc0480scp", slapshot_tc0480scp_intf)
+	MCFG_TC0360PRI_ADD("tc0360pri")
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2610B, 16000000/2)
-	MDRV_SOUND_CONFIG(ym2610_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker",  0.25)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.25)
-	MDRV_SOUND_ROUTE(1, "lspeaker",  1.0)
-	MDRV_SOUND_ROUTE(2, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM2610B, 16000000/2)
+	MCFG_SOUND_CONFIG(ym2610_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker",  0.25)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.25)
+	MCFG_SOUND_ROUTE(1, "lspeaker",  1.0)
+	MCFG_SOUND_ROUTE(2, "rspeaker", 1.0)
 
-	MDRV_MK48T08_ADD( "mk48t08" )
+	MCFG_MK48T08_ADD( "mk48t08" )
 
-	MDRV_TC0140SYT_ADD("tc0140syt", slapshot_tc0140syt_intf)
-MACHINE_DRIVER_END
+	MCFG_TC0140SYT_ADD("tc0140syt", slapshot_tc0140syt_intf)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( opwolf3 )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(slapshot_state)
+static MACHINE_CONFIG_START( opwolf3, slapshot_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 14346000)	/* 28.6860 MHz / 2 ??? */
-	MDRV_CPU_PROGRAM_MAP(opwolf3_map)
-	MDRV_CPU_VBLANK_INT("screen", slapshot_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, 14346000)	/* 28.6860 MHz / 2 ??? */
+	MCFG_CPU_PROGRAM_MAP(opwolf3_map)
+	MCFG_CPU_VBLANK_INT("screen", slapshot_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z80,32000000/8)	/* 4 MHz */
-	MDRV_CPU_PROGRAM_MAP(opwolf3_z80_sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80,32000000/8)	/* 4 MHz */
+	MCFG_CPU_PROGRAM_MAP(opwolf3_z80_sound_map)
 
-	MDRV_QUANTUM_TIME(HZ(600))
+	MCFG_QUANTUM_TIME(HZ(600))
 
-	MDRV_MACHINE_START(slapshot)
+	MCFG_MACHINE_START(slapshot)
 
-	MDRV_TC0640FIO_ADD("tc0640fio", slapshot_io_intf)
+	MCFG_TC0640FIO_ADD("tc0640fio", slapshot_io_intf)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(40*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(40*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(slapshot)
-	MDRV_PALETTE_LENGTH(8192)
+	MCFG_GFXDECODE(slapshot)
+	MCFG_PALETTE_LENGTH(8192)
 
-	MDRV_VIDEO_START(slapshot)
-	MDRV_VIDEO_EOF(taito_no_buffer)
-	MDRV_VIDEO_UPDATE(slapshot)
+	MCFG_VIDEO_START(slapshot)
+	MCFG_VIDEO_EOF(taito_no_buffer)
+	MCFG_VIDEO_UPDATE(slapshot)
 
-	MDRV_TC0480SCP_ADD("tc0480scp", slapshot_tc0480scp_intf)
-	MDRV_TC0360PRI_ADD("tc0360pri")
+	MCFG_TC0480SCP_ADD("tc0480scp", slapshot_tc0480scp_intf)
+	MCFG_TC0360PRI_ADD("tc0360pri")
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2610B, 16000000/2)
-	MDRV_SOUND_CONFIG(ym2610_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker",  0.25)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.25)
-	MDRV_SOUND_ROUTE(1, "lspeaker",  1.0)
-	MDRV_SOUND_ROUTE(2, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM2610B, 16000000/2)
+	MCFG_SOUND_CONFIG(ym2610_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker",  0.25)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.25)
+	MCFG_SOUND_ROUTE(1, "lspeaker",  1.0)
+	MCFG_SOUND_ROUTE(2, "rspeaker", 1.0)
 
-	MDRV_MK48T08_ADD( "mk48t08" )
+	MCFG_MK48T08_ADD( "mk48t08" )
 
-	MDRV_TC0140SYT_ADD("tc0140syt", slapshot_tc0140syt_intf)
-MACHINE_DRIVER_END
+	MCFG_TC0140SYT_ADD("tc0140syt", slapshot_tc0140syt_intf)
+MACHINE_CONFIG_END
 
 /***************************************************************************
                     DRIVERS
@@ -750,8 +744,8 @@ ROM_END
 static DRIVER_INIT( slapshot )
 {
 	UINT32 offset,i;
-	UINT8 *gfx = memory_region(machine, "gfx2");
-	int size = memory_region_length(machine, "gfx2");
+	UINT8 *gfx = machine->region("gfx2")->base();
+	int size = machine->region("gfx2")->bytes();
 	int data;
 
 	offset = size / 2;

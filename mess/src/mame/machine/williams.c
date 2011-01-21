@@ -26,9 +26,9 @@ static UINT8 vram_bank;
 static UINT16 joust2_current_sound_data;
 
 /* older-Williams routines */
-static void williams_main_irq(running_device *device, int state);
-static void williams_main_firq(running_device *device, int state);
-static void williams_snd_irq(running_device *device, int state);
+static void williams_main_irq(device_t *device, int state);
+static void williams_main_firq(device_t *device, int state);
+static void williams_snd_irq(device_t *device, int state);
 static WRITE8_DEVICE_HANDLER( williams_snd_cmd_w );
 static WRITE8_DEVICE_HANDLER( playball_snd_cmd_w );
 
@@ -40,8 +40,8 @@ static READ8_DEVICE_HANDLER( williams_49way_port_0_r );
 
 /* newer-Williams routines */
 static WRITE8_DEVICE_HANDLER( williams2_snd_cmd_w );
-static void mysticm_main_irq(running_device *device, int state);
-static void tshoot_main_irq(running_device *device, int state);
+static void mysticm_main_irq(device_t *device, int state);
+static void tshoot_main_irq(device_t *device, int state);
 
 /* Lotto Fun-specific code */
 static WRITE8_DEVICE_HANDLER( lottofun_coin_lock_w );
@@ -287,7 +287,7 @@ TIMER_DEVICE_CALLBACK( williams_count240_callback )
 }
 
 
-static void williams_main_irq(running_device *device, int state)
+static void williams_main_irq(device_t *device, int state)
 {
 	pia6821_device *pia_1 = device->machine->device<pia6821_device>("pia_1");
 	int combined_state = pia6821_get_irq_a(pia_1) | pia6821_get_irq_b(pia_1);
@@ -297,14 +297,14 @@ static void williams_main_irq(running_device *device, int state)
 }
 
 
-static void williams_main_firq(running_device *device, int state)
+static void williams_main_firq(device_t *device, int state)
 {
 	/* FIRQ to the main CPU */
 	cputag_set_input_line(device->machine, "maincpu", M6809_FIRQ_LINE, state ? ASSERT_LINE : CLEAR_LINE);
 }
 
 
-static void williams_snd_irq(running_device *device, int state)
+static void williams_snd_irq(device_t *device, int state)
 {
 	pia6821_device *pia_2 = device->machine->device<pia6821_device>("pia_2");
 	int combined_state = pia6821_get_irq_a(pia_2) | pia6821_get_irq_b(pia_2);
@@ -321,7 +321,7 @@ static void williams_snd_irq(running_device *device, int state)
  *
  *************************************/
 
-static void mysticm_main_irq(running_device *device, int state)
+static void mysticm_main_irq(device_t *device, int state)
 {
 	pia6821_device *pia_0 = device->machine->device<pia6821_device>("pia_0");
 	pia6821_device *pia_1 = device->machine->device<pia6821_device>("pia_1");
@@ -332,7 +332,7 @@ static void mysticm_main_irq(running_device *device, int state)
 }
 
 
-static void tshoot_main_irq(running_device *device, int state)
+static void tshoot_main_irq(device_t *device, int state)
 {
 	pia6821_device *pia_0 = device->machine->device<pia6821_device>("pia_0");
 	pia6821_device *pia_1 = device->machine->device<pia6821_device>("pia_1");
@@ -354,7 +354,7 @@ static MACHINE_START( williams_common )
 {
 	/* configure the memory bank */
 	memory_configure_bank(machine, "bank1", 0, 1, williams_videoram, 0);
-	memory_configure_bank(machine, "bank1", 1, 1, memory_region(machine, "maincpu") + 0x10000, 0);
+	memory_configure_bank(machine, "bank1", 1, 1, machine->region("maincpu")->base() + 0x10000, 0);
 
 	state_save_register_global(machine, vram_bank);
 }
@@ -441,7 +441,7 @@ TIMER_DEVICE_CALLBACK( williams2_endscreen_callback )
 
 static STATE_POSTLOAD( williams2_postload )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 	williams2_bank_select_w(space, 0, vram_bank);
 }
 
@@ -450,7 +450,7 @@ MACHINE_START( williams2 )
 {
 	/* configure memory banks */
 	memory_configure_bank(machine, "bank1", 0, 1, williams_videoram, 0);
-	memory_configure_bank(machine, "bank1", 1, 4, memory_region(machine, "maincpu") + 0x10000, 0x10000);
+	memory_configure_bank(machine, "bank1", 1, 4, machine->region("maincpu")->base() + 0x10000, 0x10000);
 
 	/* register for save states */
 	state_save_register_global(machine, vram_bank);
@@ -460,7 +460,7 @@ MACHINE_START( williams2 )
 
 MACHINE_RESET( williams2 )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	/* make sure our banking is reset */
 	williams2_bank_select_w(space, 0, 0);
@@ -641,14 +641,16 @@ READ8_DEVICE_HANDLER( williams_input_port_49way_0_5_r )
 WRITE8_HANDLER( williams_cmos_w )
 {
 	/* only 4 bits are valid */
-	space->machine->generic.nvram.u8[offset] = data | 0xf0;
+	williams_state *state = space->machine->driver_data<williams_state>();
+	state->m_nvram[offset] = data | 0xf0;
 }
 
 
 WRITE8_HANDLER( bubbles_cmos_w )
 {
 	/* bubbles has additional CMOS for a full 8 bits */
-	space->machine->generic.nvram.u8[offset] = data;
+	williams_state *state = space->machine->driver_data<williams_state>();
+	state->m_nvram[offset] = data;
 }
 
 
@@ -725,7 +727,7 @@ WRITE8_HANDLER( williams2_7segment_w )
 
 static STATE_POSTLOAD( defender_postload )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 	defender_bank_select_w(space, 0, vram_bank);
 }
 
@@ -735,7 +737,7 @@ MACHINE_START( defender )
 	MACHINE_START_CALL(williams_common);
 
 	/* configure the banking and make sure it is reset to 0 */
-	memory_configure_bank(machine, "bank1", 0, 9, &memory_region(machine, "maincpu")[0x10000], 0x1000);
+	memory_configure_bank(machine, "bank1", 0, 9, &machine->region("maincpu")->base()[0x10000], 0x1000);
 
 	state_save_register_postload(machine, defender_postload, NULL);
 }
@@ -743,7 +745,7 @@ MACHINE_START( defender )
 
 MACHINE_RESET( defender )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	MACHINE_RESET_CALL(williams_common);
 
@@ -840,10 +842,10 @@ MACHINE_START( blaster )
 
 	/* banking is different for blaster */
 	memory_configure_bank(machine, "bank1", 0, 1, williams_videoram, 0);
-	memory_configure_bank(machine, "bank1", 1, 16, memory_region(machine, "maincpu") + 0x18000, 0x4000);
+	memory_configure_bank(machine, "bank1", 1, 16, machine->region("maincpu")->base() + 0x18000, 0x4000);
 
 	memory_configure_bank(machine, "bank2", 0, 1, williams_videoram + 0x4000, 0);
-	memory_configure_bank(machine, "bank2", 1, 16, memory_region(machine, "maincpu") + 0x10000, 0x0000);
+	memory_configure_bank(machine, "bank2", 1, 16, machine->region("maincpu")->base() + 0x10000, 0x0000);
 
 	state_save_register_global(machine, blaster_bank);
 }

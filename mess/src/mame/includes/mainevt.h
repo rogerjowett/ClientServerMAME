@@ -4,12 +4,11 @@
 
 *************************************************************************/
 
-class mainevt_state
+class mainevt_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, mainevt_state(machine)); }
-
-	mainevt_state(running_machine &machine) { }
+	mainevt_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 //  UINT8 *    paletteram;    // currently this uses generic palette handling
@@ -21,12 +20,12 @@ public:
 	int        nmi_enable;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *audiocpu;
-	running_device *upd;
-	running_device *k007232;
-	running_device *k052109;
-	running_device *k051960;
+	device_t *maincpu;
+	device_t *audiocpu;
+	device_t *upd;
+	device_t *k007232;
+	device_t *k052109;
+	device_t *k051960;
 };
 
 /*----------- defined in video/mainevt.c -----------*/

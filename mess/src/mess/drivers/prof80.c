@@ -88,7 +88,7 @@ static const UINT8 prof80_keycodes[3][9][8] =
 
 static void prof80_keyboard_scan(running_machine *machine)
 {
-	prof80_state *state = (prof80_state *)machine->driver_data;
+	prof80_state *state = machine->driver_data<prof80_state>();
 
 	static const char *const keynames[] = { "ROW0", "ROW1", "ROW2", "ROW3", "ROW4", "ROW5", "ROW6", "ROW7", "ROW8" };
 	int table = 0, row, col;
@@ -136,7 +136,7 @@ static void prof80_keyboard_scan(running_machine *machine)
 
 static TIMER_DEVICE_CALLBACK( keyboard_tick )
 {
-	prof80_state *state = (prof80_state *)timer.machine->driver_data;
+	prof80_state *state = timer.machine->driver_data<prof80_state>();
 
 	if (!state->kbf) prof80_keyboard_scan(timer.machine);
 }
@@ -151,10 +151,10 @@ static TIMER_DEVICE_CALLBACK( keyboard_tick )
 
 static void prof80_bankswitch(running_machine *machine)
 {
-	prof80_state *state = (prof80_state *)machine->driver_data;
-	const address_space *program = cputag_get_address_space(machine, Z80_TAG, ADDRESS_SPACE_PROGRAM);
+	prof80_state *state = machine->driver_data<prof80_state>();
+	address_space *program = cputag_get_address_space(machine, Z80_TAG, ADDRESS_SPACE_PROGRAM);
 	UINT8 *ram = messram_get_ptr(machine->device("messram"));
-	UINT8 *rom = memory_region(machine, Z80_TAG);
+	UINT8 *rom = machine->region(Z80_TAG)->base();
 	int bank;
 
 	for (bank = 0; bank < 16; bank++)
@@ -195,7 +195,7 @@ static void prof80_bankswitch(running_machine *machine)
 
 static TIMER_CALLBACK( floppy_motor_off_tick )
 {
-	prof80_state *state = (prof80_state *)machine->driver_data;
+	prof80_state *state = machine->driver_data<prof80_state>();
 
 	floppy_mon_w(floppy_get_device(machine, 0), ASSERT_LINE);
 	floppy_mon_w(floppy_get_device(machine, 1), ASSERT_LINE);
@@ -207,7 +207,7 @@ static TIMER_CALLBACK( floppy_motor_off_tick )
 
 static void ls259_w(running_machine *machine, int fa, int sa, int fb, int sb)
 {
-	prof80_state *state = (prof80_state *)machine->driver_data;
+	prof80_state *state = machine->driver_data<prof80_state>();
 
 	switch (sa)
 	{
@@ -346,7 +346,7 @@ static READ8_HANDLER( status_r )
 
     */
 
-	prof80_state *state = (prof80_state *)space->machine->driver_data;
+	prof80_state *state = space->machine->driver_data<prof80_state>();
 
 	return (state->fdc_index << 5) | 0x01;
 }
@@ -368,7 +368,7 @@ static READ8_HANDLER( status2_r )
 
     */
 
-	prof80_state *state = (prof80_state *)space->machine->driver_data;
+	prof80_state *state = space->machine->driver_data<prof80_state>();
 	UINT8 data = 0;
 	int js4 = 0, js5 = 0;
 
@@ -407,7 +407,7 @@ static READ8_HANDLER( status2_r )
 
 static WRITE8_HANDLER( par_w )
 {
-	prof80_state *state = (prof80_state *)space->machine->driver_data;
+	prof80_state *state = space->machine->driver_data<prof80_state>();
 
 	int bank = offset >> 12;
 
@@ -420,7 +420,7 @@ static WRITE8_HANDLER( par_w )
 
 static READ8_HANDLER( gripc_r )
 {
-	prof80_state *state = (prof80_state *)space->machine->driver_data;
+	prof80_state *state = space->machine->driver_data<prof80_state>();
 
 	//logerror("GRIP status read %02x\n", state->gripc);
 
@@ -429,7 +429,7 @@ static READ8_HANDLER( gripc_r )
 
 static READ8_HANDLER( gripd_r )
 {
-	prof80_state *state = (prof80_state *)space->machine->driver_data;
+	prof80_state *state = space->machine->driver_data<prof80_state>();
 
 	//logerror("GRIP data read %02x\n", state->gripd);
 
@@ -442,7 +442,7 @@ static READ8_HANDLER( gripd_r )
 
 static WRITE8_HANDLER( gripd_w )
 {
-	prof80_state *state = (prof80_state *)space->machine->driver_data;
+	prof80_state *state = space->machine->driver_data<prof80_state>();
 
 	state->gripd = data;
 	//logerror("GRIP data write %02x\n", data);
@@ -456,28 +456,28 @@ static WRITE8_HANDLER( gripd_w )
 
 static WRITE8_HANDLER( vol0_w )
 {
-	prof80_state *state = (prof80_state *)space->machine->driver_data;
+	prof80_state *state = space->machine->driver_data<prof80_state>();
 
 	state->vol0 = BIT(data, 7);
 }
 
 static WRITE8_HANDLER( vol1_w )
 {
-	prof80_state *state = (prof80_state *)space->machine->driver_data;
+	prof80_state *state = space->machine->driver_data<prof80_state>();
 
 	state->vol1 = BIT(data, 7);
 }
 
 static WRITE8_HANDLER( flash_w )
 {
-	prof80_state *state = (prof80_state *)space->machine->driver_data;
+	prof80_state *state = space->machine->driver_data<prof80_state>();
 
 	state->flash = BIT(data, 7);
 }
 
 static WRITE8_HANDLER( page_w )
 {
-	prof80_state *state = (prof80_state *)space->machine->driver_data;
+	prof80_state *state = space->machine->driver_data<prof80_state>();
 
 	state->page = BIT(data, 7);
 
@@ -501,7 +501,7 @@ static READ8_HANDLER( stat_r )
 
     */
 
-	prof80_state *state = (prof80_state *)space->machine->driver_data;
+	prof80_state *state = space->machine->driver_data<prof80_state>();
 	UINT8 data = 0;
 	int js0 = 0, js1 = 0;
 
@@ -540,7 +540,7 @@ static READ8_HANDLER( stat_r )
 
 static READ8_HANDLER( lrs_r )
 {
-	prof80_state *state = (prof80_state *)space->machine->driver_data;
+	prof80_state *state = space->machine->driver_data<prof80_state>();
 
 	state->lps = 0;
 
@@ -549,14 +549,14 @@ static READ8_HANDLER( lrs_r )
 
 static WRITE8_HANDLER( lrs_w )
 {
-	prof80_state *state = (prof80_state *)space->machine->driver_data;
+	prof80_state *state = space->machine->driver_data<prof80_state>();
 
 	state->lps = 0;
 }
 
 static READ8_HANDLER( cxstb_r )
 {
-	prof80_state *state = (prof80_state *)space->machine->driver_data;
+	prof80_state *state = space->machine->driver_data<prof80_state>();
 
 	centronics_strobe_w(state->centronics, 0);
 	centronics_strobe_w(state->centronics, 1);
@@ -566,7 +566,7 @@ static READ8_HANDLER( cxstb_r )
 
 static WRITE8_HANDLER( cxstb_w )
 {
-	prof80_state *state = (prof80_state *)space->machine->driver_data;
+	prof80_state *state = space->machine->driver_data<prof80_state>();
 
 	centronics_strobe_w(state->centronics, 0);
 	centronics_strobe_w(state->centronics, 1);
@@ -576,7 +576,7 @@ static WRITE8_HANDLER( cxstb_w )
 
 static WRITE8_HANDLER( unio_ctrl_w )
 {
-//  prof80_state *state = (prof80_state *)space->machine->driver_data;
+//  prof80_state *state = space->machine->driver_data<prof80_state>();
 
 //  int flag = BIT(data, 0);
 	int flad = (data >> 1) & 0x07;
@@ -772,7 +772,7 @@ static INPUT_PORTS_START( ascii_keyboard )
 	PORT_START("ROW6")
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("RETURN") PORT_CODE(KEYCODE_ENTER) PORT_CHAR('\r')
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("LINE FEED") PORT_CODE(KEYCODE_ENTER_PAD)
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("\xE2\x86\x91") PORT_CODE(KEYCODE_UP) PORT_CHAR(UCHAR_MAMEKEY(UP))
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(UTF8_UP) PORT_CODE(KEYCODE_UP) PORT_CHAR(UCHAR_MAMEKEY(UP))
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad 1") PORT_CODE(KEYCODE_1_PAD)
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad 2") PORT_CODE(KEYCODE_2_PAD)
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad 3") PORT_CODE(KEYCODE_3_PAD)
@@ -790,9 +790,9 @@ static INPUT_PORTS_START( ascii_keyboard )
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_SLASH) PORT_CHAR('/') PORT_CHAR('?')
 
 	PORT_START("ROW8")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("\xE2\x86\x90") PORT_CODE(KEYCODE_LEFT) PORT_CHAR(UCHAR_MAMEKEY(LEFT))
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("\xE2\x86\x93") PORT_CODE(KEYCODE_DOWN) PORT_CHAR(UCHAR_MAMEKEY(DOWN))
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("\xE2\x86\x92") PORT_CODE(KEYCODE_RIGHT) PORT_CHAR(UCHAR_MAMEKEY(RIGHT))
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(UTF8_LEFT) PORT_CODE(KEYCODE_LEFT) PORT_CHAR(UCHAR_MAMEKEY(LEFT))
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(UTF8_DOWN) PORT_CODE(KEYCODE_DOWN) PORT_CHAR(UCHAR_MAMEKEY(DOWN))
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(UTF8_RIGHT) PORT_CODE(KEYCODE_RIGHT) PORT_CHAR(UCHAR_MAMEKEY(RIGHT))
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad 0") PORT_CODE(KEYCODE_0_PAD)
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad .") PORT_CODE(KEYCODE_ASTERISK)
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("SPACE") PORT_CODE(KEYCODE_SPACE) PORT_CHAR(' ')
@@ -944,7 +944,7 @@ INPUT_PORTS_END
 
 static MC6845_UPDATE_ROW( grip_update_row )
 {
-	prof80_state *state = (prof80_state *)device->machine->driver_data;
+	prof80_state *state = device->machine->driver_data<prof80_state>();
 	int column, bit;
 
 	for (column = 0; column < x_count; column++)
@@ -982,7 +982,7 @@ static VIDEO_START( grip )
 
 static VIDEO_UPDATE( grip )
 {
-	prof80_state *state = (prof80_state *)screen->machine->driver_data;
+	prof80_state *state = screen->machine->driver_data<prof80_state>();
 
 	mc6845_update(state->mc6845, bitmap, cliprect);
 
@@ -999,9 +999,9 @@ static UPD1990A_INTERFACE( prof80_upd1990a_intf )
 
 /* UPD765 Interface */
 
-static void prof80_fdc_index_callback(running_device *controller, running_device *img, int state)
+static void prof80_fdc_index_callback(device_t *controller, device_t *img, int state)
 {
-	prof80_state *driver_state = (prof80_state *)img->machine->driver_data;
+	prof80_state *driver_state = img->machine->driver_data<prof80_state>();
 
 	driver_state->fdc_index = state;
 }
@@ -1009,10 +1009,10 @@ static void prof80_fdc_index_callback(running_device *controller, running_device
 static const struct upd765_interface prof80_upd765_interface =
 {
 	DEVCB_NULL,
-	NULL,
+	DEVCB_NULL,
 	NULL,
 	UPD765_RDY_PIN_CONNECTED,
-	{ FLOPPY_0, FLOPPY_1, FLOPPY_2, FLOPPY_3 }
+	{ FLOPPY_0, FLOPPY_1, NULL, NULL }
 };
 
 /* PPI8255 Interface */
@@ -1034,7 +1034,7 @@ static READ8_DEVICE_HANDLER( grip_ppi8255_a_r )
 
     */
 
-	prof80_state *state = (prof80_state *)device->machine->driver_data;
+	prof80_state *state = device->machine->driver_data<prof80_state>();
 
 	return state->gripd;
 }
@@ -1056,7 +1056,7 @@ static WRITE8_DEVICE_HANDLER( grip_ppi8255_a_w )
 
     */
 
-	prof80_state *state = (prof80_state *)device->machine->driver_data;
+	prof80_state *state = device->machine->driver_data<prof80_state>();
 
 	state->gripd = data;
 }
@@ -1078,7 +1078,7 @@ static READ8_DEVICE_HANDLER( grip_ppi8255_b_r )
 
     */
 
-	prof80_state *state = (prof80_state *)device->machine->driver_data;
+	prof80_state *state = device->machine->driver_data<prof80_state>();
 
 	return state->keydata;
 }
@@ -1100,7 +1100,7 @@ static WRITE8_DEVICE_HANDLER( grip_ppi8255_c_w )
 
     */
 
-	prof80_state *state = (prof80_state *)device->machine->driver_data;
+	prof80_state *state = device->machine->driver_data<prof80_state>();
 
 	/* keyboard interrupt */
 	z80sti_i4_w(state->z80sti, BIT(data, 0));
@@ -1144,14 +1144,14 @@ static READ8_DEVICE_HANDLER( grip_z80sti_gpio_r )
 
     */
 
-	prof80_state *state = (prof80_state *)device->machine->driver_data;
+	prof80_state *state = device->machine->driver_data<prof80_state>();
 
 	return centronics_busy_r(state->centronics) << 3;
 }
 
 static WRITE_LINE_DEVICE_HANDLER( grip_speaker_w )
 {
-	prof80_state *driver_state = (prof80_state *)device->machine->driver_data;
+	prof80_state *driver_state = device->machine->driver_data<prof80_state>();
 	int level = state && ((driver_state->vol1 << 1) | driver_state->vol0);
 
 	speaker_level_w(device, level);
@@ -1184,7 +1184,7 @@ static const z80_daisy_config grip_daisy_chain[] =
 
 static MACHINE_START( prof80 )
 {
-	prof80_state *state = (prof80_state *)machine->driver_data;
+	prof80_state *state = machine->driver_data<prof80_state>();
 
 	/* find devices */
 	state->upd765 = machine->device(UPD765_TAG);
@@ -1216,7 +1216,7 @@ static MACHINE_START( prof80 )
 
 static MACHINE_RESET( prof80 )
 {
-	prof80_state *state = (prof80_state *)machine->driver_data;
+	prof80_state *state = machine->driver_data<prof80_state>();
 
 	int i;
 
@@ -1230,7 +1230,7 @@ static MACHINE_RESET( prof80 )
 
 static MACHINE_START( grip )
 {
-	prof80_state *state = (prof80_state *)machine->driver_data;
+	prof80_state *state = machine->driver_data<prof80_state>();
 
 	MACHINE_START_CALL(prof80);
 
@@ -1278,102 +1278,81 @@ static const speaker_interface grip_speaker_interface =
 	speaker_levels
 };
 
-static VIDEO_START( prof80 )
-{
-}
-
-static VIDEO_UPDATE( prof80 )
-{
-	return 0;
-}
-
-
 /* Machine Drivers */
 
-static MACHINE_DRIVER_START( prof80 )
-	MDRV_DRIVER_DATA(prof80_state)
-
+static MACHINE_CONFIG_START( prof80, prof80_state )
     /* basic machine hardware */
-    MDRV_CPU_ADD(Z80_TAG, Z80, XTAL_6MHz)
-    MDRV_CPU_PROGRAM_MAP(prof80_mem)
-    MDRV_CPU_IO_MAP(prof80_io)
+    MCFG_CPU_ADD(Z80_TAG, Z80, XTAL_6MHz)
+    MCFG_CPU_PROGRAM_MAP(prof80_mem)
+    MCFG_CPU_IO_MAP(prof80_io)
 
-	MDRV_MACHINE_START(prof80)
-	MDRV_MACHINE_RESET(prof80)
-
-	/* devices */
-	MDRV_UPD1990A_ADD(UPD1990A_TAG, XTAL_32_768kHz, prof80_upd1990a_intf)
-	MDRV_UPD765A_ADD(UPD765_TAG, prof80_upd765_interface)
-	MDRV_FLOPPY_4_DRIVES_ADD(prof80_floppy_config)
+	MCFG_MACHINE_START(prof80)
+	MCFG_MACHINE_RESET(prof80)
 
     /* video hardware */
-    MDRV_SCREEN_ADD(SCREEN_TAG, RASTER)
-    MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-    MDRV_SCREEN_SIZE(640, 480)
-    MDRV_SCREEN_VISIBLE_AREA(0, 639, 0, 479)
-    MDRV_PALETTE_LENGTH(2)
-    MDRV_PALETTE_INIT(black_and_white)
-
-    MDRV_VIDEO_START(prof80)
-    MDRV_VIDEO_UPDATE(prof80)
-
-	/* internal ram */
-	MDRV_RAM_ADD("messram")
-	MDRV_RAM_DEFAULT_SIZE("128K")
-MACHINE_DRIVER_END
-
-static MACHINE_DRIVER_START( grip )
-	MDRV_IMPORT_FROM(prof80)
-
-    MDRV_CPU_MODIFY(Z80_TAG)
-    MDRV_CPU_IO_MAP(prof80_grip_io)
-
-    /* basic machine hardware */
-	MDRV_CPU_ADD(GRIP_Z80_TAG, Z80, XTAL_16MHz/4)
-	MDRV_CPU_CONFIG(grip_daisy_chain)
-    MDRV_CPU_PROGRAM_MAP(grip_mem)
-    MDRV_CPU_IO_MAP(grip_io)
-
-	MDRV_MACHINE_START(grip)
-
-	/* keyboard hack */
-	MDRV_TIMER_ADD_PERIODIC("keyboard", keyboard_tick, HZ(50))
-
-
-    MDRV_VIDEO_START(grip)
-    MDRV_VIDEO_UPDATE(grip)
-
-	MDRV_MC6845_ADD(MC6845_TAG, MC6845, XTAL_16MHz/4, grip_mc6845_interface)
-
-	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD(SPEAKER_TAG, SPEAKER, 0)
-	MDRV_SOUND_CONFIG(grip_speaker_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+    MCFG_SCREEN_ADD(SCREEN_TAG, RASTER)
+    MCFG_SCREEN_REFRESH_RATE(50)
+    MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
+    MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+    MCFG_SCREEN_SIZE(640, 480)
+    MCFG_SCREEN_VISIBLE_AREA(0, 640-1, 0, 480-1)
+    MCFG_PALETTE_LENGTH(2)
+    MCFG_PALETTE_INIT(black_and_white)
 
 	/* devices */
-	MDRV_CENTRONICS_ADD(CENTRONICS_TAG, standard_centronics)
-	MDRV_I8255A_ADD(I8255A_TAG, grip_ppi8255_interface)
-	MDRV_Z80STI_ADD(Z80STI_TAG, XTAL_16MHz/4, grip_z80sti_interface)
-MACHINE_DRIVER_END
+	MCFG_UPD1990A_ADD(UPD1990A_TAG, XTAL_32_768kHz, prof80_upd1990a_intf)
+	MCFG_UPD765A_ADD(UPD765_TAG, prof80_upd765_interface)
+	MCFG_FLOPPY_4_DRIVES_ADD(prof80_floppy_config)
 
-static MACHINE_DRIVER_START( grip2 )
-	MDRV_IMPORT_FROM(grip)
-MACHINE_DRIVER_END
+	/* internal ram */
+	MCFG_RAM_ADD("messram")
+	MCFG_RAM_DEFAULT_SIZE("128K")
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( grip3 )
-	MDRV_IMPORT_FROM(grip)
-MACHINE_DRIVER_END
-
-static MACHINE_DRIVER_START( grip5 )
-	MDRV_IMPORT_FROM(grip)
-
+static MACHINE_CONFIG_DERIVED( grip, prof80 )
     /* basic machine hardware */
-	MDRV_CPU_MODIFY(GRIP_Z80_TAG)
-    MDRV_CPU_IO_MAP(grip5_io)
-MACHINE_DRIVER_END
+    MCFG_CPU_MODIFY(Z80_TAG)
+    MCFG_CPU_IO_MAP(prof80_grip_io)
+
+	MCFG_CPU_ADD(GRIP_Z80_TAG, Z80, XTAL_16MHz/4)
+	MCFG_CPU_CONFIG(grip_daisy_chain)
+    MCFG_CPU_PROGRAM_MAP(grip_mem)
+    MCFG_CPU_IO_MAP(grip_io)
+
+	MCFG_MACHINE_START(grip)
+
+	/* keyboard hack */
+	MCFG_TIMER_ADD_PERIODIC("keyboard", keyboard_tick, HZ(50))
+
+
+    MCFG_VIDEO_START(grip)
+    MCFG_VIDEO_UPDATE(grip)
+
+	MCFG_MC6845_ADD(MC6845_TAG, MC6845, XTAL_16MHz/4, grip_mc6845_interface)
+
+	/* sound hardware */
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD(SPEAKER_TAG, SPEAKER_SOUND, 0)
+	MCFG_SOUND_CONFIG(grip_speaker_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+
+	/* devices */
+	MCFG_CENTRONICS_ADD(CENTRONICS_TAG, standard_centronics)
+	MCFG_I8255A_ADD(I8255A_TAG, grip_ppi8255_interface)
+	MCFG_Z80STI_ADD(Z80STI_TAG, XTAL_16MHz/4, grip_z80sti_interface)
+MACHINE_CONFIG_END
+
+static MACHINE_CONFIG_DERIVED( grip2, grip )
+MACHINE_CONFIG_END
+
+static MACHINE_CONFIG_DERIVED( grip3, grip )
+MACHINE_CONFIG_END
+
+static MACHINE_CONFIG_DERIVED( grip5, grip )
+    /* basic machine hardware */
+	MCFG_CPU_MODIFY(GRIP_Z80_TAG)
+    MCFG_CPU_IO_MAP(grip5_io)
+MACHINE_CONFIG_END
 
 /* ROMs */
 

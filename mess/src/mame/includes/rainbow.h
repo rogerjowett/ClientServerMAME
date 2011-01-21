@@ -4,12 +4,11 @@
 
 *************************************************************************/
 
-class rainbow_state
+class rainbow_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, rainbow_state(machine)); }
-
-	rainbow_state(running_machine &machine) { }
+	rainbow_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT16 *    spriteram;
@@ -29,10 +28,10 @@ public:
 	UINT8       current_bank;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *audiocpu;
-	running_device *pc080sn;
-	running_device *pc090oj;
+	device_t *maincpu;
+	device_t *audiocpu;
+	device_t *pc080sn;
+	device_t *pc090oj;
 };
 
 
@@ -44,14 +43,3 @@ READ16_HANDLER( rainbow_cchip_ram_r );
 WRITE16_HANDLER( rainbow_cchip_ctrl_w );
 WRITE16_HANDLER( rainbow_cchip_bank_w );
 WRITE16_HANDLER( rainbow_cchip_ram_w );
-
-
-/*----------- defined in video/rastan.c -----------*/
-
-VIDEO_START( jumping );
-
-VIDEO_UPDATE( rainbow );
-VIDEO_UPDATE( jumping );
-
-WRITE16_HANDLER( jumping_spritectrl_w );
-WRITE16_HANDLER( rainbow_spritectrl_w );

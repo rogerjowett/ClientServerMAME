@@ -105,12 +105,12 @@ PALETTE_INIT( exerion )
 
 VIDEO_START( exerion )
 {
-	exerion_state *state = (exerion_state *)machine->driver_data;
+	exerion_state *state = machine->driver_data<exerion_state>();
 	int i;
 	UINT8 *gfx;
 
 	/* get pointers to the mixing and lookup PROMs */
-	state->background_mixer = memory_region(machine, "proms") + 0x320;
+	state->background_mixer = machine->region("proms")->base() + 0x320;
 
 	/* allocate memory for the decoded background graphics */
 	state->background_gfx[0] = auto_alloc_array(machine, UINT16, 256 * 256 * 4);
@@ -135,7 +135,7 @@ VIDEO_START( exerion )
      * Where AA,BB,CC,DD are the 2bpp data for the pixel,and a,b,c,d are the OR
      * of these two bits together.
      */
-	gfx = memory_region(machine, "gfx3");
+	gfx = machine->region("gfx3")->base();
 	for (i = 0; i < 4; i++)
 	{
 		int y;
@@ -185,7 +185,7 @@ VIDEO_START( exerion )
 
 WRITE8_HANDLER( exerion_videoreg_w )
 {
-	exerion_state *state = (exerion_state *)space->machine->driver_data;
+	exerion_state *state = space->machine->driver_data<exerion_state>();
 
 	/* bit 0 = flip screen and joystick input multiplexer */
 	state->cocktail_flip = data & 1;
@@ -205,7 +205,7 @@ WRITE8_HANDLER( exerion_videoreg_w )
 
 WRITE8_HANDLER( exerion_video_latch_w )
 {
-	exerion_state *state = (exerion_state *)space->machine->driver_data;
+	exerion_state *state = space->machine->driver_data<exerion_state>();
 	int scanline = space->machine->primary_screen->vpos();
 	if (scanline > 0)
 		space->machine->primary_screen->update_partial(scanline - 1);
@@ -236,7 +236,7 @@ READ8_HANDLER( exerion_video_timing_r )
 
 static void draw_background( running_machine *machine, bitmap_t *bitmap, const rectangle *cliprect)
 {
-	exerion_state *state = (exerion_state *)machine->driver_data;
+	exerion_state *state = machine->driver_data<exerion_state>();
 	int x, y;
 
 	/* loop over all visible scanlines */
@@ -352,7 +352,7 @@ static void draw_background( running_machine *machine, bitmap_t *bitmap, const r
 
 VIDEO_UPDATE( exerion )
 {
-	exerion_state *state = (exerion_state *)screen->machine->driver_data;
+	exerion_state *state = screen->machine->driver_data<exerion_state>();
 	int sx, sy, offs, i;
 
 	/* draw background */

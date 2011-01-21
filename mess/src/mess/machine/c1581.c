@@ -50,32 +50,32 @@ struct _c1581_t
 	int cnt_out;							/* fast serial clock out */
 
 	/* devices */
-	running_device *cpu;
-	running_device *cia;
-	running_device *wd1770;
-	running_device *serial_bus;
-	running_device *image;
+	device_t *cpu;
+	device_t *cia;
+	device_t *wd1770;
+	device_t *serial_bus;
+	device_t *image;
 };
 
 /***************************************************************************
     INLINE FUNCTIONS
 ***************************************************************************/
 
-INLINE c1581_t *get_safe_token(running_device *device)
+INLINE c1581_t *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
 	assert((device->type() == C1581) || (device->type() == C1563));
 	return (c1581_t *)downcast<legacy_device_base *>(device)->token();
 }
 
-INLINE c1581_config *get_safe_config(running_device *device)
+INLINE c1581_config *get_safe_config(device_t *device)
 {
 	assert(device != NULL);
 	assert((device->type() == C1581) || (device->type() == C1563));
 	return (c1581_config *)downcast<const legacy_device_config_base &>(device->baseconfig()).inline_config();
 }
 
-INLINE void set_iec_data(running_device *device)
+INLINE void set_iec_data(device_t *device)
 {
 	c1581_t *c1581 = get_safe_token(device);
 
@@ -88,7 +88,7 @@ INLINE void set_iec_data(running_device *device)
 	cbm_iec_data_w(c1581->serial_bus, device, data);
 }
 
-INLINE void set_iec_srq(running_device *device)
+INLINE void set_iec_srq(device_t *device)
 {
 	c1581_t *c1581 = get_safe_token(device);
 
@@ -164,7 +164,7 @@ static ADDRESS_MAP_START( c1581_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x1fff) AM_MIRROR(0x2000) AM_RAM
 	AM_RANGE(0x4000, 0x400f) AM_MIRROR(0x1ff0) AM_DEVREADWRITE(M8520_TAG, mos6526_r, mos6526_w)
 	AM_RANGE(0x6000, 0x6003) AM_MIRROR(0x1ffc) AM_DEVREADWRITE(WD1770_TAG, wd17xx_r, wd17xx_w)
-	AM_RANGE(0x8000, 0xffff) AM_ROM AM_REGION("c1581", 0)
+	AM_RANGE(0x8000, 0xffff) AM_ROM AM_REGION("c1581:c1581", 0)
 ADDRESS_MAP_END
 
 /*-------------------------------------------------
@@ -175,7 +175,7 @@ static ADDRESS_MAP_START( c1563_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x1fff) AM_MIRROR(0x2000) AM_RAM
 	AM_RANGE(0x4000, 0x400f) AM_MIRROR(0x1ff0) AM_DEVREADWRITE(M8520_TAG, mos6526_r, mos6526_w)
 	AM_RANGE(0x6000, 0x6003) AM_MIRROR(0x1ffc) AM_DEVREADWRITE(WD1770_TAG, wd17xx_r, wd17xx_w)
-	AM_RANGE(0x8000, 0xffff) AM_ROM AM_REGION("c1563", 0)
+	AM_RANGE(0x8000, 0xffff) AM_ROM AM_REGION("c1563:c1563", 0)
 ADDRESS_MAP_END
 
 /*-------------------------------------------------
@@ -395,29 +395,29 @@ static const floppy_config c1581_floppy_config =
     MACHINE_DRIVER( c1581 )
 -------------------------------------------------*/
 
-static MACHINE_DRIVER_START( c1581 )
-	MDRV_CPU_ADD(M6502_TAG, M6502, XTAL_16MHz/8)
-	MDRV_CPU_PROGRAM_MAP(c1581_map)
+static MACHINE_CONFIG_FRAGMENT( c1581 )
+	MCFG_CPU_ADD(M6502_TAG, M6502, XTAL_16MHz/8)
+	MCFG_CPU_PROGRAM_MAP(c1581_map)
 
-	MDRV_MOS8520_ADD(M8520_TAG, XTAL_16MHz/8, cia_intf)
-	MDRV_WD1770_ADD(WD1770_TAG, /*XTAL_16MHz/2,*/ wd1770_intf)
+	MCFG_MOS8520_ADD(M8520_TAG, XTAL_16MHz/8, cia_intf)
+	MCFG_WD1770_ADD(WD1770_TAG, /*XTAL_16MHz/2,*/ wd1770_intf)
 
-	MDRV_FLOPPY_DRIVE_ADD(FLOPPY_0, c1581_floppy_config)
-MACHINE_DRIVER_END
+	MCFG_FLOPPY_DRIVE_ADD(FLOPPY_0, c1581_floppy_config)
+MACHINE_CONFIG_END
 
 /*-------------------------------------------------
     MACHINE_DRIVER( c1563 )
 -------------------------------------------------*/
 
-static MACHINE_DRIVER_START( c1563 )
-	MDRV_CPU_ADD(M6502_TAG, M6502, XTAL_16MHz/8)
-	MDRV_CPU_PROGRAM_MAP(c1563_map)
+static MACHINE_CONFIG_FRAGMENT( c1563 )
+	MCFG_CPU_ADD(M6502_TAG, M6502, XTAL_16MHz/8)
+	MCFG_CPU_PROGRAM_MAP(c1563_map)
 
-	MDRV_MOS8520_ADD(M8520_TAG, XTAL_16MHz/8, cia_intf)
-	MDRV_WD1770_ADD(WD1770_TAG, /*XTAL_16MHz/2,*/ wd1770_intf)
+	MCFG_MOS8520_ADD(M8520_TAG, XTAL_16MHz/8, cia_intf)
+	MCFG_WD1770_ADD(WD1770_TAG, /*XTAL_16MHz/2,*/ wd1770_intf)
 
-	MDRV_FLOPPY_DRIVE_ADD(FLOPPY_0, c1581_floppy_config)
-MACHINE_DRIVER_END
+	MCFG_FLOPPY_DRIVE_ADD(FLOPPY_0, c1581_floppy_config)
+MACHINE_CONFIG_END
 
 /*-------------------------------------------------
     ROM( c1581 )
@@ -425,10 +425,10 @@ MACHINE_DRIVER_END
 
 ROM_START( c1581 )
 	ROM_REGION( 0x10000, "c1581", ROMREGION_LOADBYNAME )
-	ROM_LOAD( "beta.u2",	  0x0000, 0x8000, CRC(ecc223cd) SHA1(a331d0d46ead1f0275b4ca594f87c6694d9d9594) )
-	ROM_LOAD( "318045-01.u2", 0x0000, 0x8000, CRC(113af078) SHA1(3fc088349ab83e8f5948b7670c866a3c954e6164) )
+	ROM_LOAD_OPTIONAL( "beta.u2",	  0x0000, 0x8000, CRC(ecc223cd) SHA1(a331d0d46ead1f0275b4ca594f87c6694d9d9594) )
+	ROM_LOAD_OPTIONAL( "318045-01.u2", 0x0000, 0x8000, CRC(113af078) SHA1(3fc088349ab83e8f5948b7670c866a3c954e6164) )
 	ROM_LOAD( "318045-02.u2", 0x0000, 0x8000, CRC(a9011b84) SHA1(01228eae6f066bd9b7b2b6a7fa3f667e41dad393) )
-	ROM_LOAD( "jiffydos 1581.u2", 0x8000, 0x8000, CRC(98873d0f) SHA1(65bbf2be7bcd5bdcbff609d6c66471ffb9d04bfe) )
+	ROM_LOAD_OPTIONAL( "jiffydos 1581.u2", 0x8000, 0x8000, CRC(98873d0f) SHA1(65bbf2be7bcd5bdcbff609d6c66471ffb9d04bfe) )
 ROM_END
 
 /*-------------------------------------------------
@@ -501,7 +501,7 @@ DEVICE_GET_INFO( c1581 )
 
 		/* --- the following bits of info are returned as pointers --- */
 		case DEVINFO_PTR_ROM_REGION:					info->romregion = ROM_NAME(c1581);							break;
-		case DEVINFO_PTR_MACHINE_CONFIG:				info->machine_config = MACHINE_DRIVER_NAME(c1581);			break;
+		case DEVINFO_PTR_MACHINE_CONFIG:				info->machine_config = MACHINE_CONFIG_NAME(c1581);			break;
 
 		/* --- the following bits of info are returned as pointers to data or functions --- */
 		case DEVINFO_FCT_START:							info->start = DEVICE_START_NAME(c1581);						break;
@@ -527,7 +527,7 @@ DEVICE_GET_INFO( c1563 )
 	{
 		/* --- the following bits of info are returned as pointers --- */
 		case DEVINFO_PTR_ROM_REGION:					info->romregion = ROM_NAME(c1563);							break;
-		case DEVINFO_PTR_MACHINE_CONFIG:				info->machine_config = MACHINE_DRIVER_NAME(c1563);			break;
+		case DEVINFO_PTR_MACHINE_CONFIG:				info->machine_config = MACHINE_CONFIG_NAME(c1563);			break;
 
 		/* --- the following bits of info are returned as NULL-terminated strings --- */
 		case DEVINFO_STR_NAME:							strcpy(info->s, "Commodore 1563");							break;

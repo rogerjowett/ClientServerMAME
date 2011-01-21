@@ -94,7 +94,7 @@ Notes:
 
 static WRITE8_HANDLER( ctrl_w )
 {
-	jailbrek_state *state = (jailbrek_state *)space->machine->driver_data;
+	jailbrek_state *state = space->machine->driver_data<jailbrek_state>();
 
 	state->nmi_enable = data & 0x01;
 	state->irq_enable = data & 0x02;
@@ -103,7 +103,7 @@ static WRITE8_HANDLER( ctrl_w )
 
 static INTERRUPT_GEN( jb_interrupt )
 {
-	jailbrek_state *state = (jailbrek_state *)device->machine->driver_data;
+	jailbrek_state *state = device->machine->driver_data<jailbrek_state>();
 
 	if (state->irq_enable)
 		cpu_set_input_line(device, 0, HOLD_LINE);
@@ -111,7 +111,7 @@ static INTERRUPT_GEN( jb_interrupt )
 
 static INTERRUPT_GEN( jb_interrupt_nmi )
 {
-	jailbrek_state *state = (jailbrek_state *)device->machine->driver_data;
+	jailbrek_state *state = device->machine->driver_data<jailbrek_state>();
 
 	if (state->nmi_enable)
 		cpu_set_input_line(device, INPUT_LINE_NMI, PULSE_LINE);
@@ -239,53 +239,50 @@ GFXDECODE_END
 
 static MACHINE_START( jailbrek )
 {
-	jailbrek_state *state = (jailbrek_state *)machine->driver_data;
+	jailbrek_state *state = machine->driver_data<jailbrek_state>();
 	state_save_register_global(machine, state->irq_enable);
 	state_save_register_global(machine, state->nmi_enable);
 }
 
 static MACHINE_RESET( jailbrek )
 {
-	jailbrek_state *state = (jailbrek_state *)machine->driver_data;
+	jailbrek_state *state = machine->driver_data<jailbrek_state>();
 	state->irq_enable = 0;
 	state->nmi_enable = 0;
 }
 
-static MACHINE_DRIVER_START( jailbrek )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(jailbrek_state)
+static MACHINE_CONFIG_START( jailbrek, jailbrek_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6809, MASTER_CLOCK/12)
-	MDRV_CPU_PROGRAM_MAP(jailbrek_map)
-	MDRV_CPU_VBLANK_INT("screen", jb_interrupt)
-	MDRV_CPU_PERIODIC_INT(jb_interrupt_nmi, 500) /* ? */
+	MCFG_CPU_ADD("maincpu", M6809, MASTER_CLOCK/12)
+	MCFG_CPU_PROGRAM_MAP(jailbrek_map)
+	MCFG_CPU_VBLANK_INT("screen", jb_interrupt)
+	MCFG_CPU_PERIODIC_INT(jb_interrupt_nmi, 500) /* ? */
 
-	MDRV_MACHINE_START(jailbrek)
-	MDRV_MACHINE_RESET(jailbrek)
+	MCFG_MACHINE_START(jailbrek)
+	MCFG_MACHINE_RESET(jailbrek)
 
 	/* video hardware */
-	MDRV_GFXDECODE(jailbrek)
-	MDRV_PALETTE_LENGTH(512)
+	MCFG_GFXDECODE(jailbrek)
+	MCFG_PALETTE_LENGTH(512)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_RAW_PARAMS(MASTER_CLOCK/3, 396, 8, 248, 256, 16, 240)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_RAW_PARAMS(MASTER_CLOCK/3, 396, 8, 248, 256, 16, 240)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 
-	MDRV_PALETTE_INIT(jailbrek)
-	MDRV_VIDEO_START(jailbrek)
-	MDRV_VIDEO_UPDATE(jailbrek)
+	MCFG_PALETTE_INIT(jailbrek)
+	MCFG_VIDEO_START(jailbrek)
+	MCFG_VIDEO_UPDATE(jailbrek)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("snsnd", SN76489A, MASTER_CLOCK/12)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SOUND_ADD("snsnd", SN76489A, MASTER_CLOCK/12)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-	MDRV_SOUND_ADD("vlm", VLM5030, VOICE_CLOCK)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("vlm", VLM5030, VOICE_CLOCK)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************
@@ -409,7 +406,7 @@ ROM_END
 
 static DRIVER_INIT( jailbrek )
 {
-	UINT8 *SPEECH_ROM = memory_region(machine, "vlm");
+	UINT8 *SPEECH_ROM = machine->region("vlm")->base();
 	int ind;
 
     /*
@@ -421,7 +418,7 @@ static DRIVER_INIT( jailbrek )
        represents address line A13.)
     */
 
-    if (memory_region_length(machine, "vlm") == 0x4000)
+    if (machine->region("vlm")->bytes() == 0x4000)
     {
         for (ind = 0; ind < 0x2000; ++ind)
         {

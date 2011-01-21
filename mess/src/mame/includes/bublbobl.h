@@ -1,10 +1,9 @@
 
-class bublbobl_state
+class bublbobl_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, bublbobl_state(machine)); }
-
-	bublbobl_state(running_machine &machine) { }
+	bublbobl_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *  mcu_sharedram;
@@ -39,10 +38,10 @@ public:
 	int      ic43_a, ic43_b;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *mcu;
-	running_device *audiocpu;
-	running_device *slave;
+	device_t *maincpu;
+	device_t *mcu;
+	device_t *audiocpu;
+	device_t *slave;
 };
 
 

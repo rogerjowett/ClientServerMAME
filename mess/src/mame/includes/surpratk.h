@@ -4,12 +4,11 @@
 
 *************************************************************************/
 
-class surpratk_state
+class surpratk_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, surpratk_state(machine)); }
-
-	surpratk_state(running_machine &machine) { }
+	surpratk_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *    ram;
@@ -23,10 +22,10 @@ public:
 	int        videobank;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *k052109;
-	running_device *k053244;
-	running_device *k053251;
+	device_t *maincpu;
+	device_t *k052109;
+	device_t *k053244;
+	device_t *k053251;
 };
 
 /*----------- defined in video/surpratk.c -----------*/

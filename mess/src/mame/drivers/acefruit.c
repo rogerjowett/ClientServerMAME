@@ -10,6 +10,7 @@ Inputs and Dip Switches by Stephh
 
 #include "emu.h"
 #include "cpu/z80/z80.h"
+#include "machine/nvram.h"
 
 #include "sidewndr.lh"
 
@@ -258,7 +259,7 @@ static PALETTE_INIT( acefruit )
 
 static ADDRESS_MAP_START( acefruit_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x1fff) AM_ROM
-	AM_RANGE(0x2000, 0x20ff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0x2000, 0x20ff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0x4000, 0x43ff) AM_RAM AM_BASE(&videoram)
 	AM_RANGE(0x4400, 0x47ff) AM_RAM_WRITE(acefruit_colorram_w) AM_BASE(&colorram)
 	AM_RANGE(0x8000, 0x8000) AM_READ_PORT("IN0")
@@ -547,36 +548,36 @@ static GFXDECODE_START( acefruit )
 	GFXDECODE_ENTRY( "gfx1", 0x1800, charlayout, 8, 4 )
 GFXDECODE_END
 
-static MACHINE_DRIVER_START( acefruit )
+static MACHINE_CONFIG_START( acefruit, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, 2500000) /* 2.5MHz */
-	MDRV_CPU_PROGRAM_MAP(acefruit_map)
-	MDRV_CPU_IO_MAP(acefruit_io)
-	MDRV_GFXDECODE(acefruit)
-	MDRV_CPU_VBLANK_INT("screen", acefruit_vblank)
+	MCFG_CPU_ADD("maincpu", Z80, 2500000) /* 2.5MHz */
+	MCFG_CPU_PROGRAM_MAP(acefruit_map)
+	MCFG_CPU_IO_MAP(acefruit_io)
+	MCFG_GFXDECODE(acefruit)
+	MCFG_CPU_VBLANK_INT("screen", acefruit_vblank)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(512, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 511, 0, 255)
-	MDRV_PALETTE_LENGTH(16)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(512, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 511, 0, 255)
+	MCFG_PALETTE_LENGTH(16)
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
-	MDRV_PALETTE_INIT(acefruit)
-	MDRV_VIDEO_START(acefruit)
-	MDRV_VIDEO_UPDATE(acefruit)
+	MCFG_PALETTE_INIT(acefruit)
+	MCFG_VIDEO_START(acefruit)
+	MCFG_VIDEO_UPDATE(acefruit)
 
 	/* sound hardware */
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
 static DRIVER_INIT( sidewndr )
 {
-	UINT8 *ROM = memory_region( machine, "maincpu" );
+	UINT8 *ROM = machine->region( "maincpu" )->base();
 	/* replace "ret nc" ( 0xd0 ) with "di" */
 	ROM[ 0 ] = 0xf3;
 	/* this is either a bad dump or the cpu core should set the carry flag on reset */

@@ -325,11 +325,42 @@ Notes:
     as well as set 2. Missile Command set 1 will not work with the SMA board. It would
         appear set 1 and set 2 as labeled by mame are reversed.
 
+****************************************************************************
+
+Super Missile Attack Board Layout
+
+      |-------------------------------|
+      |                               |
+    A | 2716       74LS138       2716 |
+      |                               |
+    B | 2716    63S141  63S141   2716 |
+      |                               |
+    C | 2716                     2716 |
+      |            PAL                |
+    D | HDR28                    2716 |
+      |            74148              |
+    E | HDR28                    2716 |
+      |                               |
+      |-------------------------------|
+
+          1       2   3   4       5
+
 *****************************************************************************************/
 
 #include "emu.h"
 #include "cpu/m6502/m6502.h"
 #include "sound/pokey.h"
+
+
+class missile_state : public driver_device
+{
+public:
+	missile_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
+
+	UINT8 *videoram;
+};
+
 
 
 #define MASTER_CLOCK	XTAL_10MHz
@@ -445,7 +476,7 @@ static TIMER_CALLBACK( adjust_cpu_speed )
 }
 
 
-static DIRECT_UPDATE_HANDLER( missile_direct_handler )
+DIRECT_UPDATE_HANDLER( missile_direct_handler )
 {
 	/* offset accounts for lack of A15 decoding */
 	int offset = address & 0x8000;
@@ -454,14 +485,15 @@ static DIRECT_UPDATE_HANDLER( missile_direct_handler )
 	/* RAM? */
 	if (address < 0x4000)
 	{
-		direct->raw = direct->decrypted = space->machine->generic.videoram.u8 - offset;
+		missile_state *state = direct.space().m_machine.driver_data<missile_state>();
+		direct.explicit_configure(0x0000 | offset, 0x3fff | offset, 0x3fff, state->videoram);
 		return ~0;
 	}
 
 	/* ROM? */
 	else if (address >= 0x5000)
 	{
-		direct->raw = direct->decrypted = memory_region(space->machine, "maincpu") - offset;
+		direct.explicit_configure(0x5000 | offset, 0x7fff | offset, 0x7fff, direct.space().m_machine.region("maincpu")->base() + 0x5000);
 		return ~0;
 	}
 
@@ -473,11 +505,12 @@ static DIRECT_UPDATE_HANDLER( missile_direct_handler )
 static MACHINE_START( missile )
 {
 	/* initialize globals */
-	writeprom = memory_region(machine, "proms");
+	writeprom = machine->region("proms")->base();
 	flipscreen = 0;
 
 	/* set up an opcode base handler since we use mapped handlers for RAM */
-	memory_set_direct_update_handler(cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM), missile_direct_handler);
+	address_space *space = machine->device<m6502_device>("maincpu")->space(AS_PROGRAM);
+	space->set_direct_update_handler(direct_update_delegate_create_static(missile_direct_handler, *machine));
 
 	/* create a timer to speed/slow the CPU */
 	cpu_timer = timer_alloc(machine, adjust_cpu_speed, NULL);
@@ -511,7 +544,7 @@ static MACHINE_RESET( missile )
  *
  *************************************/
 
-INLINE int get_madsel(const address_space *space)
+INLINE int get_madsel(address_space *space)
 {
 	UINT16 pc = cpu_get_previouspc(space->cpu);
 
@@ -522,7 +555,7 @@ INLINE int get_madsel(const address_space *space)
 	/* MADSEL signal disables standard address decoding and routes
         writes to video RAM; it is enabled if the IRQ signal is clear
         and the low 5 bits of the fetched opcode are 0x01 */
-	if (!irq_state && (memory_decrypted_read_byte(space, pc) & 0x1f) == 0x01)
+	if (!irq_state && (space->direct().read_decrypted_byte(pc) & 0x1f) == 0x01)
 	{
 		/* the MADSEL signal goes high 5 cycles after the opcode is identified;
             this effectively skips the indirect memory read. Since this is difficult
@@ -548,8 +581,10 @@ INLINE offs_t get_bit3_addr(offs_t pixaddr)
 }
 
 
-static void write_vram(const address_space *space, offs_t address, UINT8 data)
+static void write_vram(address_space *space, offs_t address, UINT8 data)
 {
+	missile_state *state = space->machine->driver_data<missile_state>();
+	UINT8 *videoram = state->videoram;
 	static const UINT8 data_lookup[4] = { 0x00, 0x0f, 0xf0, 0xff };
 	offs_t vramaddr;
 	UINT8 vramdata;
@@ -561,7 +596,7 @@ static void write_vram(const address_space *space, offs_t address, UINT8 data)
 	vramaddr = address >> 2;
 	vramdata = data_lookup[data >> 6];
 	vrammask = writeprom[(address & 7) | 0x10];
-	space->machine->generic.videoram.u8[vramaddr] = (space->machine->generic.videoram.u8[vramaddr] & vrammask) | (vramdata & ~vrammask);
+	videoram[vramaddr] = (videoram[vramaddr] & vrammask) | (vramdata & ~vrammask);
 
 	/* 3-bit VRAM writes use an extra clock to write the 3rd bit elsewhere */
 	/* on the schematics, this is the MUSHROOM == 1 case */
@@ -570,7 +605,7 @@ static void write_vram(const address_space *space, offs_t address, UINT8 data)
 		vramaddr = get_bit3_addr(address);
 		vramdata = -((data >> 5) & 1);
 		vrammask = writeprom[(address & 7) | 0x18];
-		space->machine->generic.videoram.u8[vramaddr] = (space->machine->generic.videoram.u8[vramaddr] & vrammask) | (vramdata & ~vrammask);
+		videoram[vramaddr] = (videoram[vramaddr] & vrammask) | (vramdata & ~vrammask);
 
 		/* account for the extra clock cycle */
 		cpu_adjust_icount(space->cpu, -1);
@@ -578,8 +613,10 @@ static void write_vram(const address_space *space, offs_t address, UINT8 data)
 }
 
 
-static UINT8 read_vram(const address_space *space, offs_t address)
+static UINT8 read_vram(address_space *space, offs_t address)
 {
+	missile_state *state = space->machine->driver_data<missile_state>();
+	UINT8 *videoram = state->videoram;
 	offs_t vramaddr;
 	UINT8 vramdata;
 	UINT8 vrammask;
@@ -590,7 +627,7 @@ static UINT8 read_vram(const address_space *space, offs_t address)
 	/* this should only be called if MADSEL == 1 */
 	vramaddr = address >> 2;
 	vrammask = 0x11 << (address & 3);
-	vramdata = space->machine->generic.videoram.u8[vramaddr] & vrammask;
+	vramdata = videoram[vramaddr] & vrammask;
 	if ((vramdata & 0xf0) == 0)
 		result &= ~0x80;
 	if ((vramdata & 0x0f) == 0)
@@ -602,7 +639,7 @@ static UINT8 read_vram(const address_space *space, offs_t address)
 	{
 		vramaddr = get_bit3_addr(address);
 		vrammask = 1 << (address & 7);
-		vramdata = space->machine->generic.videoram.u8[vramaddr] & vrammask;
+		vramdata = videoram[vramaddr] & vrammask;
 		if (vramdata == 0)
 			result &= ~0x20;
 
@@ -622,6 +659,8 @@ static UINT8 read_vram(const address_space *space, offs_t address)
 
 static VIDEO_UPDATE( missile )
 {
+	missile_state *state = screen->machine->driver_data<missile_state>();
+	UINT8 *videoram = state->videoram;
 	int x, y;
 
 	/* draw the bitmap to the screen, looping over Y */
@@ -630,12 +669,12 @@ static VIDEO_UPDATE( missile )
 		UINT16 *dst = (UINT16 *)bitmap->base + y * bitmap->rowpixels;
 
 		int effy = flipscreen ? ((256+24 - y) & 0xff) : y;
-		UINT8 *src = &screen->machine->generic.videoram.u8[effy * 64];
+		UINT8 *src = &videoram[effy * 64];
 		UINT8 *src3 = NULL;
 
 		/* compute the base of the 3rd pixel row */
 		if (effy >= 224)
-			src3 = &screen->machine->generic.videoram.u8[get_bit3_addr(effy << 8)];
+			src3 = &videoram[get_bit3_addr(effy << 8)];
 
 		/* loop over X */
 		for (x = cliprect->min_x; x <= cliprect->max_x; x++)
@@ -663,6 +702,8 @@ static VIDEO_UPDATE( missile )
 
 static WRITE8_HANDLER( missile_w )
 {
+	missile_state *state = space->machine->driver_data<missile_state>();
+	UINT8 *videoram = state->videoram;
 	/* if we're in MADSEL mode, write to video RAM */
 	if (get_madsel(space))
 	{
@@ -675,7 +716,7 @@ static WRITE8_HANDLER( missile_w )
 
 	/* RAM */
 	if (offset < 0x4000)
-		space->machine->generic.videoram.u8[offset] = data;
+		videoram[offset] = data;
 
 	/* POKEY */
 	else if (offset < 0x4800)
@@ -719,6 +760,8 @@ static WRITE8_HANDLER( missile_w )
 
 static READ8_HANDLER( missile_r )
 {
+	missile_state *state = space->machine->driver_data<missile_state>();
+	UINT8 *videoram = state->videoram;
 	UINT8 result = 0xff;
 
 	/* if we're in MADSEL mode, read from video RAM */
@@ -730,11 +773,11 @@ static READ8_HANDLER( missile_r )
 
 	/* RAM */
 	if (offset < 0x4000)
-		result = space->machine->generic.videoram.u8[offset];
+		result = videoram[offset];
 
 	/* ROM */
 	else if (offset >= 0x5000)
-		result = memory_region(space->machine, "maincpu")[offset];
+		result = space->machine->region("maincpu")->base()[offset];
 
 	/* POKEY */
 	else if (offset < 0x4800)
@@ -778,7 +821,7 @@ static READ8_HANDLER( missile_r )
 
 /* complete memory map derived from schematics (implemented above) */
 static ADDRESS_MAP_START( main_map, ADDRESS_SPACE_PROGRAM, 8 )
-	AM_RANGE(0x0000, 0xffff) AM_READWRITE(missile_r, missile_w) AM_BASE_GENERIC(videoram)
+	AM_RANGE(0x0000, 0xffff) AM_READWRITE(missile_r, missile_w) AM_BASE_MEMBER(missile_state, videoram)
 ADDRESS_MAP_END
 
 
@@ -974,32 +1017,32 @@ static const pokey_interface pokey_config =
  *
  *************************************/
 
-static MACHINE_DRIVER_START( missile )
+static MACHINE_CONFIG_START( missile, missile_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6502, MASTER_CLOCK/8)
-	MDRV_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_ADD("maincpu", M6502, MASTER_CLOCK/8)
+	MCFG_CPU_PROGRAM_MAP(main_map)
 
-	MDRV_MACHINE_START(missile)
-	MDRV_MACHINE_RESET(missile)
-	MDRV_WATCHDOG_VBLANK_INIT(8)
+	MCFG_MACHINE_START(missile)
+	MCFG_MACHINE_RESET(missile)
+	MCFG_WATCHDOG_VBLANK_INIT(8)
 
 	/* video hardware */
-	MDRV_PALETTE_LENGTH(8)
+	MCFG_PALETTE_LENGTH(8)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_RAW_PARAMS(PIXEL_CLOCK, HTOTAL, HBEND, HBSTART, VTOTAL, VBEND, VBSTART)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_RAW_PARAMS(PIXEL_CLOCK, HTOTAL, HBEND, HBSTART, VTOTAL, VBEND, VBSTART)
 
-	MDRV_VIDEO_UPDATE(missile)
+	MCFG_VIDEO_UPDATE(missile)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("pokey", POKEY, MASTER_CLOCK/8)
-	MDRV_SOUND_CONFIG(pokey_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("pokey", POKEY, MASTER_CLOCK/8)
+	MCFG_SOUND_CONFIG(pokey_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 
@@ -1011,15 +1054,15 @@ MACHINE_DRIVER_END
 
 ROM_START( missile )
 	ROM_REGION( 0x8000, "maincpu", 0 )
-	ROM_LOAD( "035820.02",    0x5000, 0x0800, CRC(7a62ce6a) SHA1(9a39978138dc28fdefe193bfae1b226391e471db) )
-	ROM_LOAD( "035821.02",    0x5800, 0x0800, CRC(df3bd57f) SHA1(0916925d3c94d766d33f0e4badf6b0add835d748) )
-	ROM_LOAD( "035822.02",    0x6000, 0x0800, CRC(a1cd384a) SHA1(a1dd0953423750a0fbc6e3dccbf2ca64ef5a1f54) )
-	ROM_LOAD( "035823.02",    0x6800, 0x0800, CRC(82e552bb) SHA1(d0f22894f779c74ceef644c9f03d840d9545efea) )
-	ROM_LOAD( "035824.02",    0x7000, 0x0800, CRC(606e42e0) SHA1(9718f84a73c66b4e8ef7805a7ab638a7380624e1) )
-	ROM_LOAD( "035825.02",    0x7800, 0x0800, CRC(f752eaeb) SHA1(0339a6ce6744d2091cc7e07675e509b202b0f380) )
+	ROM_LOAD( "035820-02.h1",  0x5000, 0x0800, CRC(7a62ce6a) SHA1(9a39978138dc28fdefe193bfae1b226391e471db) )
+	ROM_LOAD( "035821-02.jk1", 0x5800, 0x0800, CRC(df3bd57f) SHA1(0916925d3c94d766d33f0e4badf6b0add835d748) )
+	ROM_LOAD( "035822-02.kl1", 0x6000, 0x0800, CRC(a1cd384a) SHA1(a1dd0953423750a0fbc6e3dccbf2ca64ef5a1f54) )
+	ROM_LOAD( "035823-02.ln1", 0x6800, 0x0800, CRC(82e552bb) SHA1(d0f22894f779c74ceef644c9f03d840d9545efea) )
+	ROM_LOAD( "035824-02.np1", 0x7000, 0x0800, CRC(606e42e0) SHA1(9718f84a73c66b4e8ef7805a7ab638a7380624e1) )
+	ROM_LOAD( "035825-02.r1",  0x7800, 0x0800, CRC(f752eaeb) SHA1(0339a6ce6744d2091cc7e07675e509b202b0f380) )
 
 	ROM_REGION( 0x0020, "proms", 0 )
-	ROM_LOAD( "035826.01",   0x0000, 0x0020, CRC(86a22140) SHA1(2beebf7855e29849ada1823eae031fc98220bc43) )
+	ROM_LOAD( "035826-01.l6",  0x0000, 0x0020, CRC(86a22140) SHA1(2beebf7855e29849ada1823eae031fc98220bc43) )
 ROM_END
 
 
@@ -1028,28 +1071,32 @@ ROM_START( missile2 )
 	ROM_LOAD( "35820-01.h1",  0x5000, 0x0800, CRC(41cbb8f2) SHA1(5dcb58276c08d75d36baadb6cefe30d4916de9b0) )
 	ROM_LOAD( "35821-01.jk1", 0x5800, 0x0800, CRC(728702c8) SHA1(6f25af7133d3ec79029117162649f94e93f36e0e) )
 	ROM_LOAD( "35822-01.kl1", 0x6000, 0x0800, CRC(28f0999f) SHA1(eb52b11c6757c8dc3be88b276ea4dc7dfebf7cf7) )
-	ROM_LOAD( "35823-01.mn1", 0x6800, 0x0800, CRC(bcc93c94) SHA1(f0daa5d2835a856e2038612e755dc7ded28fc923) )
+	ROM_LOAD( "35823-01.ln1", 0x6800, 0x0800, CRC(bcc93c94) SHA1(f0daa5d2835a856e2038612e755dc7ded28fc923) )
 	ROM_LOAD( "35824-01.np1", 0x7000, 0x0800, CRC(0ca089c8) SHA1(7f69ee990fd4fa1f2fceca7fc66fcaa02e4d2314) )
 	ROM_LOAD( "35825-01.r1",  0x7800, 0x0800, CRC(428cf0d5) SHA1(03cabbef50c33852fbbf38dd3eecaf70a82df82f) )
 
 	ROM_REGION( 0x0020, "proms", 0 )
-	ROM_LOAD( "035826.01",   0x0000, 0x0020, CRC(86a22140) SHA1(2beebf7855e29849ada1823eae031fc98220bc43) )
+	ROM_LOAD( "035826-01.l6", 0x0000, 0x0020, CRC(86a22140) SHA1(2beebf7855e29849ada1823eae031fc98220bc43) )
 ROM_END
 
 
 ROM_START( suprmatk )
-	ROM_REGION( 0x9000, "maincpu", 0 )
-	ROM_LOAD( "035820.02",    0x5000, 0x0800, CRC(7a62ce6a) SHA1(9a39978138dc28fdefe193bfae1b226391e471db) )
-	ROM_LOAD( "035821.02",    0x5800, 0x0800, CRC(df3bd57f) SHA1(0916925d3c94d766d33f0e4badf6b0add835d748) )
-	ROM_LOAD( "035822.02",    0x6000, 0x0800, CRC(a1cd384a) SHA1(a1dd0953423750a0fbc6e3dccbf2ca64ef5a1f54) )
-	ROM_LOAD( "035823.02",    0x6800, 0x0800, CRC(82e552bb) SHA1(d0f22894f779c74ceef644c9f03d840d9545efea) )
-	ROM_LOAD( "035824.02",    0x7000, 0x0800, CRC(606e42e0) SHA1(9718f84a73c66b4e8ef7805a7ab638a7380624e1) )
-	ROM_LOAD( "035825.02",    0x7800, 0x0800, CRC(f752eaeb) SHA1(0339a6ce6744d2091cc7e07675e509b202b0f380) )
-	ROM_LOAD( "e0.rom",       0x8000, 0x0800, CRC(d0b20179) SHA1(e2a9855899b6ff96b8dba169e0ab83f00a95919f) )
-	ROM_LOAD( "e1.rom",       0x8800, 0x0800, CRC(c6c818a3) SHA1(b9c92a85c07dd343d990e196d37b92d92a85a5e0) )
+	ROM_REGION( 0x9000, "maincpu", 0 ) /* ROM's located on the enhancement board */
+	ROM_LOAD( "035820-02.c1", 0x5000, 0x0800, CRC(7a62ce6a) SHA1(9a39978138dc28fdefe193bfae1b226391e471db) )
+	ROM_LOAD( "035821-02.b1", 0x5800, 0x0800, CRC(df3bd57f) SHA1(0916925d3c94d766d33f0e4badf6b0add835d748) )
+	ROM_LOAD( "035822-02.a1", 0x6000, 0x0800, CRC(a1cd384a) SHA1(a1dd0953423750a0fbc6e3dccbf2ca64ef5a1f54) )
+	ROM_LOAD( "035823-02.a5", 0x6800, 0x0800, CRC(82e552bb) SHA1(d0f22894f779c74ceef644c9f03d840d9545efea) )
+	ROM_LOAD( "035824-02.b5", 0x7000, 0x0800, CRC(606e42e0) SHA1(9718f84a73c66b4e8ef7805a7ab638a7380624e1) )
+	ROM_LOAD( "035825-02.c5", 0x7800, 0x0800, CRC(f752eaeb) SHA1(0339a6ce6744d2091cc7e07675e509b202b0f380) )
+	ROM_LOAD( "e0.d5",        0x8000, 0x0800, CRC(d0b20179) SHA1(e2a9855899b6ff96b8dba169e0ab83f00a95919f) )
+	ROM_LOAD( "e1.e5",        0x8800, 0x0800, CRC(c6c818a3) SHA1(b9c92a85c07dd343d990e196d37b92d92a85a5e0) )
 
-	ROM_REGION( 0x0020, "proms", 0 )
-	ROM_LOAD( "035826.01",   0x0000, 0x0020, CRC(86a22140) SHA1(2beebf7855e29849ada1823eae031fc98220bc43) )
+	ROM_REGION( 0x0020, "proms", 0 ) /* PROM located on the Missile Command board */
+	ROM_LOAD( "035826-01.l6", 0x0000, 0x0020, CRC(86a22140) SHA1(2beebf7855e29849ada1823eae031fc98220bc43) )
+
+	ROM_REGION( 0x0200, "proms2", 0 ) /* 63S141 PROMs located on the enhancement board */
+	ROM_LOAD( "63s141.b2",    0x0000, 0x0100, CRC(2de8ee4d) SHA1(ff28c007df9c52227dfce76af6f7b1dfac3c2296) )
+	ROM_LOAD( "63s141.b4",    0x0100, 0x0100, CRC(390fc532) SHA1(f9adde3f18f3db225ac3f3771c38ff139ef0a65e) )
 ROM_END
 
 
@@ -1063,7 +1110,7 @@ ROM_START( suprmatkd )
 	ROM_LOAD( "035825.sma",   0x7800, 0x0800, CRC(1298213d) SHA1(c8e4301704e3700c339557f2a833e70f6a068d5e) )
 
 	ROM_REGION( 0x0020, "proms", 0 )
-	ROM_LOAD( "035826.01",   0x0000, 0x0020, CRC(86a22140) SHA1(2beebf7855e29849ada1823eae031fc98220bc43) )
+	ROM_LOAD( "035826-01.l6", 0x0000, 0x0020, CRC(86a22140) SHA1(2beebf7855e29849ada1823eae031fc98220bc43) )
 ROM_END
 
 
@@ -1115,7 +1162,7 @@ ROM_END
 static DRIVER_INIT( suprmatk )
 {
 	int i;
-	UINT8 *rom = memory_region(machine, "maincpu");
+	UINT8 *rom = machine->region("maincpu")->base();
 
 	for (i = 0; i < 0x40; i++)
 	{

@@ -21,7 +21,7 @@ static KONAMI_SETLINES_CALLBACK( gbusters_banking );
 
 static INTERRUPT_GEN( gbusters_interrupt )
 {
-	gbusters_state *state = (gbusters_state *)device->machine->driver_data;
+	gbusters_state *state = device->machine->driver_data<gbusters_state>();
 
 	if (k052109_is_irq_enabled(state->k052109))
 		cpu_set_input_line(device, KONAMI_IRQ_LINE, HOLD_LINE);
@@ -29,7 +29,7 @@ static INTERRUPT_GEN( gbusters_interrupt )
 
 static READ8_HANDLER( bankedram_r )
 {
-	gbusters_state *state = (gbusters_state *)space->machine->driver_data;
+	gbusters_state *state = space->machine->driver_data<gbusters_state>();
 
 	if (state->palette_selected)
 		return space->machine->generic.paletteram.u8[offset];
@@ -39,7 +39,7 @@ static READ8_HANDLER( bankedram_r )
 
 static WRITE8_HANDLER( bankedram_w )
 {
-	gbusters_state *state = (gbusters_state *)space->machine->driver_data;
+	gbusters_state *state = space->machine->driver_data<gbusters_state>();
 
 	if (state->palette_selected)
 		paletteram_xBBBBBGGGGGRRRRR_be_w(space, offset, data);
@@ -49,7 +49,7 @@ static WRITE8_HANDLER( bankedram_w )
 
 static WRITE8_HANDLER( gbusters_1f98_w )
 {
-	gbusters_state *state = (gbusters_state *)space->machine->driver_data;
+	gbusters_state *state = space->machine->driver_data<gbusters_state>();
 
 	/* bit 0 = enable char ROM reading through the video RAM */
 	k052109_set_rmrd_line(state->k052109, (data & 0x01) ? ASSERT_LINE : CLEAR_LINE);
@@ -66,7 +66,7 @@ static WRITE8_HANDLER( gbusters_1f98_w )
 
 static WRITE8_HANDLER( gbusters_coin_counter_w )
 {
-	gbusters_state *state = (gbusters_state *)space->machine->driver_data;
+	gbusters_state *state = space->machine->driver_data<gbusters_state>();
 
 	/* bit 0 select palette RAM  or work RAM at 5800-5fff */
 	state->palette_selected = ~data & 0x01;
@@ -105,7 +105,7 @@ char baf[40];
 
 static WRITE8_HANDLER( gbusters_sh_irqtrigger_w )
 {
-	gbusters_state *state = (gbusters_state *)space->machine->driver_data;
+	gbusters_state *state = space->machine->driver_data<gbusters_state>();
 	cpu_set_input_line_and_vector(state->audiocpu, 0, HOLD_LINE, 0xff);
 }
 
@@ -127,7 +127,7 @@ static WRITE8_DEVICE_HANDLER( gbusters_snd_bankswitch_w )
 /* special handlers to combine 052109 & 051960 */
 static READ8_HANDLER( k052109_051960_r )
 {
-	gbusters_state *state = (gbusters_state *)space->machine->driver_data;
+	gbusters_state *state = space->machine->driver_data<gbusters_state>();
 
 	if (k052109_get_rmrd_line(state->k052109) == CLEAR_LINE)
 	{
@@ -144,7 +144,7 @@ static READ8_HANDLER( k052109_051960_r )
 
 static WRITE8_HANDLER( k052109_051960_w )
 {
-	gbusters_state *state = (gbusters_state *)space->machine->driver_data;
+	gbusters_state *state = space->machine->driver_data<gbusters_state>();
 
 	if (offset >= 0x3800 && offset < 0x3808)
 		k051937_w(state->k051960, offset - 0x3800, data);
@@ -245,7 +245,7 @@ INPUT_PORTS_END
 
 ***************************************************************************/
 
-static void volume_callback( running_device *device, int v )
+static void volume_callback( device_t *device, int v )
 {
 	k007232_set_volume(device, 0, (v >> 4) * 0x11, 0);
 	k007232_set_volume(device, 1, 0, (v & 0x0f) * 0x11);
@@ -274,8 +274,8 @@ static const k051960_interface gbusters_k051960_intf =
 
 static MACHINE_START( gbusters )
 {
-	gbusters_state *state = (gbusters_state *)machine->driver_data;
-	UINT8 *ROM = memory_region(machine, "maincpu");
+	gbusters_state *state = machine->driver_data<gbusters_state>();
+	UINT8 *ROM = machine->region("maincpu")->base();
 
 	memory_configure_bank(machine, "bank1", 0, 16, &ROM[0x10000], 0x2000);
 	memory_set_bank(machine, "bank1", 0);
@@ -295,8 +295,8 @@ static MACHINE_START( gbusters )
 
 static MACHINE_RESET( gbusters )
 {
-	gbusters_state *state = (gbusters_state *)machine->driver_data;
-	UINT8 *RAM = memory_region(machine, "maincpu");
+	gbusters_state *state = machine->driver_data<gbusters_state>();
+	UINT8 *RAM = machine->region("maincpu")->base();
 
 	konami_configure_set_lines(machine->device("maincpu"), gbusters_banking);
 
@@ -307,52 +307,49 @@ static MACHINE_RESET( gbusters )
 	state->priority = 0;
 }
 
-static MACHINE_DRIVER_START( gbusters )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(gbusters_state)
+static MACHINE_CONFIG_START( gbusters, gbusters_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", KONAMI, 3000000)	/* Konami custom 052526 */
-	MDRV_CPU_PROGRAM_MAP(gbusters_map)
-	MDRV_CPU_VBLANK_INT("screen", gbusters_interrupt)
+	MCFG_CPU_ADD("maincpu", KONAMI, 3000000)	/* Konami custom 052526 */
+	MCFG_CPU_PROGRAM_MAP(gbusters_map)
+	MCFG_CPU_VBLANK_INT("screen", gbusters_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 3579545)		/* ? */
-	MDRV_CPU_PROGRAM_MAP(gbusters_sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 3579545)		/* ? */
+	MCFG_CPU_PROGRAM_MAP(gbusters_sound_map)
 
-	MDRV_MACHINE_START(gbusters)
-	MDRV_MACHINE_RESET(gbusters)
+	MCFG_MACHINE_START(gbusters)
+	MCFG_MACHINE_RESET(gbusters)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(14*8, (64-14)*8-1, 2*8, 30*8-1 )
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(14*8, (64-14)*8-1, 2*8, 30*8-1 )
 
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_VIDEO_START(gbusters)
-	MDRV_VIDEO_UPDATE(gbusters)
+	MCFG_VIDEO_START(gbusters)
+	MCFG_VIDEO_UPDATE(gbusters)
 
-	MDRV_K052109_ADD("k052109", gbusters_k052109_intf)
-	MDRV_K051960_ADD("k051960", gbusters_k051960_intf)
+	MCFG_K052109_ADD("k052109", gbusters_k052109_intf)
+	MCFG_K051960_ADD("k051960", gbusters_k051960_intf)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, 3579545)
-	MDRV_SOUND_ROUTE(0, "mono", 0.60)
-	MDRV_SOUND_ROUTE(1, "mono", 0.60)
+	MCFG_SOUND_ADD("ymsnd", YM2151, 3579545)
+	MCFG_SOUND_ROUTE(0, "mono", 0.60)
+	MCFG_SOUND_ROUTE(1, "mono", 0.60)
 
-	MDRV_SOUND_ADD("k007232", K007232, 3579545)
-	MDRV_SOUND_CONFIG(k007232_config)
-	MDRV_SOUND_ROUTE(0, "mono", 0.30)
-	MDRV_SOUND_ROUTE(1, "mono", 0.30)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("k007232", K007232, 3579545)
+	MCFG_SOUND_CONFIG(k007232_config)
+	MCFG_SOUND_ROUTE(0, "mono", 0.30)
+	MCFG_SOUND_ROUTE(1, "mono", 0.30)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************

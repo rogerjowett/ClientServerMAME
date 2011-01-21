@@ -172,18 +172,18 @@ class test_class_type { public: int dummy; };
 
 void state_init(running_machine *machine)
 {
-	bool test_bool;
-	INT8 test_INT8;
-	UINT8 test_UINT8;
-	INT16 test_INT16;
-	UINT16 test_UINT16;
-	INT32 test_INT32;
-	UINT32 test_UINT32;
-	INT64 test_INT64;
-	UINT64 test_UINT64;
-	float test_float;
-	double test_double;
-	test_enum_type test_enum;
+	bool test_bool = false;
+	INT8 test_INT8 = 0;
+	UINT8 test_UINT8 = 0;
+	INT16 test_INT16 = 0;
+	UINT16 test_UINT16 = 0;
+	INT32 test_INT32 = 0;
+	UINT32 test_UINT32 = 0;
+	INT64 test_INT64 = 0;
+	UINT64 test_UINT64 = 0;
+	float test_float = 0.0f;
+	double test_double = 0.0;
+	test_enum_type test_enum = test_val;
 #ifdef __GNUC__
 	test_class_type test_class;
 #endif
@@ -276,7 +276,7 @@ void state_save_register_memory(running_machine *machine, const char *module, co
 	/* check for invalid timing */
 	if (!global->reg_allowed)
 	{
-		printf("Attempt to register save state entry after state registration is closed!\nFile: %s, line %d, module %s tag %s name %s\n", file, line, module, tag, name);
+		logerror("Attempt to register save state entry after state registration is closed!\nFile: %s, line %d, module %s tag %s name %s\n", file, line, module, tag, name);
 		if (machine->gamedrv->flags & GAME_SUPPORTS_SAVE)
 			fatalerror("Attempt to register save state entry after state registration is closed!\nFile: %s, line %d, module %s tag %s name %s\n", file, line, module, tag, name);
 		global->illegal_regs++;

@@ -134,6 +134,6 @@ $(WINUIOBJ)/mamevers.rc: $(OBJ)/build/verinfo$(EXE) $(SRC)/version.c
 	@echo Emitting $@...
 	@"$(VERINFO)" -b mess $(SRC)/version.c  > $@
 
-$(MESSUIEXE): $(WINUIOBJS) $(VERSIONOBJ) $(DRVLIBS) $(LIBOSD) $(LIBCPU) $(LIBEMU) $(LIBDASM) $(LIBSOUND) $(LIBUTIL) $(EXPAT) $(ZLIB) $(OBJ)/libminiupnpc.a $(SOFTFLOAT) $(LIBOCORE_NOMAIN) $(RESFILEUI)
+$(MESSUIEXE): $(WINUIOBJS) $(VERSIONOBJ) $(DRVLIBS) $(LIBOSD) $(LIBCPU) $(LIBEMU) $(LIBDASM) $(LIBSOUND) $(LIBUTIL) $(EXPAT) $(ZLIB) $(SOFTFLOAT) $(LIBOCORE_NOMAIN) $(RESFILEUI)
 	@echo Linking $@...
-	$(LD) $(LDFLAGS_UI) -mwindows $^ $(LIBS) -lIphlpapi -lws2_32 $(EXPAT) -o $@
+	$(LD) $(LDFLAGS_UI) -mwindows $^ $(LIBS) $(EXPAT) -o $@

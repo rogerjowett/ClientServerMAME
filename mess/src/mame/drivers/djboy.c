@@ -137,7 +137,6 @@ Notes:
 */
 
 #include "emu.h"
-#include "deprecat.h"
 #include "cpu/z80/z80.h"
 #include "cpu/mcs51/mcs51.h"
 #include "sound/2203intf.h"
@@ -150,7 +149,7 @@ Notes:
 
 static WRITE8_HANDLER( beast_data_w )
 {
-	djboy_state *state = (djboy_state *)space->machine->driver_data;
+	djboy_state *state = space->machine->driver_data<djboy_state>();
 
 	state->data_to_beast = data;
 	state->z80_to_beast_full = 1;
@@ -160,7 +159,7 @@ static WRITE8_HANDLER( beast_data_w )
 
 static READ8_HANDLER( beast_data_r )
 {
-	djboy_state *state = (djboy_state *)space->machine->driver_data;
+	djboy_state *state = space->machine->driver_data<djboy_state>();
 
 	state->beast_to_z80_full = 0;
 	return state->data_to_z80;
@@ -168,7 +167,7 @@ static READ8_HANDLER( beast_data_r )
 
 static READ8_HANDLER( beast_status_r )
 {
-	djboy_state *state = (djboy_state *)space->machine->driver_data;
+	djboy_state *state = space->machine->driver_data<djboy_state>();
 	return (!state->beast_to_z80_full << 2) | (state->z80_to_beast_full << 3);
 }
 
@@ -176,13 +175,13 @@ static READ8_HANDLER( beast_status_r )
 
 static WRITE8_HANDLER( trigger_nmi_on_cpu0 )
 {
-	djboy_state *state = (djboy_state *)space->machine->driver_data;
+	djboy_state *state = space->machine->driver_data<djboy_state>();
 	cpu_set_input_line(state->maincpu, INPUT_LINE_NMI, PULSE_LINE);
 }
 
 static WRITE8_HANDLER( cpu0_bankswitch_w )
 {
-	djboy_state *state = (djboy_state *)space->machine->driver_data;
+	djboy_state *state = space->machine->driver_data<djboy_state>();
 
 	data ^= state->bankxor;
 	memory_set_bank(space->machine, "bank1", data);
@@ -199,7 +198,7 @@ static WRITE8_HANDLER( cpu0_bankswitch_w )
  */
 static WRITE8_HANDLER( cpu1_bankswitch_w )
 {
-	djboy_state *state = (djboy_state *)space->machine->driver_data;
+	djboy_state *state = space->machine->driver_data<djboy_state>();
 	state->videoreg = data;
 
 	switch (data & 0xf)
@@ -239,7 +238,7 @@ static WRITE8_HANDLER( coin_count_w )
 
 static WRITE8_HANDLER( trigger_nmi_on_sound_cpu2 )
 {
-	djboy_state *state = (djboy_state *)space->machine->driver_data;
+	djboy_state *state = space->machine->driver_data<djboy_state>();
 	soundlatch_w(space, 0, data);
 	cpu_set_input_line(state->cpu2, INPUT_LINE_NMI, PULSE_LINE);
 } /* trigger_nmi_on_sound_cpu2 */
@@ -302,8 +301,8 @@ static ADDRESS_MAP_START( cpu2_port_am, ADDRESS_SPACE_IO, 8 )
 	AM_RANGE(0x00, 0x00) AM_WRITE(cpu2_bankswitch_w)
 	AM_RANGE(0x02, 0x03) AM_DEVREADWRITE("ymsnd", ym2203_r, ym2203_w)
 	AM_RANGE(0x04, 0x04) AM_READ(soundlatch_r)
-	AM_RANGE(0x06, 0x06) AM_DEVREADWRITE("oki1", okim6295_r, okim6295_w)
-	AM_RANGE(0x07, 0x07) AM_DEVREADWRITE("oki2", okim6295_r, okim6295_w)
+	AM_RANGE(0x06, 0x06) AM_DEVREADWRITE_MODERN("oki1", okim6295_device, read, write)
+	AM_RANGE(0x07, 0x07) AM_DEVREADWRITE_MODERN("oki2", okim6295_device, read, write)
 ADDRESS_MAP_END
 
 /******************************************************************************/
@@ -316,7 +315,7 @@ static READ8_HANDLER( beast_p0_r )
 
 static WRITE8_HANDLER( beast_p0_w )
 {
-	djboy_state *state = (djboy_state *)space->machine->driver_data;
+	djboy_state *state = space->machine->driver_data<djboy_state>();
 
 	if (!BIT(state->beast_p0, 1) && BIT(data, 1))
 	{
@@ -332,7 +331,7 @@ static WRITE8_HANDLER( beast_p0_w )
 
 static READ8_HANDLER( beast_p1_r )
 {
-	djboy_state *state = (djboy_state *)space->machine->driver_data;
+	djboy_state *state = space->machine->driver_data<djboy_state>();
 
 	if (BIT(state->beast_p0, 0) == 0)
 		return state->data_to_beast;
@@ -342,7 +341,7 @@ static READ8_HANDLER( beast_p1_r )
 
 static WRITE8_HANDLER( beast_p1_w )
 {
-	djboy_state *state = (djboy_state *)space->machine->driver_data;
+	djboy_state *state = space->machine->driver_data<djboy_state>();
 
 	if (data == 0xff)
 	{
@@ -355,7 +354,7 @@ static WRITE8_HANDLER( beast_p1_w )
 
 static READ8_HANDLER( beast_p2_r )
 {
-	djboy_state *state = (djboy_state *)space->machine->driver_data;
+	djboy_state *state = space->machine->driver_data<djboy_state>();
 
 	switch ((state->beast_p0 >> 2) & 3)
 	{
@@ -368,13 +367,13 @@ static READ8_HANDLER( beast_p2_r )
 
 static WRITE8_HANDLER( beast_p2_w )
 {
-	djboy_state *state = (djboy_state *)space->machine->driver_data;
+	djboy_state *state = space->machine->driver_data<djboy_state>();
 	state->beast_p2 = data;
 }
 
 static READ8_HANDLER( beast_p3_r )
 {
-	djboy_state *state = (djboy_state *)space->machine->driver_data;
+	djboy_state *state = space->machine->driver_data<djboy_state>();
 
 	UINT8 dsw = 0;
 	UINT8 dsw1 = ~input_port_read(space->machine, "DSW1");
@@ -392,7 +391,7 @@ static READ8_HANDLER( beast_p3_r )
 
 static WRITE8_HANDLER( beast_p3_w )
 {
-	djboy_state *state = (djboy_state *)space->machine->driver_data;
+	djboy_state *state = space->machine->driver_data<djboy_state>();
 
 	state->beast_p3 = data;
 	cpu_set_input_line(state->cpu1, INPUT_LINE_RESET, data & 2 ? CLEAR_LINE : ASSERT_LINE);
@@ -513,11 +512,17 @@ GFXDECODE_END
 
 /******************************************************************************/
 
-static INTERRUPT_GEN( djboy_interrupt )
-{ /* CPU1 uses interrupt mode 2. For now, just alternate the two interrupts. */
-	djboy_state *state = (djboy_state *)device->machine->driver_data;
-	state->addr ^= 0x02;
-	cpu_set_input_line_and_vector(device, 0, HOLD_LINE, state->addr);
+/* Main Z80 uses IM2 */
+static TIMER_DEVICE_CALLBACK( djboy_scanline )
+{
+	int scanline = param;
+
+	if(scanline == 240) // vblank-out irq
+		cputag_set_input_line_and_vector(timer.machine, "maincpu", 0, HOLD_LINE, 0xfd);
+
+	/* Pandora "sprite end dma" irq? TODO: timing is clearly off, attract mode relies on this */
+	if(scanline == 64)
+		cputag_set_input_line_and_vector(timer.machine, "maincpu", 0, HOLD_LINE, 0xff);
 }
 
 static const kaneko_pandora_interface djboy_pandora_config =
@@ -530,10 +535,10 @@ static const kaneko_pandora_interface djboy_pandora_config =
 
 static MACHINE_START( djboy )
 {
-	djboy_state *state = (djboy_state *)machine->driver_data;
-	UINT8 *MAIN = memory_region(machine, "maincpu");
-	UINT8 *CPU1 = memory_region(machine, "cpu1");
-	UINT8 *CPU2 = memory_region(machine, "cpu2");
+	djboy_state *state = machine->driver_data<djboy_state>();
+	UINT8 *MAIN = machine->region("maincpu")->base();
+	UINT8 *CPU1 = machine->region("cpu1")->base();
+	UINT8 *CPU2 = machine->region("cpu2")->base();
 
 	memory_configure_bank(machine, "bank1", 0, 4,  &MAIN[0x00000], 0x2000);
 	memory_configure_bank(machine, "bank1", 4, 28, &MAIN[0x10000], 0x2000);
@@ -553,8 +558,6 @@ static MACHINE_START( djboy )
 	state_save_register_global(machine, state->scrollx);
 	state_save_register_global(machine, state->scrolly);
 
-	state_save_register_global(machine, state->addr);
-
 	/* Kaneko BEAST */
 	state_save_register_global(machine, state->data_to_beast);
 	state_save_register_global(machine, state->data_to_z80);
@@ -569,72 +572,69 @@ static MACHINE_START( djboy )
 
 static MACHINE_RESET( djboy )
 {
-	djboy_state *state = (djboy_state *)machine->driver_data;
+	djboy_state *state = machine->driver_data<djboy_state>();
 
 	state->videoreg = 0;
 	state->scrollx = 0;
 	state->scrolly = 0;
-
-	state->addr = 0xff;
 
 	state->beast_int0_l = 1;
 	state->beast_to_z80_full = 0;
 	state->z80_to_beast_full = 0;
 }
 
-static MACHINE_DRIVER_START( djboy )
-	MDRV_DRIVER_DATA(djboy_state)
+static MACHINE_CONFIG_START( djboy, djboy_state )
 
-	MDRV_CPU_ADD("maincpu", Z80, 6000000)
-	MDRV_CPU_PROGRAM_MAP(cpu0_am)
-	MDRV_CPU_IO_MAP(cpu0_port_am)
-	MDRV_CPU_VBLANK_INT_HACK(djboy_interrupt, 2)
+	MCFG_CPU_ADD("maincpu", Z80, 6000000)
+	MCFG_CPU_PROGRAM_MAP(cpu0_am)
+	MCFG_CPU_IO_MAP(cpu0_port_am)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", djboy_scanline, "screen", 0, 1)
 
-	MDRV_CPU_ADD("cpu1", Z80, 6000000)
-	MDRV_CPU_PROGRAM_MAP(cpu1_am)
-	MDRV_CPU_IO_MAP(cpu1_port_am)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("cpu1", Z80, 6000000)
+	MCFG_CPU_PROGRAM_MAP(cpu1_am)
+	MCFG_CPU_IO_MAP(cpu1_port_am)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("cpu2", Z80, 6000000)
-	MDRV_CPU_PROGRAM_MAP(cpu2_am)
-	MDRV_CPU_IO_MAP(cpu2_port_am)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("cpu2", Z80, 6000000)
+	MCFG_CPU_PROGRAM_MAP(cpu2_am)
+	MCFG_CPU_IO_MAP(cpu2_port_am)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("beast", I80C51, 6000000)
-	MDRV_CPU_IO_MAP(djboy_mcu_io_map)
+	MCFG_CPU_ADD("beast", I80C51, 6000000)
+	MCFG_CPU_IO_MAP(djboy_mcu_io_map)
 
-	MDRV_QUANTUM_TIME(HZ(6000))
+	MCFG_QUANTUM_TIME(HZ(6000))
 
-	MDRV_MACHINE_START(djboy)
-	MDRV_MACHINE_RESET(djboy)
+	MCFG_MACHINE_START(djboy)
+	MCFG_MACHINE_RESET(djboy)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(57.5)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(256, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 256-1, 16, 256-16-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(57.5)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(256, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 256-1, 16, 256-16-1)
 
-	MDRV_GFXDECODE(djboy)
-	MDRV_PALETTE_LENGTH(0x200)
+	MCFG_GFXDECODE(djboy)
+	MCFG_PALETTE_LENGTH(0x200)
 
-	MDRV_KANEKO_PANDORA_ADD("pandora", djboy_pandora_config)
+	MCFG_KANEKO_PANDORA_ADD("pandora", djboy_pandora_config)
 
-	MDRV_VIDEO_START(djboy)
-	MDRV_VIDEO_UPDATE(djboy)
-	MDRV_VIDEO_EOF(djboy)
+	MCFG_VIDEO_START(djboy)
+	MCFG_VIDEO_UPDATE(djboy)
+	MCFG_VIDEO_EOF(djboy)
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM2203, 3000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
+	MCFG_SOUND_ADD("ymsnd", YM2203, 3000000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
 
-	MDRV_OKIM6295_ADD("oki1", 12000000 / 8, OKIM6295_PIN7_LOW)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_OKIM6295_ADD("oki1", 12000000 / 8, OKIM6295_PIN7_LOW)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MDRV_OKIM6295_ADD("oki2", 12000000 / 8, OKIM6295_PIN7_LOW)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki2", 12000000 / 8, OKIM6295_PIN7_LOW)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 
 ROM_START( djboy )
@@ -748,13 +748,13 @@ ROM_END
 
 static DRIVER_INIT( djboy )
 {
-	djboy_state *state = (djboy_state *)machine->driver_data;
+	djboy_state *state = machine->driver_data<djboy_state>();
 	state->bankxor = 0x00;
 }
 
 static DRIVER_INIT( djboyj )
 {
-	djboy_state *state = (djboy_state *)machine->driver_data;
+	djboy_state *state = machine->driver_data<djboy_state>();
 	state->bankxor = 0x1f;
 }
 

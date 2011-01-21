@@ -50,7 +50,7 @@ Notes:
 
 static WRITE16_HANDLER( sound_command_w )
 {
-	deniam_state *state = (deniam_state *)space->machine->driver_data;
+	deniam_state *state = space->machine->driver_data<deniam_state>();
 	if (ACCESSING_BITS_8_15)
 	{
 		soundlatch_w(space,offset, (data >> 8) & 0xff);
@@ -104,7 +104,7 @@ static ADDRESS_MAP_START( sound_io_map, ADDRESS_SPACE_IO, 8 )
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 	AM_RANGE(0x01, 0x01) AM_READ(soundlatch_r)
 	AM_RANGE(0x02, 0x03) AM_DEVWRITE("ymsnd", ym3812_w)
-	AM_RANGE(0x05, 0x05) AM_DEVREADWRITE("oki", okim6295_r, okim6295_w)
+	AM_RANGE(0x05, 0x05) AM_DEVREADWRITE_MODERN("oki", okim6295_device, read, write)
 	AM_RANGE(0x07, 0x07) AM_DEVWRITE("oki", deniam16b_oki_rom_bank_w)
 ADDRESS_MAP_END
 
@@ -115,7 +115,7 @@ static ADDRESS_MAP_START( deniam16c_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x410000, 0x410fff) AM_RAM_WRITE(deniam_textram_w) AM_BASE_MEMBER(deniam_state, textram)
 	AM_RANGE(0x440000, 0x4407ff) AM_WRITEONLY AM_BASE_SIZE_MEMBER(deniam_state, spriteram, spriteram_size)
 	AM_RANGE(0x840000, 0x840fff) AM_WRITE(deniam_palette_w) AM_BASE_MEMBER(deniam_state, paletteram)
-	AM_RANGE(0xc40000, 0xc40001) AM_DEVREADWRITE8("oki", okim6295_r, okim6295_w, 0x00ff)
+	AM_RANGE(0xc40000, 0xc40001) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0x00ff)
 	AM_RANGE(0xc40002, 0xc40003) AM_READWRITE(deniam_coinctrl_r, deniam_coinctrl_w)
 	AM_RANGE(0xc40004, 0xc40005) AM_WRITE(deniam_irq_ack_w)
 	AM_RANGE(0xc44000, 0xc44001) AM_READ_PORT("SYSTEM")
@@ -221,9 +221,9 @@ static GFXDECODE_START( deniam )
 GFXDECODE_END
 
 
-static void irqhandler( running_device *device, int linestate )
+static void irqhandler( device_t *device, int linestate )
 {
-	deniam_state *state = (deniam_state *)device->machine->driver_data;
+	deniam_state *state = device->machine->driver_data<deniam_state>();
 
 	/* system 16c doesn't have the sound CPU */
 	if (state->audio_cpu != NULL)
@@ -239,7 +239,7 @@ static const ym3812_interface ym3812_config =
 
 static MACHINE_START( deniam )
 {
-	deniam_state *state = (deniam_state *)machine->driver_data;
+	deniam_state *state = machine->driver_data<deniam_state>();
 
 	state->audio_cpu = machine->device("audiocpu");
 
@@ -267,87 +267,81 @@ static MACHINE_RESET( deniam )
 	machine->device<okim6295_device>("oki")->set_bank_base(0x00000);
 }
 
-static MACHINE_DRIVER_START( deniam16b )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(deniam_state)
+static MACHINE_CONFIG_START( deniam16b, deniam_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000,XTAL_25MHz/2)	/* 12.5Mhz verified */
-	MDRV_CPU_PROGRAM_MAP(deniam16b_map)
-	MDRV_CPU_VBLANK_INT("screen", irq4_line_assert)
+	MCFG_CPU_ADD("maincpu", M68000,XTAL_25MHz/2)	/* 12.5Mhz verified */
+	MCFG_CPU_PROGRAM_MAP(deniam16b_map)
+	MCFG_CPU_VBLANK_INT("screen", irq4_line_assert)
 
-	MDRV_CPU_ADD("audiocpu", Z80,XTAL_25MHz/4)	/* 6.25Mhz verified */
-	MDRV_CPU_PROGRAM_MAP(sound_map)
-	MDRV_CPU_IO_MAP(sound_io_map)
+	MCFG_CPU_ADD("audiocpu", Z80,XTAL_25MHz/4)	/* 6.25Mhz verified */
+	MCFG_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_IO_MAP(sound_io_map)
 
-	MDRV_MACHINE_START(deniam)
-	MDRV_MACHINE_RESET(deniam)
+	MCFG_MACHINE_START(deniam)
+	MCFG_MACHINE_RESET(deniam)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(512, 256)
-	//MDRV_SCREEN_VISIBLE_AREA(24*8, 64*8-1, 0*8, 28*8-1) // looks better but doesn't match hardware
-	MDRV_SCREEN_VISIBLE_AREA(24*8-4, 64*8-5, 0*8, 28*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(512, 256)
+	//MCFG_SCREEN_VISIBLE_AREA(24*8, 64*8-1, 0*8, 28*8-1) // looks better but doesn't match hardware
+	MCFG_SCREEN_VISIBLE_AREA(24*8-4, 64*8-5, 0*8, 28*8-1)
 
-	MDRV_GFXDECODE(deniam)
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_GFXDECODE(deniam)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(deniam)
-	MDRV_VIDEO_UPDATE(deniam)
+	MCFG_VIDEO_START(deniam)
+	MCFG_VIDEO_UPDATE(deniam)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM3812, XTAL_25MHz/6) /* "SM64" ym3812 clone; 4.166470 measured, = 4.166666Mhz verified */
-	MDRV_SOUND_CONFIG(ym3812_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.60)
+	MCFG_SOUND_ADD("ymsnd", YM3812, XTAL_25MHz/6) /* "SM64" ym3812 clone; 4.166470 measured, = 4.166666Mhz verified */
+	MCFG_SOUND_CONFIG(ym3812_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.60)
 
-	MDRV_OKIM6295_ADD("oki", XTAL_25MHz/24, OKIM6295_PIN7_HIGH) /* 1.041620 measured, = 1.0416666Mhz verified */
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", XTAL_25MHz/24, OKIM6295_PIN7_HIGH) /* 1.041620 measured, = 1.0416666Mhz verified */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( deniam16c )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(deniam_state)
+static MACHINE_CONFIG_START( deniam16c, deniam_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000,XTAL_25MHz/2)	/* 12.5Mhz verified */
-	MDRV_CPU_PROGRAM_MAP(deniam16c_map)
-	MDRV_CPU_VBLANK_INT("screen", irq4_line_assert)
+	MCFG_CPU_ADD("maincpu", M68000,XTAL_25MHz/2)	/* 12.5Mhz verified */
+	MCFG_CPU_PROGRAM_MAP(deniam16c_map)
+	MCFG_CPU_VBLANK_INT("screen", irq4_line_assert)
 
-	MDRV_MACHINE_START(deniam)
-	MDRV_MACHINE_RESET(deniam)
+	MCFG_MACHINE_START(deniam)
+	MCFG_MACHINE_RESET(deniam)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(512, 256)
-	//MDRV_SCREEN_VISIBLE_AREA(24*8, 64*8-1, 0*8, 28*8-1) // looks better but doesn't match hardware
-	MDRV_SCREEN_VISIBLE_AREA(24*8-4, 64*8-5, 0*8, 28*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(512, 256)
+	//MCFG_SCREEN_VISIBLE_AREA(24*8, 64*8-1, 0*8, 28*8-1) // looks better but doesn't match hardware
+	MCFG_SCREEN_VISIBLE_AREA(24*8-4, 64*8-5, 0*8, 28*8-1)
 
-	MDRV_GFXDECODE(deniam)
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_GFXDECODE(deniam)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(deniam)
-	MDRV_VIDEO_UPDATE(deniam)
+	MCFG_VIDEO_START(deniam)
+	MCFG_VIDEO_UPDATE(deniam)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM3812, XTAL_25MHz/6) /* "SM64" ym3812 clone; 4.166470 measured, = 4.166666Mhz verified) */
-	MDRV_SOUND_CONFIG(ym3812_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.60)
+	MCFG_SOUND_ADD("ymsnd", YM3812, XTAL_25MHz/6) /* "SM64" ym3812 clone; 4.166470 measured, = 4.166666Mhz verified) */
+	MCFG_SOUND_CONFIG(ym3812_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.60)
 
-	MDRV_OKIM6295_ADD("oki", XTAL_25MHz/24, OKIM6295_PIN7_HIGH)  /* 1.041620 measured, = 1.0416666Mhz verified */
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", XTAL_25MHz/24, OKIM6295_PIN7_HIGH)  /* 1.041620 measured, = 1.0416666Mhz verified */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 

@@ -53,12 +53,11 @@
 
 
 
-class diverboy_state
+class diverboy_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, diverboy_state(machine)); }
-
-	diverboy_state(running_machine &machine) { }
+	diverboy_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT16 *  spriteram;
@@ -66,7 +65,7 @@ public:
 	size_t    spriteram_size;
 
 	/* devices */
-	running_device *audiocpu;
+	device_t *audiocpu;
 };
 
 
@@ -76,7 +75,7 @@ static VIDEO_START(diverboy)
 
 static void draw_sprites( running_machine* machine, bitmap_t *bitmap, const rectangle *cliprect )
 {
-	diverboy_state *state = (diverboy_state *)machine->driver_data;
+	diverboy_state *state = machine->driver_data<diverboy_state>();
 	UINT16 *source = state->spriteram;
 	UINT16 *finish = source + (state->spriteram_size / 2);
 
@@ -120,7 +119,7 @@ static VIDEO_UPDATE(diverboy)
 
 static WRITE16_HANDLER( soundcmd_w )
 {
-	diverboy_state *state = (diverboy_state *)space->machine->driver_data;
+	diverboy_state *state = space->machine->driver_data<diverboy_state>();
 
 	if (ACCESSING_BITS_0_7)
 	{
@@ -161,7 +160,7 @@ static ADDRESS_MAP_START( snd_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x7fff) AM_ROM
 	AM_RANGE(0x8000, 0x87ff) AM_RAM
 	AM_RANGE(0x9000, 0x9000) AM_DEVWRITE("oki", okibank_w)
-	AM_RANGE(0x9800, 0x9800) AM_DEVREADWRITE("oki", okim6295_r, okim6295_w)
+	AM_RANGE(0x9800, 0x9800) AM_DEVREADWRITE_MODERN("oki", okim6295_device, read, write)
 	AM_RANGE(0xa000, 0xa000) AM_READ(soundlatch_r)
 ADDRESS_MAP_END
 
@@ -245,42 +244,41 @@ GFXDECODE_END
 
 static MACHINE_START( diverboy )
 {
-	diverboy_state *state = (diverboy_state *)machine->driver_data;
+	diverboy_state *state = machine->driver_data<diverboy_state>();
 
 	state->audiocpu = machine->device("audiocpu");
 }
 
-static MACHINE_DRIVER_START( diverboy )
-	MDRV_DRIVER_DATA(diverboy_state)
+static MACHINE_CONFIG_START( diverboy, diverboy_state )
 
-	MDRV_CPU_ADD("maincpu", M68000, 12000000) /* guess */
-	MDRV_CPU_PROGRAM_MAP(diverboy_map)
-	MDRV_CPU_VBLANK_INT("screen", irq6_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, 12000000) /* guess */
+	MCFG_CPU_PROGRAM_MAP(diverboy_map)
+	MCFG_CPU_VBLANK_INT("screen", irq6_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 4000000)
-	MDRV_CPU_PROGRAM_MAP(snd_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 4000000)
+	MCFG_CPU_PROGRAM_MAP(snd_map)
 
-	MDRV_MACHINE_START(diverboy)
+	MCFG_MACHINE_START(diverboy)
 
-	MDRV_GFXDECODE(diverboy)
+	MCFG_GFXDECODE(diverboy)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8+4, 40*8+1, 2*8, 32*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8+4, 40*8+1, 2*8, 32*8-1)
 
-	MDRV_PALETTE_LENGTH(0x400)
+	MCFG_PALETTE_LENGTH(0x400)
 
-	MDRV_VIDEO_START(diverboy)
-	MDRV_VIDEO_UPDATE(diverboy)
+	MCFG_VIDEO_START(diverboy)
+	MCFG_VIDEO_UPDATE(diverboy)
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_OKIM6295_ADD("oki", 1320000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 1320000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 
 

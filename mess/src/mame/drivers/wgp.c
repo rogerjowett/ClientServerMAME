@@ -405,13 +405,13 @@ Stephh's notes (based on the game M68000 code and some tests) :
 
 static READ16_HANDLER( sharedram_r )
 {
-	wgp_state *state = (wgp_state *)space->machine->driver_data;
+	wgp_state *state = space->machine->driver_data<wgp_state>();
 	return state->sharedram[offset];
 }
 
 static WRITE16_HANDLER( sharedram_w )
 {
-	wgp_state *state = (wgp_state *)space->machine->driver_data;
+	wgp_state *state = space->machine->driver_data<wgp_state>();
 	COMBINE_DATA(&state->sharedram[offset]);
 }
 
@@ -420,7 +420,7 @@ static void parse_control(running_machine *machine)
 	/* bit 0 enables cpu B */
 	/* however this fails when recovering from a save state
        if cpu B is disabled !! */
-	wgp_state *state = (wgp_state *)machine->driver_data;
+	wgp_state *state = machine->driver_data<wgp_state>();
 	cpu_set_input_line(state->subcpu, INPUT_LINE_RESET, (state->cpua_ctrl & 0x1) ? CLEAR_LINE : ASSERT_LINE);
 
 	/* bit 1 is "vibration" acc. to test mode */
@@ -428,7 +428,7 @@ static void parse_control(running_machine *machine)
 
 static WRITE16_HANDLER( cpua_ctrl_w )	/* assumes Z80 sandwiched between 68Ks */
 {
-	wgp_state *state = (wgp_state *)space->machine->driver_data;
+	wgp_state *state = space->machine->driver_data<wgp_state>();
 
 	if ((data &0xff00) && ((data &0xff) == 0))
 		data = data >> 8;	/* for Wgp */
@@ -449,14 +449,14 @@ static WRITE16_HANDLER( cpua_ctrl_w )	/* assumes Z80 sandwiched between 68Ks */
 #ifdef UNUSED_FUNCTION
 static TIMER_CALLBACK( wgp_interrupt4 )
 {
-	wgp_state *state = (wgp_state *)machine->driver_data;
+	wgp_state *state = machine->driver_data<wgp_state>();
 	cpu_set_input_line(state->maincpu, 4, HOLD_LINE);
 }
 #endif
 
 static TIMER_CALLBACK( wgp_interrupt6 )
 {
-	wgp_state *state = (wgp_state *)machine->driver_data;
+	wgp_state *state = machine->driver_data<wgp_state>();
 	cpu_set_input_line(state->maincpu, 6, HOLD_LINE);
 }
 
@@ -464,7 +464,7 @@ static TIMER_CALLBACK( wgp_interrupt6 )
 
 static TIMER_CALLBACK( wgp_cpub_interrupt6 )
 {
-	wgp_state *state = (wgp_state *)machine->driver_data;
+	wgp_state *state = machine->driver_data<wgp_state>();
 	cpu_set_input_line(state->subcpu, 6, HOLD_LINE);	/* assumes Z80 sandwiched between the 68Ks */
 }
 
@@ -510,7 +510,7 @@ static WRITE16_HANDLER( rotate_port_w )
     which contains sets of 4 words (used for ports 0-3).
     NB: port 6 is not written.
     */
-	wgp_state *state = (wgp_state *)space->machine->driver_data;
+	wgp_state *state = space->machine->driver_data<wgp_state>();
 
 	switch (offset)
 	{
@@ -611,20 +611,20 @@ static WRITE16_HANDLER( wgp_adinput_w )
 
 static void reset_sound_region( running_machine *machine )	/* assumes Z80 sandwiched between the 68Ks */
 {
-	wgp_state *state = (wgp_state *)machine->driver_data;
+	wgp_state *state = machine->driver_data<wgp_state>();
 	memory_set_bank(machine, "bank10", state->banknum);
 }
 
 static WRITE8_HANDLER( sound_bankswitch_w )
 {
-	wgp_state *state = (wgp_state *)space->machine->driver_data;
+	wgp_state *state = space->machine->driver_data<wgp_state>();
 	state->banknum = data & 7;
 	reset_sound_region(space->machine);
 }
 
 static WRITE16_HANDLER( wgp_sound_w )
 {
-	wgp_state *state = (wgp_state *)space->machine->driver_data;
+	wgp_state *state = space->machine->driver_data<wgp_state>();
 
 	if (offset == 0)
 		tc0140syt_port_w(state->tc0140syt, 0, data & 0xff);
@@ -634,7 +634,7 @@ static WRITE16_HANDLER( wgp_sound_w )
 
 static READ16_HANDLER( wgp_sound_r )
 {
-	wgp_state *state = (wgp_state *)space->machine->driver_data;
+	wgp_state *state = space->machine->driver_data<wgp_state>();
 
 	if (offset == 1)
 		return ((tc0140syt_comm_r(state->tc0140syt, 0) & 0xff));
@@ -903,9 +903,9 @@ GFXDECODE_END
 **************************************************************/
 
 /* handler called by the YM2610 emulator when the internal timers cause an IRQ */
-static void irqhandler( running_device *device, int irq )	// assumes Z80 sandwiched between 68Ks
+static void irqhandler( device_t *device, int irq )	// assumes Z80 sandwiched between 68Ks
 {
-	wgp_state *state = (wgp_state *)device->machine->driver_data;
+	wgp_state *state = device->machine->driver_data<wgp_state>();
 	cpu_set_input_line(state->audiocpu, 0, irq ? ASSERT_LINE : CLEAR_LINE);
 }
 
@@ -931,7 +931,7 @@ static STATE_POSTLOAD( wgp_postload )
 
 static MACHINE_RESET( wgp )
 {
-	wgp_state *state = (wgp_state *)machine->driver_data;
+	wgp_state *state = machine->driver_data<wgp_state>();
 	int i;
 
 	state->banknum = 0;
@@ -951,9 +951,9 @@ static MACHINE_RESET( wgp )
 
 static MACHINE_START( wgp )
 {
-	wgp_state *state = (wgp_state *)machine->driver_data;
+	wgp_state *state = machine->driver_data<wgp_state>();
 
-	memory_configure_bank(machine, "bank10", 0, 4, memory_region(machine, "audiocpu") + 0xc000, 0x4000);
+	memory_configure_bank(machine, "bank10", 0, 4, machine->region("audiocpu")->base() + 0xc000, 0x4000);
 
 	state->maincpu = machine->device("maincpu");
 	state->audiocpu = machine->device("audiocpu");
@@ -998,70 +998,66 @@ static const tc0140syt_interface wgp_tc0140syt_intf =
 	"sub", "audiocpu"
 };
 
-static MACHINE_DRIVER_START( wgp )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(wgp_state)
+static MACHINE_CONFIG_START( wgp, wgp_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 12000000)	/* 12 MHz ??? */
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_VBLANK_INT("screen", irq4_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, 12000000)	/* 12 MHz ??? */
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_VBLANK_INT("screen", irq4_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 16000000/4)	/* 4 MHz ??? */
-	MDRV_CPU_PROGRAM_MAP(z80_sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 16000000/4)	/* 4 MHz ??? */
+	MCFG_CPU_PROGRAM_MAP(z80_sound_map)
 
-	MDRV_CPU_ADD("sub", M68000, 12000000)	/* 12 MHz ??? */
-	MDRV_CPU_PROGRAM_MAP(cpu2_map)
-	MDRV_CPU_VBLANK_INT("screen", wgp_cpub_interrupt)
+	MCFG_CPU_ADD("sub", M68000, 12000000)	/* 12 MHz ??? */
+	MCFG_CPU_PROGRAM_MAP(cpu2_map)
+	MCFG_CPU_VBLANK_INT("screen", wgp_cpub_interrupt)
 
-	MDRV_MACHINE_START(wgp)
-	MDRV_MACHINE_RESET(wgp)
+	MCFG_MACHINE_START(wgp)
+	MCFG_MACHINE_RESET(wgp)
 
-	MDRV_QUANTUM_TIME(HZ(30000))
+	MCFG_QUANTUM_TIME(HZ(30000))
 
-	MDRV_TC0220IOC_ADD("tc0220ioc", wgp_io_intf)
+	MCFG_TC0220IOC_ADD("tc0220ioc", wgp_io_intf)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(40*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 2*8, 32*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(40*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 2*8, 32*8-1)
 
-	MDRV_GFXDECODE(wgp)
-	MDRV_PALETTE_LENGTH(4096)
+	MCFG_GFXDECODE(wgp)
+	MCFG_PALETTE_LENGTH(4096)
 
-	MDRV_VIDEO_START(wgp)
-	MDRV_VIDEO_UPDATE(wgp)
+	MCFG_VIDEO_START(wgp)
+	MCFG_VIDEO_UPDATE(wgp)
 
-	MDRV_TC0100SCN_ADD("tc0100scn", wgp_tc0100scn_intf)
+	MCFG_TC0100SCN_ADD("tc0100scn", wgp_tc0100scn_intf)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2610, 16000000/2)
-	MDRV_SOUND_CONFIG(ym2610_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker",  0.25)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.25)
-	MDRV_SOUND_ROUTE(1, "lspeaker",  1.0)
-	MDRV_SOUND_ROUTE(2, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM2610, 16000000/2)
+	MCFG_SOUND_CONFIG(ym2610_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker",  0.25)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.25)
+	MCFG_SOUND_ROUTE(1, "lspeaker",  1.0)
+	MCFG_SOUND_ROUTE(2, "rspeaker", 1.0)
 
-	MDRV_TC0140SYT_ADD("tc0140syt", wgp_tc0140syt_intf)
-MACHINE_DRIVER_END
+	MCFG_TC0140SYT_ADD("tc0140syt", wgp_tc0140syt_intf)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( wgp2 )
-	MDRV_IMPORT_FROM(wgp)
+static MACHINE_CONFIG_DERIVED( wgp2, wgp )
 
-	MDRV_QUANTUM_TIME(HZ(12000))
+	MCFG_QUANTUM_TIME(HZ(12000))
 	/* video hardware */
-	MDRV_VIDEO_START(wgp2)
+	MCFG_VIDEO_START(wgp2)
 
-	MDRV_DEVICE_REMOVE("tc0100scn")
-	MDRV_TC0100SCN_ADD("tc0100scn", wgp2_tc0100scn_intf)
-MACHINE_DRIVER_END
+	MCFG_DEVICE_REMOVE("tc0100scn")
+	MCFG_TC0100SCN_ADD("tc0100scn", wgp2_tc0100scn_intf)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************
@@ -1274,7 +1270,7 @@ static DRIVER_INIT( wgp )
 #if 0
 	/* Patch for coding error that causes corrupt data in
        sprite tilemapping area from $4083c0-847f */
-	UINT16 *ROM = (UINT16 *)memory_region(machine, "maincpu");
+	UINT16 *ROM = (UINT16 *)machine->region("maincpu")->base();
 	ROM[0x25dc / 2] = 0x0602;	// faulty value is 0x0206
 #endif
 }
@@ -1282,7 +1278,7 @@ static DRIVER_INIT( wgp )
 static DRIVER_INIT( wgp2 )
 {
 	/* Code patches to prevent failure in memory checks */
-	UINT16 *ROM = (UINT16 *)memory_region(machine, "sub");
+	UINT16 *ROM = (UINT16 *)machine->region("sub")->base();
 	ROM[0x8008 / 2] = 0x0;
 	ROM[0x8010 / 2] = 0x0;
 }

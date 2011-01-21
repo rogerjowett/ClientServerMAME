@@ -83,7 +83,7 @@ TODO:
 
 static WRITE16_HANDLER( inufuku_soundcommand_w )
 {
-	inufuku_state *state = (inufuku_state *)space->machine->driver_data;
+	inufuku_state *state = space->machine->driver_data<inufuku_state>();
 	if (ACCESSING_BITS_0_7)
 	{
 		/* hack... sound doesn't work otherwise */
@@ -98,7 +98,7 @@ static WRITE16_HANDLER( inufuku_soundcommand_w )
 
 static WRITE8_HANDLER( pending_command_clear_w )
 {
-	inufuku_state *state = (inufuku_state *)space->machine->driver_data;
+	inufuku_state *state = space->machine->driver_data<inufuku_state>();
 	state->pending_command = 0;
 }
 
@@ -115,7 +115,7 @@ static WRITE8_HANDLER( inufuku_soundrombank_w )
 
 static CUSTOM_INPUT( soundflag_r )
 {
-	inufuku_state *state = (inufuku_state *)field->port->machine->driver_data;
+	inufuku_state *state = field->port->machine->driver_data<inufuku_state>();
 	UINT16 soundflag = state->pending_command ? 0 : 1;
 
 	return soundflag;
@@ -296,9 +296,9 @@ GFXDECODE_END
 
 ******************************************************************************/
 
-static void irqhandler( running_device *device, int irq )
+static void irqhandler( device_t *device, int irq )
 {
-	inufuku_state *state = (inufuku_state *)device->machine->driver_data;
+	inufuku_state *state = device->machine->driver_data<inufuku_state>();
 	cpu_set_input_line(state->audiocpu, 0, irq ? ASSERT_LINE : CLEAR_LINE);
 }
 
@@ -316,8 +316,8 @@ static const ym2610_interface ym2610_config =
 
 static MACHINE_START( inufuku )
 {
-	inufuku_state *state = (inufuku_state *)machine->driver_data;
-	UINT8 *ROM = memory_region(machine, "audiocpu");
+	inufuku_state *state = machine->driver_data<inufuku_state>();
+	UINT8 *ROM = machine->region("audiocpu")->base();
 
 	memory_configure_bank(machine, "bank1", 0, 4, &ROM[0x10000], 0x8000);
 	memory_set_bank(machine, "bank1", 0);
@@ -336,7 +336,7 @@ static MACHINE_START( inufuku )
 
 static MACHINE_RESET( inufuku )
 {
-	inufuku_state *state = (inufuku_state *)machine->driver_data;
+	inufuku_state *state = machine->driver_data<inufuku_state>();
 
 	state->pending_command = 1;
 	state->bg_scrollx = 0;
@@ -348,49 +348,46 @@ static MACHINE_RESET( inufuku )
 	state->tx_palettebank = 0;
 }
 
-static MACHINE_DRIVER_START( inufuku )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(inufuku_state)
+static MACHINE_CONFIG_START( inufuku, inufuku_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 32000000/2)	/* 16.00 MHz */
-	MDRV_CPU_PROGRAM_MAP(inufuku_map)
-	MDRV_CPU_VBLANK_INT("screen", irq1_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, 32000000/2)	/* 16.00 MHz */
+	MCFG_CPU_PROGRAM_MAP(inufuku_map)
+	MCFG_CPU_VBLANK_INT("screen", irq1_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 32000000/4)		/* 8.00 MHz */
-	MDRV_CPU_PROGRAM_MAP(inufuku_sound_map)
-	MDRV_CPU_IO_MAP(inufuku_sound_io_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 32000000/4)		/* 8.00 MHz */
+	MCFG_CPU_PROGRAM_MAP(inufuku_sound_map)
+	MCFG_CPU_IO_MAP(inufuku_sound_io_map)
 								/* IRQs are triggered by the YM2610 */
 
-	MDRV_MACHINE_START(inufuku)
-	MDRV_MACHINE_RESET(inufuku)
+	MCFG_MACHINE_START(inufuku)
+	MCFG_MACHINE_RESET(inufuku)
 
-	MDRV_EEPROM_93C46_ADD("eeprom")
+	MCFG_EEPROM_93C46_ADD("eeprom")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(2048, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 319-1, 1, 224-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(2048, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 319-1, 1, 224-1)
 
-	MDRV_GFXDECODE(inufuku)
-	MDRV_PALETTE_LENGTH(4096)
+	MCFG_GFXDECODE(inufuku)
+	MCFG_PALETTE_LENGTH(4096)
 
-	MDRV_VIDEO_START(inufuku)
-	MDRV_VIDEO_UPDATE(inufuku)
+	MCFG_VIDEO_START(inufuku)
+	MCFG_VIDEO_UPDATE(inufuku)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM2610, 32000000/4)
-	MDRV_SOUND_CONFIG(ym2610_config)
-	MDRV_SOUND_ROUTE(0, "mono", 0.50)
-	MDRV_SOUND_ROUTE(1, "mono", 0.75)
-	MDRV_SOUND_ROUTE(2, "mono", 0.75)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2610, 32000000/4)
+	MCFG_SOUND_CONFIG(ym2610_config)
+	MCFG_SOUND_ROUTE(0, "mono", 0.50)
+	MCFG_SOUND_ROUTE(1, "mono", 0.75)
+	MCFG_SOUND_ROUTE(2, "mono", 0.75)
+MACHINE_CONFIG_END
 
 
 /******************************************************************************

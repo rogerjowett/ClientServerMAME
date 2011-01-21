@@ -70,7 +70,7 @@
 typedef struct _namco_51xx_state namco_51xx_state;
 struct _namco_51xx_state
 {
-	running_device *	cpu;
+	device_t *	cpu;
 	devcb_resolved_read8 in[4];
 	devcb_resolved_write8 out[2];
 	INT32 lastcoins,lastbuttons;
@@ -82,7 +82,7 @@ struct _namco_51xx_state
 	INT32 mode,coincred_mode,remap_joy;
 };
 
-INLINE namco_51xx_state *get_safe_token(running_device *device)
+INLINE namco_51xx_state *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
 	assert(device->type() == NAMCO_51XX);
@@ -357,11 +357,11 @@ static ADDRESS_MAP_START( namco_51xx_map_io, ADDRESS_SPACE_IO, 8 )
 ADDRESS_MAP_END
 
 
-static MACHINE_DRIVER_START( namco_51xx )
-	MDRV_CPU_ADD("mcu", MB8843, DERIVED_CLOCK(1,1))		/* parent clock, internally divided by 6 */
-	MDRV_CPU_IO_MAP(namco_51xx_map_io)
-	MDRV_DEVICE_DISABLE()
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_FRAGMENT( namco_51xx )
+	MCFG_CPU_ADD("mcu", MB8843, DERIVED_CLOCK(1,1))		/* parent clock, internally divided by 6 */
+	MCFG_CPU_IO_MAP(namco_51xx_map_io)
+	MCFG_DEVICE_DISABLE()
+MACHINE_CONFIG_END
 
 
 ROM_START( namco_51xx )

@@ -7,6 +7,7 @@
 ***************************************************************************/
 
 #include "emu.h"
+#include "includes/popeye.h"
 
 UINT8 *popeye_videoram;
 UINT8 *popeye_colorram;
@@ -138,7 +139,7 @@ PALETTE_INIT( popeyebl )
 static void set_background_palette(running_machine *machine,int bank)
 {
 	int i;
-	UINT8 *color_prom = memory_region(machine, "proms") + 16 * bank;
+	UINT8 *color_prom = machine->region("proms")->base() + 16 * bank;
 
 	for (i = 0;i < 16;i++)
 	{
@@ -281,7 +282,7 @@ VIDEO_START( popeye )
 static void draw_background(running_machine *machine, bitmap_t *bitmap, const rectangle *cliprect)
 {
 	int offs;
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	if (lastflip != flip_screen_get(machine))
 	{

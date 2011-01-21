@@ -27,21 +27,13 @@ Sound: AY-3-8912
 #include "cpu/m6809/m6809.h"
 #include "video/mc6845.h"
 #include "sound/ay8910.h"
-
-/* video */
-WRITE8_HANDLER( usgames_videoram_w );
-WRITE8_HANDLER( usgames_charram_w );
-VIDEO_START(usgames);
-PALETTE_INIT(usgames);
-VIDEO_UPDATE(usgames);
-
-
-extern UINT8 *usgames_videoram,*usgames_charram;
+#include "includes/usgames.h"
+#include "machine/nvram.h"
 
 
 static WRITE8_HANDLER( usgames_rombank_w )
 {
-	UINT8 *RAM = memory_region(space->machine, "maincpu");
+	UINT8 *RAM = space->machine->region("maincpu")->base();
 
 //  logerror ("BANK WRITE? -%02x-\n",data);
 //popmessage("%02x",data);
@@ -69,7 +61,7 @@ static WRITE8_HANDLER( lamps2_w )
 
 
 static ADDRESS_MAP_START( usgames_map, ADDRESS_SPACE_PROGRAM, 8 )
-	AM_RANGE(0x0000, 0x1fff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0x0000, 0x1fff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0x2000, 0x2000) AM_READ_PORT("DSW")
 	AM_RANGE(0x2010, 0x2010) AM_READ_PORT("INPUTS")
 	AM_RANGE(0x2020, 0x2020) AM_WRITE(lamps1_w)
@@ -88,7 +80,7 @@ ADDRESS_MAP_END
 
 
 static ADDRESS_MAP_START( usg185_map, ADDRESS_SPACE_PROGRAM, 8 )
-	AM_RANGE(0x0000, 0x1fff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0x0000, 0x1fff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0x2000, 0x2001) AM_DEVWRITE("aysnd", ay8910_address_data_w)
 	AM_RANGE(0x2400, 0x2400) AM_READ_PORT("DSW")
 	AM_RANGE(0x2410, 0x2410) AM_READ_PORT("INPUTS")
@@ -237,44 +229,43 @@ static const mc6845_interface mc6845_intf =
 };
 
 
-static MACHINE_DRIVER_START( usg32 )
+static MACHINE_CONFIG_START( usg32, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6809, 2000000) /* ?? */
-	MDRV_CPU_PROGRAM_MAP(usgames_map)
-	MDRV_CPU_PERIODIC_INT(irq0_line_hold,5*60) /* ?? */
+	MCFG_CPU_ADD("maincpu", M6809, 2000000) /* ?? */
+	MCFG_CPU_PROGRAM_MAP(usgames_map)
+	MCFG_CPU_PERIODIC_INT(irq0_line_hold,5*60) /* ?? */
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(7*8, 57*8-1, 0*8, 31*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(7*8, 57*8-1, 0*8, 31*8-1)
 
-	MDRV_GFXDECODE(usgames)
-	MDRV_PALETTE_LENGTH(2*256)
+	MCFG_GFXDECODE(usgames)
+	MCFG_PALETTE_LENGTH(2*256)
 
-	MDRV_PALETTE_INIT(usgames)
-	MDRV_VIDEO_START(usgames)
-	MDRV_VIDEO_UPDATE(usgames)
+	MCFG_PALETTE_INIT(usgames)
+	MCFG_VIDEO_START(usgames)
+	MCFG_VIDEO_UPDATE(usgames)
 
-	MDRV_MC6845_ADD("crtc", MC6845, XTAL_18MHz / 16, mc6845_intf)
+	MCFG_MC6845_ADD("crtc", MC6845, XTAL_18MHz / 16, mc6845_intf)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("aysnd", AY8910, 2000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("aysnd", AY8910, 2000000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( usg185 )
-	MDRV_IMPORT_FROM(usg32)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(usg185_map)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( usg185, usg32 )
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(usg185_map)
+MACHINE_CONFIG_END
 
 
 

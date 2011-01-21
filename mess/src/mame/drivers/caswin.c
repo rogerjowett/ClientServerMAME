@@ -44,6 +44,7 @@ TODO:
 #include "emu.h"
 #include "cpu/z80/z80.h"
 #include "sound/ay8910.h"
+#include "machine/nvram.h"
 
 static UINT8 *sc0_vram,*sc0_attr;
 static tilemap_t *sc0_tilemap;
@@ -104,7 +105,7 @@ static WRITE8_HANDLER( vvillage_vregs_w )
 
 static READ8_HANDLER( vvillage_rng_r )
 {
-	return mame_rand(space->machine);
+	return space->machine->rand();
 }
 
 static WRITE8_HANDLER( vvillage_output_w )
@@ -135,7 +136,7 @@ static WRITE8_HANDLER( vvillage_lamps_w )
 static ADDRESS_MAP_START( vvillage_mem, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x7fff) AM_ROM
 	AM_RANGE(0xa000, 0xa000) AM_READ(vvillage_rng_r) //accessed by caswin only
-	AM_RANGE(0xe000, 0xe7ff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0xe000, 0xe7ff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0xf000, 0xf3ff) AM_RAM_WRITE(sc0_vram_w) AM_BASE(&sc0_vram)
 	AM_RANGE(0xf800, 0xfbff) AM_RAM_WRITE(sc0_attr_w) AM_BASE(&sc0_attr)
 ADDRESS_MAP_END
@@ -274,36 +275,36 @@ static PALETTE_INIT( caswin )
 }
 
 
-static MACHINE_DRIVER_START( vvillage )
+static MACHINE_CONFIG_START( vvillage, driver_device )
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80,4000000)		 /* ? MHz */
-	MDRV_CPU_PROGRAM_MAP(vvillage_mem)
-	MDRV_CPU_IO_MAP(vvillage_io)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold )
+	MCFG_CPU_ADD("maincpu", Z80,4000000)		 /* ? MHz */
+	MCFG_CPU_PROGRAM_MAP(vvillage_mem)
+	MCFG_CPU_IO_MAP(vvillage_io)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold )
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(256, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 256-1, 16, 256-16-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(256, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 256-1, 16, 256-16-1)
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
-	MDRV_GFXDECODE(vvillage)
-	MDRV_PALETTE_LENGTH(0x40)
-	MDRV_PALETTE_INIT(caswin)
+	MCFG_GFXDECODE(vvillage)
+	MCFG_PALETTE_LENGTH(0x40)
+	MCFG_PALETTE_INIT(caswin)
 
-	MDRV_VIDEO_START(vvillage)
-	MDRV_VIDEO_UPDATE(vvillage)
+	MCFG_VIDEO_START(vvillage)
+	MCFG_VIDEO_UPDATE(vvillage)
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("aysnd", AY8910, 4000000 / 4)
-	MDRV_SOUND_CONFIG(ay8910_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("aysnd", AY8910, 4000000 / 4)
+	MCFG_SOUND_CONFIG(ay8910_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
+MACHINE_CONFIG_END
 
 ROM_START( caswin )
 	ROM_REGION( 0x8000, "maincpu", 0 )

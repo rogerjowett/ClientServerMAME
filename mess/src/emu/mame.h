@@ -38,7 +38,7 @@ enum
 	MAMERR_INVALID_CONFIG	= 6,	/* some sort of error in configuration */
 	MAMERR_IDENT_NONROMS	= 7,	/* identified all non-ROM files */
 	MAMERR_IDENT_PARTIAL	= 8,	/* identified some files but not all */
-	MAMERR_IDENT_NONE		= 9,	/* identified no files */
+	MAMERR_IDENT_NONE		= 9,		/* identified no files */
 	MAMERR_NETWORK		= 10 /*Network error in ClientServerMAME*/
 };
 
@@ -97,10 +97,13 @@ extern const char build_version[];
 /* ----- core system management ----- */
 
 /* execute as configured by the OPTION_GAMENAME option on the specified options */
-int mame_execute(core_options *options);
+int mame_execute(osd_interface &osd, core_options *options);
 
 /* accesses the core_options for the currently running emulation */
 core_options *mame_options(void);
+
+/* set mame options, used by validate option */
+void set_mame_options(core_options *options);
 
 /* return true if the given machine is valid */
 int mame_is_valid_machine(running_machine *machine);

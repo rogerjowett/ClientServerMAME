@@ -1,10 +1,9 @@
 
-class flstory_state
+class flstory_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, flstory_state(machine)); }
-
-	flstory_state(running_machine &machine) { }
+	flstory_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *  videoram;
@@ -39,9 +38,9 @@ public:
 	int      mcu_select;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *audiocpu;
-	running_device *mcu;
+	device_t *maincpu;
+	device_t *audiocpu;
+	device_t *mcu;
 };
 
 
@@ -73,6 +72,8 @@ VIDEO_START( flstory );
 VIDEO_UPDATE( flstory );
 VIDEO_START( victnine );
 VIDEO_UPDATE( victnine );
+VIDEO_START( rumba );
+VIDEO_UPDATE( rumba );
 
 WRITE8_HANDLER( flstory_videoram_w );
 READ8_HANDLER( flstory_palette_r );

@@ -44,16 +44,11 @@ static ADDRESS_MAP_START(concept_memmap, ADDRESS_SPACE_PROGRAM, 16)
 	AM_RANGE(0x020000, 0x021fff) AM_ROM										/* macsbugs ROM (optional) */
 	AM_RANGE(0x030000, 0x03ffff) AM_READWRITE(concept_io_r,concept_io_w)	/* I/O space */
 
-	AM_RANGE(0x080000, 0x0fffff) AM_RAM AM_BASE_GENERIC(videoram)/* AM_RAMBANK(2) */	/* DRAM */
+	AM_RANGE(0x080000, 0x0fffff) AM_RAM AM_BASE_MEMBER(concept_state, videoram)/* AM_RAMBANK(2) */	/* DRAM */
 ADDRESS_MAP_END
 
 /* init with simple, fixed, B/W palette */
 /* Is the palette black on white or white on black??? */
-static PALETTE_INIT( concept )
-{
-	palette_set_color_rgb(machine, 0, 0xff, 0xff, 0xff);
-	palette_set_color_rgb(machine, 1, 0x00, 0x00, 0x00);
-}
 
 static const mm58274c_interface concept_mm58274c_interface =
 {
@@ -119,43 +114,43 @@ static const floppy_config concept_floppy_config =
 };
 
 /* concept machine */
-static MACHINE_DRIVER_START( concept )
+static MACHINE_CONFIG_START( concept, concept_state )
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 8182000)        /* 16.364 MHz / 2 */
-	MDRV_CPU_PROGRAM_MAP(concept_memmap)
-	MDRV_CPU_VBLANK_INT("screen", concept_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, 8182000)        /* 16.364 MHz / 2 */
+	MCFG_CPU_PROGRAM_MAP(concept_memmap)
+	MCFG_CPU_VBLANK_INT("screen", concept_interrupt)
 
-	MDRV_QUANTUM_TIME(HZ(60))
-	MDRV_MACHINE_START(concept)
+	MCFG_QUANTUM_TIME(HZ(60))
+	MCFG_MACHINE_START(concept)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)			/* 50 or 60, jumper-selectable */
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(720, 560)
-	MDRV_SCREEN_VISIBLE_AREA(0, 720-1, 0, 560-1)
-	MDRV_PALETTE_LENGTH(2)
-	MDRV_PALETTE_INIT(concept)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)			/* 50 or 60, jumper-selectable */
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(720, 560)
+	MCFG_SCREEN_VISIBLE_AREA(0, 720-1, 0, 560-1)
+	MCFG_PALETTE_LENGTH(2)
+	MCFG_PALETTE_INIT(black_and_white)
 
-	MDRV_VIDEO_START(concept)
-	MDRV_VIDEO_UPDATE(concept)
+	MCFG_VIDEO_START(concept)
+	MCFG_VIDEO_UPDATE(concept)
 
 	/* no sound? */
 
-	MDRV_HARDDISK_ADD( "harddisk1" )
+	MCFG_HARDDISK_ADD( "harddisk1" )
 
 	/* rtc */
-	MDRV_MM58274C_ADD("mm58274c", concept_mm58274c_interface)
+	MCFG_MM58274C_ADD("mm58274c", concept_mm58274c_interface)
 
 	/* via */
-	MDRV_VIA6522_ADD("via6522_0", 1022750, concept_via6522_intf)
+	MCFG_VIA6522_ADD("via6522_0", 1022750, concept_via6522_intf)
 
-	MDRV_WD179X_ADD("wd179x", concept_wd17xx_interface )
+	MCFG_WD179X_ADD("wd179x", concept_wd17xx_interface )
 
-	MDRV_FLOPPY_4_DRIVES_ADD(concept_floppy_config)
-MACHINE_DRIVER_END
+	MCFG_FLOPPY_4_DRIVES_ADD(concept_floppy_config)
+MACHINE_CONFIG_END
 
 
 static INPUT_PORTS_START( concept )
@@ -286,7 +281,7 @@ static INPUT_PORTS_START( concept )
 		PORT_DIPSETTING(0x00, DEF_STR( Off ))
 		PORT_DIPSETTING(0x20, DEF_STR( On ))
 		PORT_DIPNAME(0xc0, 0x00, "Type of Boot")
-		PORT_DIPSETTING(0x00, "Prompt fo type of Boot")		// Documentation has 0x00 and 0xc0 reversed per boot PROM
+		PORT_DIPSETTING(0x00, "Prompt for type of Boot")		// Documentation has 0x00 and 0xc0 reversed per boot PROM
 		PORT_DIPSETTING(0x40, "Boot from Omninet")
 		PORT_DIPSETTING(0x80, "Boot from Local Disk")
 		PORT_DIPSETTING(0xc0, "Boot from Diskette")
@@ -334,4 +329,4 @@ ROM_START( concept )
 ROM_END
 
 /*    YEAR  NAME      PARENT    COMPAT  MACHINE   INPUT    INIT  COMPANY           FULLNAME */
-COMP( 1982, concept,  0,		0,		concept,  concept, 0,    "Corvus Systems", "Concept" , GAME_NO_SOUND)
+COMP( 1982, concept,  0,	0,	concept,  concept, 0,    "Corvus Systems", "Concept" , GAME_NO_SOUND)

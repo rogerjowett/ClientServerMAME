@@ -38,7 +38,7 @@
 
 static INTERRUPT_GEN( bladestl_interrupt )
 {
-	bladestl_state *state = (bladestl_state *)device->machine->driver_data;
+	bladestl_state *state = device->machine->driver_data<bladestl_state>();
 
 	if (cpu_getiloops(device) == 0)
 	{
@@ -59,7 +59,7 @@ static INTERRUPT_GEN( bladestl_interrupt )
 
 static READ8_HANDLER( trackball_r )
 {
-	bladestl_state *state = (bladestl_state *)space->machine->driver_data;
+	bladestl_state *state = space->machine->driver_data<bladestl_state>();
 	static const char *const port[] = { "TRACKBALL_P1_1", "TRACKBALL_P1_2", "TRACKBALL_P2_1", "TRACKBALL_P1_2" };
 	int curr, delta;
 
@@ -72,7 +72,7 @@ static READ8_HANDLER( trackball_r )
 
 static WRITE8_HANDLER( bladestl_bankswitch_w )
 {
-	bladestl_state *state = (bladestl_state *)space->machine->driver_data;
+	bladestl_state *state = space->machine->driver_data<bladestl_state>();
 
 	/* bits 0 & 1 = coin counters */
 	coin_counter_w(space->machine, 0,data & 0x01);
@@ -94,7 +94,7 @@ static WRITE8_HANDLER( bladestl_bankswitch_w )
 
 static WRITE8_HANDLER( bladestl_sh_irqtrigger_w )
 {
-	bladestl_state *state = (bladestl_state *)space->machine->driver_data;
+	bladestl_state *state = space->machine->driver_data<bladestl_state>();
 
 	soundlatch_w(space, offset, data);
 	cpu_set_input_line(state->audiocpu, M6809_IRQ_LINE, HOLD_LINE);
@@ -306,8 +306,8 @@ static const k007420_interface bladestl_k007420_intf =
 
 static MACHINE_START( bladestl )
 {
-	bladestl_state *state = (bladestl_state *)machine->driver_data;
-	UINT8 *ROM = memory_region(machine, "maincpu");
+	bladestl_state *state = machine->driver_data<bladestl_state>();
+	UINT8 *ROM = machine->region("maincpu")->base();
 
 	memory_configure_bank(machine, "bank1", 0, 4, &ROM[0x10000], 0x2000);
 
@@ -322,7 +322,7 @@ static MACHINE_START( bladestl )
 
 static MACHINE_RESET( bladestl )
 {
-	bladestl_state *state = (bladestl_state *)machine->driver_data;
+	bladestl_state *state = machine->driver_data<bladestl_state>();
 	int i;
 
 	state->layer_colorbase[0] = 0;
@@ -333,54 +333,51 @@ static MACHINE_RESET( bladestl )
 		state->last_track[i] = 0;
 }
 
-static MACHINE_DRIVER_START( bladestl )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(bladestl_state)
+static MACHINE_CONFIG_START( bladestl, bladestl_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", HD6309, 24000000/2)		/* 24MHz/2 (?) */
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_VBLANK_INT_HACK(bladestl_interrupt,2) /* (1 IRQ + 1 NMI) */
+	MCFG_CPU_ADD("maincpu", HD6309, 24000000/2)		/* 24MHz/2 (?) */
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_VBLANK_INT_HACK(bladestl_interrupt,2) /* (1 IRQ + 1 NMI) */
 
-	MDRV_CPU_ADD("audiocpu", M6809, 2000000)
-	MDRV_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_ADD("audiocpu", M6809, 2000000)
+	MCFG_CPU_PROGRAM_MAP(sound_map)
 
-	MDRV_QUANTUM_TIME(HZ(600))
+	MCFG_QUANTUM_TIME(HZ(600))
 
-	MDRV_MACHINE_START(bladestl)
-	MDRV_MACHINE_RESET(bladestl)
+	MCFG_MACHINE_START(bladestl)
+	MCFG_MACHINE_RESET(bladestl)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(bladestl)
-	MDRV_PALETTE_INIT(bladestl)
-	MDRV_PALETTE_LENGTH(32 + 16*16)
+	MCFG_GFXDECODE(bladestl)
+	MCFG_PALETTE_INIT(bladestl)
+	MCFG_PALETTE_LENGTH(32 + 16*16)
 
-	MDRV_VIDEO_UPDATE(bladestl)
+	MCFG_VIDEO_UPDATE(bladestl)
 
-	MDRV_K007342_ADD("k007342", bladestl_k007342_intf)
-	MDRV_K007420_ADD("k007420", bladestl_k007420_intf)
-	MDRV_K051733_ADD("k051733")
+	MCFG_K007342_ADD("k007342", bladestl_k007342_intf)
+	MCFG_K007420_ADD("k007420", bladestl_k007420_intf)
+	MCFG_K051733_ADD("k051733")
 
 	/* sound hardware */
 	/* the initialization order is important, the port callbacks being
        called at initialization time */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("upd", UPD7759, UPD7759_STANDARD_CLOCK)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.60)
+	MCFG_SOUND_ADD("upd", UPD7759, UPD7759_STANDARD_CLOCK)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.60)
 
-	MDRV_SOUND_ADD("ymsnd", YM2203, 3579545)
-	MDRV_SOUND_CONFIG(ym2203_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.45)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2203, 3579545)
+	MCFG_SOUND_CONFIG(ym2203_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.45)
+MACHINE_CONFIG_END
 
 
 /*************************************

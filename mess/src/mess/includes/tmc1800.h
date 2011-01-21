@@ -7,55 +7,40 @@
 #define CDP1864_TAG		"m3"
 #define CASSETTE_TAG	"cassette"
 
-class tmc1800_state
+class tmc1800_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, tmc1800_state(machine)); }
-
-	tmc1800_state(running_machine &machine) { }
-
-	/* cpu state */
-	int reset;				/* reset activated */
-
-	/* video state */
-	int cdp1861_efx;		/* EFx */
+	tmc1800_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* keyboard state */
 	int keylatch;			/* key latch */
 
 	/* devices */
-	running_device *cdp1861;
-	running_device *cassette;
+	device_t *cdp1861;
+	device_t *cassette;
 };
 
-class osc1000b_state
+class osc1000b_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, osc1000b_state(machine)); }
-
-	osc1000b_state(running_machine &machine) { }
-
-	/* cpu state */
-	int reset;				/* reset activated */
+	osc1000b_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* keyboard state */
 	int keylatch;			/* key latch */
 
 	/* devices */
-	running_device *cassette;
+	device_t *cassette;
 };
 
-class tmc2000_state
+class tmc2000_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, tmc2000_state(machine)); }
-
-	tmc2000_state(running_machine &machine) { }
+	tmc2000_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* video state */
-	int cdp1864_efx;		/* EFx */
-	int reset;				/* reset activated */
-
 	UINT8 *colorram;		/* color memory */
 	UINT8 color;
 
@@ -63,23 +48,15 @@ public:
 	int keylatch;			/* key latch */
 
 	/* devices */
-	running_device *cdp1864;
-	running_device *cassette;
+	device_t *cdp1864;
+	device_t *cassette;
 };
 
-class oscnano_state
+class nano_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, oscnano_state(machine)); }
-
-	oscnano_state(running_machine &machine) { }
-
-	/* cpu state */
-	int monitor_ef4;		/* EF4 line */
-	int reset;				/* reset activated */
-
-	/* video state */
-	int cdp1864_efx;		/* EFx */
+	nano_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* keyboard state */
 	int keylatch;			/* key latch */
@@ -88,15 +65,15 @@ public:
 	emu_timer *ef4_timer;	/* EF4 line RC timer */
 
 	/* devices */
-	running_device *cdp1864;
-	running_device *cassette;
+	device_t *cdp1864;
+	device_t *cassette;
 };
 
 /* ---------- defined in video/tmc1800.c ---------- */
 
-MACHINE_DRIVER_EXTERN( tmc1800_video );
-MACHINE_DRIVER_EXTERN( osc1000b_video );
-MACHINE_DRIVER_EXTERN( tmc2000_video );
-MACHINE_DRIVER_EXTERN( oscnano_video );
+MACHINE_CONFIG_EXTERN( tmc1800_video );
+MACHINE_CONFIG_EXTERN( osc1000b_video );
+MACHINE_CONFIG_EXTERN( tmc2000_video );
+MACHINE_CONFIG_EXTERN( nano_video );
 
 #endif

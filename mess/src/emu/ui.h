@@ -16,6 +16,7 @@
 
 #include "render.h"
 
+
 /***************************************************************************
     CONSTANTS
 ***************************************************************************/
@@ -36,18 +37,18 @@
 #define ARGB_WHITE				MAKE_ARGB(0xff,0xff,0xff,0xff)
 #define ARGB_BLACK				MAKE_ARGB(0xff,0x00,0x00,0x00)
 #define UI_BORDER_COLOR			MAKE_ARGB(0xff,0xff,0xff,0xff)
-#define UI_BACKGROUND_COLOR		MAKE_ARGB(0xe0,0x10,0x10,0x30)
-#define UI_GFXVIEWER_BG_COLOR	MAKE_ARGB(0xe0,0x10,0x10,0x30)
-#define UI_GREEN_COLOR			MAKE_ARGB(0xe0,0x10,0x60,0x10)
-#define UI_YELLOW_COLOR			MAKE_ARGB(0xe0,0x60,0x60,0x10)
+#define UI_BACKGROUND_COLOR		MAKE_ARGB(0xef,0x10,0x10,0x30)
+#define UI_GFXVIEWER_BG_COLOR	MAKE_ARGB(0xef,0x10,0x10,0x30)
+#define UI_GREEN_COLOR			MAKE_ARGB(0xef,0x10,0x60,0x10)
+#define UI_YELLOW_COLOR			MAKE_ARGB(0xef,0x60,0x60,0x10)
 #define UI_RED_COLOR			MAKE_ARGB(0xf0,0x60,0x10,0x10)
 #define UI_UNAVAILABLE_COLOR	MAKE_ARGB(0xff,0x40,0x40,0x40)
 #define UI_TEXT_COLOR			MAKE_ARGB(0xff,0xff,0xff,0xff)
-#define UI_TEXT_BG_COLOR		MAKE_ARGB(0xe0,0x00,0x00,0x00)
+#define UI_TEXT_BG_COLOR		MAKE_ARGB(0xef,0x00,0x00,0x00)
 #define UI_SUBITEM_COLOR		MAKE_ARGB(0xff,0xff,0xff,0xff)
 #define UI_CLONE_COLOR			MAKE_ARGB(0xff,0x80,0x80,0x80)
 #define UI_SELECTED_COLOR		MAKE_ARGB(0xff,0xff,0xff,0x00)
-#define UI_SELECTED_BG_COLOR	MAKE_ARGB(0xe0,0x80,0x80,0x00)
+#define UI_SELECTED_BG_COLOR	MAKE_ARGB(0xef,0x80,0x80,0x00)
 #define UI_MOUSEOVER_COLOR		MAKE_ARGB(0xff,0xff,0xff,0x80)
 #define UI_MOUSEOVER_BG_COLOR	MAKE_ARGB(0x70,0x40,0x40,0x00)
 #define UI_MOUSEDOWN_COLOR		MAKE_ARGB(0xff,0xff,0xff,0x80)
@@ -146,14 +147,14 @@ void ui_set_startup_text(running_machine *machine, const char *text, int force);
 void ui_update_and_render(running_machine *machine, render_container *container);
 
 /* returns the current UI font */
-render_font *ui_get_font(void);
+render_font *ui_get_font(running_machine &machine);
 
 /* returns the line height of the font used by the UI system */
-float ui_get_line_height(void);
+float ui_get_line_height(running_machine &machine);
 
 /* returns the width of a character or string in the UI font */
-float ui_get_char_width(unicode_char ch);
-float ui_get_string_width(const char *s);
+float ui_get_char_width(running_machine &machine, unicode_char ch);
+float ui_get_string_width(running_machine &machine, const char *s);
 
 /* draw an outlined box filled with a given color */
 void ui_draw_outlined_box(render_container *container, float x0, float y0, float x1, float y1, rgb_t backcolor);

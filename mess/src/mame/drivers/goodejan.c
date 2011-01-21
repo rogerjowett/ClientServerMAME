@@ -60,9 +60,6 @@ Notes:
 #define GOODEJAN_MHZ2 16000000
 #define GOODEJAN_MHZ3 12000000
 
-extern UINT16 *seibucrtc_sc0vram,*seibucrtc_sc1vram,*seibucrtc_sc2vram,*seibucrtc_sc3vram;
-extern UINT16 *seibucrtc_vregs;
-extern UINT16 seibucrtc_sc0bank;
 static UINT16 goodejan_mux_data;
 
 static WRITE16_HANDLER( goodejan_gfxbank_w )
@@ -325,41 +322,40 @@ static INTERRUPT_GEN( goodejan_irq )
 /* vector 0x00c is just a reti */
 }
 
-static MACHINE_DRIVER_START( goodejan )
+static MACHINE_CONFIG_START( goodejan, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", V30, GOODEJAN_MHZ2/2)
-	MDRV_CPU_PROGRAM_MAP(goodejan_map)
-	MDRV_CPU_IO_MAP(goodejan_io_map)
-	MDRV_CPU_VBLANK_INT("screen",goodejan_irq)
+	MCFG_CPU_ADD("maincpu", V30, GOODEJAN_MHZ2/2)
+	MCFG_CPU_PROGRAM_MAP(goodejan_map)
+	MCFG_CPU_IO_MAP(goodejan_io_map)
+	MCFG_CPU_VBLANK_INT("screen",goodejan_irq)
 
 	SEIBU_SOUND_SYSTEM_CPU(GOODEJAN_MHZ1/2)
 
-	MDRV_MACHINE_RESET(seibu_sound)
+	MCFG_MACHINE_RESET(seibu_sound)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1) //TODO: dynamic resolution
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1) //TODO: dynamic resolution
 
-	MDRV_GFXDECODE(goodejan)
-	MDRV_PALETTE_LENGTH(0x1000)
+	MCFG_GFXDECODE(goodejan)
+	MCFG_PALETTE_LENGTH(0x1000)
 
-	MDRV_VIDEO_START(seibu_crtc)
-	MDRV_VIDEO_UPDATE(seibu_crtc)
+	MCFG_VIDEO_START(seibu_crtc)
+	MCFG_VIDEO_UPDATE(seibu_crtc)
 
 	/* sound hardware */
 	SEIBU_SOUND_SYSTEM_YM3812_INTERFACE(GOODEJAN_MHZ1/2,GOODEJAN_MHZ2/16)
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( totmejan )
-	MDRV_IMPORT_FROM( goodejan )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_IO_MAP(totmejan_io_map)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( totmejan, goodejan )
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_IO_MAP(totmejan_io_map)
+MACHINE_CONFIG_END
 
 ROM_START( totmejan )
 	ROM_REGION( 0x100000, "maincpu", 0 ) /* V30 code */

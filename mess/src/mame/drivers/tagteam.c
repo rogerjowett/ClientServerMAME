@@ -29,22 +29,7 @@ TODO:
 #include "cpu/m6502/m6502.h"
 #include "sound/ay8910.h"
 #include "sound/dac.h"
-
-extern UINT8 *tagteam_videoram;
-extern UINT8 *tagteam_colorram;
-
-extern WRITE8_HANDLER( tagteam_videoram_w );
-extern WRITE8_HANDLER( tagteam_colorram_w );
-extern READ8_HANDLER( tagteam_mirrorvideoram_r );
-extern WRITE8_HANDLER( tagteam_mirrorvideoram_w );
-extern READ8_HANDLER( tagteam_mirrorcolorram_r );
-extern WRITE8_HANDLER( tagteam_mirrorcolorram_w );
-extern WRITE8_HANDLER( tagteam_control_w );
-extern WRITE8_HANDLER( tagteam_flipscreen_w );
-
-extern PALETTE_INIT( tagteam );
-extern VIDEO_START( tagteam );
-extern VIDEO_UPDATE( tagteam );
+#include "includes/tagteam.h"
 
 static WRITE8_HANDLER( sound_command_w )
 {
@@ -226,44 +211,44 @@ GFXDECODE_END
 
 
 
-static MACHINE_DRIVER_START( tagteam )
+static MACHINE_CONFIG_START( tagteam, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6502, 1500000)	/* 1.5 MHz ?? */
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_VBLANK_INT("screen", tagteam_interrupt)
+	MCFG_CPU_ADD("maincpu", M6502, 1500000)	/* 1.5 MHz ?? */
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_VBLANK_INT("screen", tagteam_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", M6502, 975000)  /* 975 kHz ?? */
-	MDRV_CPU_PROGRAM_MAP(sound_map)
-	MDRV_CPU_VBLANK_INT_HACK(nmi_line_pulse,16)   /* IRQs are triggered by the main CPU */
+	MCFG_CPU_ADD("audiocpu", M6502, 975000)  /* 975 kHz ?? */
+	MCFG_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_VBLANK_INT_HACK(nmi_line_pulse,16)   /* IRQs are triggered by the main CPU */
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(57)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(3072))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 1*8, 31*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(57)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(3072))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 1*8, 31*8-1)
 
-	MDRV_GFXDECODE(tagteam)
-	MDRV_PALETTE_LENGTH(32)
+	MCFG_GFXDECODE(tagteam)
+	MCFG_PALETTE_LENGTH(32)
 
-	MDRV_PALETTE_INIT(tagteam)
-	MDRV_VIDEO_START(tagteam)
-	MDRV_VIDEO_UPDATE(tagteam)
+	MCFG_PALETTE_INIT(tagteam)
+	MCFG_VIDEO_START(tagteam)
+	MCFG_VIDEO_UPDATE(tagteam)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ay1", AY8910, 1500000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+	MCFG_SOUND_ADD("ay1", AY8910, 1500000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
-	MDRV_SOUND_ADD("ay2", AY8910, 1500000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+	MCFG_SOUND_ADD("ay2", AY8910, 1500000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
-	MDRV_SOUND_ADD("dac", DAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("dac", DAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 

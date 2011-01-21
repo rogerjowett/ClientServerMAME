@@ -166,7 +166,7 @@ static ADDRESS_MAP_START( base_mem, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x605000, 0x61ffff) AM_RAM							            	//
 	AM_RANGE(0x800000, 0x800003) AM_DEVREADWRITE8("ymz", ymz280b_r, ymz280b_w, 0xff00)	// YMZ280
 	AM_RANGE(0xfe0000, 0xfeffff) AM_RAM						                	// RAM
-	AM_RANGE(0xfffc00, 0xffffff) AM_RAM_WRITE(tmp68301_regs_w) AM_BASE(&tmp68301_regs	)	// TMP68301 Registers
+	AM_RANGE(0xfffc00, 0xffffff) AM_READWRITE(tmp68301_regs_r, tmp68301_regs_w)	// TMP68301 Registers
 ADDRESS_MAP_END
 
 /*realbrk specific memory map*/
@@ -673,62 +673,59 @@ static INTERRUPT_GEN( realbrk_interrupt )
 	}
 }
 
-static MACHINE_DRIVER_START( realbrk )
+static MACHINE_CONFIG_START( realbrk, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu",M68000, XTAL_32MHz / 2)			/* !! TMP68301 !! */
-	MDRV_CPU_PROGRAM_MAP(realbrk_mem)
-	MDRV_CPU_VBLANK_INT("screen", realbrk_interrupt)
+	MCFG_CPU_ADD("maincpu",M68000, XTAL_32MHz / 2)			/* !! TMP68301 !! */
+	MCFG_CPU_PROGRAM_MAP(realbrk_mem)
+	MCFG_CPU_VBLANK_INT("screen", realbrk_interrupt)
 
-	MDRV_MACHINE_START( tmp68301 )
-	MDRV_MACHINE_RESET( tmp68301 )
+	MCFG_MACHINE_START( tmp68301 )
+	MCFG_MACHINE_RESET( tmp68301 )
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(0x140, 0xe0)
-	MDRV_SCREEN_VISIBLE_AREA(0, 0x140-1, 0, 0xe0-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(0x140, 0xe0)
+	MCFG_SCREEN_VISIBLE_AREA(0, 0x140-1, 0, 0xe0-1)
 
-	MDRV_GFXDECODE(realbrk)
-	MDRV_PALETTE_LENGTH(0x8000)
+	MCFG_GFXDECODE(realbrk)
+	MCFG_PALETTE_LENGTH(0x8000)
 
-	MDRV_VIDEO_START(realbrk)
-	MDRV_VIDEO_UPDATE(realbrk)
+	MCFG_VIDEO_START(realbrk)
+	MCFG_VIDEO_UPDATE(realbrk)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymz", YMZ280B, XTAL_33_8688MHz / 2)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.50)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.50)
+	MCFG_SOUND_ADD("ymz", YMZ280B, XTAL_33_8688MHz / 2)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.50)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.50)
 
-	MDRV_SOUND_ADD("ymsnd", YM2413, XTAL_3_579545MHz)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2413, XTAL_3_579545MHz)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( pkgnsh )
-	MDRV_IMPORT_FROM( realbrk )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(pkgnsh_mem)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( pkgnsh, realbrk )
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(pkgnsh_mem)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( pkgnshdx )
-	MDRV_IMPORT_FROM( realbrk )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(pkgnshdx_mem)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( pkgnshdx, realbrk )
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(pkgnshdx_mem)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( dai2kaku )
-	MDRV_IMPORT_FROM( realbrk )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(dai2kaku_mem)
+static MACHINE_CONFIG_DERIVED( dai2kaku, realbrk )
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(dai2kaku_mem)
 
-	MDRV_GFXDECODE(dai2kaku)
-	MDRV_VIDEO_UPDATE(dai2kaku)
-MACHINE_DRIVER_END
+	MCFG_GFXDECODE(dai2kaku)
+	MCFG_VIDEO_UPDATE(dai2kaku)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************

@@ -56,18 +56,19 @@ struct _sc61860_state
     struct { int t2ms, t512ms; int count;} timer;
 
     legacy_cpu_device *device;
-    const address_space *program;
+    address_space *program;
+    direct_read_data *direct;
     int icount;
 };
 
-INLINE sc61860_state *get_safe_token(running_device *device)
+INLINE sc61860_state *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
 	assert(device->type() == SC61860);
 	return (sc61860_state *)downcast<legacy_cpu_device *>(device)->token();
 }
 
-UINT8 *sc61860_internal_ram(running_device *device)
+UINT8 *sc61860_internal_ram(device_t *device)
 {
 	sc61860_state *cpustate = get_safe_token(device);
 	return cpustate->ram;
@@ -106,6 +107,7 @@ static CPU_INIT( sc61860 )
 	timer_pulse(device->machine, ATTOTIME_IN_HZ(500), cpustate, 0, sc61860_2ms_tick);
 	cpustate->device = device;
 	cpustate->program = device->space(AS_PROGRAM);
+	cpustate->direct = &cpustate->program->direct();
 }
 
 static CPU_EXECUTE( sc61860 )

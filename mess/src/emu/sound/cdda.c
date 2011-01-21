@@ -22,10 +22,10 @@ struct _cdda_info
 	UINT32				audio_bptr;
 };
 
-INLINE cdda_info *get_safe_token(running_device *device)
+INLINE cdda_info *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
-	assert(device->type() == SOUND_CDDA);
+	assert(device->type() == CDDA);
 	return (cdda_info *)downcast<legacy_device_base *>(device)->token();
 }
 
@@ -77,7 +77,7 @@ static DEVICE_START( cdda )
     given CDDA stream
 -------------------------------------------------*/
 
-void cdda_set_cdrom(running_device *device, void *file)
+void cdda_set_cdrom(device_t *device, void *file)
 {
 	cdda_info *info = get_safe_token(device);
 	info->disc = (cdrom_file *)file;
@@ -89,12 +89,12 @@ void cdda_set_cdrom(running_device *device, void *file)
     that references the given CD-ROM file
 -------------------------------------------------*/
 
-running_device *cdda_from_cdrom(running_machine *machine, void *file)
+device_t *cdda_from_cdrom(running_machine *machine, void *file)
 {
 	device_sound_interface *sound = NULL;
 
 	for (bool gotone = machine->m_devicelist.first(sound); gotone; gotone = sound->next(sound))
-		if (sound->device().type() == SOUND_CDDA)
+		if (sound->device().type() == CDDA)
 		{
 			cdda_info *info = get_safe_token(*sound);
 			if (info->disc == file)
@@ -110,7 +110,7 @@ running_device *cdda_from_cdrom(running_machine *machine, void *file)
     Book audio track
 -------------------------------------------------*/
 
-void cdda_start_audio(running_device *device, UINT32 startlba, UINT32 numblocks)
+void cdda_start_audio(device_t *device, UINT32 startlba, UINT32 numblocks)
 {
 	cdda_info *info = get_safe_token(device);
 
@@ -128,7 +128,7 @@ void cdda_start_audio(running_device *device, UINT32 startlba, UINT32 numblocks)
     audio track
 -------------------------------------------------*/
 
-void cdda_stop_audio(running_device *device)
+void cdda_stop_audio(device_t *device)
 {
 	cdda_info *info = get_safe_token(device);
 
@@ -143,7 +143,7 @@ void cdda_stop_audio(running_device *device)
     a Red Book audio track
 -------------------------------------------------*/
 
-void cdda_pause_audio(running_device *device, int pause)
+void cdda_pause_audio(device_t *device, int pause)
 {
 	cdda_info *info = get_safe_token(device);
 
@@ -157,7 +157,7 @@ void cdda_pause_audio(running_device *device, int pause)
     (physical sector) during Red Book playback
 -------------------------------------------------*/
 
-UINT32 cdda_get_audio_lba(running_device *device)
+UINT32 cdda_get_audio_lba(device_t *device)
 {
 	cdda_info *info = get_safe_token(device);
 
@@ -171,7 +171,7 @@ UINT32 cdda_get_audio_lba(running_device *device)
     playback status
 -------------------------------------------------*/
 
-int cdda_audio_active(running_device *device)
+int cdda_audio_active(device_t *device)
 {
 	cdda_info *info = get_safe_token(device);
 
@@ -185,7 +185,7 @@ int cdda_audio_active(running_device *device)
     playback is paused
 -------------------------------------------------*/
 
-int cdda_audio_paused(running_device *device)
+int cdda_audio_paused(device_t *device)
 {
 	cdda_info *info = get_safe_token(device);
 	return info->audio_pause;
@@ -197,7 +197,7 @@ int cdda_audio_paused(running_device *device)
     track reached it's natural end
 -------------------------------------------------*/
 
-int cdda_audio_ended(running_device *device)
+int cdda_audio_ended(device_t *device)
 {
 	cdda_info *info = get_safe_token(device);
 	return info->audio_ended_normally;
@@ -290,7 +290,33 @@ static void get_audio_data(cdda_info *info, stream_sample_t *bufL, stream_sample
 	get_audio_data(info, bufL, bufR, remaining);
 }
 
+/*-------------------------------------------------
+    cdda_set_volume - sets CD-DA volume level
+    for both speakers, used for fade in/out effects
+-------------------------------------------------*/
 
+void cdda_set_volume(device_t *device,int volume)
+{
+	cdda_info *cdda = get_safe_token(device);
+
+	stream_set_output_gain(cdda->stream,0,volume / 100.0);
+	stream_set_output_gain(cdda->stream,1,volume / 100.0);
+}
+
+/*-------------------------------------------------
+    cdda_set_channel_volume - sets CD-DA volume level
+    for either speaker, used for fade in/out effects
+-------------------------------------------------*/
+
+void cdda_set_channel_volume(device_t *device, int channel, int volume)
+{
+	cdda_info *cdda = get_safe_token(device);
+
+	if(channel == 0)
+		stream_set_output_gain(cdda->stream,0,volume / 100.0);
+	if(channel == 1)
+		stream_set_output_gain(cdda->stream,1,volume / 100.0);
+}
 
 /**************************************************************************
  * Generic get_info

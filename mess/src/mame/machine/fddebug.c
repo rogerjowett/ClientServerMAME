@@ -277,7 +277,7 @@ static void execute_fdcset(running_machine *machine, int ref, int params, const 
 static void execute_fdclist(running_machine *machine, int ref, int params, const char **param);
 static void execute_fdcsearch(running_machine *machine, int ref, int params, const char **param);
 
-static fd1094_possibility *try_all_possibilities(const address_space *space, int basepc, int offset, int length, UINT8 *instrbuffer, UINT8 *keybuffer, fd1094_possibility *possdata);
+static fd1094_possibility *try_all_possibilities(address_space *space, int basepc, int offset, int length, UINT8 *instrbuffer, UINT8 *keybuffer, fd1094_possibility *possdata);
 static void tag_possibility(running_machine *machine, fd1094_possibility *possdata, UINT8 status);
 
 static void perform_constrained_search(running_machine *machine);
@@ -287,8 +287,8 @@ static int does_key_work_for_constraints(const UINT16 *base, UINT8 *key);
 static UINT32 reconstruct_base_seed(int keybaseaddr, UINT32 startseed);
 
 static void build_optable(running_machine *machine);
-static int validate_ea(const address_space *space, UINT32 pc, UINT8 modereg, const UINT8 *parambase, UINT32 flags);
-static int validate_opcode(const address_space *space, UINT32 pc, const UINT8 *opdata, int maxwords);
+static int validate_ea(address_space *space, UINT32 pc, UINT8 modereg, const UINT8 *parambase, UINT32 flags);
+static int validate_opcode(address_space *space, UINT32 pc, const UINT8 *opdata, int maxwords);
 
 
 
@@ -429,14 +429,14 @@ INLINE void print_possibilities(running_machine *machine)
     0=no, 1=yes, 2=unlikely
 -----------------------------------------------*/
 
-INLINE int pc_is_valid(const address_space *space, UINT32 pc, UINT32 flags)
+INLINE int pc_is_valid(address_space *space, UINT32 pc, UINT32 flags)
 {
 	/* if we're odd or out of range, fail */
 	if ((pc & 1) == 1)
 		return 0;
 	if (pc & 0xff000000)
 		return 0;
-	if (memory_decrypted_read_ptr(space, pc) == NULL)
+	if (space->direct().read_decrypted_ptr(pc) == NULL)
 		return 0;
 	return 1;
 }
@@ -447,7 +447,7 @@ INLINE int pc_is_valid(const address_space *space, UINT32 pc, UINT32 flags)
     valid? 0=no, 1=yes, 2=unlikely
 -----------------------------------------------*/
 
-INLINE int addr_is_valid(const address_space *space, UINT32 addr, UINT32 flags)
+INLINE int addr_is_valid(address_space *space, UINT32 addr, UINT32 flags)
 {
 	/* if this a JMP, the address is a PC */
 	if (flags & OF_JMP)
@@ -460,7 +460,7 @@ INLINE int addr_is_valid(const address_space *space, UINT32 addr, UINT32 flags)
 		return 0;
 
 	/* if we're invalid, fail */
-	if (strcmp(memory_get_handler_string(space, 0, addr), "segaic16_memory_mapper_lsb_r") == 0)
+	if (strcmp(const_cast<address_space *>(space)->get_handler_string(ROW_READ, addr), "segaic16_memory_mapper_lsb_r") == 0)
 		return 2;
 
 	return 1;
@@ -482,11 +482,11 @@ void fd1094_init_debugging(running_machine *machine, const char *cpureg, const c
 	key_changed = changed;
 
 	/* set up the regions */
-	coderegion = (UINT16 *)memory_region(machine, cpureg);
-	coderegion_words = memory_region_length(machine, cpureg) / 2;
-	keyregion = (UINT8 *)memory_region(machine, keyreg);
-	keystatus = (UINT16 *)memory_region(machine, statreg);
-	keystatus_words = memory_region_length(machine, statreg) / 2;
+	coderegion = (UINT16 *)machine->region(cpureg)->base();
+	coderegion_words = machine->region(cpureg)->bytes() / 2;
+	keyregion = (UINT8 *)machine->region(keyreg)->base();
+	keystatus = (UINT16 *)machine->region(statreg)->base();
+	keystatus_words = machine->region(statreg)->bytes() / 2;
 	assert(coderegion_words == keystatus_words);
 
 	/* allocate memory for the ignore table */
@@ -676,8 +676,8 @@ void fd1094_regenerate_key(running_machine *machine)
 		(*key_changed)(machine);
 
 	/* force all memory and disassembly views to update */
-	machine->m_debug_view->update_all(DVT_MEMORY);
-	machine->m_debug_view->update_all(DVT_DISASSEMBLY);
+	machine->debug_view().update_all(DVT_MEMORY);
+	machine->debug_view().update_all(DVT_DISASSEMBLY);
 
 	/* reset keydirty */
 	keydirty = FALSE;
@@ -887,7 +887,7 @@ static void execute_fdeliminate(running_machine *machine, int ref, int params, c
 
 static void execute_fdunlock(running_machine *machine, int ref, int params, const char **param)
 {
-	running_device *cpu = debug_cpu_get_visible_cpu(machine);
+	device_t *cpu = debug_cpu_get_visible_cpu(machine);
 	int reps = keystatus_words / KEY_SIZE;
 	int keyaddr, repnum;
 	UINT64 offset;
@@ -925,7 +925,7 @@ static void execute_fdunlock(running_machine *machine, int ref, int params, cons
 
 static void execute_fdignore(running_machine *machine, int ref, int params, const char **param)
 {
-	running_device *cpu = debug_cpu_get_visible_cpu(machine);
+	device_t *cpu = debug_cpu_get_visible_cpu(machine);
 	UINT64 offset;
 
 	/* support 0 or 1 parameters */
@@ -1014,8 +1014,8 @@ static void execute_fdstate(running_machine *machine, int ref, int params, const
 			return;
 		fd1094_set_state(keyregion, newstate);
 		fd1094_regenerate_key(machine);
-		machine->m_debug_view->update_all(DVT_MEMORY);
-		machine->m_debug_view->update_all(DVT_DISASSEMBLY);
+		machine->debug_view().update_all(DVT_MEMORY);
+		machine->debug_view().update_all(DVT_DISASSEMBLY);
 	}
 
 	/* 0 parameters displays the current state */
@@ -1030,7 +1030,7 @@ static void execute_fdstate(running_machine *machine, int ref, int params, const
 
 static void execute_fdpc(running_machine *machine, int ref, int params, const char **param)
 {
-	running_device *cpu = debug_cpu_get_visible_cpu(machine);
+	device_t *cpu = debug_cpu_get_visible_cpu(machine);
 	UINT64 newpc;
 
 	/* support 0 or 1 parameters */
@@ -1052,7 +1052,7 @@ static void execute_fdpc(running_machine *machine, int ref, int params, const ch
 
 static void execute_fdsearch(running_machine *machine, int ref, int params, const char **param)
 {
-	const address_space *space = cpu_get_address_space(debug_cpu_get_visible_cpu(machine), ADDRESS_SPACE_PROGRAM);
+	address_space *space = cpu_get_address_space(debug_cpu_get_visible_cpu(machine), ADDRESS_SPACE_PROGRAM);
 	int pc = cpu_get_pc(space->cpu);
 	int length, first = TRUE;
 	UINT8 instrdata[2];
@@ -1178,7 +1178,7 @@ static void execute_fdsearch(running_machine *machine, int ref, int params, cons
 
 static void execute_fddasm(running_machine *machine, int ref, int params, const char **param)
 {
-	const address_space *space = cpu_get_address_space(debug_cpu_get_visible_cpu(machine), ADDRESS_SPACE_PROGRAM);
+	address_space *space = cpu_get_address_space(debug_cpu_get_visible_cpu(machine), ADDRESS_SPACE_PROGRAM);
 	int origstate = fd1094_set_state(keyregion, -1);
 	const char *filename;
 	int skipped = FALSE;
@@ -1385,7 +1385,7 @@ static void execute_fdcsearch(running_machine *machine, int ref, int params, con
     length
 -----------------------------------------------*/
 
-static fd1094_possibility *try_all_possibilities(const address_space *space, int basepc, int offset, int length, UINT8 *instrbuffer, UINT8 *keybuffer, fd1094_possibility *possdata)
+static fd1094_possibility *try_all_possibilities(address_space *space, int basepc, int offset, int length, UINT8 *instrbuffer, UINT8 *keybuffer, fd1094_possibility *possdata)
 {
 	UINT8 keymask, keystat;
 	UINT16 possvalue[4];
@@ -2226,7 +2226,7 @@ static void build_optable(running_machine *machine)
     valid or not, and return the length
 -----------------------------------------------*/
 
-static int validate_ea(const address_space *space, UINT32 pc, UINT8 modereg, const UINT8 *parambase, UINT32 flags)
+static int validate_ea(address_space *space, UINT32 pc, UINT8 modereg, const UINT8 *parambase, UINT32 flags)
 {
 	UINT32 addr;
 	int valid;
@@ -2296,7 +2296,7 @@ static int validate_ea(const address_space *space, UINT32 pc, UINT8 modereg, con
     the length specified
 -----------------------------------------------*/
 
-static int validate_opcode(const address_space *space, UINT32 pc, const UINT8 *opdata, int maxwords)
+static int validate_opcode(address_space *space, UINT32 pc, const UINT8 *opdata, int maxwords)
 {
 	UINT32 immvalue = 0;
 	int iffy = FALSE;

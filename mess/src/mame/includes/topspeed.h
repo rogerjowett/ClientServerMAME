@@ -4,12 +4,11 @@
 
 *************************************************************************/
 
-class topspeed_state
+class topspeed_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, topspeed_state(machine)); }
-
-	topspeed_state(running_machine &machine) { }
+	topspeed_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT16 *   spritemap;
@@ -28,16 +27,15 @@ public:
 	int        adpcm_data;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *audiocpu;
-	running_device *subcpu;
-	running_device *pc080sn_1;
-	running_device *pc080sn_2;
-	running_device *tc0220ioc;
+	device_t *maincpu;
+	device_t *audiocpu;
+	device_t *subcpu;
+	device_t *pc080sn_1;
+	device_t *pc080sn_2;
+	device_t *tc0220ioc;
 };
 
 
 /*----------- defined in video/topspeed.c -----------*/
 
-VIDEO_START( topspeed );
 VIDEO_UPDATE( topspeed );

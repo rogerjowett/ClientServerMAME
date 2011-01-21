@@ -32,7 +32,7 @@
 #define NUM_DRIVES 2
 
 /* required prototype */
-static void setup_fdc_buffer( running_device *device,int drive );
+static void setup_fdc_buffer( device_t *device,int drive );
 
 /***************************************************************************
     TYPE DEFINITIONS
@@ -76,7 +76,7 @@ struct _amiga_fdc_t
 /*****************************************************************************
     INLINE FUNCTIONS
 *****************************************************************************/
-INLINE amiga_fdc_t *get_safe_token(running_device *device)
+INLINE amiga_fdc_t *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
 
@@ -86,7 +86,7 @@ INLINE amiga_fdc_t *get_safe_token(running_device *device)
 static TIMER_CALLBACK(fdc_rev_proc);
 static TIMER_CALLBACK(fdc_dma_proc);
 static TIMER_CALLBACK(fdc_sync_proc);
-static void check_extended_image( running_device *device, int id );
+static void check_extended_image( device_t *device, int id );
 
 static void amiga_load_proc(device_image_interface &image)
 {
@@ -123,7 +123,7 @@ static void amiga_unload_proc(device_image_interface &image)
 /*-------------------------------------------------
     DEVICE_START(amiga_fdc)
 -------------------------------------------------*/
-running_device *amiga_floppy_get_device_child(running_device *device,int drive)
+device_t *amiga_floppy_get_device_child(device_t *device,int drive)
 {
 	switch(drive) {
 		case 0 : return device->subdevice(FLOPPY_0);
@@ -179,7 +179,7 @@ static DEVICE_RESET(amiga_fdc)
 {
 }
 
-static void check_extended_image( running_device *device, int id )
+static void check_extended_image( device_t *device, int id )
 {
 	UINT8	header[8], data[4];
 	amiga_fdc_t *fdc = get_safe_token(device);
@@ -222,8 +222,9 @@ static void check_extended_image( running_device *device, int id )
 	}
 }
 
-static int fdc_get_curpos( running_device *device, int drive )
+static int fdc_get_curpos( device_t *device, int drive )
 {
+	amiga_state *state = device->machine->driver_data<amiga_state>();
 	double elapsed;
 	int speed;
 	int	bytes;
@@ -244,8 +245,9 @@ static int fdc_get_curpos( running_device *device, int drive )
 	return pos;
 }
 
-UINT16 amiga_fdc_get_byte (running_device *device)
+UINT16 amiga_fdc_get_byte (device_t *device)
 {
+	amiga_state *state = device->machine->driver_data<amiga_state>();
 	int pos;
 	int i, drive = -1;
 	UINT16 ret;
@@ -285,12 +287,13 @@ UINT16 amiga_fdc_get_byte (running_device *device)
 
 static TIMER_CALLBACK(fdc_sync_proc)
 {
+	amiga_state *state = machine->driver_data<amiga_state>();
 	int drive = param;
 	UINT16			sync = CUSTOM_REG(REG_DSRSYNC);
 	int				cur_pos;
 	int				sector;
 	int				time;
-	amiga_fdc_t *fdc = get_safe_token((running_device*)ptr);
+	amiga_fdc_t *fdc = get_safe_token((device_t*)ptr);
 
 	/* if floppy got ejected, stop */
 	if ( fdc->fdc_status[drive].disk_changed )
@@ -299,7 +302,7 @@ static TIMER_CALLBACK(fdc_sync_proc)
 	if ( fdc->fdc_status[drive].motor_on == 0 )
 		goto bail;
 
-	cur_pos = fdc_get_curpos( (running_device*)ptr, drive );
+	cur_pos = fdc_get_curpos( (device_t*)ptr, drive );
 
 	if ( cur_pos <= ( GAP_TRACK_BYTES + 6 ) )
 	{
@@ -310,7 +313,7 @@ static TIMER_CALLBACK(fdc_sync_proc)
 		sector = ( cur_pos - ( GAP_TRACK_BYTES + 6 ) ) / ONE_SECTOR_BYTES;
 	}
 
-	setup_fdc_buffer( (running_device*)ptr, drive );
+	setup_fdc_buffer( (device_t*)ptr, drive );
 
 	if ( cur_pos < 2 )
 		cur_pos = 2;
@@ -318,7 +321,7 @@ static TIMER_CALLBACK(fdc_sync_proc)
 	if ( fdc->fdc_status[drive].mfm[cur_pos-2] == ( ( sync >> 8 ) & 0xff ) &&
 		 fdc->fdc_status[drive].mfm[cur_pos-1] == ( sync & 0xff ) )
 	{
-		const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+		address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 		amiga_custom_w(space, REG_INTREQ, 0x8000 | INTENA_DSKSYN, 0xffff);
 	}
@@ -339,8 +342,9 @@ bail:
 
 static TIMER_CALLBACK(fdc_dma_proc)
 {
+	amiga_state *state = machine->driver_data<amiga_state>();
 	int drive = param;
-	amiga_fdc_t *fdc = get_safe_token((running_device*)ptr);
+	amiga_fdc_t *fdc = get_safe_token((device_t*)ptr);
 
 	/* if DMA got disabled by the time we got here, stop operations */
 	if ( ( CUSTOM_REG(REG_DSKLEN) & 0x8000 ) == 0 )
@@ -356,13 +360,13 @@ static TIMER_CALLBACK(fdc_dma_proc)
 	if ( fdc->fdc_status[drive].motor_on == 0 )
 		goto bail;
 
-	setup_fdc_buffer( (running_device*)ptr, drive );
+	setup_fdc_buffer( (device_t*)ptr, drive );
 
 	if ( CUSTOM_REG(REG_DSKLEN) & 0x4000 ) /* disk write case, unsupported yet */
 	{
 		if ( fdc->fdc_status[drive].len > 0 )
 		{
-			const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+			address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 			logerror("Write to disk unsupported yet\n" );
 
@@ -389,7 +393,7 @@ static TIMER_CALLBACK(fdc_dma_proc)
 
 			cur_pos %= ( fdc->fdc_status[drive].tracklen );
 
-			amiga_chip_ram_w(offset, dat);
+			(*state->chip_ram_w)(state, offset, dat);
 
 			offset += 2;
 		}
@@ -399,7 +403,7 @@ static TIMER_CALLBACK(fdc_dma_proc)
 
 		if ( fdc->fdc_status[drive].len <= 0 )
 		{
-			const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+			address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 			amiga_custom_w(space, REG_INTREQ, 0x8000 | INTENA_DSKBLK, 0xffff);
 		}
@@ -421,7 +425,8 @@ bail:
 	timer_reset( fdc->fdc_status[drive].dma_timer, attotime_never );
 }
 
-void amiga_fdc_setup_dma( running_device *device ) {
+void amiga_fdc_setup_dma( device_t *device ) {
+	amiga_state *state = device->machine->driver_data<amiga_state>();
 	int i, cur_pos, drive = -1, len_words = 0;
 	int time = 0;
 	amiga_fdc_t *fdc = get_safe_token(device);
@@ -432,7 +437,7 @@ void amiga_fdc_setup_dma( running_device *device ) {
 	}
 
 	if ( drive == -1 ) {
-		const address_space *space = cputag_get_address_space(device->machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+		address_space *space = cputag_get_address_space(device->machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 		logerror("Disk DMA started with no drive selected!\n" );
 		amiga_custom_w(space, REG_INTREQ, 0x8000 | INTENA_DSKBLK, 0xffff);
@@ -494,7 +499,7 @@ bail:
 	timer_reset( fdc->fdc_status[drive].dma_timer, attotime_never );
 }
 
-static void setup_fdc_buffer( running_device *device,int drive )
+static void setup_fdc_buffer( device_t *device,int drive )
 {
 	int		sector, offset, len;
 	UINT8	temp_cyl[512*11];
@@ -657,10 +662,11 @@ static void setup_fdc_buffer( running_device *device,int drive )
 
 static TIMER_CALLBACK(fdc_rev_proc)
 {
+	amiga_state *state = machine->driver_data<amiga_state>();
 	int drive = param;
 	int time;
-	running_device *cia;
-	amiga_fdc_t *fdc = get_safe_token((running_device*)ptr);
+	device_t *cia;
+	amiga_fdc_t *fdc = get_safe_token((device_t*)ptr);
 
 	/* Issue a index pulse when a disk revolution completes */
 	cia = machine->device("cia_1");
@@ -680,7 +686,7 @@ static TIMER_CALLBACK(fdc_rev_proc)
 	}
 }
 
-static void start_rev_timer( running_device *device,int drive ) {
+static void start_rev_timer( device_t *device,int drive ) {
 //  double time;
 	amiga_fdc_t *fdc = get_safe_token(device);
 
@@ -693,7 +699,7 @@ static void start_rev_timer( running_device *device,int drive ) {
 	fdc->fdc_status[drive].rev_timer_started = 1;
 }
 
-static void stop_rev_timer( running_device *device,int drive ) {
+static void stop_rev_timer( device_t *device,int drive ) {
 	amiga_fdc_t *fdc = get_safe_token(device);
 
 	if ( fdc->fdc_status[drive].rev_timer_started == 0 ) {
@@ -707,7 +713,7 @@ static void stop_rev_timer( running_device *device,int drive ) {
 	timer_reset( fdc->fdc_status[drive].sync_timer, attotime_never );
 }
 
-static void fdc_setup_leds(running_device *device, int drive ) {
+static void fdc_setup_leds(device_t *device, int drive ) {
 
 	char portname[12];
 	amiga_fdc_t *fdc = get_safe_token(device);
@@ -721,7 +727,7 @@ static void fdc_setup_leds(running_device *device, int drive ) {
 		set_led_status(device->machine, 2, fdc->fdc_status[drive].motor_on ); /* update external drive led */
 }
 
-static void fdc_stepdrive( running_device *device,int drive ) {
+static void fdc_stepdrive( device_t *device,int drive ) {
 	amiga_fdc_t *fdc = get_safe_token(device);
 
 	if ( fdc->fdc_dir ) {
@@ -740,7 +746,7 @@ static void fdc_stepdrive( running_device *device,int drive ) {
 	}
 }
 
-static void fdc_motor( running_device *device,int drive, int off ) {
+static void fdc_motor( device_t *device,int drive, int off ) {
 	amiga_fdc_t *fdc = get_safe_token(device);
 	int on = !off;
 
@@ -792,7 +798,7 @@ WRITE8_DEVICE_HANDLER( amiga_fdc_control_w )
     }
 }
 
-UINT8  amiga_fdc_status_r (running_device *device)
+UINT8  amiga_fdc_status_r (device_t *device)
 {
 	int drive = -1, ret = 0x3c;
 	amiga_fdc_t *fdc = get_safe_token(device);
@@ -835,9 +841,9 @@ static const floppy_config amiga_floppy_config =
 	NULL
 };
 
-static MACHINE_DRIVER_START( amiga_fdc )
-	MDRV_FLOPPY_2_DRIVES_ADD(amiga_floppy_config)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_FRAGMENT( amiga_fdc )
+	MCFG_FLOPPY_2_DRIVES_ADD(amiga_floppy_config)
+MACHINE_CONFIG_END
 
 
 DEVICE_GET_INFO( amiga_fdc )
@@ -849,7 +855,7 @@ DEVICE_GET_INFO( amiga_fdc )
 		case DEVINFO_INT_TOKEN_BYTES:					info->i = sizeof(amiga_fdc_t);								break;
 
 		/* --- the following bits of info are returned as pointers --- */
-		case DEVINFO_PTR_MACHINE_CONFIG:				info->machine_config = MACHINE_DRIVER_NAME(amiga_fdc);		break;
+		case DEVINFO_PTR_MACHINE_CONFIG:				info->machine_config = MACHINE_CONFIG_NAME(amiga_fdc);		break;
 
 		/* --- the following bits of info are returned as pointers to data or functions --- */
 		case DEVINFO_FCT_START:							info->start = DEVICE_START_NAME(amiga_fdc);					break;

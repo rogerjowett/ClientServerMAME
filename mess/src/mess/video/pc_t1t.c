@@ -10,6 +10,7 @@
 
 #include "emu.h"
 #include "pc_t1t.h"
+#include "video/pc_video_mess.h"
 #include "video/mc6845.h"
 #include "machine/pic8259.h"
 #include "devices/messram.h"
@@ -44,18 +45,18 @@ static const mc6845_interface mc6845_t1000_intf = {
 };
 
 
-MACHINE_DRIVER_START( pcvideo_t1000 )
-	MDRV_SCREEN_ADD(T1000_SCREEN_NAME, RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_RAW_PARAMS(XTAL_14_31818MHz,912,0,640,262,0,200)
-	MDRV_PALETTE_LENGTH( 32 )
-	MDRV_PALETTE_INIT(pcjr)
+MACHINE_CONFIG_FRAGMENT( pcvideo_t1000 )
+	MCFG_SCREEN_ADD(T1000_SCREEN_NAME, RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_RAW_PARAMS(XTAL_14_31818MHz,912,0,640,262,0,200)
+	MCFG_PALETTE_LENGTH( 32 )
+	MCFG_PALETTE_INIT(pcjr)
 
-	MDRV_MC6845_ADD(T1000_MC6845_NAME, MC6845, XTAL_14_31818MHz/8, mc6845_t1000_intf)
+	MCFG_MC6845_ADD(T1000_MC6845_NAME, MC6845, XTAL_14_31818MHz/8, mc6845_t1000_intf)
 
-	MDRV_VIDEO_START(pc_t1t)
-	MDRV_VIDEO_UPDATE( mc6845_t1000 )
-MACHINE_DRIVER_END
+	MCFG_VIDEO_START(pc_t1t)
+	MCFG_VIDEO_UPDATE( mc6845_t1000 )
+MACHINE_CONFIG_END
 
 
 static const mc6845_interface mc6845_pcjr_intf = {
@@ -72,18 +73,18 @@ static const mc6845_interface mc6845_pcjr_intf = {
 };
 
 
-MACHINE_DRIVER_START( pcvideo_pcjr )
-	MDRV_SCREEN_ADD(T1000_SCREEN_NAME, RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_RAW_PARAMS(XTAL_14_31818MHz,912,0,640,262,0,200)
-	MDRV_PALETTE_LENGTH( 32 )
-	MDRV_PALETTE_INIT(pcjr)
+MACHINE_CONFIG_FRAGMENT( pcvideo_pcjr )
+	MCFG_SCREEN_ADD(T1000_SCREEN_NAME, RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_RAW_PARAMS(XTAL_14_31818MHz,912,0,640,262,0,200)
+	MCFG_PALETTE_LENGTH( 32 )
+	MCFG_PALETTE_INIT(pcjr)
 
-	MDRV_MC6845_ADD(T1000_MC6845_NAME, MC6845, XTAL_14_31818MHz/16, mc6845_pcjr_intf)
+	MCFG_MC6845_ADD(T1000_MC6845_NAME, MC6845, XTAL_14_31818MHz/16, mc6845_pcjr_intf)
 
-	MDRV_VIDEO_START(pc_pcjr)
-	MDRV_VIDEO_UPDATE( mc6845_t1000 )
-MACHINE_DRIVER_END
+	MCFG_VIDEO_START(pc_pcjr)
+	MCFG_VIDEO_UPDATE( mc6845_t1000 )
+MACHINE_CONFIG_END
 
 
 /***************************************************************************
@@ -153,29 +154,29 @@ static struct
 
 static VIDEO_START( pc_t1t )
 {
-	pcjr.chr_gen = memory_region(machine, "gfx1");
+	pcjr.chr_gen = machine->region("gfx1")->base();
 	pcjr.update_row = NULL;
 	pcjr.bank = 0;
 	pcjr.chr_size = 16;
 
-	machine->generic.videoram_size = 0x8000;
+	pc_videoram_size = 0x8000;
 }
 
 
 static VIDEO_START( pc_pcjr )
 {
-	pcjr.chr_gen = memory_region(machine, "gfx1");
+	pcjr.chr_gen = machine->region("gfx1")->base();
 	pcjr.update_row = NULL;
 	pcjr.bank = 0;
 	pcjr.mode_control = 0x08;
 	pcjr.chr_size = 8;
 
-	machine->generic.videoram_size = 0x8000;
+	pc_videoram_size = 0x8000;
 }
 
 static VIDEO_UPDATE( mc6845_t1000 )
 {
-	running_device *devconf = screen->machine->device(T1000_MC6845_NAME);
+	device_t *devconf = screen->machine->device(T1000_MC6845_NAME);
 	mc6845_update( devconf, bitmap, cliprect);
 	return 0;
 }
@@ -404,9 +405,10 @@ static MC6845_UPDATE_ROW( t1000_update_row )
 
  READ8_HANDLER ( pc_t1t_videoram_r )
 {
+	UINT8 *videoram = pc_videoram;
 	int data = 0xff;
-	if( space->machine->generic.videoram.u8 )
-		data = space->machine->generic.videoram.u8[offset];
+	if( videoram )
+		data = videoram[offset];
 	return data;
 }
 
@@ -485,7 +487,7 @@ static void pc_t1t_mode_switch( void )
 
 static void pc_pcjr_mode_switch( running_machine *machine )
 {
-	running_device *mc6845 = machine->device(T1000_MC6845_NAME);
+	device_t *mc6845 = machine->device(T1000_MC6845_NAME);
 
 	switch( pcjr.reg.data[0] & 0x1A )
 	{
@@ -718,7 +720,7 @@ static void pc_t1t_bank_w(running_machine *machine, int data)
 {
 	if (pcjr.bank != data)
 	{
-		UINT8 *ram = memory_region(machine, "maincpu");
+		UINT8 *ram = machine->region("maincpu")->base();
 		int dram, vram;
 		pcjr.bank = data;
 	/* it seems the video ram is mapped to the last 128K of main memory */
@@ -737,7 +739,7 @@ static void pc_t1t_bank_w(running_machine *machine, int data)
 		dram = (data & 0x07) << 14;
 		vram = (data & 0x38) << (14-3);
 #endif
-		machine->generic.videoram.u8 = &ram[vram];
+		pc_videoram = &ram[vram];
 		pcjr.displayram = &ram[dram];
 		pc_t1t_mode_switch();
 	}
@@ -782,7 +784,7 @@ static int pc_t1t_bank_r(void)
 
 WRITE8_HANDLER ( pc_T1T_w )
 {
-	running_device *devconf;
+	device_t *devconf;
 
 	switch( offset )
 	{
@@ -822,7 +824,7 @@ WRITE8_HANDLER ( pc_T1T_w )
 
 WRITE8_HANDLER( pc_pcjr_w )
 {
-	running_device *devconf;
+	device_t *devconf;
 
 	switch( offset )
 	{
@@ -862,7 +864,7 @@ WRITE8_HANDLER( pc_pcjr_w )
 
  READ8_HANDLER ( pc_T1T_r )
 {
-	running_device *devconf;
+	device_t *devconf;
 	int				data = 0xff;
 
 	switch( offset )

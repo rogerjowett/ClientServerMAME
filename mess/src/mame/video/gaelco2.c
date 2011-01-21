@@ -468,8 +468,8 @@ VIDEO_UPDATE( gaelco2_dual )
 {
 	int i;
 
-	running_device *left_screen  = screen->machine->device("lscreen");
-	running_device *right_screen = screen->machine->device("rscreen");
+	device_t *left_screen  = screen->machine->device("lscreen");
+	device_t *right_screen = screen->machine->device("rscreen");
 
 	/* read scroll values */
 	int scroll0x = gaelco2_videoram[0x2802/2] + 0x14;
@@ -509,7 +509,7 @@ VIDEO_UPDATE( gaelco2_dual )
 
 VIDEO_EOF( gaelco2 )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	/* sprites are one frame ahead */
 	buffer_spriteram16_w(space, 0, 0, 0xffff);

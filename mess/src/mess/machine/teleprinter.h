@@ -23,12 +23,12 @@ struct _teleprinter_interface
 
 DECLARE_LEGACY_DEVICE(GENERIC_TELEPRINTER, teleprinter);
 
-#define MDRV_GENERIC_TELEPRINTER_ADD(_tag, _intrf) \
-	MDRV_DEVICE_ADD(_tag, GENERIC_TELEPRINTER, 0) \
-	MDRV_DEVICE_CONFIG(_intrf)
+#define MCFG_GENERIC_TELEPRINTER_ADD(_tag, _intrf) \
+	MCFG_DEVICE_ADD(_tag, GENERIC_TELEPRINTER, 0) \
+	MCFG_DEVICE_CONFIG(_intrf)
 
-#define MDRV_GENERIC_TELEPRINTER_REMOVE(_tag)		\
-    MDRV_DEVICE_REMOVE(_tag)
+#define MCFG_GENERIC_TELEPRINTER_REMOVE(_tag)		\
+    MCFG_DEVICE_REMOVE(_tag)
 
 
 /***************************************************************************
@@ -37,7 +37,7 @@ DECLARE_LEGACY_DEVICE(GENERIC_TELEPRINTER, teleprinter);
 
 WRITE8_DEVICE_HANDLER ( teleprinter_write );
 
-MACHINE_DRIVER_EXTERN( generic_teleprinter );
+MACHINE_CONFIG_EXTERN( generic_teleprinter );
 
 INPUT_PORTS_EXTERN(generic_teleprinter);
 

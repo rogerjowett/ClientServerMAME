@@ -139,9 +139,6 @@ typedef struct
 
 
 
-UINT8 *vectorram;
-size_t vectorram_size;
-
 static int flicker;                              /* beam flicker value     */
 static float flicker_correction = 0.0f;
 
@@ -203,7 +200,7 @@ void vector_add_point (running_machine *machine, int x, int y, rgb_t color, int 
 
 	if (flicker && (intensity > 0))
 	{
-		intensity += (intensity * (0x80-(mame_rand(machine)&0xff)) * flicker)>>16;
+		intensity += (intensity * (0x80-(machine->rand()&0xff)) * flicker)>>16;
 		if (intensity < 0)
 			intensity = 0;
 		if (intensity > 0xff)
@@ -272,8 +269,8 @@ VIDEO_UPDATE( vector )
 
 	curpoint = vector_list;
 
-	render_container_empty(render_container_get_screen(screen));
-	render_screen_add_rect(screen, 0.0f, 0.0f, 1.0f, 1.0f, MAKE_ARGB(0xff,0x00,0x00,0x00), PRIMFLAG_BLENDMODE(BLENDMODE_ALPHA));
+	screen->container().empty();
+	screen->container().add_rect(0.0f, 0.0f, 1.0f, 1.0f, MAKE_ARGB(0xff,0x00,0x00,0x00), PRIMFLAG_BLENDMODE(BLENDMODE_ALPHA));
 
 	clip.x0 = clip.y0 = 0.0f;
 	clip.x1 = clip.y1 = 1.0f;
@@ -303,7 +300,7 @@ VIDEO_UPDATE( vector )
 
 			if (curpoint->intensity != 0)
 				if (!render_clip_line(&coords, &clip))
-					render_screen_add_line(screen, coords.x0, coords.y0, coords.x1, coords.y1,
+					screen->container().add_line(coords.x0, coords.y0, coords.x1, coords.y1,
 							beam_width * (1.0f / (float)VECTOR_WIDTH_DENOM),
 							(curpoint->intensity << 24) | (curpoint->col & 0xffffff),
 							flags);

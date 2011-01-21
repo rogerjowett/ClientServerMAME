@@ -6,7 +6,7 @@ The Hitachi hcd62121 is the custom cpu which was used in the Casio
 CFX-9850 (and maybe some other things too).
 
 This CPU core is based on the information provided by Martin Poupe.
-Martin Poupe's site can be found at http://prg.rkk.cz/~mpoupe/ 
+Martin Poupe's site can be found at http://prg.rkk.cz/~mpoupe/
 
 **********************************************************************/
 
@@ -31,8 +31,8 @@ struct _hcd62121_state
 	UINT8 temp2[0x10];
 	device_irq_callback irq_callback;
 	legacy_cpu_device *device;
-	const address_space *program;
-	const address_space *io;
+	address_space *program;
+	address_space *io;
 	int icount;
 };
 
@@ -48,10 +48,10 @@ typedef struct _hcd62121_state hcd62121_state;
 #define _FLAG_ZH	0x10
 
 
-#define mem_readbyte(cs,A)		(memory_read_byte_8le((cs)->program,A))
-#define mem_writebyte(cs,A,V)	(memory_write_byte_8le((cs)->program,A,V))
-#define io_readbyte(cs,A)		(memory_read_byte_8le((cs)->io,A))
-#define io_writebyte(cs,A,V)	(memory_write_byte_8le((cs)->io,A,V))
+#define mem_readbyte(cs,A)		((UINT8)(cs)->program->read_byte(A))
+#define mem_writebyte(cs,A,V)	((cs)->program->write_byte(A,V))
+#define io_readbyte(cs,A)		((UINT8)(cs)->io->read_byte(A))
+#define io_writebyte(cs,A,V)	((cs)->io->write_byte(A,V))
 
 
 INLINE UINT8 read_op(hcd62121_state *cpustate)
@@ -141,7 +141,7 @@ INLINE void read_regreg( hcd62121_state *cpustate, int size, UINT8 op1, UINT8 op
 			cpustate->temp1[i] = cpustate->temp2[i];
 			cpustate->temp2[i] = v;
 		}
-	}   
+	}
 }
 
 
@@ -302,7 +302,7 @@ INLINE int check_cond( hcd62121_state *cpustate, UINT8 op )
 }
 
 
-INLINE hcd62121_state *get_safe_token(running_device *device)
+INLINE hcd62121_state *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
 	assert(device->type() == HCD62121);
@@ -382,8 +382,8 @@ static CPU_SET_INFO( hcd62121 )
 
 	case CPUINFO_INT_REGISTER + HCD62121_IP:	cpustate->ip = info->i;							break;
 	case CPUINFO_INT_REGISTER + HCD62121_SP:	cpustate->sp = info->i;							break;
-//	case CPUINFO_INT_REGISTER + HCD62121_R00:	break;
-//	case CPUINFO_INT_REGISTER + HCD62121_R02:	break;
+//  case CPUINFO_INT_REGISTER + HCD62121_R00:   break;
+//  case CPUINFO_INT_REGISTER + HCD62121_R02:   break;
 	}
 }
 
@@ -432,7 +432,7 @@ CPU_GET_INFO( hcd62121 )
 	case CPUINFO_INT_REGISTER + HCD62121_SS:			info->i = cpustate->sseg;				break;
 	case CPUINFO_INT_REGISTER + HCD62121_DSIZE:			info->i = cpustate->dsize;				break;
 	case CPUINFO_INT_REGISTER + HCD62121_R00:			info->i = ( cpustate->reg[0x00] << 24 ) | ( cpustate->reg[0x01] << 16 ) | ( cpustate->reg[0x02] << 8 ) | cpustate->reg[0x03]; break;
-//	case CPUINFO_INT_REGISTER + HCD62121_R02:			info->i = cpustate->;					break;
+//  case CPUINFO_INT_REGISTER + HCD62121_R02:           info->i = cpustate->;                   break;
 
 	/* --- the following bits of info are returned as pointers to data or functions --- */
 	case CPUINFO_FCT_SET_INFO:						info->setinfo = CPU_SET_INFO_NAME(hcd62121);		break;

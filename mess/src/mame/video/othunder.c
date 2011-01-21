@@ -8,7 +8,7 @@ VIDEO_START( othunder )
 	/* Up to $800/8 big sprites, requires 0x100 * sizeof(*spritelist)
        Multiply this by 32 to give room for the number of small sprites,
        which are what actually get put in the structure. */
-	othunder_state *state = (othunder_state *)machine->driver_data;
+	othunder_state *state = machine->driver_data<othunder_state>();
 	state->spritelist = auto_alloc_array(machine, struct othunder_tempsprite, 0x2000);
 }
 
@@ -65,8 +65,8 @@ spriteram is being tested, take no notice of that.]
 
 static void draw_sprites( running_machine *machine, bitmap_t *bitmap, const rectangle *cliprect, const int *primasks, int y_offs )
 {
-	othunder_state *state = (othunder_state *)machine->driver_data;
-	UINT16 *spritemap = (UINT16 *)memory_region(machine, "user1");
+	othunder_state *state = machine->driver_data<othunder_state>();
+	UINT16 *spritemap = (UINT16 *)machine->region("user1")->base();
 	UINT16 tile_mask = (machine->gfx[0]->total_elements) - 1;
 	UINT16 *spriteram16 = state->spriteram;
 	int offs, data, tilenum, color, flipx, flipy;
@@ -202,7 +202,7 @@ logerror("Sprite number %04x had %02x invalid chunks\n",tilenum,bad_chunks);
 
 VIDEO_UPDATE( othunder )
 {
-	othunder_state *state = (othunder_state *)screen->machine->driver_data;
+	othunder_state *state = screen->machine->driver_data<othunder_state>();
 	int layer[3];
 
 	tc0100scn_tilemap_update(state->tc0100scn);

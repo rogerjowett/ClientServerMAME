@@ -4,12 +4,11 @@
 
 *************************************************************************/
 
-class ninjaw_state
+class ninjaw_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, ninjaw_state(machine)); }
-
-	ninjaw_state(running_machine &machine) { }
+	ninjaw_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT16 *   spriteram;
@@ -21,20 +20,20 @@ public:
 	int        pandata[4];
 
 	/* devices */
-	running_device *maincpu;
-	running_device *audiocpu;
-	running_device *subcpu;
-	running_device *tc0140syt;
-	running_device *tc0100scn_1;
-	running_device *tc0100scn_2;
-	running_device *tc0100scn_3;
-	running_device *lscreen;
-	running_device *mscreen;
-	running_device *rscreen;
-	running_device *_2610_1l;
-	running_device *_2610_1r;
-	running_device *_2610_2l;
-	running_device *_2610_2r;
+	device_t *maincpu;
+	device_t *audiocpu;
+	device_t *subcpu;
+	device_t *tc0140syt;
+	device_t *tc0100scn_1;
+	device_t *tc0100scn_2;
+	device_t *tc0100scn_3;
+	device_t *lscreen;
+	device_t *mscreen;
+	device_t *rscreen;
+	device_t *_2610_1l;
+	device_t *_2610_1r;
+	device_t *_2610_2l;
+	device_t *_2610_2r;
 };
 
 

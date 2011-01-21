@@ -17,12 +17,11 @@
 #define MARKER_HORZ_ADJ -1
 #define MARKER_VERT_ADJ -10
 
-class lazercmd_state
+class lazercmd_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, lazercmd_state(machine)); }
-
-	lazercmd_state(running_machine &machine) { }
+	lazercmd_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *  videoram;
@@ -35,7 +34,7 @@ public:
 	int      timer_count, sense_state, dac_data;
 
 	/* device */
-	running_device *dac;
+	device_t *dac;
 };
 
 

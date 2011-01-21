@@ -44,6 +44,17 @@
 #include "dlair.lh"
 
 
+class dlair_state : public driver_device
+{
+public:
+	dlair_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
+
+	UINT8 *videoram;
+};
+
+
+
 
 /*************************************
  *
@@ -82,7 +93,7 @@ static const UINT8 led_map[16] =
  *
  *************************************/
 
-static void dleuro_interrupt(running_device *device, int state)
+static void dleuro_interrupt(device_t *device, int state)
 {
 	cputag_set_input_line(device->machine, "maincpu", 0, state);
 }
@@ -94,7 +105,7 @@ static WRITE8_DEVICE_HANDLER( serial_transmit )
 }
 
 
-static int serial_receive(running_device *device, int channel)
+static int serial_receive(device_t *device, int channel)
 {
 	/* if we still have data to send, do it now */
 	if (channel == 0 && laserdisc_line_r(laserdisc, LASERDISC_LINE_DATA_AVAIL) == ASSERT_LINE)
@@ -161,13 +172,15 @@ static PALETTE_INIT( dleuro )
 
 static VIDEO_UPDATE( dleuro )
 {
+	dlair_state *state = screen->machine->driver_data<dlair_state>();
+	UINT8 *videoram = state->videoram;
 	int x, y;
 
 	/* redraw the overlay */
 	for (y = 0; y < 32; y++)
 		for (x = 0; x < 32; x++)
 		{
-			UINT8 *base = &screen->machine->generic.videoram.u8[y * 64 + x * 2 + 1];
+			UINT8 *base = &videoram[y * 64 + x * 2 + 1];
 			drawgfx_opaque(bitmap, cliprect, screen->machine->gfx[0], base[0], base[1], 0, 0, 10 * x, 16 * y);
 		}
 
@@ -209,7 +222,7 @@ static MACHINE_RESET( dlair )
 static INTERRUPT_GEN( vblank_callback )
 {
 	/* also update the speaker on the European version */
-	beep_sound_device *beep = device->machine->device<beep_sound_device>("beep");
+	beep_device *beep = device->machine->device<beep_device>("beep");
 	if (beep != NULL)
 	{
 		z80ctc_device *ctc = device->machine->device<z80ctc_device>("ctc");
@@ -378,7 +391,7 @@ ADDRESS_MAP_END
 static ADDRESS_MAP_START( dleuro_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x9fff) AM_ROM
 	AM_RANGE(0xa000, 0xa7ff) AM_MIRROR(0x1800) AM_RAM
-	AM_RANGE(0xc000, 0xc7ff) AM_MIRROR(0x1800) AM_RAM AM_BASE_GENERIC(videoram)
+	AM_RANGE(0xc000, 0xc7ff) AM_MIRROR(0x1800) AM_RAM AM_BASE_MEMBER(dlair_state, videoram)
 	AM_RANGE(0xe000, 0xe000) AM_MIRROR(0x1f47) // WT LED 1
 	AM_RANGE(0xe008, 0xe008) AM_MIRROR(0x1f47) // WT LED 2
 	AM_RANGE(0xe010, 0xe010) AM_MIRROR(0x1f47) AM_WRITE(led_den1_w)			// WT EXT LED 1
@@ -669,84 +682,82 @@ static const ay8910_interface ay8910_config =
  *
  *************************************/
 
-static MACHINE_DRIVER_START( dlair_base )
+static MACHINE_CONFIG_START( dlair_base, dlair_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, MASTER_CLOCK_US/4)
-	MDRV_CPU_PROGRAM_MAP(dlus_map)
-	MDRV_CPU_VBLANK_INT("screen", vblank_callback)
-	MDRV_CPU_PERIODIC_INT(irq0_line_hold, (double)MASTER_CLOCK_US/8/16/16/16/16)
+	MCFG_CPU_ADD("maincpu", Z80, MASTER_CLOCK_US/4)
+	MCFG_CPU_PROGRAM_MAP(dlus_map)
+	MCFG_CPU_VBLANK_INT("screen", vblank_callback)
+	MCFG_CPU_PERIODIC_INT(irq0_line_hold, (double)MASTER_CLOCK_US/8/16/16/16/16)
 
-	MDRV_MACHINE_START(dlair)
-	MDRV_MACHINE_RESET(dlair)
+	MCFG_MACHINE_START(dlair)
+	MCFG_MACHINE_RESET(dlair)
 
 	/* video hardware */
-	MDRV_LASERDISC_SCREEN_ADD_NTSC("screen", BITMAP_FORMAT_RGB32)
+	MCFG_LASERDISC_SCREEN_ADD_NTSC("screen", BITMAP_FORMAT_RGB32)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("aysnd", AY8910, MASTER_CLOCK_US/8)
-	MDRV_SOUND_CONFIG(ay8910_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.33)
+	MCFG_SOUND_ADD("aysnd", AY8910, MASTER_CLOCK_US/8)
+	MCFG_SOUND_CONFIG(ay8910_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.33)
 
-	MDRV_SOUND_ADD("ldsound", LASERDISC, 0)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( dlair_pr7820 )
-	MDRV_IMPORT_FROM(dlair_base)
-	MDRV_LASERDISC_ADD("laserdisc", PIONEER_PR7820, "screen", "ldsound")
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ldsound", LASERDISC_SOUND, 0)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( dlair_ldv1000 )
-	MDRV_IMPORT_FROM(dlair_base)
-	MDRV_LASERDISC_ADD("laserdisc", PIONEER_LDV1000, "screen", "ldsound")
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( dlair_pr7820, dlair_base )
+	MCFG_LASERDISC_ADD("laserdisc", PIONEER_PR7820, "screen", "ldsound")
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( dleuro )
+static MACHINE_CONFIG_DERIVED( dlair_ldv1000, dlair_base )
+	MCFG_LASERDISC_ADD("laserdisc", PIONEER_LDV1000, "screen", "ldsound")
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_START( dleuro, dlair_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, MASTER_CLOCK_EURO/4)
-	MDRV_CPU_CONFIG(dleuro_daisy_chain)
-	MDRV_CPU_PROGRAM_MAP(dleuro_map)
-	MDRV_CPU_IO_MAP(dleuro_io_map)
-	MDRV_CPU_VBLANK_INT("screen", vblank_callback)
+	MCFG_CPU_ADD("maincpu", Z80, MASTER_CLOCK_EURO/4)
+	MCFG_CPU_CONFIG(dleuro_daisy_chain)
+	MCFG_CPU_PROGRAM_MAP(dleuro_map)
+	MCFG_CPU_IO_MAP(dleuro_io_map)
+	MCFG_CPU_VBLANK_INT("screen", vblank_callback)
 
-	MDRV_Z80CTC_ADD("ctc", MASTER_CLOCK_EURO/4 /* same as "maincpu" */, ctc_intf)
-	MDRV_Z80SIO_ADD("sio", MASTER_CLOCK_EURO/4 /* same as "maincpu" */, sio_intf)
+	MCFG_Z80CTC_ADD("ctc", MASTER_CLOCK_EURO/4 /* same as "maincpu" */, ctc_intf)
+	MCFG_Z80SIO_ADD("sio", MASTER_CLOCK_EURO/4 /* same as "maincpu" */, sio_intf)
 
-	MDRV_WATCHDOG_TIME_INIT(HZ(MASTER_CLOCK_EURO/(16*16*16*16*16*8)))
+	MCFG_WATCHDOG_TIME_INIT(HZ(MASTER_CLOCK_EURO/(16*16*16*16*16*8)))
 
-	MDRV_MACHINE_START(dlair)
-	MDRV_MACHINE_RESET(dlair)
+	MCFG_MACHINE_START(dlair)
+	MCFG_MACHINE_RESET(dlair)
 
-	MDRV_LASERDISC_ADD("laserdisc", PHILLIPS_22VP932, "screen", "ldsound")
-	MDRV_LASERDISC_OVERLAY(dleuro, 256, 256, BITMAP_FORMAT_INDEXED16)
+	MCFG_LASERDISC_ADD("laserdisc", PHILLIPS_22VP932, "screen", "ldsound")
+	MCFG_LASERDISC_OVERLAY(dleuro, 256, 256, BITMAP_FORMAT_INDEXED16)
 
 	/* video hardware */
-	MDRV_LASERDISC_SCREEN_ADD_PAL("screen", BITMAP_FORMAT_INDEXED16)
+	MCFG_LASERDISC_SCREEN_ADD_PAL("screen", BITMAP_FORMAT_INDEXED16)
 
-	MDRV_GFXDECODE(dlair)
-	MDRV_PALETTE_LENGTH(16)
+	MCFG_GFXDECODE(dlair)
+	MCFG_PALETTE_LENGTH(16)
 
-	MDRV_PALETTE_INIT(dleuro)
+	MCFG_PALETTE_INIT(dleuro)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("beep", BEEP, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.33)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.33)
+	MCFG_SOUND_ADD("beep", BEEP, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.33)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.33)
 
-	MDRV_SOUND_ADD("ldsound", LASERDISC, 0)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ldsound", LASERDISC_SOUND, 0)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 
 

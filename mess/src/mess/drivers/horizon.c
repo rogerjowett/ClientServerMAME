@@ -10,6 +10,16 @@
 #include "cpu/z80/z80.h"
 #include "machine/terminal.h"
 
+
+class horizon_state : public driver_device
+{
+public:
+	horizon_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
+
+};
+
+
 static ADDRESS_MAP_START(horizon_mem, ADDRESS_SPACE_PROGRAM, 8)
 	ADDRESS_MAP_UNMAP_HIGH
 	AM_RANGE(0x0000, 0xe7ff) AM_RAM
@@ -57,27 +67,26 @@ static GENERIC_TERMINAL_INTERFACE( horizon_terminal_intf )
 	DEVCB_HANDLER(horizon_kbd_put)
 };
 
-static MACHINE_DRIVER_START( horizon )
+static MACHINE_CONFIG_START( horizon, horizon_state )
     /* basic machine hardware */
-    MDRV_CPU_ADD("maincpu",Z80, XTAL_4MHz)
-    MDRV_CPU_PROGRAM_MAP(horizon_mem)
-    MDRV_CPU_IO_MAP(horizon_io)
+    MCFG_CPU_ADD("maincpu",Z80, XTAL_4MHz)
+    MCFG_CPU_PROGRAM_MAP(horizon_mem)
+    MCFG_CPU_IO_MAP(horizon_io)
 
-    MDRV_MACHINE_RESET(horizon)
+    MCFG_MACHINE_RESET(horizon)
 
     /* video hardware */
-    MDRV_IMPORT_FROM( generic_terminal )
-	MDRV_GENERIC_TERMINAL_ADD(TERMINAL_TAG,horizon_terminal_intf)
-MACHINE_DRIVER_END
+    MCFG_FRAGMENT_ADD( generic_terminal )
+	MCFG_GENERIC_TERMINAL_ADD(TERMINAL_TAG,horizon_terminal_intf)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( horizsd )
-	MDRV_IMPORT_FROM( horizon )
-	MDRV_CPU_MODIFY( "maincpu" )
-	MDRV_CPU_PROGRAM_MAP( horizon_sd_mem)
-    MDRV_CPU_IO_MAP(horizon_sd_io)
+static MACHINE_CONFIG_DERIVED( horizsd, horizon )
+	MCFG_CPU_MODIFY( "maincpu" )
+	MCFG_CPU_PROGRAM_MAP( horizon_sd_mem)
+    MCFG_CPU_IO_MAP(horizon_sd_io)
 
-    MDRV_MACHINE_RESET(horizon_sd)
-MACHINE_DRIVER_END
+    MCFG_MACHINE_RESET(horizon_sd)
+MACHINE_CONFIG_END
 
 /* ROM definition */
 ROM_START( horizon )

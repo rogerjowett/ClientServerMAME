@@ -27,14 +27,14 @@
 
 static INTERRUPT_GEN( battlnts_interrupt )
 {
-	battlnts_state *state = (battlnts_state *)device->machine->driver_data;
+	battlnts_state *state = device->machine->driver_data<battlnts_state>();
 	if (k007342_is_int_enabled(state->k007342))
 		cpu_set_input_line(device, HD6309_IRQ_LINE, HOLD_LINE);
 }
 
 static WRITE8_HANDLER( battlnts_sh_irqtrigger_w )
 {
-	battlnts_state *state = (battlnts_state *)space->machine->driver_data;
+	battlnts_state *state = space->machine->driver_data<battlnts_state>();
 	cpu_set_input_line_and_vector(state->audiocpu, 0, HOLD_LINE, 0xff);
 }
 
@@ -220,8 +220,8 @@ static const k007420_interface bladestl_k007420_intf =
 
 static MACHINE_START( battlnts )
 {
-	battlnts_state *state = (battlnts_state *)machine->driver_data;
-	UINT8 *ROM = memory_region(machine, "maincpu");
+	battlnts_state *state = machine->driver_data<battlnts_state>();
+	UINT8 *ROM = machine->region("maincpu")->base();
 
 	memory_configure_bank(machine, "bank1", 0, 4, &ROM[0x10000], 0x4000);
 
@@ -235,53 +235,50 @@ static MACHINE_START( battlnts )
 
 static MACHINE_RESET( battlnts )
 {
-	battlnts_state *state = (battlnts_state *)machine->driver_data;
+	battlnts_state *state = machine->driver_data<battlnts_state>();
 
 	state->layer_colorbase[0] = 0;
 	state->layer_colorbase[1] = 0;
 	state->spritebank = 0;
 }
 
-static MACHINE_DRIVER_START( battlnts )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(battlnts_state)
+static MACHINE_CONFIG_START( battlnts, battlnts_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", HD6309, XTAL_24MHz / 2 /* 3000000*4? */)
-	MDRV_CPU_PROGRAM_MAP(battlnts_map)
-	MDRV_CPU_VBLANK_INT("screen", battlnts_interrupt)
+	MCFG_CPU_ADD("maincpu", HD6309, XTAL_24MHz / 2 /* 3000000*4? */)
+	MCFG_CPU_PROGRAM_MAP(battlnts_map)
+	MCFG_CPU_VBLANK_INT("screen", battlnts_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z80, XTAL_24MHz / 6 /* 3579545? */)
-	MDRV_CPU_PROGRAM_MAP(battlnts_sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL_24MHz / 6 /* 3579545? */)
+	MCFG_CPU_PROGRAM_MAP(battlnts_sound_map)
 
-	MDRV_MACHINE_START(battlnts)
-	MDRV_MACHINE_RESET(battlnts)
+	MCFG_MACHINE_START(battlnts)
+	MCFG_MACHINE_RESET(battlnts)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
-	MDRV_GFXDECODE(battlnts)
-	MDRV_PALETTE_LENGTH(128)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_GFXDECODE(battlnts)
+	MCFG_PALETTE_LENGTH(128)
 
-	MDRV_VIDEO_UPDATE(battlnts)
+	MCFG_VIDEO_UPDATE(battlnts)
 
-	MDRV_K007342_ADD("k007342", bladestl_k007342_intf)
-	MDRV_K007420_ADD("k007420", bladestl_k007420_intf)
+	MCFG_K007342_ADD("k007342", bladestl_k007342_intf)
+	MCFG_K007420_ADD("k007420", bladestl_k007420_intf)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ym1", YM3812, XTAL_24MHz / 8)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SOUND_ADD("ym1", YM3812, XTAL_24MHz / 8)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-	MDRV_SOUND_ADD("ym2", YM3812, XTAL_24MHz / 8)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ym2", YM3812, XTAL_24MHz / 8)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 /*************************************
@@ -405,7 +402,7 @@ static void shuffle( UINT8 *buf, int len )
 static DRIVER_INIT( rackemup )
 {
 	/* rearrange char ROM */
-	shuffle(memory_region(machine, "gfx1"), memory_region_length(machine, "gfx1"));
+	shuffle(machine->region("gfx1")->base(), machine->region("gfx1")->bytes());
 }
 
 

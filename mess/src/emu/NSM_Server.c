@@ -1,3 +1,5 @@
+#define DISABLE_EMUALLOC
+
 #include "RakPeerInterface.h"
 #include "RakNetStatistics.h"
 #include "RakNetTypes.h"
@@ -13,6 +15,9 @@
 #include <cstdio>
 #include <cstring>
 #include <stdlib.h>
+
+#include "osdcore.h"
+#include "emu.h"
 
 Server *netServer=NULL;
 
@@ -30,9 +35,6 @@ void deleteGlobalServer()
     if(netServer) delete netServer;
     netServer = NULL;
 }
-
-#include "osdcore.h"
-#include "emu.h"
 
 // Copied from Multiplayer.cpp
 // If the first byte is ID_TIMESTAMP, then we want the 5th byte
@@ -296,38 +298,41 @@ void Server::initialSync(const RakNet::SystemAddress &sa)
     RakNet::BitStream uncompressedStream;
     //unsigned char *data = uncompressedBuffer;
 
-    uncompressedStream.Write(syncTime);
+    uncompressedStream.Write(startupTime);
 
     uncompressedStream.Write(globalCurtime);
 
     if(getSecondsBetweenSync())
     {
-    while(memoryBlocksLocked)
-    {
-        ;
-    }
-    memoryBlocksLocked=true;
-    cout << "IN CRITICAL SECTION\n";
-    cout << "SERVER: Sending initial snapshot\n";
-
-    int numBlocks = int(blocks.size());
-    cout << "NUMBLOCKS: " << numBlocks << endl;
-    uncompressedStream.Write(numBlocks);
-
-    // NOTE: The server must send stale data to the client for the first time
-    // So that future syncs will be accurate
-    for(int blockIndex=0; blockIndex<int(staleBlocks.size()); blockIndex++)
-    {
-        //cout << "BLOCK SIZE FOR INDEX " << blockIndex << ": " << staleBlocks[blockIndex].size << endl;
-        uncompressedStream.Write(staleBlocks[blockIndex].size);
-        uncompressedStream.WriteBits(staleBlocks[blockIndex].data,staleBlocks[blockIndex].size*8);
-
-        for(int a=0; a<staleBlocks[blockIndex].size; a++)
+        while(memoryBlocksLocked)
         {
-            checksum = checksum ^ staleBlocks[blockIndex].data[a];
+            ;
+        }
+        memoryBlocksLocked=true;
+        cout << "IN CRITICAL SECTION\n";
+        cout << "SERVER: Sending initial snapshot\n";
+
+        int numBlocks = int(blocks.size());
+        cout << "NUMBLOCKS: " << numBlocks << endl;
+        uncompressedStream.Write(numBlocks);
+
+        // NOTE: The server must send stale data to the client for the first time
+        // So that future syncs will be accurate
+        for(int blockIndex=0; blockIndex<int(staleBlocks.size()); blockIndex++)
+        {
+            //cout << "BLOCK SIZE FOR INDEX " << blockIndex << ": " << staleBlocks[blockIndex].size << endl;
+            uncompressedStream.Write(staleBlocks[blockIndex].size);
+            uncompressedStream.WriteBits(staleBlocks[blockIndex].data,staleBlocks[blockIndex].size*8);
+
+            for(int a=0; a<staleBlocks[blockIndex].size; a++)
+            {
+                checksum = checksum ^ staleBlocks[blockIndex].data[a];
             }
         }
     }
+
+    int uncompressedStateSize = (int)uncompressedStream.GetNumberOfBytesUsed();
+    printf("INITIAL UNCOMPRESSED STATE SIZE: %d\n",uncompressedStateSize/1024);
 
     int numConstBlocks = int(constBlocks.size());
     uncompressedStream.Write(numConstBlocks);
@@ -380,6 +385,10 @@ void Server::initialSync(const RakNet::SystemAddress &sa)
 
     uLongf compressedSizeLong = compressedInitialSyncBuffer.size();
 
+    //FILE *stateptr = fopen("initialState.dat","wb");
+    //fwrite(uncompressedStream.GetData(),uncompressedStream.GetNumberOfBytesUsed(),1,stateptr);
+    //fclose(stateptr);
+
     compress2(
         (&compressedInitialSyncBuffer[0])+sizeof(int)+sizeof(int),
         &compressedSizeLong,
@@ -394,7 +403,7 @@ void Server::initialSync(const RakNet::SystemAddress &sa)
     int compressedSize = (int)compressedSizeLong;
     memcpy((&compressedInitialSyncBuffer[0])+sizeof(int),&compressedSize,sizeof(int));
 
-    printf("COMPRESSED SIZE: %d\n",compressedSize/8/1024);
+    printf("INITIAL UNCOMPRESSED SIZE: %d\n",uncompressedSize/1024);
 
     /*
     rakInterface->Send(
@@ -411,8 +420,8 @@ void Server::initialSync(const RakNet::SystemAddress &sa)
     //
     unsigned char *sendPtr = (&compressedInitialSyncBuffer[0]);
     int sizeRemaining = compressedSize+sizeof(int)+sizeof(int);
-    printf("INITIAL STATE SIZE: %dKB\n",sizeRemaining/1024);
-    int packetSize = max(256,min(512,sizeRemaining/100));
+    printf("INITIAL COMPRESSED SIZE: %dKB\n",sizeRemaining/1024);
+    int packetSize = max(256,min(1024,sizeRemaining/100));
     while(sizeRemaining>packetSize)
     {
         RakNet::BitStream bitStreamPart(65536);
@@ -612,6 +621,7 @@ void Server::update()
             {
                 cout << __FILE__ << ":" << __LINE__ << " OOPS!!!!\n";
             }
+            //cout << "GOT CLIENT INPUTS\n";
             peerInputs[peerIDs[p->systemAddress]].push_back(string((char*)GetPacketData(p),(int)GetPacketSize(p)));
             break;
         default:
@@ -796,7 +806,7 @@ void Server::sendInputs(const string &inputString)
     rakInterface->Send(
 		    dataToSend,
 		    (int)(inputString.length()+1),
-		    HIGH_PRIORITY,
+		    IMMEDIATE_PRIORITY,
 		    RELIABLE_ORDERED,
 		    ORDERING_CHANNEL_CLIENT_INPUTS,
 		    RakNet::UNASSIGNED_SYSTEM_ADDRESS,

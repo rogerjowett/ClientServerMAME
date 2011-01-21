@@ -76,7 +76,7 @@ static const pen_t default_colortable[] =
 typedef struct _ppu2c0x_state  ppu2c0x_state;
 struct _ppu2c0x_state
 {
-	const address_space 		*space;					/* memory space */
+	address_space		*space;					/* memory space */
 	bitmap_t                    *bitmap;			/* target bitmap */
 	UINT8                       *spriteram;			/* sprite ram */
 	pen_t                       *colortable;			/* color table modified at run time */
@@ -115,13 +115,13 @@ struct _ppu2c0x_state
     PROTOTYPES
 ***************************************************************************/
 
-static void update_scanline( running_device *device );
+static void update_scanline( device_t *device );
 
 static TIMER_CALLBACK( scanline_callback );
 static TIMER_CALLBACK( hblank_callback );
 static TIMER_CALLBACK( nmi_callback );
 
-void (*ppu_latch)( running_device *device, offs_t offset );
+void (*ppu_latch)( device_t *device, offs_t offset );
 
 /* palette handlers */
 static WRITE8_HANDLER( ppu2c0x_palette_write );
@@ -132,7 +132,7 @@ static READ8_HANDLER( ppu2c0x_palette_read );
     INLINE FUNCTIONS
 ***************************************************************************/
 
-INLINE ppu2c0x_state *get_token( running_device *device )
+INLINE ppu2c0x_state *get_token( device_t *device )
 {
 	assert(device != NULL);
 	assert((device->type() == PPU_2C02) || (device->type() == PPU_2C03B)
@@ -143,7 +143,7 @@ INLINE ppu2c0x_state *get_token( running_device *device )
 }
 
 
-INLINE const ppu2c0x_interface *get_interface( running_device *device )
+INLINE const ppu2c0x_interface *get_interface( device_t *device )
 {
 	assert(device != NULL);
 	assert((device->type() == PPU_2C02) || (device->type() == PPU_2C03B)
@@ -291,7 +291,7 @@ void ppu2c0x_init_palette_rgb( running_machine *machine, int first_entry )
 
 	int R, G, B;
 
-	UINT8 *palette_data = memory_region(machine, "palette");
+	UINT8 *palette_data = machine->region("palette")->base();
 
 	/* Loop through the emphasis modes (8 total) */
 	for (color_emphasis = 0; color_emphasis < 8; color_emphasis++)
@@ -329,7 +329,7 @@ static const gfx_layout ppu_charlayout =
 
 static TIMER_CALLBACK( hblank_callback )
 {
-	running_device *device = (running_device *)ptr;
+	device_t *device = (device_t *)ptr;
 	ppu2c0x_state *ppu2c0x = get_token(device);
 	int *ppu_regs = &ppu2c0x->regs[0];
 
@@ -346,7 +346,7 @@ static TIMER_CALLBACK( hblank_callback )
 
 static TIMER_CALLBACK( nmi_callback )
 {
-	running_device *device = (running_device *)ptr;
+	device_t *device = (device_t *)ptr;
 	ppu2c0x_state *ppu2c0x = get_token(device);
 	int *ppu_regs = &ppu2c0x->regs[0];
 
@@ -357,7 +357,7 @@ static TIMER_CALLBACK( nmi_callback )
 	timer_adjust_oneshot(ppu2c0x->nmi_timer, attotime_never, 0);
 }
 
-static void draw_background( running_device *device, UINT8 *line_priority )
+static void draw_background( device_t *device, UINT8 *line_priority )
 {
 	ppu2c0x_state *ppu2c0x = get_token(device);
 
@@ -426,14 +426,14 @@ static void draw_background( running_device *device, UINT8 *line_priority )
 		pos = ((index1 & 0x380) >> 4) | ((index1 & 0x1f) >> 2);
 		page = (index1 & 0x0c00) >> 10;
 		address = 0x3c0 + pos;
-		color_byte = memory_read_byte(ppu2c0x->space, (((page * 0x400) + address) & 0xfff) + 0x2000);
+		color_byte = ppu2c0x->space->read_byte((((page * 0x400) + address) & 0xfff) + 0x2000);
 
 		/* figure out which bits in the color table to use */
 		color_bits = ((index1 & 0x40) >> 4) + (index1 & 0x02);
 
 		// page2 is the output of the nametable read (this section is the FIRST read per tile!)
 		address = index1 & 0x3ff;
-		page2 = memory_read_byte(ppu2c0x->space, index1);
+		page2 = ppu2c0x->space->read_byte(index1);
 
 		// 27/12/2002
 		if (ppu_latch)
@@ -451,8 +451,8 @@ static void draw_background( running_device *device, UINT8 *line_priority )
 			// plus something that accounts for y
 			address += scroll_y_fine;
 
-			plane1 = memory_read_byte(ppu2c0x->space, (address & 0x1fff));
-			plane2 = memory_read_byte(ppu2c0x->space, (address + 8) & 0x1fff);
+			plane1 = ppu2c0x->space->read_byte((address & 0x1fff));
+			plane2 = ppu2c0x->space->read_byte((address + 8) & 0x1fff);
 
 			/* render the pixel */
 			for (i = 0; i < 8; i++)
@@ -503,7 +503,7 @@ static void draw_background( running_device *device, UINT8 *line_priority )
 	}
 }
 
-static void draw_sprites( running_device *device, UINT8 *line_priority )
+static void draw_sprites( device_t *device, UINT8 *line_priority )
 {
 	ppu2c0x_state *ppu2c0x = get_token(device);
 
@@ -598,8 +598,8 @@ static void draw_sprites( running_device *device, UINT8 *line_priority )
 		if (size == 8)
 			index1 += ((sprite_page == 0) ? 0 : 0x1000);
 
-		plane1 = memory_read_byte(ppu2c0x->space, (index1 + sprite_line + 0) & 0x1fff);
-		plane2 = memory_read_byte(ppu2c0x->space, (index1 + sprite_line + 8) & 0x1fff);
+		plane1 = ppu2c0x->space->read_byte((index1 + sprite_line + 0) & 0x1fff);
+		plane2 = ppu2c0x->space->read_byte((index1 + sprite_line + 8) & 0x1fff);
 
 		/* if there are more than 8 sprites on this line, set the flag */
 		if (sprite_count == 8)
@@ -710,14 +710,14 @@ static void draw_sprites( running_device *device, UINT8 *line_priority )
  *
  *************************************/
 
-static void render_scanline( running_device *device )
+static void render_scanline( device_t *device )
 {
 	ppu2c0x_state *ppu2c0x = get_token(device);
 	UINT8 line_priority[VISIBLE_SCREEN_WIDTH];
 	int *ppu_regs = &ppu2c0x->regs[0];
 
 	/* lets see how long it takes */
-	profiler_mark_start(PROFILER_USER1);
+	g_profiler.start(PROFILER_USER1);
 
 	/* clear the line priority for this scanline */
 	memset(line_priority, 0, VISIBLE_SCREEN_WIDTH);
@@ -751,10 +751,10 @@ static void render_scanline( running_device *device )
 	draw_sprites(device, line_priority);
 
 	/* done updating, whew */
-	profiler_mark_end();
+	g_profiler.stop();
 }
 
-static void update_scanline( running_device *device )
+static void update_scanline( device_t *device )
 {
 	ppu2c0x_state *ppu2c0x = get_token(device);
 	const int scanline = ppu2c0x->scanline;
@@ -834,7 +834,7 @@ static void update_scanline( running_device *device )
 
 static TIMER_CALLBACK( scanline_callback )
 {
-	running_device *device = (running_device *)ptr;
+	device_t *device = (device_t *)ptr;
 	ppu2c0x_state *ppu2c0x = get_token(device);
 	int *ppu_regs = &ppu2c0x->regs[0];
 	int blanked = (ppu_regs[PPU_CONTROL1] & (PPU_CONTROL1_BACKGROUND | PPU_CONTROL1_SPRITES)) == 0;
@@ -867,7 +867,7 @@ static TIMER_CALLBACK( scanline_callback )
 			// a game can read the high bit of $2002 before the NMI is called (potentially resetting the bit
 			// via a read from $2002 in the NMI handler).
 			// B-Wings is an example game that needs this.
-			timer_adjust_oneshot(ppu2c0x->nmi_timer, cputag_clocks_to_attotime(device->machine, "maincpu", 4), 0);
+			timer_adjust_oneshot(ppu2c0x->nmi_timer, device->machine->device<cpu_device>("maincpu")->cycles_to_attotime(4), 0);
 		}
 	}
 
@@ -895,7 +895,7 @@ static TIMER_CALLBACK( scanline_callback )
 		next_scanline = 0;
 
 	// Call us back when the hblank starts for this scanline
-	timer_adjust_oneshot(ppu2c0x->hblank_timer, cputag_clocks_to_attotime(device->machine, "maincpu", 86.67), 0); // ??? FIXME - hardcoding NTSC, need better calculation
+	timer_adjust_oneshot(ppu2c0x->hblank_timer, device->machine->device<cpu_device>("maincpu")->cycles_to_attotime(86.67), 0); // ??? FIXME - hardcoding NTSC, need better calculation
 
 	// trigger again at the start of the next scanline
 	timer_adjust_oneshot(ppu2c0x->scanline_timer, device->machine->primary_screen->time_until_pos(next_scanline * ppu2c0x->scan_scale), 0);
@@ -996,14 +996,14 @@ READ8_DEVICE_HANDLER( ppu2c0x_r )
 
 			if (ppu2c0x->videomem_addr >= 0x3f00)
 			{
-				ppu2c0x->data_latch = memory_read_byte(ppu2c0x->space, ppu2c0x->videomem_addr);
+				ppu2c0x->data_latch = ppu2c0x->space->read_byte(ppu2c0x->videomem_addr);
 				// buffer the mirrored NT data
-				ppu2c0x->buffered_data = memory_read_byte(ppu2c0x->space, ppu2c0x->videomem_addr & 0x2fff);
+				ppu2c0x->buffered_data = ppu2c0x->space->read_byte(ppu2c0x->videomem_addr & 0x2fff);
 			}
 			else
 			{
 				ppu2c0x->data_latch = ppu2c0x->buffered_data;
-				ppu2c0x->buffered_data = memory_read_byte(ppu2c0x->space, ppu2c0x->videomem_addr);
+				ppu2c0x->buffered_data = ppu2c0x->space->read_byte(ppu2c0x->videomem_addr);
 			}
 
 			ppu2c0x->videomem_addr += ppu2c0x->add;
@@ -1153,12 +1153,12 @@ WRITE8_DEVICE_HANDLER( ppu2c0x_w )
 				if (tempAddr < 0x2000)
 				{
 					/* store the data */
-					memory_write_byte(ppu2c0x->space, tempAddr, data);
+					ppu2c0x->space->write_byte(tempAddr, data);
 				}
 
 				else
 				{
-					memory_write_byte(ppu2c0x->space, tempAddr, data);
+					ppu2c0x->space->write_byte(tempAddr, data);
 				}
 				/* increment the address */
 				ppu2c0x->videomem_addr += ppu2c0x->add;
@@ -1179,15 +1179,15 @@ WRITE8_DEVICE_HANDLER( ppu2c0x_w )
  *
  *************************************/
 
-void ppu2c0x_spriteram_dma( const address_space *space, running_device *device, const UINT8 page )
+void ppu2c0x_spriteram_dma( address_space *space, device_t *device, const UINT8 page )
 {
 	int i;
 	int address = page << 8;
 
 	for (i = 0; i < SPRITERAM_SIZE; i++)
 	{
-		UINT8 spriteData = memory_read_byte(space, address + i);
-		memory_write_byte(space, 0x2004, spriteData);
+		UINT8 spriteData = space->read_byte(address + i);
+		space->write_byte(0x2004, spriteData);
 	}
 
 	// should last 513 CPU cycles.
@@ -1200,7 +1200,7 @@ void ppu2c0x_spriteram_dma( const address_space *space, running_device *device, 
  *
  *************************************/
 
-void ppu2c0x_render( running_device *device, bitmap_t *bitmap, int flipx, int flipy, int sx, int sy )
+void ppu2c0x_render( device_t *device, bitmap_t *bitmap, int flipx, int flipy, int sx, int sy )
 {
 	ppu2c0x_state *ppu2c0x = get_token(device);
 	copybitmap(bitmap, ppu2c0x->bitmap, flipx, flipy, sx, sy, 0);
@@ -1212,7 +1212,7 @@ void ppu2c0x_render( running_device *device, bitmap_t *bitmap, int flipx, int fl
  *
  *************************************/
 
-int ppu2c0x_get_pixel( running_device *device, int x, int y )
+int ppu2c0x_get_pixel( device_t *device, int x, int y )
 {
 	ppu2c0x_state *ppu2c0x = get_token(device);
 
@@ -1225,44 +1225,44 @@ int ppu2c0x_get_pixel( running_device *device, int x, int y )
 	return *BITMAP_ADDR16(ppu2c0x->bitmap, y, x);
 }
 
-int ppu2c0x_get_colorbase( running_device *device )
+int ppu2c0x_get_colorbase( device_t *device )
 {
 	ppu2c0x_state *ppu2c0x = get_token(device);
 	return ppu2c0x->color_base;
 }
 
-int ppu2c0x_get_current_scanline( running_device *device )
+int ppu2c0x_get_current_scanline( device_t *device )
 {
 	ppu2c0x_state *ppu2c0x = get_token(device);
 	return ppu2c0x->scanline;
 }
 
 // MMC5 has to be able to check this
-int ppu2c0x_is_sprite_8x16( running_device *device )
+int ppu2c0x_is_sprite_8x16( device_t *device )
 {
 	ppu2c0x_state *ppu2c0x = get_token(device);
 	return BIT(ppu2c0x->regs[0], 5);
 }
 
-void ppu2c0x_set_scanline_callback( running_device *device, ppu2c0x_scanline_cb cb )
+void ppu2c0x_set_scanline_callback( device_t *device, ppu2c0x_scanline_cb cb )
 {
 	ppu2c0x_state *ppu2c0x = get_token(device);
 	ppu2c0x->scanline_callback_proc = cb;
 }
 
-void ppu2c0x_set_hblank_callback( running_device *device, ppu2c0x_hblank_cb cb )
+void ppu2c0x_set_hblank_callback( device_t *device, ppu2c0x_hblank_cb cb )
 {
 	ppu2c0x_state *ppu2c0x = get_token(device);
 	ppu2c0x->hblank_callback_proc = cb;
 }
 
-void ppu2c0x_set_vidaccess_callback( running_device *device, ppu2c0x_vidaccess_cb cb )
+void ppu2c0x_set_vidaccess_callback( device_t *device, ppu2c0x_vidaccess_cb cb )
 {
 	ppu2c0x_state *ppu2c0x = get_token(device);
 	ppu2c0x->vidaccess_callback_proc = cb;
 }
 
-void ppu2c0x_set_scanlines_per_frame( running_device *device, int scanlines )
+void ppu2c0x_set_scanlines_per_frame( device_t *device, int scanlines )
 {
 	ppu2c0x_state *ppu2c0x = get_token(device);
 	ppu2c0x->scanlines_per_frame = scanlines;
@@ -1305,7 +1305,7 @@ static DEVICE_START( ppu2c0x )
 	timer_adjust_oneshot(ppu2c0x->scanline_timer, device->machine->primary_screen->time_until_pos(1), 0);
 
 	ppu2c0x->hblank_timer = timer_alloc(device->machine, hblank_callback, (void *) device);
-	timer_adjust_oneshot(ppu2c0x->hblank_timer, cputag_clocks_to_attotime(device->machine, "maincpu", 86.67), 0); // ??? FIXME - hardcoding NTSC, need better calculation
+	timer_adjust_oneshot(ppu2c0x->hblank_timer, device->machine->device<cpu_device>("maincpu")->cycles_to_attotime(86.67), 0); // ??? FIXME - hardcoding NTSC, need better calculation
 
 	ppu2c0x->nmi_timer = timer_alloc(device->machine, nmi_callback, (void *) device);
 	timer_adjust_oneshot(ppu2c0x->nmi_timer, attotime_never, 0);
@@ -1332,12 +1332,10 @@ static DEVICE_START( ppu2c0x )
 	state_save_register_device_item(device, 0, ppu2c0x->tile_page);
 	state_save_register_device_item(device, 0, ppu2c0x->sprite_page);
 	state_save_register_device_item(device, 0, ppu2c0x->back_color);
-	state_save_register_device_item(device, 0, ppu2c0x->color_base);
 	state_save_register_device_item(device, 0, ppu2c0x->scan_scale);
 	state_save_register_device_item(device, 0, ppu2c0x->scanlines_per_frame);
 	state_save_register_device_item_array(device, 0, ppu2c0x->regs);
 	state_save_register_device_item_array(device, 0, ppu2c0x->palette_ram);
-	state_save_register_device_item_array(device, 0, ppu2c0x->palette);
 	state_save_register_device_item_pointer(device, 0, ppu2c0x->spriteram, SPRITERAM_SIZE);
 	state_save_register_device_item_pointer(device, 0, ppu2c0x->colortable, ARRAY_LENGTH(default_colortable));
 	state_save_register_device_item_pointer(device, 0, ppu2c0x->colortable_mono, ARRAY_LENGTH(default_colortable_mono));

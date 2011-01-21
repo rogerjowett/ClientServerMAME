@@ -8,9 +8,11 @@ static tilemap_t *bg_tilemap;
 
 WRITE8_HANDLER( playch10_videoram_w )
 {
+	playch10_state *state = space->machine->driver_data<playch10_state>();
+	UINT8 *videoram = state->videoram;
 	if (pc10_sdcs)
 	{
-		space->machine->generic.videoram.u8[offset] = data;
+		videoram[offset] = data;
 		tilemap_mark_tile_dirty(bg_tilemap, offset / 2);
 	}
 }
@@ -57,7 +59,7 @@ PALETTE_INIT( playch10 )
 	ppu2c0x_init_palette_rgb(machine, 256 );
 }
 
-static void ppu_irq( running_device *device, int *ppu_regs )
+static void ppu_irq( device_t *device, int *ppu_regs )
 {
 	cputag_set_input_line(device->machine, "cart", INPUT_LINE_NMI, PULSE_LINE );
 	pc10_int_detect = 1;
@@ -85,16 +87,18 @@ const ppu2c0x_interface playch10_ppu_interface_hboard =
 
 static TILE_GET_INFO( get_bg_tile_info )
 {
+	playch10_state *state = machine->driver_data<playch10_state>();
+	UINT8 *videoram = state->videoram;
 	int offs = tile_index * 2;
-	int code = machine->generic.videoram.u8[offs] + ((machine->generic.videoram.u8[offs + 1] & 0x07) << 8);
-	int color = (machine->generic.videoram.u8[offs + 1] >> 3) & 0x1f;
+	int code = videoram[offs] + ((videoram[offs + 1] & 0x07) << 8);
+	int color = (videoram[offs + 1] >> 3) & 0x1f;
 
 	SET_TILE_INFO(0, code, color, 0);
 }
 
 VIDEO_START( playch10 )
 {
-	const UINT8 *bios = memory_region(machine, "maincpu");
+	const UINT8 *bios = machine->region("maincpu")->base();
 	pc10_bios = (bios[3] == 0x2a) ? 1 : 2;
 
 	bg_tilemap = tilemap_create(machine, get_bg_tile_info, tilemap_scan_rows,
@@ -103,7 +107,7 @@ VIDEO_START( playch10 )
 
 VIDEO_START( playch10_hboard )
 {
-	const UINT8 *bios = memory_region(machine, "maincpu");
+	const UINT8 *bios = machine->region("maincpu")->base();
 	pc10_bios = (bios[3] == 0x2a) ? 1 : 2;
 
 	bg_tilemap = tilemap_create(machine, get_bg_tile_info, tilemap_scan_rows,
@@ -118,12 +122,12 @@ VIDEO_START( playch10_hboard )
 
 VIDEO_UPDATE( playch10 )
 {
-	running_device *ppu = screen->machine->device("ppu");
+	device_t *ppu = screen->machine->device("ppu");
 
 	/* Dual monitor version */
 	if (pc10_bios == 1)
 	{
-		running_device *top_screen = screen->machine->device("top");
+		device_t *top_screen = screen->machine->device("top");
 
 		/* On Playchoice 10 single monitor, this bit toggles    */
 		/* between PPU and BIOS display.                        */

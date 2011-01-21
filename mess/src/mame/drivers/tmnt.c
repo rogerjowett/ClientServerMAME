@@ -77,14 +77,13 @@ Updates:
 #include "sound/k054539.h"
 #include "sound/k007232.h"
 #include "sound/upd7759.h"
+#include "machine/nvram.h"
 #include "includes/tmnt.h"
 #include "includes/konamipt.h"
 
-static UINT16 cuebrick_nvram[0x400 * 0x20];	// 32k paged in a 1k window
-
 static READ16_HANDLER( k052109_word_noA12_r )
 {
-	tmnt_state *state = (tmnt_state *)space->machine->driver_data;
+	tmnt_state *state = space->machine->driver_data<tmnt_state>();
 
 	/* some games have the A12 line not connected, so the chip spans */
 	/* twice the memory range, with mirroring */
@@ -94,7 +93,7 @@ static READ16_HANDLER( k052109_word_noA12_r )
 
 static WRITE16_HANDLER( k052109_word_noA12_w )
 {
-	tmnt_state *state = (tmnt_state *)space->machine->driver_data;
+	tmnt_state *state = space->machine->driver_data<tmnt_state>();
 
 	/* some games have the A12 line not connected, so the chip spans */
 	/* twice the memory range, with mirroring */
@@ -104,7 +103,7 @@ static WRITE16_HANDLER( k052109_word_noA12_w )
 
 static WRITE16_HANDLER( punkshot_k052109_word_w )
 {
-	tmnt_state *state = (tmnt_state *)space->machine->driver_data;
+	tmnt_state *state = space->machine->driver_data<tmnt_state>();
 
 	/* it seems that a word write is supposed to affect only the MSB. The */
 	/* "ROUND 1" text in punkshtj goes lost otherwise. */
@@ -128,7 +127,7 @@ static WRITE16_HANDLER( punkshot_k052109_word_noA12_w )
 /* A1, A5 and A6 don't go to the 053245. */
 static READ16_HANDLER( k053245_scattered_word_r )
 {
-	tmnt_state *state = (tmnt_state *)space->machine->driver_data;
+	tmnt_state *state = space->machine->driver_data<tmnt_state>();
 
 	if (offset & 0x0031)
 		return space->machine->generic.spriteram.u16[offset];
@@ -141,7 +140,7 @@ static READ16_HANDLER( k053245_scattered_word_r )
 
 static WRITE16_HANDLER( k053245_scattered_word_w )
 {
-	tmnt_state *state = (tmnt_state *)space->machine->driver_data;
+	tmnt_state *state = space->machine->driver_data<tmnt_state>();
 
 	COMBINE_DATA(space->machine->generic.spriteram.u16 + offset);
 
@@ -154,7 +153,7 @@ static WRITE16_HANDLER( k053245_scattered_word_w )
 
 static READ16_HANDLER( k053244_word_noA1_r )
 {
-	tmnt_state *state = (tmnt_state *)space->machine->driver_data;
+	tmnt_state *state = space->machine->driver_data<tmnt_state>();
 
 	offset &= ~1;	/* handle mirror address */
 
@@ -163,7 +162,7 @@ static READ16_HANDLER( k053244_word_noA1_r )
 
 static WRITE16_HANDLER( k053244_word_noA1_w )
 {
-	tmnt_state *state = (tmnt_state *)space->machine->driver_data;
+	tmnt_state *state = space->machine->driver_data<tmnt_state>();
 
 	offset &= ~1;	/* handle mirror address */
 
@@ -175,7 +174,7 @@ static WRITE16_HANDLER( k053244_word_noA1_w )
 
 static INTERRUPT_GEN(cuebrick_interrupt)
 {
-	tmnt_state *state = (tmnt_state *)device->machine->driver_data;
+	tmnt_state *state = device->machine->driver_data<tmnt_state>();
 
 	// cheap IRQ multiplexing to avoid losing sound IRQs
 	switch (cpu_getiloops(device))
@@ -193,7 +192,7 @@ static INTERRUPT_GEN(cuebrick_interrupt)
 
 static INTERRUPT_GEN( punkshot_interrupt )
 {
-	tmnt_state *state = (tmnt_state *)device->machine->driver_data;
+	tmnt_state *state = device->machine->driver_data<tmnt_state>();
 
 	if (k052109_is_irq_enabled(state->k052109))
 		irq4_line_hold(device);
@@ -201,7 +200,7 @@ static INTERRUPT_GEN( punkshot_interrupt )
 
 static INTERRUPT_GEN( lgtnfght_interrupt )
 {
-	tmnt_state *state = (tmnt_state *)device->machine->driver_data;
+	tmnt_state *state = device->machine->driver_data<tmnt_state>();
 
 	if (k052109_is_irq_enabled(state->k052109))
 		irq5_line_hold(device);
@@ -224,7 +223,7 @@ static READ8_DEVICE_HANDLER( punkshot_sound_r )
 
 static WRITE8_DEVICE_HANDLER( glfgreat_sound_w )
 {
-	tmnt_state *state = (tmnt_state *)device->machine->driver_data;
+	tmnt_state *state = device->machine->driver_data<tmnt_state>();
 	k053260_w(device, offset, data);
 
 	if (offset)
@@ -250,7 +249,7 @@ static WRITE16_HANDLER( prmrsocr_sound_cmd_w )
 
 static WRITE16_HANDLER( prmrsocr_sound_irq_w )
 {
-	tmnt_state *state = (tmnt_state *)space->machine->driver_data;
+	tmnt_state *state = space->machine->driver_data<tmnt_state>();
 	cpu_set_input_line_and_vector(state->audiocpu, 0, HOLD_LINE, 0xff);
 }
 
@@ -262,13 +261,13 @@ static WRITE8_HANDLER( prmrsocr_audio_bankswitch_w )
 
 static READ8_HANDLER( tmnt_sres_r )
 {
-	tmnt_state *state = (tmnt_state *)space->machine->driver_data;
+	tmnt_state *state = space->machine->driver_data<tmnt_state>();
 	return state->tmnt_soundlatch;
 }
 
 static WRITE8_HANDLER( tmnt_sres_w )
 {
-	tmnt_state *state = (tmnt_state *)space->machine->driver_data;
+	tmnt_state *state = space->machine->driver_data<tmnt_state>();
 
 	/* bit 1 resets the UPD7795C sound chip */
 	upd7759_reset_w(state->upd, data & 2);
@@ -298,9 +297,9 @@ static READ8_DEVICE_HANDLER( tmnt_upd_busy_r )
 static SAMPLES_START( tmnt_decode_sample )
 {
 	running_machine *machine = device->machine;
-	tmnt_state *state = (tmnt_state *)machine->driver_data;
+	tmnt_state *state = machine->driver_data<tmnt_state>();
 	int i;
-	UINT8 *source = memory_region(machine, "title");
+	UINT8 *source = machine->region("title")->base();
 
 	state->sampledata = auto_alloc_array(machine, INT16, 0x40000);
 	state_save_register_global_pointer(machine, state->sampledata, 0x40000);
@@ -340,13 +339,13 @@ static void sound_nmi_callback( int param )
 
 static TIMER_CALLBACK( nmi_callback )
 {
-	tmnt_state *state = (tmnt_state *)machine->driver_data;
+	tmnt_state *state = machine->driver_data<tmnt_state>();
 	cpu_set_input_line(state->audiocpu, INPUT_LINE_NMI, ASSERT_LINE);
 }
 
 static WRITE8_HANDLER( sound_arm_nmi_w )
 {
-	tmnt_state *state = (tmnt_state *)space->machine->driver_data;
+	tmnt_state *state = space->machine->driver_data<tmnt_state>();
 //  sound_nmi_enabled = 1;
 	cpu_set_input_line(state->audiocpu, INPUT_LINE_NMI, CLEAR_LINE);
 	timer_set(space->machine, ATTOTIME_IN_USEC(50), NULL, 0, nmi_callback);	/* kludge until the K053260 is emulated correctly */
@@ -359,16 +358,16 @@ static READ16_HANDLER( punkshot_kludge_r )
 	/* 0xffffff, and returning 0 causes the game to mess up - locking up in a */
 	/* loop where the ball is continuously bouncing from the basket. Returning */
 	/* a random number seems to prevent that. */
-	return mame_rand(space->machine);
+	return space->machine->rand();
 }
 
 
 /* protection simulation derived from a bootleg */
 static READ16_HANDLER( ssriders_protection_r )
 {
-	tmnt_state *state = (tmnt_state *)space->machine->driver_data;
-	int data = memory_read_word(space, 0x105a0a);
-	int cmd = memory_read_word(space, 0x1058fc);
+	tmnt_state *state = space->machine->driver_data<tmnt_state>();
+	int data = space->read_word(0x105a0a);
+	int cmd = space->read_word(0x1058fc);
 
 	switch (cmd)
 	{
@@ -395,9 +394,9 @@ static READ16_HANDLER( ssriders_protection_r )
 
 		case 0x8abc:
 			/* collision table */
-			data = -memory_read_word(space, 0x105818);
+			data = -space->read_word(0x105818);
 			data = ((data / 8 - 4) & 0x1f) * 0x40;
-			data += ((memory_read_word(space, 0x105cb0) +
+			data += ((space->read_word(0x105cb0) +
 						256 * k052109_r(state->k052109, 0x1a01) + k052109_r(state->k052109, 0x1a00) - 6) / 8 + 12) & 0x3f;
 			return data;
 
@@ -410,7 +409,7 @@ static READ16_HANDLER( ssriders_protection_r )
 
 static WRITE16_HANDLER( ssriders_protection_w )
 {
-	tmnt_state *state = (tmnt_state *)space->machine->driver_data;
+	tmnt_state *state = space->machine->driver_data<tmnt_state>();
 
 	if (offset == 1)
 	{
@@ -424,7 +423,7 @@ static WRITE16_HANDLER( ssriders_protection_w )
 
 			for (i = 0; i < 128; i++)
 			{
-				if ((memory_read_word(space, 0x180006 + 128 * i) >> 8) == logical_pri)
+				if ((space->read_word(0x180006 + 128 * i) >> 8) == logical_pri)
 				{
 					k053245_word_w(state->k053245, 8 * i, hardware_pri, 0x00ff);
 					hardware_pri++;
@@ -456,7 +455,7 @@ static const eeprom_interface eeprom_intf =
 
 static READ16_HANDLER( blswhstl_coin_r )
 {
-	tmnt_state *state = (tmnt_state *)space->machine->driver_data;
+	tmnt_state *state = space->machine->driver_data<tmnt_state>();
 	int res;
 
 	/* bit 3 is service button */
@@ -469,7 +468,7 @@ static READ16_HANDLER( blswhstl_coin_r )
 
 static READ16_HANDLER( ssriders_eeprom_r )
 {
-	tmnt_state *state = (tmnt_state *)space->machine->driver_data;
+	tmnt_state *state = space->machine->driver_data<tmnt_state>();
 	int res;
 
 	/* bit 0 is EEPROM data */
@@ -484,7 +483,7 @@ static READ16_HANDLER( ssriders_eeprom_r )
 
 static READ16_HANDLER( sunsetbl_eeprom_r )
 {
-	tmnt_state *state = (tmnt_state *)space->machine->driver_data;
+	tmnt_state *state = space->machine->driver_data<tmnt_state>();
 	int res;
 
 	/* bit 0 is EEPROM data */
@@ -521,7 +520,7 @@ static const eeprom_interface thndrx2_eeprom_intf =
 
 static READ16_HANDLER( thndrx2_eeprom_r )
 {
-	tmnt_state *state = (tmnt_state *)space->machine->driver_data;
+	tmnt_state *state = space->machine->driver_data<tmnt_state>();
 	int res;
 
 	/* bit 0 is EEPROM data */
@@ -535,7 +534,7 @@ static READ16_HANDLER( thndrx2_eeprom_r )
 
 static WRITE16_HANDLER( thndrx2_eeprom_w )
 {
-	tmnt_state *state = (tmnt_state *)space->machine->driver_data;
+	tmnt_state *state = space->machine->driver_data<tmnt_state>();
 
 	if (ACCESSING_BITS_0_7)
 	{
@@ -572,19 +571,19 @@ static WRITE16_HANDLER( prmrsocr_eeprom_w )
 
 static READ16_HANDLER( cuebrick_nv_r )
 {
-	tmnt_state *state = (tmnt_state *)space->machine->driver_data;
-	return cuebrick_nvram[offset + (state->cuebrick_nvram_bank * 0x400 / 2)];
+	tmnt_state *state = space->machine->driver_data<tmnt_state>();
+	return state->m_cuebrick_nvram[offset + (state->cuebrick_nvram_bank * 0x400 / 2)];
 }
 
 static WRITE16_HANDLER( cuebrick_nv_w )
 {
-	tmnt_state *state = (tmnt_state *)space->machine->driver_data;
-       COMBINE_DATA(&cuebrick_nvram[offset + (state->cuebrick_nvram_bank * 0x400 / 2)]);
+	tmnt_state *state = space->machine->driver_data<tmnt_state>();
+       COMBINE_DATA(&state->m_cuebrick_nvram[offset + (state->cuebrick_nvram_bank * 0x400 / 2)]);
 }
 
 static WRITE16_HANDLER( cuebrick_nvbank_w )
 {
-	tmnt_state *state = (tmnt_state *)space->machine->driver_data;
+	tmnt_state *state = space->machine->driver_data<tmnt_state>();
 	state->cuebrick_nvram_bank = data >> 8;
 }
 
@@ -600,7 +599,7 @@ static ADDRESS_MAP_START( cuebrick_main_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x0a0010, 0x0a0011) AM_READ_PORT("DSW1") AM_WRITE(watchdog_reset16_w)
 	AM_RANGE(0x0a0012, 0x0a0013) AM_READ_PORT("DSW2")
 	AM_RANGE(0x0a0018, 0x0a0019) AM_READ_PORT("DSW3")
-	AM_RANGE(0x0b0000, 0x0b03ff) AM_READWRITE(cuebrick_nv_r, cuebrick_nv_w)
+	AM_RANGE(0x0b0000, 0x0b03ff) AM_READWRITE(cuebrick_nv_r, cuebrick_nv_w) AM_SHARE("nvram")
 	AM_RANGE(0x0b0400, 0x0b0401) AM_WRITE(cuebrick_nvbank_w)
 	AM_RANGE(0x0c0000, 0x0c0003) AM_DEVREADWRITE8("ymsnd", ym2151_r, ym2151_w, 0xff00)
 	AM_RANGE(0x100000, 0x107fff) AM_READWRITE(k052109_word_noA12_r, k052109_word_noA12_w)
@@ -695,7 +694,7 @@ ADDRESS_MAP_END
 
 static WRITE16_HANDLER( ssriders_soundkludge_w )
 {
-	tmnt_state *state = (tmnt_state *)space->machine->driver_data;
+	tmnt_state *state = space->machine->driver_data<tmnt_state>();
 
 	/* I think this is more than just a trigger */
 	cpu_set_input_line_and_vector(state->audiocpu, 0, HOLD_LINE, 0xff);
@@ -725,7 +724,7 @@ ADDRESS_MAP_END
 
 static WRITE16_HANDLER( k053251_glfgreat_w )
 {
-	tmnt_state *state = (tmnt_state *)space->machine->driver_data;
+	tmnt_state *state = space->machine->driver_data<tmnt_state>();
 	int i;
 
 	if (ACCESSING_BITS_8_15)
@@ -795,7 +794,7 @@ ADDRESS_MAP_END
 #if 1
 INLINE UINT32 tmnt2_get_word( running_machine *machine, UINT32 addr )
 {
-	tmnt_state *state = (tmnt_state *)machine->driver_data;
+	tmnt_state *state = machine->driver_data<tmnt_state>();
 
 	if (addr <= 0x07ffff / 2)
 		return(state->tmnt2_rom[addr]);
@@ -806,9 +805,9 @@ INLINE UINT32 tmnt2_get_word( running_machine *machine, UINT32 addr )
 	return 0;
 }
 
-static void tmnt2_put_word( const address_space *space, UINT32 addr, UINT16 data )
+static void tmnt2_put_word( address_space *space, UINT32 addr, UINT16 data )
 {
-	tmnt_state *state = (tmnt_state *)space->machine->driver_data;
+	tmnt_state *state = space->machine->driver_data<tmnt_state>();
 
 	UINT32 offs;
 	if (addr >= 0x180000 / 2 && addr <= 0x183fff / 2)
@@ -827,7 +826,7 @@ static void tmnt2_put_word( const address_space *space, UINT32 addr, UINT16 data
 
 static WRITE16_HANDLER( tmnt2_1c0800_w )
 {
-	tmnt_state *state = (tmnt_state *)space->machine->driver_data;
+	tmnt_state *state = space->machine->driver_data<tmnt_state>();
 	UINT32 src_addr, dst_addr, mod_addr, attr1, code, attr2, cbase, cmod, color;
 	int xoffs, yoffs, xmod, ymod, zmod, xzoom, yzoom, i;
 	UINT16 *mcu;
@@ -948,7 +947,7 @@ static WRITE16_HANDLER( tmnt2_1c0800_w )
 #else // for reference; do not remove
 static WRITE16_HANDLER( tmnt2_1c0800_w )
 {
-	tmnt_state *state = (tmnt_state *)space->machine->driver_data;
+	tmnt_state *state = space->machine->driver_data<tmnt_state>();
 	COMBINE_DATA(state->tmnt2_1c0800 + offset);
 	if (offset == 0x0008 && (state->tmnt2_1c0800[0x8] & 0xff00) == 0x8200)
 	{
@@ -963,13 +962,13 @@ static WRITE16_HANDLER( tmnt2_1c0800_w )
 		CellSrc = state->tmnt2_1c0800[0x00] | (state->tmnt2_1c0800[0x01] << 16 );
 //        if (CellDest >= 0x180000 && CellDest < 0x183fe0) {
 		CellVar -= 0x104000;
-		src = (UINT16 *)(memory_region(space->machine, "maincpu") + CellSrc);
+		src = (UINT16 *)(space->machine->region("maincpu")->base() + CellSrc);
 
 		CellVar >>= 1;
 
-		memory_write_word(space, dst + 0x00, 0x8000 | ((src[1] & 0xfc00) >> 2));	/* size, flip xy */
-		memory_write_word(space, dst + 0x04, src[0]);	/* code */
-		memory_write_word(space, dst + 0x18, (src[1] & 0x3ff) ^		/* color, mirror, priority */
+		space->write_word(dst + 0x00, 0x8000 | ((src[1] & 0xfc00) >> 2));	/* size, flip xy */
+		space->write_word(dst + 0x04, src[0]);	/* code */
+		space->write_word(dst + 0x18, (src[1] & 0x3ff) ^		/* color, mirror, priority */
 				(sunset_104000[CellVar + 0x00] & 0x0060));
 
 		/* base color modifier */
@@ -979,24 +978,24 @@ static WRITE16_HANDLER( tmnt2_1c0800_w )
 		/* Also, the bosses don't blink when they are about to die - don't know */
 		/* if this is correct or not. */
 //      if (state->sunset_104000[CellVar + 0x15] & 0x001f)
-//          memory_write_word(dst + 0x18, (memory_read_word(space, dst + 0x18) & 0xffe0) |
+//          dst + 0x18->write_word((space->read_word(dst + 0x18) & 0xffe0) |
 //                  (state->sunset_104000[CellVar + 0x15] & 0x001f));
 
 		x = src[2];
 		if (state->sunset_104000[CellVar + 0x00] & 0x4000)
 		{
 			/* flip x */
-			memory_write_word(space, dst + 0x00, memory_read_word(space, dst + 0x00) ^ 0x1000);
+			space->write_word(dst + 0x00, space->read_word(dst + 0x00) ^ 0x1000);
 			x = -x;
 		}
 		x += state->sunset_104000[CellVar + 0x06];
-		memory_write_word(space, dst + 0x0c, x);
+		space->write_word(dst + 0x0c, x);
 		y = src[3];
 		y += state->sunset_104000[CellVar + 0x07];
 		/* don't do second offset for shadows */
 		if ((state->tmnt2_1c0800[0x08] & 0x00ff) != 0x01)
 			y += state->sunset_104000[CellVar + 0x08];
-		memory_write_word(space, dst + 0x08, y);
+		space->write_word(dst + 0x08, y);
 #if 0
 logerror("copy command %04x sprite %08x data %08x: %04x%04x %04x%04x  modifiers %08x:%04x%04x %04x%04x %04x%04x %04x%04x %04x%04x %04x%04x %04x%04x %04x%04x %04x%04x %04x%04x %04x%04x %04x%04x\n",
 	state->tmnt2_1c0800[0x05],
@@ -1107,7 +1106,7 @@ static ADDRESS_MAP_START( sunsetbl_main_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0xc00200, 0xc00201) AM_WRITE(ssriders_eeprom_w)	/* EEPROM and gfx control */
 	AM_RANGE(0xc00404, 0xc00405) AM_READ_PORT("COINS")
 	AM_RANGE(0xc00406, 0xc00407) AM_READ(sunsetbl_eeprom_r)
-	AM_RANGE(0xc00600, 0xc00601) AM_DEVREADWRITE8("oki", okim6295_r, okim6295_w, 0x00ff)
+	AM_RANGE(0xc00600, 0xc00601) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0x00ff)
 	AM_RANGE(0x75d288, 0x75d289) AM_READNOP	// read repeatedly in some test menus (PC=181f2)
 ADDRESS_MAP_END
 
@@ -1782,11 +1781,11 @@ static INPUT_PORTS_START( glfgreat )
 
 	PORT_START("P1/P2")
 	KONAMI16_LSB( 1, IPT_BUTTON3, IPT_BUTTON4 )
-	KONAMI16_MSB( 2, IPT_BUTTON3, IPT_BUTTON4 )
+	KONAMI16_MSB( 2, IPT_BUTTON3, IPT_BUTTON4 ) PORT_PLAYER(2)
 
 	PORT_START("P3/P4")
-	KONAMI16_LSB( 3, IPT_BUTTON3, IPT_BUTTON4 )
-	KONAMI16_MSB( 4, IPT_BUTTON3, IPT_BUTTON4 )
+	KONAMI16_LSB( 3, IPT_BUTTON3, IPT_BUTTON4 ) PORT_PLAYER(3)
+	KONAMI16_MSB( 4, IPT_BUTTON3, IPT_BUTTON4 ) PORT_PLAYER(4)
 INPUT_PORTS_END
 
 static INPUT_PORTS_START( ssriders )
@@ -1934,9 +1933,7 @@ static INPUT_PORTS_START( sunsetbl )
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_SPECIAL )	/* EEPROM status? - always 1 */
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )
 	PORT_SERVICE_NO_TOGGLE( 0x08, IP_ACTIVE_LOW )
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x60, IP_ACTIVE_LOW, IPT_UNKNOWN )	/* unused? */
-	PORT_SERVICE_NO_TOGGLE( 0x80, IP_ACTIVE_LOW )
+	PORT_BIT( 0xf0, IP_ACTIVE_LOW, IPT_UNKNOWN )    /* unused? */
 
 	PORT_START( "EEPROMOUT" )
 	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_OUTPUT ) PORT_WRITE_LINE_DEVICE("eeprom", eeprom_write_bit)
@@ -2063,9 +2060,9 @@ static INPUT_PORTS_START( prmrsocr )
 INPUT_PORTS_END
 
 
-static void cuebrick_irq_handler( running_device *device, int state )
+static void cuebrick_irq_handler( device_t *device, int state )
 {
-	tmnt_state *tmnt = (tmnt_state *)device->machine->driver_data;
+	tmnt_state *tmnt = device->machine->driver_data<tmnt_state>();
 	tmnt->cuebrick_snd_irqlatch = state;
 }
 
@@ -2074,7 +2071,7 @@ static const ym2151_interface ym2151_interface_cbj =
 	cuebrick_irq_handler
 };
 
-static void volume_callback(running_device *device, int v)
+static void volume_callback(device_t *device, int v)
 {
 	k007232_set_volume(device, 0, (v >> 4) * 0x11, 0);
 	k007232_set_volume(device, 1, 0, (v & 0x0f) * 0x11);
@@ -2235,7 +2232,7 @@ static const k053936_interface prmrsocr_k053936_interface =
 
 static MACHINE_START( common )
 {
-	tmnt_state *state = (tmnt_state *)machine->driver_data;
+	tmnt_state *state = machine->driver_data<tmnt_state>();
 
 	state->maincpu = machine->device("maincpu");
 	state->audiocpu = machine->device("audiocpu");
@@ -2264,7 +2261,7 @@ static MACHINE_START( common )
 
 static MACHINE_RESET( common )
 {
-	tmnt_state *state = (tmnt_state *)machine->driver_data;
+	tmnt_state *state = machine->driver_data<tmnt_state>();
 
 	state->toggle = 0;
 	state->last = 0;
@@ -2274,306 +2271,288 @@ static MACHINE_RESET( common )
 }
 
 
-static MACHINE_DRIVER_START( cuebrick )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(tmnt_state)
+static MACHINE_CONFIG_START( cuebrick, tmnt_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 8000000)	/* 8 MHz */
-	MDRV_CPU_PROGRAM_MAP(cuebrick_main_map)
-	MDRV_CPU_VBLANK_INT_HACK(cuebrick_interrupt,10)
+	MCFG_CPU_ADD("maincpu", M68000, 8000000)	/* 8 MHz */
+	MCFG_CPU_PROGRAM_MAP(cuebrick_main_map)
+	MCFG_CPU_VBLANK_INT_HACK(cuebrick_interrupt,10)
 
-	MDRV_MACHINE_START(common)
-	MDRV_MACHINE_RESET(common)
+	MCFG_MACHINE_START(common)
+	MCFG_MACHINE_RESET(common)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_HAS_HIGHLIGHTS | VIDEO_UPDATE_AFTER_VBLANK)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_HAS_HIGHLIGHTS | VIDEO_UPDATE_AFTER_VBLANK)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(13*8, (64-13)*8-1, 2*8, 30*8-1 )
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(13*8, (64-13)*8-1, 2*8, 30*8-1 )
 
-	MDRV_PALETTE_LENGTH(1024)
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_PALETTE_LENGTH(1024)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
-	MDRV_VIDEO_START(cuebrick)
-	MDRV_VIDEO_UPDATE(mia)
+	MCFG_VIDEO_START(cuebrick)
+	MCFG_VIDEO_UPDATE(mia)
 
-	MDRV_K052109_ADD("k052109", cuebrick_k052109_intf)
-	MDRV_K051960_ADD("k051960", cuebrick_k051960_intf)
+	MCFG_K052109_ADD("k052109", cuebrick_k052109_intf)
+	MCFG_K051960_ADD("k051960", cuebrick_k051960_intf)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, XTAL_3_579545MHz)
-	MDRV_SOUND_CONFIG(ym2151_interface_cbj)
-	MDRV_SOUND_ROUTE(0, "mono", 1.0)
-	MDRV_SOUND_ROUTE(1, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2151, XTAL_3_579545MHz)
+	MCFG_SOUND_CONFIG(ym2151_interface_cbj)
+	MCFG_SOUND_ROUTE(0, "mono", 1.0)
+	MCFG_SOUND_ROUTE(1, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( mia )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(tmnt_state)
+static MACHINE_CONFIG_START( mia, tmnt_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, XTAL_24MHz/3)
-	MDRV_CPU_PROGRAM_MAP(mia_main_map)
-	MDRV_CPU_VBLANK_INT("screen", irq5_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, XTAL_24MHz/3)
+	MCFG_CPU_PROGRAM_MAP(mia_main_map)
+	MCFG_CPU_VBLANK_INT("screen", irq5_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80, XTAL_3_579545MHz)
-	MDRV_CPU_PROGRAM_MAP(mia_audio_map)
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL_3_579545MHz)
+	MCFG_CPU_PROGRAM_MAP(mia_audio_map)
 
-	MDRV_MACHINE_START(common)
-	MDRV_MACHINE_RESET(common)
+	MCFG_MACHINE_START(common)
+	MCFG_MACHINE_RESET(common)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_HAS_HIGHLIGHTS)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_HAS_HIGHLIGHTS)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(13*8, (64-13)*8-1, 2*8, 30*8-1 )
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(13*8, (64-13)*8-1, 2*8, 30*8-1 )
 
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_VIDEO_START(mia)
-	MDRV_VIDEO_UPDATE(mia)
+	MCFG_VIDEO_START(mia)
+	MCFG_VIDEO_UPDATE(mia)
 
-	MDRV_K052109_ADD("k052109", mia_k052109_intf)
-	MDRV_K051960_ADD("k051960", mia_k051960_intf)
+	MCFG_K052109_ADD("k052109", mia_k052109_intf)
+	MCFG_K051960_ADD("k051960", mia_k051960_intf)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, XTAL_3_579545MHz)
-	MDRV_SOUND_ROUTE(0, "mono", 1.0)
-	MDRV_SOUND_ROUTE(1, "mono", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM2151, XTAL_3_579545MHz)
+	MCFG_SOUND_ROUTE(0, "mono", 1.0)
+	MCFG_SOUND_ROUTE(1, "mono", 1.0)
 
-	MDRV_SOUND_ADD("k007232", K007232, XTAL_3_579545MHz)
-	MDRV_SOUND_CONFIG(k007232_config)
-	MDRV_SOUND_ROUTE(0, "mono", 0.20)
-	MDRV_SOUND_ROUTE(1, "mono", 0.20)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("k007232", K007232, XTAL_3_579545MHz)
+	MCFG_SOUND_CONFIG(k007232_config)
+	MCFG_SOUND_ROUTE(0, "mono", 0.20)
+	MCFG_SOUND_ROUTE(1, "mono", 0.20)
+MACHINE_CONFIG_END
 
 
 static MACHINE_RESET( tmnt )
 {
-	tmnt_state *state = (tmnt_state *)machine->driver_data;
+	tmnt_state *state = machine->driver_data<tmnt_state>();
 
 	/* the UPD7759 control flip-flops are cleared: /ST is 1, /RESET is 0 */
 	upd7759_start_w(state->upd, 0);
 	upd7759_reset_w(state->upd, 1);
 }
 
-static MACHINE_DRIVER_START( tmnt )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(tmnt_state)
+static MACHINE_CONFIG_START( tmnt, tmnt_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, XTAL_24MHz/3)
-	MDRV_CPU_PROGRAM_MAP(tmnt_main_map)
-	MDRV_CPU_VBLANK_INT("screen", irq5_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, XTAL_24MHz/3)
+	MCFG_CPU_PROGRAM_MAP(tmnt_main_map)
+	MCFG_CPU_VBLANK_INT("screen", irq5_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80, XTAL_3_579545MHz)
-	MDRV_CPU_PROGRAM_MAP(tmnt_audio_map)
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL_3_579545MHz)
+	MCFG_CPU_PROGRAM_MAP(tmnt_audio_map)
 
-	MDRV_MACHINE_START(common)
-	MDRV_MACHINE_RESET(tmnt)
+	MCFG_MACHINE_START(common)
+	MCFG_MACHINE_RESET(tmnt)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_HAS_HIGHLIGHTS)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_HAS_HIGHLIGHTS)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(13*8, (64-13)*8-1, 2*8, 30*8-1 )
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(13*8, (64-13)*8-1, 2*8, 30*8-1 )
 
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_VIDEO_START(tmnt)
-	MDRV_VIDEO_UPDATE(tmnt)
+	MCFG_VIDEO_START(tmnt)
+	MCFG_VIDEO_UPDATE(tmnt)
 
-	MDRV_K052109_ADD("k052109", tmnt_k052109_intf)
-	MDRV_K051960_ADD("k051960", tmnt_k051960_intf)
+	MCFG_K052109_ADD("k052109", tmnt_k052109_intf)
+	MCFG_K051960_ADD("k051960", tmnt_k051960_intf)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, XTAL_3_579545MHz)
-	MDRV_SOUND_ROUTE(0, "mono", 1.0)
-	MDRV_SOUND_ROUTE(1, "mono", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM2151, XTAL_3_579545MHz)
+	MCFG_SOUND_ROUTE(0, "mono", 1.0)
+	MCFG_SOUND_ROUTE(1, "mono", 1.0)
 
-	MDRV_SOUND_ADD("k007232", K007232, XTAL_3_579545MHz)
-	MDRV_SOUND_CONFIG(k007232_config)
-	MDRV_SOUND_ROUTE(0, "mono", 0.33)
-	MDRV_SOUND_ROUTE(1, "mono", 0.33)
+	MCFG_SOUND_ADD("k007232", K007232, XTAL_3_579545MHz)
+	MCFG_SOUND_CONFIG(k007232_config)
+	MCFG_SOUND_ROUTE(0, "mono", 0.33)
+	MCFG_SOUND_ROUTE(1, "mono", 0.33)
 
-	MDRV_SOUND_ADD("upd", UPD7759, XTAL_640kHz)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.60)
+	MCFG_SOUND_ADD("upd", UPD7759, XTAL_640kHz)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.60)
 
-	MDRV_SOUND_ADD("samples", SAMPLES, 0)
-	MDRV_SOUND_CONFIG(tmnt_samples_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("samples", SAMPLES, 0)
+	MCFG_SOUND_CONFIG(tmnt_samples_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( punkshot )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(tmnt_state)
+static MACHINE_CONFIG_START( punkshot, tmnt_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, XTAL_24MHz/2)
-	MDRV_CPU_PROGRAM_MAP(punkshot_main_map)
-	MDRV_CPU_VBLANK_INT("screen", punkshot_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, XTAL_24MHz/2)
+	MCFG_CPU_PROGRAM_MAP(punkshot_main_map)
+	MCFG_CPU_VBLANK_INT("screen", punkshot_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z80, XTAL_3_579545MHz)
-	MDRV_CPU_PROGRAM_MAP(punkshot_audio_map)
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL_3_579545MHz)
+	MCFG_CPU_PROGRAM_MAP(punkshot_audio_map)
 								/* NMIs are generated by the 053260 */
 
-	MDRV_MACHINE_START(common)
-	MDRV_MACHINE_RESET(common)
+	MCFG_MACHINE_START(common)
+	MCFG_MACHINE_RESET(common)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_HAS_HIGHLIGHTS | VIDEO_UPDATE_AFTER_VBLANK)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_HAS_HIGHLIGHTS | VIDEO_UPDATE_AFTER_VBLANK)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(14*8, (64-14)*8-1, 2*8, 30*8-1 )
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(14*8, (64-14)*8-1, 2*8, 30*8-1 )
 
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_UPDATE(punkshot)
+	MCFG_VIDEO_UPDATE(punkshot)
 
-	MDRV_K052109_ADD("k052109", tmnt_k052109_intf)
-	MDRV_K051960_ADD("k051960", punkshot_k051960_intf)
-	MDRV_K053251_ADD("k053251")
+	MCFG_K052109_ADD("k052109", tmnt_k052109_intf)
+	MCFG_K051960_ADD("k051960", punkshot_k051960_intf)
+	MCFG_K053251_ADD("k053251")
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, XTAL_3_579545MHz)
-	MDRV_SOUND_ROUTE(0, "mono", 1.0)
-	MDRV_SOUND_ROUTE(1, "mono", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM2151, XTAL_3_579545MHz)
+	MCFG_SOUND_ROUTE(0, "mono", 1.0)
+	MCFG_SOUND_ROUTE(1, "mono", 1.0)
 
-	MDRV_SOUND_ADD("k053260", K053260, XTAL_3_579545MHz)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.70)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("k053260", K053260, XTAL_3_579545MHz)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.70)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( lgtnfght )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(tmnt_state)
+static MACHINE_CONFIG_START( lgtnfght, tmnt_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, XTAL_24MHz/2)
-	MDRV_CPU_PROGRAM_MAP(lgtnfght_main_map)
-	MDRV_CPU_VBLANK_INT("screen", lgtnfght_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, XTAL_24MHz/2)
+	MCFG_CPU_PROGRAM_MAP(lgtnfght_main_map)
+	MCFG_CPU_VBLANK_INT("screen", lgtnfght_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z80, XTAL_3_579545MHz)
-	MDRV_CPU_PROGRAM_MAP(lgtnfght_audio_map)
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL_3_579545MHz)
+	MCFG_CPU_PROGRAM_MAP(lgtnfght_audio_map)
 
-	MDRV_MACHINE_START(common)
-	MDRV_MACHINE_RESET(common)
+	MCFG_MACHINE_START(common)
+	MCFG_MACHINE_RESET(common)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_HAS_HIGHLIGHTS | VIDEO_UPDATE_AFTER_VBLANK)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_HAS_HIGHLIGHTS | VIDEO_UPDATE_AFTER_VBLANK)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(14*8, (64-14)*8-1, 2*8, 30*8-1 )
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(14*8, (64-14)*8-1, 2*8, 30*8-1 )
 
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(lgtnfght)
-	MDRV_VIDEO_UPDATE(lgtnfght)
+	MCFG_VIDEO_START(lgtnfght)
+	MCFG_VIDEO_UPDATE(lgtnfght)
 
-	MDRV_K052109_ADD("k052109", tmnt_k052109_intf)
-	MDRV_K053245_ADD("k053245", lgtnfght_k05324x_intf)
-	MDRV_K053251_ADD("k053251")
+	MCFG_K052109_ADD("k052109", tmnt_k052109_intf)
+	MCFG_K053245_ADD("k053245", lgtnfght_k05324x_intf)
+	MCFG_K053251_ADD("k053251")
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, XTAL_3_579545MHz)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM2151, XTAL_3_579545MHz)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
 
-	MDRV_SOUND_ADD("k053260", K053260, XTAL_3_579545MHz)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.70)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.70)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("k053260", K053260, XTAL_3_579545MHz)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.70)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.70)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( blswhstl )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(tmnt_state)
+static MACHINE_CONFIG_START( blswhstl, tmnt_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 16000000)	/* 16 MHz */
-	MDRV_CPU_PROGRAM_MAP(blswhstl_main_map)
-	MDRV_CPU_VBLANK_INT("screen", punkshot_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, 16000000)	/* 16 MHz */
+	MCFG_CPU_PROGRAM_MAP(blswhstl_main_map)
+	MCFG_CPU_VBLANK_INT("screen", punkshot_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z80, XTAL_3_579545MHz)
-	MDRV_CPU_PROGRAM_MAP(ssriders_audio_map)
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL_3_579545MHz)
+	MCFG_CPU_PROGRAM_MAP(ssriders_audio_map)
 								/* NMIs are generated by the 053260 */
 
-	MDRV_MACHINE_START(common)
-	MDRV_MACHINE_RESET(common)
+	MCFG_MACHINE_START(common)
+	MCFG_MACHINE_RESET(common)
 
-	MDRV_EEPROM_ADD("eeprom", eeprom_intf)
+	MCFG_EEPROM_ADD("eeprom", eeprom_intf)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_HAS_HIGHLIGHTS | VIDEO_UPDATE_AFTER_VBLANK)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_HAS_HIGHLIGHTS | VIDEO_UPDATE_AFTER_VBLANK)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(14*8, (64-14)*8-1, 2*8, 30*8-1 )
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(14*8, (64-14)*8-1, 2*8, 30*8-1 )
 
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START( blswhstl )
-	MDRV_VIDEO_UPDATE(lgtnfght)
-	MDRV_VIDEO_EOF( blswhstl )
+	MCFG_VIDEO_START( blswhstl )
+	MCFG_VIDEO_UPDATE(lgtnfght)
+	MCFG_VIDEO_EOF( blswhstl )
 
-	MDRV_K052109_ADD("k052109", blswhstl_k052109_intf)
-	MDRV_K053245_ADD("k053245", blswhstl_k05324x_intf)
-	MDRV_K053251_ADD("k053251")
-	MDRV_K054000_ADD("k054000")
+	MCFG_K052109_ADD("k052109", blswhstl_k052109_intf)
+	MCFG_K053245_ADD("k053245", blswhstl_k05324x_intf)
+	MCFG_K053251_ADD("k053251")
+	MCFG_K054000_ADD("k054000")
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, XTAL_3_579545MHz)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.70)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.70)
+	MCFG_SOUND_ADD("ymsnd", YM2151, XTAL_3_579545MHz)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.70)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.70)
 
-	MDRV_SOUND_ADD("k053260", K053260, XTAL_3_579545MHz)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.50)	/* fixed inverted stereo channels */
-	MDRV_SOUND_ROUTE(1, "lspeaker", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("k053260", K053260, XTAL_3_579545MHz)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.50)	/* fixed inverted stereo channels */
+	MCFG_SOUND_ROUTE(1, "lspeaker", 0.50)
+MACHINE_CONFIG_END
 
 
 
@@ -2593,56 +2572,53 @@ static GFXDECODE_START( glfgreat )
 	GFXDECODE_ENTRY( "gfx3", 0, zoomlayout, 0x400, 16 )
 GFXDECODE_END
 
-static MACHINE_DRIVER_START( glfgreat )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(tmnt_state)
+static MACHINE_CONFIG_START( glfgreat, tmnt_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, XTAL_32MHz/2)		/* Confirmed */
-	MDRV_CPU_PROGRAM_MAP(glfgreat_main_map)
-	MDRV_CPU_VBLANK_INT("screen", lgtnfght_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, XTAL_32MHz/2)		/* Confirmed */
+	MCFG_CPU_PROGRAM_MAP(glfgreat_main_map)
+	MCFG_CPU_VBLANK_INT("screen", lgtnfght_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z80, XTAL_3_579545MHz)
-	MDRV_CPU_PROGRAM_MAP(glfgreat_audio_map)
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL_3_579545MHz)
+	MCFG_CPU_PROGRAM_MAP(glfgreat_audio_map)
 								/* NMIs are generated by the 053260 */
 
-	MDRV_MACHINE_START(common)
-	MDRV_MACHINE_RESET(common)
+	MCFG_MACHINE_START(common)
+	MCFG_MACHINE_RESET(common)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_HAS_HIGHLIGHTS | VIDEO_UPDATE_AFTER_VBLANK)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_HAS_HIGHLIGHTS | VIDEO_UPDATE_AFTER_VBLANK)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(14*8, (64-14)*8-1, 2*8, 30*8-1 )
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(14*8, (64-14)*8-1, 2*8, 30*8-1 )
 
-	MDRV_GFXDECODE(glfgreat)
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_GFXDECODE(glfgreat)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(glfgreat)
-	MDRV_VIDEO_UPDATE(glfgreat)
+	MCFG_VIDEO_START(glfgreat)
+	MCFG_VIDEO_UPDATE(glfgreat)
 
-	MDRV_K052109_ADD("k052109", glfgreat_k052109_intf)
-	MDRV_K053245_ADD("k053245", glfgreat_k05324x_intf)
-	MDRV_K053936_ADD("k053936", glfgreat_k053936_interface)
-	MDRV_K053251_ADD("k053251")
+	MCFG_K052109_ADD("k052109", glfgreat_k052109_intf)
+	MCFG_K053245_ADD("k053245", glfgreat_k05324x_intf)
+	MCFG_K053936_ADD("k053936", glfgreat_k053936_interface)
+	MCFG_K053251_ADD("k053251")
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("k053260", K053260, XTAL_3_579545MHz)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("k053260", K053260, XTAL_3_579545MHz)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 
-static void sound_nmi( running_device *device )
+static void sound_nmi( device_t *device )
 {
-	tmnt_state *state = (tmnt_state *)device->machine->driver_data;
+	tmnt_state *state = device->machine->driver_data<tmnt_state>();
 	cpu_set_input_line(state->audiocpu, INPUT_LINE_NMI, PULSE_LINE);
 }
 
@@ -2656,256 +2632,241 @@ static const k054539_interface k054539_config =
 static MACHINE_START( prmrsocr )
 {
 	MACHINE_START_CALL(common);
-	UINT8 *ROM = memory_region(machine, "audiocpu");
+	UINT8 *ROM = machine->region("audiocpu")->base();
 	memory_configure_bank(machine, "bank1", 0, 8, &ROM[0x10000], 0x4000);
 }
 
-static MACHINE_DRIVER_START( prmrsocr )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(tmnt_state)
+static MACHINE_CONFIG_START( prmrsocr, tmnt_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, XTAL_32MHz/2)		/* Confirmed */
-	MDRV_CPU_PROGRAM_MAP(prmrsocr_main_map)
-	MDRV_CPU_VBLANK_INT("screen", lgtnfght_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, XTAL_32MHz/2)		/* Confirmed */
+	MCFG_CPU_PROGRAM_MAP(prmrsocr_main_map)
+	MCFG_CPU_VBLANK_INT("screen", lgtnfght_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 8000000)	/* ? */
-	MDRV_CPU_PROGRAM_MAP(prmrsocr_audio_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 8000000)	/* ? */
+	MCFG_CPU_PROGRAM_MAP(prmrsocr_audio_map)
 								/* NMIs are generated by the 054539 */
 
-	MDRV_MACHINE_START(prmrsocr)
-	MDRV_MACHINE_RESET(common)
+	MCFG_MACHINE_START(prmrsocr)
+	MCFG_MACHINE_RESET(common)
 
-	MDRV_EEPROM_ADD("eeprom", thndrx2_eeprom_intf)
+	MCFG_EEPROM_ADD("eeprom", thndrx2_eeprom_intf)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_HAS_HIGHLIGHTS | VIDEO_UPDATE_AFTER_VBLANK)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_HAS_HIGHLIGHTS | VIDEO_UPDATE_AFTER_VBLANK)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(14*8, (64-14)*8-1, 2*8, 30*8-1 )
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(14*8, (64-14)*8-1, 2*8, 30*8-1 )
 
-	MDRV_GFXDECODE(glfgreat)
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_GFXDECODE(glfgreat)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(prmrsocr)
-	MDRV_VIDEO_UPDATE(glfgreat)
+	MCFG_VIDEO_START(prmrsocr)
+	MCFG_VIDEO_UPDATE(glfgreat)
 
-	MDRV_K052109_ADD("k052109", glfgreat_k052109_intf)
-	MDRV_K053245_ADD("k053245", prmrsocr_k05324x_intf)
-	MDRV_K053936_ADD("k053936", prmrsocr_k053936_interface)
-	MDRV_K053251_ADD("k053251")
+	MCFG_K052109_ADD("k052109", glfgreat_k052109_intf)
+	MCFG_K053245_ADD("k053245", prmrsocr_k05324x_intf)
+	MCFG_K053936_ADD("k053936", prmrsocr_k053936_interface)
+	MCFG_K053251_ADD("k053251")
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("k054539", K054539, 48000)
-	MDRV_SOUND_CONFIG(k054539_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("k054539", K054539, 48000)
+	MCFG_SOUND_CONFIG(k054539_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( tmnt2 )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(tmnt_state)
+static MACHINE_CONFIG_START( tmnt2, tmnt_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, XTAL_32MHz/2)
-	MDRV_CPU_PROGRAM_MAP(tmnt2_main_map)
-	MDRV_CPU_VBLANK_INT("screen", punkshot_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, XTAL_32MHz/2)
+	MCFG_CPU_PROGRAM_MAP(tmnt2_main_map)
+	MCFG_CPU_VBLANK_INT("screen", punkshot_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 8000000)	/* 8 MHz; clock is correct, but there's 1 cycle wait for ROM/RAM */
+	MCFG_CPU_ADD("audiocpu", Z80, 8000000)	/* 8 MHz; clock is correct, but there's 1 cycle wait for ROM/RAM */
 						/* access. Access speed of ROM/RAM used on the machine is 150ns, */
 						/* without the wait, they cannot run on 8MHz.                    */
 						/* We are not emulating the wait state, so the ROM test ends at  */
 						/* 02 instead of 00. */
-	MDRV_CPU_PROGRAM_MAP(ssriders_audio_map)
+	MCFG_CPU_PROGRAM_MAP(ssriders_audio_map)
 								/* NMIs are generated by the 053260 */
 
-	MDRV_MACHINE_START(common)
-	MDRV_MACHINE_RESET(common)
+	MCFG_MACHINE_START(common)
+	MCFG_MACHINE_RESET(common)
 
-	MDRV_EEPROM_ADD("eeprom", eeprom_intf)
+	MCFG_EEPROM_ADD("eeprom", eeprom_intf)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_HAS_HIGHLIGHTS | VIDEO_UPDATE_AFTER_VBLANK)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_HAS_HIGHLIGHTS | VIDEO_UPDATE_AFTER_VBLANK)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(13*8, (64-13)*8-1, 2*8, 30*8-1 )
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(13*8, (64-13)*8-1, 2*8, 30*8-1 )
 
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(lgtnfght)
-	MDRV_VIDEO_UPDATE(tmnt2)
+	MCFG_VIDEO_START(lgtnfght)
+	MCFG_VIDEO_UPDATE(tmnt2)
 
-	MDRV_K052109_ADD("k052109", tmnt_k052109_intf)
-	MDRV_K053245_ADD("k053245", lgtnfght_k05324x_intf)
-	MDRV_K053251_ADD("k053251")
+	MCFG_K052109_ADD("k052109", tmnt_k052109_intf)
+	MCFG_K053245_ADD("k053245", lgtnfght_k05324x_intf)
+	MCFG_K053251_ADD("k053251")
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, XTAL_3_579545MHz)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM2151, XTAL_3_579545MHz)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
 
-	MDRV_SOUND_ADD("k053260", K053260, XTAL_3_579545MHz)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.75)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.75)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("k053260", K053260, XTAL_3_579545MHz)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.75)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.75)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( ssriders )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(tmnt_state)
+static MACHINE_CONFIG_START( ssriders, tmnt_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, XTAL_32MHz/2)
-	MDRV_CPU_PROGRAM_MAP(ssriders_main_map)
-	MDRV_CPU_VBLANK_INT("screen", punkshot_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, XTAL_32MHz/2)
+	MCFG_CPU_PROGRAM_MAP(ssriders_main_map)
+	MCFG_CPU_VBLANK_INT("screen", punkshot_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 4000000)	/* ????? makes the ROM test sync */
-	MDRV_CPU_PROGRAM_MAP(ssriders_audio_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 4000000)	/* ????? makes the ROM test sync */
+	MCFG_CPU_PROGRAM_MAP(ssriders_audio_map)
 								/* NMIs are generated by the 053260 */
 
-	MDRV_MACHINE_START(common)
-	MDRV_MACHINE_RESET(common)
+	MCFG_MACHINE_START(common)
+	MCFG_MACHINE_RESET(common)
 
-	MDRV_EEPROM_ADD("eeprom", eeprom_intf)
-
-	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_HAS_HIGHLIGHTS | VIDEO_UPDATE_AFTER_VBLANK)
-
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(14*8, (64-14)*8-1, 2*8, 30*8-1 )
-
-	MDRV_PALETTE_LENGTH(2048)
-
-	MDRV_VIDEO_START(lgtnfght)
-	MDRV_VIDEO_UPDATE(tmnt2)
-
-	MDRV_K052109_ADD("k052109", tmnt_k052109_intf)
-	MDRV_K053245_ADD("k053245", lgtnfght_k05324x_intf)
-	MDRV_K053251_ADD("k053251")
-
-	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
-
-	MDRV_SOUND_ADD("ymsnd", YM2151, XTAL_3_579545MHz)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
-
-	MDRV_SOUND_ADD("k053260", K053260, XTAL_3_579545MHz)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.70)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.70)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( sunsetbl )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(tmnt_state)
-
-	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 16000000)	/* 16 MHz */
-	MDRV_CPU_PROGRAM_MAP(sunsetbl_main_map)
-	MDRV_CPU_VBLANK_INT("screen", irq4_line_hold)
-
-	MDRV_MACHINE_START(common)
-	MDRV_MACHINE_RESET(common)
-
-	MDRV_EEPROM_ADD("eeprom", eeprom_intf)
+	MCFG_EEPROM_ADD("eeprom", eeprom_intf)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_HAS_HIGHLIGHTS | VIDEO_UPDATE_AFTER_VBLANK)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_HAS_HIGHLIGHTS | VIDEO_UPDATE_AFTER_VBLANK)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(14*8, (64-14)*8-1, 2*8, 30*8-1 )
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(14*8, (64-14)*8-1, 2*8, 30*8-1 )
 
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_K052109_ADD("k052109", sunsetbl_k052109_intf)
-	MDRV_K053245_ADD("k053245", lgtnfght_k05324x_intf)
-	MDRV_K053251_ADD("k053251")
+	MCFG_VIDEO_START(lgtnfght)
+	MCFG_VIDEO_UPDATE(tmnt2)
 
-	MDRV_VIDEO_UPDATE(tmnt2)
+	MCFG_K052109_ADD("k052109", tmnt_k052109_intf)
+	MCFG_K053245_ADD("k053245", lgtnfght_k05324x_intf)
+	MCFG_K053251_ADD("k053251")
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2151, XTAL_3_579545MHz)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
 
-static MACHINE_DRIVER_START( thndrx2 )
+	MCFG_SOUND_ADD("k053260", K053260, XTAL_3_579545MHz)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.70)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.70)
+MACHINE_CONFIG_END
 
-	/* driver data */
-	MDRV_DRIVER_DATA(tmnt_state)
+
+static MACHINE_CONFIG_START( sunsetbl, tmnt_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 12000000)	/* 12 MHz */
-	MDRV_CPU_PROGRAM_MAP(thndrx2_main_map)
-	MDRV_CPU_VBLANK_INT("screen", punkshot_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, 16000000)	/* 16 MHz */
+	MCFG_CPU_PROGRAM_MAP(sunsetbl_main_map)
+	MCFG_CPU_VBLANK_INT("screen", irq4_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80, XTAL_3_579545MHz)
-	MDRV_CPU_PROGRAM_MAP(thndrx2_audio_map)
+	MCFG_MACHINE_START(common)
+	MCFG_MACHINE_RESET(common)
+
+	MCFG_EEPROM_ADD("eeprom", eeprom_intf)
+
+	/* video hardware */
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_HAS_HIGHLIGHTS | VIDEO_UPDATE_AFTER_VBLANK)
+
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(14*8, (64-14)*8-1, 2*8, 30*8-1 )
+
+	MCFG_PALETTE_LENGTH(2048)
+
+	MCFG_K052109_ADD("k052109", sunsetbl_k052109_intf)
+	MCFG_K053245_ADD("k053245", lgtnfght_k05324x_intf)
+	MCFG_K053251_ADD("k053251")
+
+	MCFG_VIDEO_UPDATE(tmnt2)
+
+	/* sound hardware */
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+
+	MCFG_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+MACHINE_CONFIG_END
+
+static MACHINE_CONFIG_START( thndrx2, tmnt_state )
+
+	/* basic machine hardware */
+	MCFG_CPU_ADD("maincpu", M68000, 12000000)	/* 12 MHz */
+	MCFG_CPU_PROGRAM_MAP(thndrx2_main_map)
+	MCFG_CPU_VBLANK_INT("screen", punkshot_interrupt)
+
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL_3_579545MHz)
+	MCFG_CPU_PROGRAM_MAP(thndrx2_audio_map)
 								/* NMIs are generated by the 053260 */
 
-	MDRV_MACHINE_START(common)
-	MDRV_MACHINE_RESET(common)
+	MCFG_MACHINE_START(common)
+	MCFG_MACHINE_RESET(common)
 
-	MDRV_EEPROM_ADD("eeprom", thndrx2_eeprom_intf)
+	MCFG_EEPROM_ADD("eeprom", thndrx2_eeprom_intf)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_HAS_HIGHLIGHTS)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_HAS_HIGHLIGHTS)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(14*8, (64-14)*8-1, 2*8, 30*8-1 )
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(14*8, (64-14)*8-1, 2*8, 30*8-1 )
 
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_UPDATE(thndrx2)
+	MCFG_VIDEO_UPDATE(thndrx2)
 
-	MDRV_K052109_ADD("k052109", tmnt_k052109_intf)
-	MDRV_K051960_ADD("k051960", thndrx2_k051960_intf)
-	MDRV_K053251_ADD("k053251")
-	MDRV_K054000_ADD("k054000")
+	MCFG_K052109_ADD("k052109", tmnt_k052109_intf)
+	MCFG_K051960_ADD("k051960", thndrx2_k051960_intf)
+	MCFG_K053251_ADD("k053251")
+	MCFG_K054000_ADD("k054000")
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, XTAL_3_579545MHz)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM2151, XTAL_3_579545MHz)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
 
-	MDRV_SOUND_ADD("k053260", K053260, XTAL_3_579545MHz)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.75)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.75)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("k053260", K053260, XTAL_3_579545MHz)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.75)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.75)
+MACHINE_CONFIG_END
 
 
 
@@ -3988,6 +3949,26 @@ ROM_START( ssridersb )
 	ROM_LOAD( "sunsetb.02",   0x080000, 0x080000, CRC(5d485523) SHA1(478119cb6273d870ca04a66e9b964ca0424f6fbd) )
 ROM_END
 
+ROM_START( ssriders2 )
+	ROM_REGION( 0x100000, "maincpu", 0 ) /* 2*32k for 68000 code */
+	ROM_LOAD16_WORD_SWAP( "3.bin",   0x000000, 0x080000, CRC(d8d802c5) SHA1(1b5362edd6756586b95b59779a74c804fe69786a) )
+	ROM_LOAD16_WORD_SWAP( "4.bin",   0x080000, 0x080000, CRC(8ff647b7) SHA1(75144ce928fc4e7d24d9dd50a93e11ea41903bc4) )
+
+	ROM_REGION( 0x100000, "gfx1", 0 )	/* graphics (addressable by the main CPU) */
+	ROM_LOAD( "9.bin",   0x000000, 0x080000, CRC(e2bdc619) SHA1(04449deb267b0beacfa33640b593eb16194aa0d9) )	/* tiles */
+	ROM_LOAD( "10.bin",  0x080000, 0x080000, CRC(2d8ca8b0) SHA1(7c882f79c2402cf75979c681071007d76e4db9ae) )
+
+	ROM_REGION( 0x200000, "gfx2", 0 )	/* graphics (addressable by the main CPU) */
+	ROM_LOAD( "5.bin",   0x000000, 0x080000, CRC(4ee77259) SHA1(92cb3ae296b1c42b70ce636a989c03d898ca35cf) )
+	ROM_LOAD( "6.bin",   0x080000, 0x080000, CRC(fdf2c887) SHA1(a165c7e6495d870324f59262ad4175a039e199a5) )
+	ROM_LOAD( "7.bin",   0x100000, 0x080000, CRC(3f1f7222) SHA1(14547c308180e5009f3ea8edcea58d96aa039919) )
+	ROM_LOAD( "8.bin",   0x180000, 0x080000, CRC(a91b9171) SHA1(e7002fe176196c297073ebf48e6fa5b1fe62caa1) )
+
+	ROM_REGION( 0x100000, "oki", 0 )	/* samples */
+	ROM_LOAD( "1.bin",   0x000000, 0x080000, CRC(1a8b5ca2) SHA1(4101686c7bf3243273a52fca046b252fc3c78721) )
+	ROM_LOAD( "2.bin",   0x080000, 0x080000, CRC(5d485523) SHA1(478119cb6273d870ca04a66e9b964ca0424f6fbd) )
+ROM_END
+
 ROM_START( thndrx2 )
 	ROM_REGION( 0x40000, "maincpu", 0 ) /* 2*32k for 68000 code */
 	ROM_LOAD16_BYTE( "073-ea-l02.11c", 0x000000, 0x20000, CRC(eae02b51) SHA1(ac513919b183d5353792418e6190c484c5cf1bcd) )
@@ -4134,8 +4115,8 @@ static DRIVER_INIT( mia )
         be shuffled around because the ROMs are connected differently to the
         051962 custom IC.
     */
-	gfxdata = memory_region(machine, "gfx1");
-	len = memory_region_length(machine, "gfx1");
+	gfxdata = machine->region("gfx1")->base();
+	len = machine->region("gfx1")->bytes();
 	for (i = 0; i < len; i += 4)
 	{
 		for (j = 0; j < 4; j++)
@@ -4155,8 +4136,8 @@ static DRIVER_INIT( mia )
         be shuffled around because the ROMs are connected differently to the
         051937 custom IC.
     */
-	gfxdata = memory_region(machine, "gfx2");
-	len = memory_region_length(machine, "gfx2");
+	gfxdata = machine->region("gfx2")->base();
+	len = machine->region("gfx2")->bytes();
 	for (i = 0; i < len; i += 4)
 	{
 		for (j = 0; j < 4; j++)
@@ -4227,8 +4208,8 @@ static DRIVER_INIT( tmnt )
         be shuffled around because the ROMs are connected differently to the
         051962 custom IC.
     */
-	gfxdata = memory_region(machine, "gfx1");
-	len = memory_region_length(machine, "gfx1");
+	gfxdata = machine->region("gfx1")->base();
+	len = machine->region("gfx1")->bytes();
 	for (i = 0; i < len; i += 4)
 	{
 		for (j = 0; j < 4; j++)
@@ -4248,8 +4229,8 @@ static DRIVER_INIT( tmnt )
         be shuffled around because the ROMs are connected differently to the
         051937 custom IC.
     */
-	gfxdata = memory_region(machine, "gfx2");
-	len = memory_region_length(machine, "gfx2");
+	gfxdata = machine->region("gfx2")->base();
+	len = machine->region("gfx2")->bytes();
 	for (i = 0; i < len; i += 4)
 	{
 		for (j = 0; j < 4; j++)
@@ -4266,7 +4247,7 @@ static DRIVER_INIT( tmnt )
 
 	temp = auto_alloc_array(machine, UINT8, len);
 	memcpy(temp, gfxdata, len);
-	code_conv_table = &memory_region(machine, "proms")[0x0000];
+	code_conv_table = &machine->region("proms")->base()[0x0000];
 	for (A = 0; A < len / 4; A++)
 	{
 #define CA0 0
@@ -4321,8 +4302,8 @@ static DRIVER_INIT( tmnt )
 
 static DRIVER_INIT( cuebrick )
 {
-	machine->generic.nvram.u8 = (UINT8 *)cuebrick_nvram;
-	machine->generic.nvram_size = 0x400 * 0x20;
+	tmnt_state *state = machine->driver_data<tmnt_state>();
+	machine->device<nvram_device>("nvram")->set_base(state->m_cuebrick_nvram, sizeof(state->m_cuebrick_nvram));
 }
 
 GAME( 1989, cuebrick,    0,        cuebrick, cuebrick, cuebrick, ROT0,  "Konami", "Cue Brick (World version D)", GAME_SUPPORTS_SAVE )
@@ -4374,6 +4355,7 @@ GAME( 1991, ssridersabd, ssriders, ssriders, ssriders, 0,        ROT0,  "Konami"
 GAME( 1991, ssridersadd, ssriders, ssriders, ssrid4ps, 0,        ROT0,  "Konami", "Sunset Riders (4 Players ver ADD)", GAME_IMPERFECT_GRAPHICS | GAME_SUPPORTS_SAVE )
 GAME( 1991, ssridersjbd, ssriders, ssriders, ssriders, 0,        ROT0,  "Konami", "Sunset Riders (2 Players ver JBD)", GAME_IMPERFECT_GRAPHICS | GAME_SUPPORTS_SAVE )
 GAME( 1991, ssridersb,   ssriders, sunsetbl, sunsetbl, 0,        ROT0,  "bootleg","Sunset Riders (bootleg 4 Players ver ADD)", GAME_NOT_WORKING | GAME_IMPERFECT_GRAPHICS | GAME_SUPPORTS_SAVE )
+GAME( 1991, ssriders2,   ssriders, sunsetbl, sunsetbl, 0,        ROT0,  "bootleg","Sunset Riders 2 (bootleg 4 Players ver ADD)", GAME_NOT_WORKING | GAME_IMPERFECT_GRAPHICS | GAME_SUPPORTS_SAVE )
 
 GAME( 1991, thndrx2,     0,        thndrx2,  thndrx2,  0,        ROT0,  "Konami", "Thunder Cross II (World)", GAME_SUPPORTS_SAVE )
 GAME( 1991, thndrx2a,    thndrx2,  thndrx2,  thndrx2,  0,        ROT0,  "Konami", "Thunder Cross II (Asia)", GAME_SUPPORTS_SAVE )

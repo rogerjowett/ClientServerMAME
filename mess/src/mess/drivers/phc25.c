@@ -27,6 +27,18 @@
     - tune cassette trigger level
     - accurate video timing
 
+    10 SCREEN 2,1,1:CLS
+    20 FOR X=0 TO 8
+    30 LINE(X*24,0)-(X*24+16,191),X,BF
+    40 NEXT
+
+    10 SCREEN3,1,1:COLOR,,1:CLS
+    20 X1=INT(RND(1)*256):Y1=INT(RND(1)*192):X2=INT(RND(1)*256):Y2=INT(RND(1)*192):C=INT(RND(1)*4)+1:LINE(X1,Y1)-(X2,Y2),C:GOTO 20
+    RUN
+
+
+    10 SCREEN2,1,1:CLS:FORX=0TO8:LINE(X*24,0)-(X*24+16,191),X,BF:NEXT
+
 */
 
 #include "emu.h"
@@ -57,7 +69,7 @@ static READ8_HANDLER( port40_r )
 
     */
 
-	phc25_state *state = (phc25_state *)space->machine->driver_data;
+	phc25_state *state = space->machine->driver_data<phc25_state>();
 
 	UINT8 data = 0;
 
@@ -87,19 +99,16 @@ static WRITE8_HANDLER( port40_w )
         2       MC6847 INT/EXT
         3       centronics strobe
         4
-        5       MC6847
-        6       MC6847
+        5       MC6847 GM1
+        6       MC6847 GM0
         7       MC6847 A/G
 
     */
 
-	phc25_state *state = (phc25_state *)space->machine->driver_data;
+	phc25_state *state = space->machine->driver_data<phc25_state>();
 
 	/* cassette output */
 	cassette_output(state->cassette, BIT(data, 0) ? -1.0 : +1.0);
-
-	/* internal/external character generator */
-	mc6847_intext_w(state->mc6847, BIT(data, 2));
 
 	/* cassette motor */
 	cassette_change_state(state->cassette, BIT(data, 1) ? CASSETTE_MOTOR_DISABLED : CASSETTE_MOTOR_ENABLED, CASSETTE_MASK_MOTOR);
@@ -107,7 +116,10 @@ static WRITE8_HANDLER( port40_w )
 	/* centronics strobe */
 	centronics_strobe_w(state->centronics, BIT(data, 3));
 
-	/* alphanumerics/graphics */
+	/* MC6847 */
+	mc6847_intext_w(state->mc6847, BIT(data, 2));
+	mc6847_gm0_w(state->mc6847, BIT(data, 5));
+	mc6847_gm1_w(state->mc6847, BIT(data, 6));
 	mc6847_ag_w(state->mc6847, BIT(data, 7));
 }
 
@@ -146,7 +158,7 @@ static INPUT_PORTS_START( phc25 )
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_W) PORT_CHAR('w') PORT_CHAR('W')
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_S) PORT_CHAR('s') PORT_CHAR('S')
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_X) PORT_CHAR('x') PORT_CHAR('X')
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("\xE2\x86\x91") PORT_CODE(KEYCODE_UP) PORT_CHAR(UCHAR_MAMEKEY(UP))
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(UTF8_UP) PORT_CODE(KEYCODE_UP) PORT_CHAR(UCHAR_MAMEKEY(UP))
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("INS DEL") PORT_CODE(KEYCODE_BACKSPACE) PORT_CHAR(8)
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_QUOTE) PORT_CHAR(':') PORT_CHAR('*')
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) // unlabeled key
@@ -156,7 +168,7 @@ static INPUT_PORTS_START( phc25 )
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_Q) PORT_CHAR('q') PORT_CHAR('Q')
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_A) PORT_CHAR('a') PORT_CHAR('A')
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_Z) PORT_CHAR('z') PORT_CHAR('Z')
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("\xE2\x86\x93") PORT_CODE(KEYCODE_DOWN) PORT_CHAR(UCHAR_MAMEKEY(DOWN))
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(UTF8_DOWN) PORT_CODE(KEYCODE_DOWN) PORT_CHAR(UCHAR_MAMEKEY(DOWN))
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("RETURN") PORT_CODE(KEYCODE_ENTER) PORT_CHAR(13)
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_COLON) PORT_CHAR(';') PORT_CHAR('+')
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_SLASH) PORT_CHAR('/') PORT_CHAR('?')
@@ -166,7 +178,7 @@ static INPUT_PORTS_START( phc25 )
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_R) PORT_CHAR('r') PORT_CHAR('R')
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_F) PORT_CHAR('f') PORT_CHAR('F')
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_V) PORT_CHAR('v') PORT_CHAR('V')
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("\xE2\x86\x90") PORT_CODE(KEYCODE_LEFT) PORT_CHAR(UCHAR_MAMEKEY(LEFT))
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(UTF8_LEFT) PORT_CODE(KEYCODE_LEFT) PORT_CHAR(UCHAR_MAMEKEY(LEFT))
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_EQUALS) PORT_CHAR('^') PORT_CHAR('~')
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_CLOSEBRACE) PORT_CHAR('[')
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_UNUSED )
@@ -176,7 +188,7 @@ static INPUT_PORTS_START( phc25 )
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_E) PORT_CHAR('e') PORT_CHAR('E')
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_D) PORT_CHAR('d') PORT_CHAR('D')
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_C) PORT_CHAR('c') PORT_CHAR('C')
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("\xE2\x86\x92") PORT_CODE(KEYCODE_RIGHT) PORT_CHAR(UCHAR_MAMEKEY(RIGHT))
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME(UTF8_RIGHT) PORT_CODE(KEYCODE_RIGHT) PORT_CHAR(UCHAR_MAMEKEY(RIGHT))
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_TILDE) PORT_CHAR('\\') PORT_CHAR('|')
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_BACKSLASH) PORT_CHAR(']')
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("SPACE") PORT_CODE(KEYCODE_SPACE) PORT_CHAR(' ')
@@ -260,14 +272,14 @@ INPUT_PORTS_END
 
 static READ8_DEVICE_HANDLER( phc25_video_ram_r )
 {
-	phc25_state *state = (phc25_state *)device->machine->driver_data;
+	phc25_state *state = device->machine->driver_data<phc25_state>();
 
 	return state->video_ram[offset & 0x17ff];
 }
 
 static UINT8 phc25_char_rom_r(running_machine *machine, UINT8 ch, int line)
 {
-	phc25_state *state = (phc25_state *)machine->driver_data;
+	phc25_state *state = machine->driver_data<phc25_state>();
 
 	return state->char_rom[((ch - state->char_substact) * state->char_size) + line + state->char_correct];
 }
@@ -290,10 +302,10 @@ static const mc6847_interface mc6847_intf =
 
 static VIDEO_START( pal )
 {
-	phc25_state *state = (phc25_state *)machine->driver_data;
+	phc25_state *state = machine->driver_data<phc25_state>();
 
 	/* find memory regions */
-	state->char_rom = memory_region(machine, Z80_TAG) + 0x5000;
+	state->char_rom = machine->region(Z80_TAG)->base() + 0x5000;
 	state->char_size = 12;
 	state->char_correct = 4;
 	state->char_substact = 2;
@@ -301,10 +313,10 @@ static VIDEO_START( pal )
 
 static VIDEO_START( ntsc )
 {
-	phc25_state *state = (phc25_state *)machine->driver_data;
+	phc25_state *state = machine->driver_data<phc25_state>();
 
 	/* find memory regions */
-	state->char_rom = memory_region(machine, Z80_TAG) + 0x5000;
+	state->char_rom = machine->region(Z80_TAG)->base() + 0x5000;
 	state->char_size = 16;
 	state->char_correct = 0;
 	state->char_substact = 0;
@@ -312,7 +324,7 @@ static VIDEO_START( ntsc )
 
 static VIDEO_UPDATE( phc25 )
 {
-	phc25_state *state = (phc25_state *)screen->machine->driver_data;
+	phc25_state *state = screen->machine->driver_data<phc25_state>();
 
 	return mc6847_update(state->mc6847, bitmap, cliprect);
 }
@@ -343,7 +355,7 @@ static const cassette_config phc25_cassette_config =
 
 static MACHINE_START( phc25 )
 {
-	phc25_state *state = (phc25_state *)machine->driver_data;
+	phc25_state *state = machine->driver_data<phc25_state>();
 
 	/* find devices */
 	state->mc6847 = machine->device(MC6847_TAG);
@@ -356,73 +368,70 @@ static MACHINE_START( phc25 )
 
 /* Machine Driver */
 
-static MACHINE_DRIVER_START( phc25 )
-	MDRV_DRIVER_DATA(phc25_state)
+static MACHINE_CONFIG_START( phc25, phc25_state )
 
 	/* basic machine hardware */
-    MDRV_CPU_ADD(Z80_TAG, Z80, 4000000)
-    MDRV_CPU_PROGRAM_MAP(phc25_mem)
-    MDRV_CPU_IO_MAP(phc25_io)
+    MCFG_CPU_ADD(Z80_TAG, Z80, 4000000)
+    MCFG_CPU_PROGRAM_MAP(phc25_mem)
+    MCFG_CPU_IO_MAP(phc25_io)
 
-    MDRV_MACHINE_START(phc25)
+    MCFG_MACHINE_START(phc25)
 
     /* video hardware */
-    MDRV_VIDEO_UPDATE(phc25)
+    MCFG_VIDEO_UPDATE(phc25)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD(AY8910_TAG, AY8910, 1996750)
-	MDRV_SOUND_CONFIG(ay8910_intf)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD(AY8910_TAG, AY8910, 1996750)
+	MCFG_SOUND_CONFIG(ay8910_intf)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
 	/* devices */
-	MDRV_CASSETTE_ADD(CASSETTE_TAG, phc25_cassette_config)
-	MDRV_CENTRONICS_ADD(CENTRONICS_TAG, standard_centronics)
+	MCFG_CASSETTE_ADD(CASSETTE_TAG, phc25_cassette_config)
+	MCFG_CENTRONICS_ADD(CENTRONICS_TAG, standard_centronics)
 
 	/* internal ram */
-	MDRV_RAM_ADD("messram")
-	MDRV_RAM_DEFAULT_SIZE("16K")
-MACHINE_DRIVER_END
+	MCFG_RAM_ADD("messram")
+	MCFG_RAM_DEFAULT_SIZE("16K")
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( pal )
-	MDRV_IMPORT_FROM(phc25)
-
-    /* video hardware */
-    MDRV_SCREEN_ADD(SCREEN_TAG, RASTER)
-    MDRV_SCREEN_REFRESH_RATE(M6847_PAL_FRAMES_PER_SECOND)
-    MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
-    MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(320, 25+192+26)
-	MDRV_SCREEN_VISIBLE_AREA(0, 319, 1, 239)
-
-    MDRV_PALETTE_LENGTH(16)
-
-	MDRV_MC6847_ADD(MC6847_TAG, mc6847_intf)
-    MDRV_MC6847_TYPE(M6847_VERSION_ORIGINAL_PAL)
-	MDRV_MC6847_CHAR_ROM(phc25_char_rom_r)
-
-	MDRV_VIDEO_START(pal)
-MACHINE_DRIVER_END
-
-static MACHINE_DRIVER_START( ntsc )
-	MDRV_IMPORT_FROM(phc25)
+static MACHINE_CONFIG_DERIVED( pal, phc25 )
 
     /* video hardware */
-    MDRV_SCREEN_ADD(SCREEN_TAG, RASTER)
-    MDRV_SCREEN_REFRESH_RATE(M6847_NTSC_FRAMES_PER_SECOND)
-    MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
-    MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(320, 25+192+26)
-	MDRV_SCREEN_VISIBLE_AREA(0, 319, 1, 239)
+    MCFG_SCREEN_ADD(SCREEN_TAG, RASTER)
+    MCFG_SCREEN_REFRESH_RATE(M6847_PAL_FRAMES_PER_SECOND)
+    MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
+    MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(320, 25+192+26)
+	MCFG_SCREEN_VISIBLE_AREA(0, 319, 1, 239)
 
-    MDRV_PALETTE_LENGTH(16)
+    MCFG_PALETTE_LENGTH(16)
 
-	MDRV_MC6847_ADD(MC6847_TAG, mc6847_intf)
-    MDRV_MC6847_TYPE(M6847_VERSION_ORIGINAL_NTSC)
-	MDRV_MC6847_CHAR_ROM(phc25_char_rom_r)
+	MCFG_MC6847_ADD(MC6847_TAG, mc6847_intf)
+    MCFG_MC6847_TYPE(M6847_VERSION_ORIGINAL_PAL)
+	MCFG_MC6847_CHAR_ROM(phc25_char_rom_r)
 
-	MDRV_VIDEO_START(ntsc)
-MACHINE_DRIVER_END
+	MCFG_VIDEO_START(pal)
+MACHINE_CONFIG_END
+
+static MACHINE_CONFIG_DERIVED( ntsc, phc25 )
+
+    /* video hardware */
+    MCFG_SCREEN_ADD(SCREEN_TAG, RASTER)
+    MCFG_SCREEN_REFRESH_RATE(M6847_NTSC_FRAMES_PER_SECOND)
+    MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
+    MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(320, 25+192+26)
+	MCFG_SCREEN_VISIBLE_AREA(0, 319, 1, 239)
+
+    MCFG_PALETTE_LENGTH(16)
+
+	MCFG_MC6847_ADD(MC6847_TAG, mc6847_intf)
+    MCFG_MC6847_TYPE(M6847_VERSION_ORIGINAL_NTSC) // actually M5C6847P-1
+	MCFG_MC6847_CHAR_ROM(phc25_char_rom_r)
+
+	MCFG_VIDEO_START(ntsc)
+MACHINE_CONFIG_END
 
 /* ROMs */
 

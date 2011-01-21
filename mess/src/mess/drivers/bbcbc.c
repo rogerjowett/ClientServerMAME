@@ -15,26 +15,36 @@
 #include "cpu/z80/z80daisy.h"
 #include "devices/cartslot.h"
 
+
+class bbcbc_state : public driver_device
+{
+public:
+	bbcbc_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
+
+};
+
+
 #define MAIN_CLOCK XTAL_4_433619MHz
 
 
 static ADDRESS_MAP_START( bbcbc_prg, ADDRESS_SPACE_PROGRAM, 8 )
-	AM_RANGE(0x00000, 0x03fff) AM_ROM
-	AM_RANGE(0x04000, 0x0bfff) AM_ROM
-	AM_RANGE(0x0e000, 0x0e02f) AM_RAM
-	AM_RANGE(0x0e030, 0x0e030) AM_READ_PORT("LINE01")
-	AM_RANGE(0x0e031, 0x0e031) AM_READ_PORT("LINE02")
-	AM_RANGE(0x0e032, 0x0e032) AM_READ_PORT("LINE03")
-	AM_RANGE(0x0e033, 0x0e033) AM_READ_PORT("LINE04")
-	AM_RANGE(0x0e034, 0x0e034) AM_READ_PORT("LINE05")
-	AM_RANGE(0x0e035, 0x0e035) AM_READ_PORT("LINE06")
-	AM_RANGE(0x0e036, 0x0e036) AM_READ_PORT("LINE07")
-	AM_RANGE(0x0e037, 0x0e037) AM_READ_PORT("LINE08")
-	AM_RANGE(0x0e038, 0x0e038) AM_READ_PORT("LINE09")
-	AM_RANGE(0x0e039, 0x0e039) AM_READ_PORT("LINE10")
-	AM_RANGE(0x0e03a, 0x0e03a) AM_READ_PORT("LINE11")
-	AM_RANGE(0x0e03b, 0x0e03b) AM_READ_PORT("LINE12")
-	AM_RANGE(0x0e03c, 0x0e7ff) AM_RAM
+	AM_RANGE(0x0000, 0x3fff) AM_ROM
+	AM_RANGE(0x4000, 0xbfff) AM_ROM
+	AM_RANGE(0xe000, 0xe02f) AM_RAM
+	AM_RANGE(0xe030, 0xe030) AM_READ_PORT("LINE01")
+	AM_RANGE(0xe031, 0xe031) AM_READ_PORT("LINE02")
+	AM_RANGE(0xe032, 0xe032) AM_READ_PORT("LINE03")
+	AM_RANGE(0xe033, 0xe033) AM_READ_PORT("LINE04")
+	AM_RANGE(0xe034, 0xe034) AM_READ_PORT("LINE05")
+	AM_RANGE(0xe035, 0xe035) AM_READ_PORT("LINE06")
+	AM_RANGE(0xe036, 0xe036) AM_READ_PORT("LINE07")
+	AM_RANGE(0xe037, 0xe037) AM_READ_PORT("LINE08")
+	AM_RANGE(0xe038, 0xe038) AM_READ_PORT("LINE09")
+	AM_RANGE(0xe039, 0xe039) AM_READ_PORT("LINE10")
+	AM_RANGE(0xe03a, 0xe03a) AM_READ_PORT("LINE11")
+	AM_RANGE(0xe03b, 0xe03b) AM_READ_PORT("LINE12")
+	AM_RANGE(0xe03c, 0xe7ff) AM_RAM
 ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( bbcbc_io, ADDRESS_SPACE_IO, 8 )
@@ -121,7 +131,7 @@ static const z80_daisy_config bbcbc_daisy_chain[] =
 
 static DEVICE_START( bbcbc_cart )
 {
-	UINT8 *cart = memory_region(device->machine,  "maincpu" ) + 0x4000;
+	UINT8 *cart = device->machine->region("maincpu" )->base() + 0x4000;
 
 	memset( cart, 0xFF, 0x8000 );
 }
@@ -129,7 +139,7 @@ static DEVICE_START( bbcbc_cart )
 
 static DEVICE_IMAGE_LOAD( bbcbc_cart )
 {
-	UINT8 *cart = memory_region(image.device().machine,  "maincpu" ) + 0x4000;
+	UINT8 *cart = image.device().machine->region("maincpu" )->base() + 0x4000;
 
 	if ( image.software_entry() == NULL )
 	{
@@ -161,31 +171,31 @@ static MACHINE_RESET( bbcbc )
 }
 
 
-static MACHINE_DRIVER_START( bbcbc )
-	MDRV_CPU_ADD( "maincpu", Z80, MAIN_CLOCK / 8 )
-	MDRV_CPU_PROGRAM_MAP( bbcbc_prg)
-	MDRV_CPU_IO_MAP( bbcbc_io)
-	MDRV_CPU_CONFIG(bbcbc_daisy_chain)
-	MDRV_CPU_VBLANK_INT("screen", bbcbc_interrupt)
+static MACHINE_CONFIG_START( bbcbc, bbcbc_state )
+	MCFG_CPU_ADD( "maincpu", Z80, MAIN_CLOCK / 8 )
+	MCFG_CPU_PROGRAM_MAP( bbcbc_prg)
+	MCFG_CPU_IO_MAP( bbcbc_io)
+	MCFG_CPU_CONFIG(bbcbc_daisy_chain)
+	MCFG_CPU_VBLANK_INT("screen", bbcbc_interrupt)
 
-	MDRV_MACHINE_START( bbcbc )
-	MDRV_MACHINE_RESET( bbcbc )
+	MCFG_MACHINE_START( bbcbc )
+	MCFG_MACHINE_RESET( bbcbc )
 
-	MDRV_Z80PIO_ADD( "z80pio", MAIN_CLOCK / 8, bbcbc_z80pio_intf )
+	MCFG_Z80PIO_ADD( "z80pio", MAIN_CLOCK / 8, bbcbc_z80pio_intf )
 
-	MDRV_IMPORT_FROM( tms9928a )
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_REFRESH_RATE( 50 )
+	MCFG_FRAGMENT_ADD( tms9928a )
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_REFRESH_RATE( 50 )
 
-	MDRV_CARTSLOT_ADD("cart")
-	MDRV_CARTSLOT_NOT_MANDATORY
-	MDRV_CARTSLOT_INTERFACE("bbcbc_cart")
-	MDRV_CARTSLOT_START( bbcbc_cart )
-	MDRV_CARTSLOT_LOAD( bbcbc_cart )
+	MCFG_CARTSLOT_ADD("cart")
+	MCFG_CARTSLOT_NOT_MANDATORY
+	MCFG_CARTSLOT_INTERFACE("bbcbc_cart")
+	MCFG_CARTSLOT_START( bbcbc_cart )
+	MCFG_CARTSLOT_LOAD( bbcbc_cart )
 
 	/* Software lists */
-	MDRV_SOFTWARE_LIST_ADD("cart_list","bbcbc")
-MACHINE_DRIVER_END
+	MCFG_SOFTWARE_LIST_ADD("cart_list","bbcbc")
+MACHINE_CONFIG_END
 
 
 ROM_START( bbcbc )
@@ -201,4 +211,4 @@ ROM_END
 ***************************************************************************/
 
 /*   YEAR  NAME  PARENT  COMPAT  MACHINE INPUT  INIT  COMPANY  FULLNAME  FLAGS */
-CONS(1985, bbcbc,     0, 0,      bbcbc,  bbcbc, 0,    "BBC",   "Bridge Companion", GAME_NO_SOUND )
+CONS(1985, bbcbc,     0, 0,      bbcbc,  bbcbc, 0,    "BBC",   "Bridge Companion", GAME_NO_SOUND_HW )

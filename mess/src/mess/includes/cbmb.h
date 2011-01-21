@@ -15,12 +15,11 @@
 #include "machine/6526cia.h"
 #include "devices/cartslot.h"
 
-class cbmb_state
+class cbmb_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, cbmb_state(machine)); }
-
-	cbmb_state(running_machine &machine) { }
+	cbmb_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* keyboard lines */
 	int cbmb_keyline_a;
@@ -30,16 +29,20 @@ public:
 	int p500;
 	int cbm700;
 	int cbm_ntsc;
+	UINT8 *videoram;
+	UINT8 *basic;
+	UINT8 *kernal;
+	UINT8 *colorram;
+	int keyline_a;
+	int keyline_b;
+	int keyline_c;
+	UINT8 *chargen;
+	int old_level;
+	int irq_level;
+	int font;
 };
 
 /*----------- defined in machine/cbmb.c -----------*/
-
-extern UINT8 *cbmb_basic;
-extern UINT8 *cbmb_kernal;
-//extern UINT8 *cbmb_chargen;
-//extern UINT8 *cbmb_memory;
-extern UINT8 *cbmb_videoram;
-extern UINT8 *cbmb_colorram;
 
 extern const mos6526_interface cbmb_cia;
 
@@ -56,7 +59,7 @@ WRITE8_DEVICE_HANDLER( cbmb_keyboard_line_select_c );
 READ8_DEVICE_HANDLER( cbmb_keyboard_line_a );
 READ8_DEVICE_HANDLER( cbmb_keyboard_line_b );
 READ8_DEVICE_HANDLER( cbmb_keyboard_line_c );
-void cbmb_irq(running_device *device, int level);
+void cbmb_irq(device_t *device, int level);
 
 int cbmb_dma_read(running_machine *machine, int offset);
 int cbmb_dma_read_color(running_machine *machine, int offset);
@@ -70,7 +73,7 @@ DRIVER_INIT( cbm600hu );
 DRIVER_INIT( cbm700 );
 MACHINE_RESET( cbmb );
 
-MACHINE_DRIVER_EXTERN( cbmb_cartslot );
+MACHINE_CONFIG_EXTERN( cbmb_cartslot );
 
 
 /*----------- defined in video/cbmb.c -----------*/
@@ -85,7 +88,7 @@ void cbm600_vh_init(running_machine *machine);
 void cbm700_vh_init(running_machine *machine);
 VIDEO_START( cbm700 );
 
-void cbmb_vh_set_font(int font);
+void cbmb_vh_set_font(running_machine *machine, int font);
 
 
 #endif /* CBMB_H_ */

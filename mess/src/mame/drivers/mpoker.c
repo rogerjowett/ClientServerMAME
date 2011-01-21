@@ -170,6 +170,7 @@
 #include "emu.h"
 #include "cpu/z80/z80.h"
 //#include "sound/dac.h"
+#include "machine/nvram.h"
 #include "mpoker.lh"
 
 static UINT8 output[8];
@@ -237,7 +238,7 @@ static READ8_HANDLER( mixport_r )
 */
 	static int mixdata;
 
-	mixdata = (input_port_read(space->machine, "SW2") & 0xfd) | (mame_rand(space->machine) & 0x02);
+	mixdata = (input_port_read(space->machine, "SW2") & 0xfd) | (space->machine->rand() & 0x02);
 
 	return mixdata;
 }
@@ -453,7 +454,7 @@ static WRITE8_HANDLER( outport7_w )
 static ADDRESS_MAP_START( main_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x2fff) AM_ROM
 //  AM_RANGE(0x0158, 0x0158) AM_WRITE (muxed_w)
-	AM_RANGE(0x3800, 0x38ff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)	/* NVRAM = 2x SCM5101E */
+	AM_RANGE(0x3800, 0x38ff) AM_RAM AM_SHARE("nvram")	/* NVRAM = 2x SCM5101E */
 	AM_RANGE(0x4000, 0x47ff) AM_RAM AM_BASE(&mpoker_video)	/* 4x MM2114N-3 */
 	AM_RANGE(0x8000, 0x8000) AM_READ_PORT("SW1")
 	AM_RANGE(0x8001, 0x8001) AM_READ (mixport_r) /* DIP switch bank 2 + a sort of watchdog */
@@ -559,34 +560,34 @@ static GFXDECODE_START( mpoker )
 	GFXDECODE_ENTRY( "gfx1", 0, tiles16x16_layout, 0, 0x100 )
 GFXDECODE_END
 
-static MACHINE_DRIVER_START( mpoker )
+static MACHINE_CONFIG_START( mpoker, driver_device )
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80,MASTER_CLOCK/6)		 /* 3 MHz? */
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80,MASTER_CLOCK/6)		 /* 3 MHz? */
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(512, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 512-1, 0, 256-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(512, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 512-1, 0, 256-1)
 
-	MDRV_GFXDECODE(mpoker)
-	MDRV_PALETTE_LENGTH(0x200)
+	MCFG_GFXDECODE(mpoker)
+	MCFG_PALETTE_LENGTH(0x200)
 
-	MDRV_PALETTE_INIT(mpoker)
-	MDRV_VIDEO_START(mpoker)
-	MDRV_VIDEO_UPDATE(mpoker)
+	MCFG_PALETTE_INIT(mpoker)
+	MCFG_VIDEO_START(mpoker)
+	MCFG_VIDEO_UPDATE(mpoker)
 
 	/* sound hardware */
-//  MDRV_SPEAKER_STANDARD_MONO("mono")
-//  MDRV_SOUND_ADD("dac", DAC, 0)
-//  MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+//  MCFG_SPEAKER_STANDARD_MONO("mono")
+//  MCFG_SOUND_ADD("dac", DAC, 0)
+//  MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 ROM_START( mpoker )
 	ROM_REGION( 0x3000, "maincpu", 0 )

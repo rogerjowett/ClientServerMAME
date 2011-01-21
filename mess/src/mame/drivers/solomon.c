@@ -9,20 +9,7 @@ driver by Mirko Buffoni
 #include "deprecat.h"
 #include "cpu/z80/z80.h"
 #include "sound/ay8910.h"
-
-extern UINT8 *solomon_videoram;
-extern UINT8 *solomon_colorram;
-extern UINT8 *solomon_videoram2;
-extern UINT8 *solomon_colorram2;
-
-extern WRITE8_HANDLER( solomon_videoram_w );
-extern WRITE8_HANDLER( solomon_colorram_w );
-extern WRITE8_HANDLER( solomon_videoram2_w );
-extern WRITE8_HANDLER( solomon_colorram2_w );
-extern WRITE8_HANDLER( solomon_flipscreen_w );
-
-extern VIDEO_START( solomon );
-extern VIDEO_UPDATE( solomon );
+#include "includes/solomon.h"
 
 static WRITE8_HANDLER( solomon_sh_command_w )
 {
@@ -55,11 +42,11 @@ static READ8_HANDLER( solomon_0xe603_r )
 static ADDRESS_MAP_START( main_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0xbfff) AM_ROM
 	AM_RANGE(0xc000, 0xcfff) AM_RAM
-	AM_RANGE(0xd000, 0xd3ff) AM_RAM_WRITE(solomon_colorram_w) AM_BASE(&solomon_colorram)
-	AM_RANGE(0xd400, 0xd7ff) AM_RAM_WRITE(solomon_videoram_w) AM_BASE(&solomon_videoram)
-	AM_RANGE(0xd800, 0xdbff) AM_RAM_WRITE(solomon_colorram2_w) AM_BASE(&solomon_colorram2)
-	AM_RANGE(0xdc00, 0xdfff) AM_RAM_WRITE(solomon_videoram2_w) AM_BASE(&solomon_videoram2)
-	AM_RANGE(0xe000, 0xe07f) AM_RAM AM_BASE_SIZE_GENERIC(spriteram)
+	AM_RANGE(0xd000, 0xd3ff) AM_RAM_WRITE(solomon_colorram_w) AM_BASE_MEMBER(solomon_state, colorram)
+	AM_RANGE(0xd400, 0xd7ff) AM_RAM_WRITE(solomon_videoram_w) AM_BASE_MEMBER(solomon_state, videoram)
+	AM_RANGE(0xd800, 0xdbff) AM_RAM_WRITE(solomon_colorram2_w) AM_BASE_MEMBER(solomon_state, colorram2)
+	AM_RANGE(0xdc00, 0xdfff) AM_RAM_WRITE(solomon_videoram2_w) AM_BASE_MEMBER(solomon_state, videoram2)
+	AM_RANGE(0xe000, 0xe07f) AM_RAM AM_BASE_SIZE_MEMBER(solomon_state, spriteram, spriteram_size)
 	AM_RANGE(0xe400, 0xe5ff) AM_RAM_WRITE(paletteram_xxxxBBBBGGGGRRRR_le_w) AM_BASE_GENERIC(paletteram)
 	AM_RANGE(0xe600, 0xe600) AM_READ_PORT("P1")
 	AM_RANGE(0xe601, 0xe601) AM_READ_PORT("P2")
@@ -201,45 +188,45 @@ static GFXDECODE_START( solomon )
 	GFXDECODE_ENTRY( "gfx3", 0, spritelayout,   0, 8 )	/* colors   0-127 */
 GFXDECODE_END
 
-static MACHINE_DRIVER_START( solomon )
+static MACHINE_CONFIG_START( solomon, solomon_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, 4000000)	/* 4.0 MHz (?????) */
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_VBLANK_INT("screen", nmi_line_pulse)
+	MCFG_CPU_ADD("maincpu", Z80, 4000000)	/* 4.0 MHz (?????) */
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_VBLANK_INT("screen", nmi_line_pulse)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 3072000)
-	MDRV_CPU_PROGRAM_MAP(sound_map)
-	MDRV_CPU_IO_MAP(sound_portmap)
-	MDRV_CPU_VBLANK_INT_HACK(irq0_line_hold,2)	/* ??? */
+	MCFG_CPU_ADD("audiocpu", Z80, 3072000)
+	MCFG_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_IO_MAP(sound_portmap)
+	MCFG_CPU_VBLANK_INT_HACK(irq0_line_hold,2)	/* ??? */
 						/* NMIs are caused by the main CPU */
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(solomon)
-	MDRV_PALETTE_LENGTH(256)
+	MCFG_GFXDECODE(solomon)
+	MCFG_PALETTE_LENGTH(256)
 
-	MDRV_VIDEO_START(solomon)
-	MDRV_VIDEO_UPDATE(solomon)
+	MCFG_VIDEO_START(solomon)
+	MCFG_VIDEO_UPDATE(solomon)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ay1", AY8910, 1500000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.12)
+	MCFG_SOUND_ADD("ay1", AY8910, 1500000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.12)
 
-	MDRV_SOUND_ADD("ay2", AY8910, 1500000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.12)
+	MCFG_SOUND_ADD("ay2", AY8910, 1500000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.12)
 
-	MDRV_SOUND_ADD("ay3", AY8910, 1500000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.12)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ay3", AY8910, 1500000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.12)
+MACHINE_CONFIG_END
 
 /***************************************************************************
 

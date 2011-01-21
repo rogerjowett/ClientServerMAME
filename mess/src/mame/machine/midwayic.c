@@ -69,7 +69,7 @@ struct ioasic_state
 	UINT32	reg[16];
 	UINT8	has_dcs;
 	UINT8	has_cage;
-	running_device *dcs_cpu;
+	device_t *dcs_cpu;
 	UINT8	shuffle_type;
 	UINT8	shuffle_active;
 	const UINT8 *	shuffle_map;
@@ -126,8 +126,8 @@ static void generate_serial_data(running_machine *machine, int upper)
 	serial_digit[7] = (serial_number / 10) % 10;
 	serial_digit[8] = (serial_number / 1) % 10;
 
-	serial.data[12] = mame_rand(machine) & 0xff;
-	serial.data[13] = mame_rand(machine) & 0xff;
+	serial.data[12] = machine->rand() & 0xff;
+	serial.data[13] = machine->rand() & 0xff;
 
 	serial.data[14] = 0; /* ??? */
 	serial.data[15] = 0; /* ??? */
@@ -205,7 +205,7 @@ UINT8 midway_serial_pic_status_r(void)
 }
 
 
-UINT8 midway_serial_pic_r(const address_space *space)
+UINT8 midway_serial_pic_r(address_space *space)
 {
 	logerror("%s:security R = %04X\n", cpuexec_describe_context(space->machine), serial.buffer);
 	serial.status = 1;
@@ -213,7 +213,7 @@ UINT8 midway_serial_pic_r(const address_space *space)
 }
 
 
-void midway_serial_pic_w(const address_space *space, UINT8 data)
+void midway_serial_pic_w(address_space *space, UINT8 data)
 {
 	logerror("%s:security W = %04X\n", cpuexec_describe_context(space->machine), data);
 
@@ -293,7 +293,7 @@ void midway_serial_pic2_set_default_nvram(const UINT8 *nvram)
 }
 
 
-UINT8 midway_serial_pic2_status_r(const address_space *space)
+UINT8 midway_serial_pic2_status_r(address_space *space)
 {
 	UINT8 result = 0;
 
@@ -312,7 +312,7 @@ UINT8 midway_serial_pic2_status_r(const address_space *space)
 }
 
 
-UINT8 midway_serial_pic2_r(const address_space *space)
+UINT8 midway_serial_pic2_r(address_space *space)
 {
 	UINT8 result = 0;
 
@@ -332,7 +332,7 @@ UINT8 midway_serial_pic2_r(const address_space *space)
 }
 
 
-void midway_serial_pic2_w(const address_space *space, UINT8 data)
+void midway_serial_pic2_w(address_space *space, UINT8 data)
 {
 	running_machine *machine = space->machine;
 	static FILE *nvramlog;
@@ -558,8 +558,8 @@ enum
 	IOASIC_INTCTL		/* f: interrupt control */
 };
 
-static UINT16 ioasic_fifo_r(running_device *device);
-static UINT16 ioasic_fifo_status_r(running_device *device);
+static UINT16 ioasic_fifo_r(device_t *device);
+static UINT16 ioasic_fifo_status_r(device_t *device);
 static void ioasic_input_empty(running_machine *machine, int state);
 static void ioasic_output_full(running_machine *machine, int state);
 static void update_ioasic_irq(running_machine *machine);
@@ -724,7 +724,7 @@ static void ioasic_output_full(running_machine *machine, int state)
  *
  *************************************/
 
-static UINT16 ioasic_fifo_r(running_device *device)
+static UINT16 ioasic_fifo_r(device_t *device)
 {
 	UINT16 result = 0;
 
@@ -759,7 +759,7 @@ static UINT16 ioasic_fifo_r(running_device *device)
 }
 
 
-static UINT16 ioasic_fifo_status_r(running_device *device)
+static UINT16 ioasic_fifo_status_r(device_t *device)
 {
 	UINT16 result = 0;
 

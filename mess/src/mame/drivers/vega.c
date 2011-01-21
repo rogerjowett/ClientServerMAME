@@ -35,23 +35,23 @@ static VIDEO_UPDATE(vega)
 	return 0;
 }
 
-static MACHINE_DRIVER_START( vega )
-	MDRV_CPU_ADD("maincpu", I8035, 6000000) // what CPU? what speed?
-	MDRV_CPU_PROGRAM_MAP(vega_map)
+static MACHINE_CONFIG_START( vega, driver_device )
+	MCFG_CPU_ADD("maincpu", I8035, 6000000) // what CPU? what speed?
+	MCFG_CPU_PROGRAM_MAP(vega_map)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 0*8, 28*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 0*8, 28*8-1)
 
-	MDRV_PALETTE_LENGTH(0x100)
+	MCFG_PALETTE_LENGTH(0x100)
 
-	MDRV_PALETTE_INIT(vega)
-	MDRV_VIDEO_UPDATE(vega)
-MACHINE_DRIVER_END
+	MCFG_PALETTE_INIT(vega)
+	MCFG_VIDEO_UPDATE(vega)
+MACHINE_CONFIG_END
 
 ROM_START( vega )
 	ROM_REGION( 0x10000, "maincpu", 0 )
@@ -97,7 +97,7 @@ UINT8 ascii_to_bin( UINT8 ascii )
 DRIVER_INIT(vegaa)
 {
 	UINT8* buf = (UINT8*)malloc(0x10000);
-	UINT8* rom = memory_region(machine,"maincpu");
+	UINT8* rom = machine->region("maincpu")->base();
 	int i;
 	int count = 0;
 	// last 0xc bytes of file are just some settings, ignore

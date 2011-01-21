@@ -50,12 +50,11 @@ modified by Hau
 #include "cpu/i8085/i8085.h"
 #include "sound/samples.h"
 
-class safarir_state
+class safarir_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, safarir_state(machine)); }
-
-	safarir_state(running_machine &machine) { }
+	safarir_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	UINT8 *ram_1, *ram_2;
 	size_t ram_size;
@@ -65,7 +64,7 @@ public:
 	UINT8 *bg_scroll;
 	UINT8 port_last;
 	UINT8 port_last2;
-	running_device *samples;
+	device_t *samples;
 };
 
 
@@ -77,7 +76,7 @@ public:
 
 static WRITE8_HANDLER( ram_w )
 {
-	safarir_state *state = (safarir_state *)space->machine->driver_data;
+	safarir_state *state = space->machine->driver_data<safarir_state>();
 
 	if (state->ram_bank)
 		state->ram_2[offset] = data;
@@ -90,7 +89,7 @@ static WRITE8_HANDLER( ram_w )
 
 static READ8_HANDLER( ram_r )
 {
-	safarir_state *state = (safarir_state *)space->machine->driver_data;
+	safarir_state *state = space->machine->driver_data<safarir_state>();
 
 	return state->ram_bank ? state->ram_2[offset] : state->ram_1[offset];
 }
@@ -98,7 +97,7 @@ static READ8_HANDLER( ram_r )
 
 static WRITE8_HANDLER( ram_bank_w )
 {
-	safarir_state *state = (safarir_state *)space->machine->driver_data;
+	safarir_state *state = space->machine->driver_data<safarir_state>();
 
 	state->ram_bank = data & 0x01;
 
@@ -145,7 +144,7 @@ static PALETTE_INIT( safarir )
 static TILE_GET_INFO( get_bg_tile_info )
 {
 	int color;
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 	UINT8 code = ram_r(space,tile_index | 0x400);
 
 	if (code & 0x80)
@@ -167,7 +166,7 @@ static TILE_GET_INFO( get_bg_tile_info )
 static TILE_GET_INFO( get_fg_tile_info )
 {
 	int color, flags;
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	UINT8 code = ram_r(space,tile_index);
 
@@ -184,7 +183,7 @@ static TILE_GET_INFO( get_fg_tile_info )
 
 static VIDEO_START( safarir )
 {
-	safarir_state *state = (safarir_state *)machine->driver_data;
+	safarir_state *state = machine->driver_data<safarir_state>();
 
 	state->bg_tilemap = tilemap_create(machine, get_bg_tile_info, tilemap_scan_rows, 8, 8, 32, 32);
 	state->fg_tilemap = tilemap_create(machine, get_fg_tile_info, tilemap_scan_rows, 8, 8, 32, 32);
@@ -195,7 +194,7 @@ static VIDEO_START( safarir )
 
 static VIDEO_UPDATE( safarir )
 {
-	safarir_state *state = (safarir_state *)screen->machine->driver_data;
+	safarir_state *state = screen->machine->driver_data<safarir_state>();
 
 	tilemap_set_scrollx(state->bg_tilemap, 0, *state->bg_scroll);
 
@@ -233,8 +232,8 @@ static VIDEO_UPDATE( safarir )
 
 static WRITE8_HANDLER( safarir_audio_w )
 {
-	safarir_state *state = (safarir_state *)space->machine->driver_data;
-	running_device *samples = state->samples;
+	safarir_state *state = space->machine->driver_data<safarir_state>();
+	device_t *samples = state->samples;
 	UINT8 rising_bits = data & ~state->port_last;
 
 	if (rising_bits == 0x12) sample_start(samples, CHANNEL_SOUND1, SAMPLE_SOUND1_1, 0);
@@ -295,12 +294,12 @@ static const samples_interface safarir_samples_interface =
 };
 
 
-static MACHINE_DRIVER_START( safarir_audio )
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("samples", SAMPLES, 0)
-	MDRV_SOUND_CONFIG(safarir_samples_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_FRAGMENT( safarir_audio )
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("samples", SAMPLES, 0)
+	MCFG_SOUND_CONFIG(safarir_samples_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 
 
@@ -312,7 +311,7 @@ MACHINE_DRIVER_END
 
 static MACHINE_START( safarir )
 {
-	safarir_state *state = (safarir_state *)machine->driver_data;
+	safarir_state *state = machine->driver_data<safarir_state>();
 
 	state->ram_1 = auto_alloc_array(machine, UINT8, state->ram_size);
 	state->ram_2 = auto_alloc_array(machine, UINT8, state->ram_size);
@@ -396,32 +395,30 @@ INPUT_PORTS_END
  *
  *************************************/
 
-static MACHINE_DRIVER_START( safarir )
-
-	MDRV_DRIVER_DATA( safarir_state )
+static MACHINE_CONFIG_START( safarir, safarir_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", I8085A, 18000000/8)	/* 2.25 MHz ? */
-	MDRV_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_ADD("maincpu", I8085A, 18000000/8)	/* 2.25 MHz ? */
+	MCFG_CPU_PROGRAM_MAP(main_map)
 
-	MDRV_MACHINE_START(safarir)
+	MCFG_MACHINE_START(safarir)
 
 	/* video hardware */
-	MDRV_VIDEO_START(safarir)
-	MDRV_VIDEO_UPDATE(safarir)
-	MDRV_PALETTE_INIT(safarir)
-	MDRV_PALETTE_LENGTH(2*8)
-	MDRV_GFXDECODE(safarir)
+	MCFG_VIDEO_START(safarir)
+	MCFG_VIDEO_UPDATE(safarir)
+	MCFG_PALETTE_INIT(safarir)
+	MCFG_PALETTE_LENGTH(2*8)
+	MCFG_GFXDECODE(safarir)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 0*8, 26*8-1)
-	MDRV_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 0*8, 26*8-1)
+	MCFG_SCREEN_REFRESH_RATE(60)
 
 	/* audio hardware */
-	MDRV_IMPORT_FROM(safarir_audio)
-MACHINE_DRIVER_END
+	MCFG_FRAGMENT_ADD(safarir_audio)
+MACHINE_CONFIG_END
 
 
 

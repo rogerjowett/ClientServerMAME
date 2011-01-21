@@ -294,6 +294,7 @@ Notes & Todo:
 #include "video/ppu2c0x.h"
 #include "cpu/z80/z80.h"
 #include "machine/rp5h01.h"
+#include "machine/nvram.h"
 #include "sound/dac.h"
 #include "sound/nes_apu.h"
 
@@ -336,18 +337,6 @@ static WRITE8_HANDLER( sprite_dma_w )
 	ppu2c0x_spriteram_dma( space, space->machine->device("ppu"), source );
 }
 
-static NVRAM_HANDLER( playch10 )
-{
-	UINT8 *mem = memory_region( machine, "cart" ) + 0x6000;
-
-	if ( read_or_write )
-		mame_fwrite( file, mem, 0x1000 );
-	else if (file)
-		mame_fread( file, mem, 0x1000 );
-	else
-		memset(mem, 0, 0x1000);
-}
-
 /* Only used in single monitor bios */
 static UINT8 *timedata;
 
@@ -383,7 +372,7 @@ static ADDRESS_MAP_START( bios_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x3fff) AM_ROM
 	AM_RANGE(0x8000, 0x87ff) AM_RAM	// 8V
 	AM_RANGE(0x8800, 0x8fff) AM_READWRITE(ram_8w_r, ram_8w_w) AM_BASE(&ram_8w)	// 8W
-	AM_RANGE(0x9000, 0x97ff) AM_RAM_WRITE(playch10_videoram_w) AM_BASE_GENERIC(videoram)
+	AM_RANGE(0x9000, 0x97ff) AM_RAM_WRITE(playch10_videoram_w) AM_BASE_MEMBER(playch10_state, videoram)
 	AM_RANGE(0xc000, 0xdfff) AM_ROM
 	AM_RANGE(0xe000, 0xffff) AM_READWRITE(pc10_prot_r, pc10_prot_w)
 ADDRESS_MAP_END
@@ -684,67 +673,65 @@ static const nes_interface nes_config =
 };
 
 
-static MACHINE_DRIVER_START( playch10 )
+static MACHINE_CONFIG_START( playch10, playch10_state )
 	// basic machine hardware
-	MDRV_CPU_ADD("maincpu", Z80, 8000000/2)	// 4 MHz
-	MDRV_CPU_PROGRAM_MAP(bios_map)
-	MDRV_CPU_IO_MAP(bios_io_map)
-	MDRV_CPU_VBLANK_INT("top", playch10_interrupt)
+	MCFG_CPU_ADD("maincpu", Z80, 8000000/2)	// 4 MHz
+	MCFG_CPU_PROGRAM_MAP(bios_map)
+	MCFG_CPU_IO_MAP(bios_io_map)
+	MCFG_CPU_VBLANK_INT("top", playch10_interrupt)
 
-	MDRV_CPU_ADD("cart", N2A03, N2A03_DEFAULTCLOCK)
-	MDRV_CPU_PROGRAM_MAP(cart_map)
+	MCFG_CPU_ADD("cart", N2A03, N2A03_DEFAULTCLOCK)
+	MCFG_CPU_PROGRAM_MAP(cart_map)
 
-	MDRV_MACHINE_RESET(pc10)
-	MDRV_MACHINE_START(pc10)
+	MCFG_MACHINE_RESET(pc10)
+	MCFG_MACHINE_START(pc10)
 
 	// video hardware
-	MDRV_GFXDECODE(playch10)
-	MDRV_PALETTE_LENGTH(256+8*4*16)
-	MDRV_DEFAULT_LAYOUT(layout_dualhuov)
+	MCFG_GFXDECODE(playch10)
+	MCFG_PALETTE_LENGTH(256+8*4*16)
+	MCFG_DEFAULT_LAYOUT(layout_dualhuov)
 
-	MDRV_SCREEN_ADD("top", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_SIZE(32*8, 262)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 0*8, 30*8-1)
+	MCFG_SCREEN_ADD("top", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_SIZE(32*8, 262)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 0*8, 30*8-1)
 
-	MDRV_SCREEN_ADD("bottom", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_SIZE(32*8, 262)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 0*8, 30*8-1)
+	MCFG_SCREEN_ADD("bottom", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_SIZE(32*8, 262)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 0*8, 30*8-1)
 
-	MDRV_PALETTE_INIT(playch10)
-	MDRV_VIDEO_START(playch10)
-	MDRV_VIDEO_UPDATE(playch10)
+	MCFG_PALETTE_INIT(playch10)
+	MCFG_VIDEO_START(playch10)
+	MCFG_VIDEO_UPDATE(playch10)
 
-	MDRV_PPU2C03B_ADD("ppu", playch10_ppu_interface)
+	MCFG_PPU2C03B_ADD("ppu", playch10_ppu_interface)
 
 	// sound hardware
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("nes", NES, N2A03_DEFAULTCLOCK)
-	MDRV_SOUND_CONFIG(nes_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("nes", NES, N2A03_DEFAULTCLOCK)
+	MCFG_SOUND_CONFIG(nes_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MDRV_SOUND_ADD("dac", DAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_SOUND_ADD("dac", DAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MDRV_RP5H01_ADD("rp5h01")
-MACHINE_DRIVER_END
+	MCFG_RP5H01_ADD("rp5h01")
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( playchnv )
-	MDRV_IMPORT_FROM(playch10)
-	MDRV_NVRAM_HANDLER(playch10)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( playchnv, playch10 )
+	MCFG_NVRAM_ADD_0FILL("nvram")
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( playch10_hboard )
-	MDRV_IMPORT_FROM(playch10)
-	MDRV_VIDEO_START(playch10_hboard)
-	MDRV_MACHINE_START(playch10_hboard)
+static MACHINE_CONFIG_DERIVED( playch10_hboard, playch10 )
+	MCFG_VIDEO_START(playch10_hboard)
+	MCFG_MACHINE_START(playch10_hboard)
 
-	MDRV_DEVICE_REMOVE("ppu")
-	MDRV_PPU2C03B_ADD("ppu", playch10_ppu_interface)
-MACHINE_DRIVER_END
+	MCFG_DEVICE_REMOVE("ppu")
+	MCFG_PPU2C03B_ADD("ppu", playch10_ppu_interface)
+MACHINE_CONFIG_END
 
 /***************************************************************************
 

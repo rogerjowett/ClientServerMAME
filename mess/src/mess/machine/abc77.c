@@ -20,7 +20,7 @@ struct _abc77_t
 	devcb_resolved_write_line	out_clock_func;
 	devcb_resolved_write_line	out_keydown_func;
 
-	running_device *cpu;		/* CPU of the 8035 */
+	device_t *cpu;		/* CPU of the 8035 */
 
 	int txd;						/* transmit data */
 	int keylatch;					/* keyboard row latch */
@@ -36,13 +36,13 @@ struct _abc77_t
     INLINE FUNCTIONS
 ***************************************************************************/
 
-INLINE abc77_t *get_safe_token(running_device *device)
+INLINE abc77_t *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
 	return (abc77_t *)downcast<legacy_device_base *>(device)->token();
 }
 
-INLINE const abc77_interface *get_interface(running_device *device)
+INLINE const abc77_interface *get_interface(device_t *device)
 {
 	assert(device != NULL);
 	assert((device->type() == ABC77));
@@ -76,7 +76,7 @@ DISCRETE_SOUND_END
 
 static TIMER_DEVICE_CALLBACK( clock_tick )
 {
-	running_device *device = timer.machine->device(ABC77_TAG);
+	device_t *device = timer.machine->device(ABC77_TAG);
 	abc77_t *abc77 = get_safe_token(device);
 
 	abc77->clock = !abc77->clock;
@@ -90,7 +90,7 @@ static TIMER_DEVICE_CALLBACK( clock_tick )
 
 static TIMER_CALLBACK( reset_tick )
 {
-	running_device *device = (running_device *)ptr;
+	device_t *device = (device_t *)ptr;
 	abc77_t *abc77 = get_safe_token(device);
 
 	cpu_set_input_line(abc77->cpu, INPUT_LINE_RESET, CLEAR_LINE);
@@ -102,7 +102,7 @@ static TIMER_CALLBACK( reset_tick )
 
 static READ8_HANDLER( abc77_clock_r )
 {
-	running_device *device = space->machine->device(ABC77_TAG);
+	device_t *device = space->machine->device(ABC77_TAG);
 	abc77_t *abc77 = get_safe_token(device);
 
 	return abc77->clock;
@@ -114,7 +114,7 @@ static READ8_HANDLER( abc77_clock_r )
 
 static READ8_HANDLER( abc77_data_r )
 {
-	running_device *device = space->machine->device(ABC77_TAG);
+	device_t *device = space->machine->device(ABC77_TAG);
 	abc77_t *abc77 = get_safe_token(device);
 
 	static const char *const keynames[] = { "ABC77_X0", "ABC77_X1", "ABC77_X2", "ABC77_X3", "ABC77_X4", "ABC77_X5", "ABC77_X6", "ABC77_X7", "ABC77_X8", "ABC77_X9", "ABC77_X10", "ABC77_X11" };
@@ -128,8 +128,8 @@ static READ8_HANDLER( abc77_data_r )
 
 static WRITE8_HANDLER( abc77_data_w )
 {
-	running_device *device = space->machine->device(ABC77_TAG);
-	running_device *discrete = space->machine->device("discrete");
+	device_t *device = space->machine->device(ABC77_TAG);
+	device_t *discrete = space->machine->device("discrete");
 	abc77_t *abc77 = get_safe_token(device);
 
 	abc77->keylatch = data & 0x0f;
@@ -320,23 +320,23 @@ INPUT_PORTS_END
     MACHINE_DRIVER( abc77 )
 -------------------------------------------------*/
 
-static MACHINE_DRIVER_START( abc77 )
+static MACHINE_CONFIG_FRAGMENT( abc77 )
 	/* keyboard cpu */
-	MDRV_CPU_ADD(I8035_TAG, I8035, XTAL_4_608MHz)
-	MDRV_CPU_PROGRAM_MAP(abc77_map)
-	MDRV_CPU_IO_MAP(abc77_io_map)
+	MCFG_CPU_ADD(I8035_TAG, I8035, XTAL_4_608MHz)
+	MCFG_CPU_PROGRAM_MAP(abc77_map)
+	MCFG_CPU_IO_MAP(abc77_io_map)
 
 	/* watchdog */
-	MDRV_WATCHDOG_TIME_INIT(HZ(XTAL_4_608MHz/(3*5)))
+	MCFG_WATCHDOG_TIME_INIT(HZ(XTAL_4_608MHz/(3*5)))
 
 	/* serial clock timer */
-	MDRV_TIMER_ADD_PERIODIC("serial", clock_tick, HZ(XTAL_4_608MHz/(3*5)/16))
+	MCFG_TIMER_ADD_PERIODIC("serial", clock_tick, HZ(XTAL_4_608MHz/(3*5)/16))
 
 	/* discrete sound */
-	MDRV_SOUND_ADD("discrete", DISCRETE, 0)
-	MDRV_SOUND_CONFIG_DISCRETE(abc77)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("discrete", DISCRETE, 0)
+	MCFG_SOUND_CONFIG_DISCRETE(abc77)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
+MACHINE_CONFIG_END
 
 /*-------------------------------------------------
     ROM( abc77 )
@@ -403,16 +403,13 @@ static DEVICE_START( abc77 )
 	abc77_t *abc77 = (abc77_t *)downcast<legacy_device_base *>(device)->token();
 	const abc77_interface *intf = get_interface(device);
 
-	astring tempstring;
-
 	/* resolve callbacks */
 	devcb_resolve_write_line(&abc77->out_txd_func, &intf->out_txd_func, device);
 	devcb_resolve_write_line(&abc77->out_clock_func, &intf->out_clock_func, device);
 	devcb_resolve_write_line(&abc77->out_keydown_func, &intf->out_keydown_func, device);
 
 	/* find our CPU */
-	astring_printf(&tempstring, "%s:%s", device->tag(), I8035_TAG);
-	abc77->cpu = device->machine->device(astring_c(&tempstring));
+	abc77->cpu = device->subdevice(I8035_TAG);
 
 	/* allocate reset timer */
 	abc77->reset_timer = timer_alloc(device->machine, reset_tick, (FPTR *) device);
@@ -439,7 +436,7 @@ DEVICE_GET_INFO( abc77 )
 
 		/* --- the following bits of info are returned as pointers --- */
 		case DEVINFO_PTR_ROM_REGION:					info->romregion = rom_abc77;				break;
-		case DEVINFO_PTR_MACHINE_CONFIG:				info->machine_config = MACHINE_DRIVER_NAME(abc77); break;
+		case DEVINFO_PTR_MACHINE_CONFIG:				info->machine_config = MACHINE_CONFIG_NAME(abc77); break;
 
 		/* --- the following bits of info are returned as pointers to data or functions --- */
 		case DEVINFO_FCT_START:							info->start = DEVICE_START_NAME(abc77);		break;

@@ -202,7 +202,7 @@ static INPUT_PORTS_START( arcadia )
 /* FIXME: the joystick are analog - the actual definition is merely an hack */
 
 #if 0
-    // shit, auto centering too slow, so only using 5 bits, and scaling at videoside
+    // auto centering too slow, so only using 5 bits, and scaling at videoside
     PORT_START("controller1_joy_x")
     PORT_BIT( 0x1fe,0x10,IPT_AD_STICK_X)
     PORT_SENSITIVITY(1)
@@ -341,7 +341,7 @@ static INPUT_PORTS_START( plldium )
 /* FIXME: the joystick are analog - the actual definition is merely an hack */
 
 #if 0
-    // shit, auto centering too slow, so only using 5 bits, and scaling at videoside
+    // auto centering too slow, so only using 5 bits, and scaling at videoside
     PORT_START("controller1_joy_x")
     PORT_BIT( 0x1fe,0x10,IPT_AD_STICK_X)
     PORT_SENSITIVITY(1)
@@ -459,7 +459,7 @@ static PALETTE_INIT( arcadia )
 
 static DEVICE_IMAGE_LOAD( arcadia_cart )
 {
-	UINT8 *rom = memory_region(image.device().machine, "maincpu");
+	UINT8 *rom = image.device().machine->region("maincpu")->base();
 	int size;
 
 	memset(rom, 0, 0x8000);
@@ -467,8 +467,8 @@ static DEVICE_IMAGE_LOAD( arcadia_cart )
 	{
 		size = image.length();
 
-		if (size > memory_region_length(image.device().machine, "maincpu"))
-			size = memory_region_length(image.device().machine, "maincpu");
+		if (size > image.device().machine->region("maincpu")->bytes())
+			size = image.device().machine->region("maincpu")->bytes();
 
 		if (image.fread(rom, size) != size)
 			return IMAGE_INIT_FAIL;
@@ -496,8 +496,8 @@ static DEVICE_IMAGE_LOAD( arcadia_cart )
        so it could be burned in a arcadia 2001 cartridge
        activate it and use debugger to save patched version */
 	// not enough yet (some pointers stored as data?)
-	struct { UINT16 address; UINT8 old; UINT8 new; }
-	int i:
+	int i;
+	static const struct { UINT16 address; UINT8 old; UINT8 new; }
 	patch[]= {
 		{ 0x0077,0x40,0x20 },
 		{ 0x011e,0x40,0x20 },
@@ -531,43 +531,43 @@ static DEVICE_IMAGE_LOAD( arcadia_cart )
 	return IMAGE_INIT_PASS;
 }
 
-static MACHINE_DRIVER_START( arcadia )
+static MACHINE_CONFIG_START( arcadia, arcadia_state )
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", S2650, 3580000/4)        /* 0.895 MHz */
-	MDRV_CPU_PROGRAM_MAP(arcadia_mem)
-	MDRV_CPU_IO_MAP(arcadia_io)
-	MDRV_CPU_PERIODIC_INT(arcadia_video_line, 262*60)
-	MDRV_QUANTUM_TIME(HZ(60))
+	MCFG_CPU_ADD("maincpu", S2650, 3580000/4)        /* 0.895 MHz */
+	MCFG_CPU_PROGRAM_MAP(arcadia_mem)
+	MCFG_CPU_IO_MAP(arcadia_io)
+	MCFG_CPU_PERIODIC_INT(arcadia_video_line, 262*60)
+	MCFG_QUANTUM_TIME(HZ(60))
 
     /* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(128+2*XPOS, 262)
-	MDRV_SCREEN_VISIBLE_AREA(0, 2*XPOS+128-1, 0, 262-1)
-	MDRV_GFXDECODE( arcadia )
-	MDRV_PALETTE_LENGTH(ARRAY_LENGTH(arcadia_palette))
-	MDRV_PALETTE_INIT( arcadia )
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(128+2*XPOS, 262)
+	MCFG_SCREEN_VISIBLE_AREA(0, 2*XPOS+128-1, 0, 262-1)
+	MCFG_GFXDECODE( arcadia )
+	MCFG_PALETTE_LENGTH(ARRAY_LENGTH(arcadia_palette))
+	MCFG_PALETTE_INIT( arcadia )
 
-	MDRV_VIDEO_START( arcadia )
-	MDRV_VIDEO_UPDATE( arcadia )
+	MCFG_VIDEO_START( arcadia )
+	MCFG_VIDEO_UPDATE( arcadia )
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("custom", ARCADIA, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("custom", ARCADIA, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
 
 	/* cartridge */
-	MDRV_CARTSLOT_ADD("cart")
-	MDRV_CARTSLOT_EXTENSION_LIST("bin")
-	MDRV_CARTSLOT_NOT_MANDATORY
-	MDRV_CARTSLOT_INTERFACE("arcadia_cart")
-	MDRV_CARTSLOT_LOAD(arcadia_cart)
+	MCFG_CARTSLOT_ADD("cart")
+	MCFG_CARTSLOT_EXTENSION_LIST("bin")
+	MCFG_CARTSLOT_NOT_MANDATORY
+	MCFG_CARTSLOT_INTERFACE("arcadia_cart")
+	MCFG_CARTSLOT_LOAD(arcadia_cart)
 
 	/* Software lists */
-	MDRV_SOFTWARE_LIST_ADD("cart_list","arcadia")
-MACHINE_DRIVER_END
+	MCFG_SOFTWARE_LIST_ADD("cart_list","arcadia")
+MACHINE_CONFIG_END
 
 ROM_START(advsnha)
 	ROM_REGION(0x8000,"maincpu", ROMREGION_ERASEFF)
@@ -739,13 +739,13 @@ ROM_END
 static DRIVER_INIT( arcadia )
 {
 	int i;
-	UINT8 *gfx=memory_region(machine, "gfx1");
+	UINT8 *gfx=machine->region("gfx1")->base();
 	for (i=0; i<256; i++) gfx[i]=i;
 #if 0
 	// this is here to allow developement of some simple testroutines
 	// for a real console
 	{
-	    UINT8 *rom=memory_region(machine, "maincpu");
+	    UINT8 *rom=machine->region("maincpu")->base();
 	    /* this is a simple routine to display all rom characters
            on the display for a snapshot */
 	    static const UINT8 prog[]={ // address 0 of course
@@ -875,7 +875,7 @@ static DRIVER_INIT( arcadia )
 CONS(1983, advsnha,   arcadia,   0,        arcadia,      arcadia,  arcadia,      "Advision",           "Advision Home Arcade", GAME_IMPERFECT_SOUND )    /* France */
 CONS(1982, bndarc,    arcadia,   0,        arcadia,      arcadia,  arcadia,      "Bandai",             "Arcadia", GAME_IMPERFECT_SOUND )                 /* Japan */
 CONS(1982, arcadia,   0,         0,        arcadia,      arcadia,  arcadia,      "Emerson",            "Arcadia 2001", GAME_IMPERFECT_SOUND )            /* U.S.A. */
-CONS(198?, tccosmos,  arcadia,   0,        arcadia,      arcadia,  arcadia,      "Tele-Computer",      "Cosmos", GAME_IMPERFECT_SOUND )                  /* Spain */
+CONS(198?, tccosmos,  arcadia,   0,        arcadia,      arcadia,  arcadia,      "Mobilar?",           "Tele-Computer Cosmos", GAME_IMPERFECT_SOUND )    /* Spain? I have only found pictures of a German Cosmos ( http://www.pong-picture-page.de/catalog/product_info.php?products_id=2170 ) */
 CONS(1982, dynavisn,  intmpt03,  0,        arcadia,      arcadia,  arcadia,      "Yamagiwa",           "Dynavision", GAME_IMPERFECT_SOUND )              /* Japan */
 CONS(1982, ekusera,   intmpt03,  0,        arcadia,      arcadia,  arcadia,      "P.I.C",              "Ekusera", GAME_IMPERFECT_SOUND )                 /* Japan */
 CONS(1982, hanihac,   arcadia,   0,        arcadia,      arcadia,  arcadia,      "Hanimex",            "Hanimex Home Arcade Centre", GAME_IMPERFECT_SOUND )  /* UK */

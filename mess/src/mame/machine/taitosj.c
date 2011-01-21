@@ -26,8 +26,8 @@ static UINT32 address;
 
 MACHINE_START( taitosj )
 {
-	memory_configure_bank(machine, "bank1", 0, 1, memory_region(machine, "maincpu") + 0x6000, 0);
-	memory_configure_bank(machine, "bank1", 1, 1, memory_region(machine, "maincpu") + 0x10000, 0);
+	memory_configure_bank(machine, "bank1", 0, 1, machine->region("maincpu")->base() + 0x6000, 0);
+	memory_configure_bank(machine, "bank1", 1, 1, machine->region("maincpu")->base() + 0x10000, 0);
 
 	state_save_register_global(machine, fromz80);
 	state_save_register_global(machine, toz80);
@@ -44,7 +44,7 @@ MACHINE_START( taitosj )
 
 MACHINE_RESET( taitosj )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 	/* set the default ROM bank (many games only have one bank and */
 	/* never write to the bank selector register) */
 	taitosj_bankswitch_w(space, 0, 0);
@@ -216,18 +216,18 @@ WRITE8_HANDLER( taitosj_68705_portB_w )
 	}
 	if (~data & 0x10)
 	{
-		const address_space *cpu0space = cputag_get_address_space(space->machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+		address_space *cpu0space = cputag_get_address_space(space->machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 		LOG(("%04x: 68705 write %02x to address %04x\n",cpu_get_pc(space->cpu), portA_out, address));
 
-		memory_write_byte(cpu0space, address, portA_out);
+		cpu0space->write_byte(address, portA_out);
 
 		/* increase low 8 bits of latched address for burst writes */
 		address = (address & 0xff00) | ((address + 1) & 0xff);
 	}
 	if (~data & 0x20)
 	{
-		const address_space *cpu0space = cputag_get_address_space(space->machine, "maincpu", ADDRESS_SPACE_PROGRAM);
-		portA_in = memory_read_byte(cpu0space, address);
+		address_space *cpu0space = cputag_get_address_space(space->machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+		portA_in = cpu0space->read_byte(address);
 		LOG(("%04x: 68705 read %02x from address %04x\n", cpu_get_pc(space->cpu), portA_in, address));
 	}
 	if (~data & 0x40)

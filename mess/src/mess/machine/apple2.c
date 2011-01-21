@@ -112,7 +112,7 @@ void apple2_setup_memory(running_machine *machine, const apple2_memmap_config *c
 
 void apple2_update_memory(running_machine *machine)
 {
-	const address_space* space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space* space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 	int i, bank;
 	char rbank[10], wbank[10];
 	int full_update = 0;
@@ -135,9 +135,9 @@ void apple2_update_memory(running_machine *machine)
 	}
 
 	/* get critical info */
-	rom = memory_region(machine, "maincpu");
-	rom_length = memory_region_length(machine, "maincpu") & ~0xFFF;
-	slot_length = memory_region_length(machine, "maincpu") - rom_length;
+	rom = machine->region("maincpu")->base();
+	rom_length = machine->region("maincpu")->bytes() & ~0xFFF;
+	slot_length = machine->region("maincpu")->bytes() - rom_length;
 	slot_ram = (slot_length > 0) ? &rom[rom_length] : NULL;
 
 	/* loop through the entire memory map */
@@ -340,7 +340,7 @@ static STATE_POSTLOAD( apple2_update_memory_postload )
 
 READ8_HANDLER(apple2_c0xx_r)
 {
-	if(!space->debugger_access)
+	if(!space->debugger_access())
 	{
 		static const read8_space_func handlers[] =
 		{
@@ -355,7 +355,7 @@ READ8_HANDLER(apple2_c0xx_r)
 		};
 		UINT8 result = 0x00;
 		int slotnum;
-		running_device *slotdevice;
+		device_t *slotdevice;
 
 		offset &= 0xFF;
 
@@ -405,7 +405,7 @@ WRITE8_HANDLER(apple2_c0xx_w)
 		apple2_c07x_w
 	};
 	int slotnum;
-	running_device *slotdevice;
+	device_t *slotdevice;
 
 	offset &= 0xFF;
 
@@ -442,9 +442,9 @@ INT8 apple2_slotram_r(running_machine *machine, int slotnum, int offset)
 	UINT32 rom_length, slot_length;
 
 	// find slot_ram if any
-	rom = memory_region(machine, "maincpu");
-	rom_length = memory_region_length(machine, "maincpu") & ~0xFFF;
-	slot_length = memory_region_length(machine, "maincpu") - rom_length;
+	rom = machine->region("maincpu")->base();
+	rom_length = machine->region("maincpu")->bytes() & ~0xFFF;
+	slot_length = machine->region("maincpu")->bytes() - rom_length;
 	slot_ram = (slot_length > 0) ? &rom[rom_length] : NULL;
 
 	if (slot_ram)
@@ -465,7 +465,7 @@ INT8 apple2_slotram_r(running_machine *machine, int slotnum, int offset)
 static READ8_HANDLER( apple2_c1xx_r )
 {
 	int slotnum;
-	running_device *slotdevice;
+	device_t *slotdevice;
 
 	slotnum = ((offset>>8) & 0xf) + 1;
 	slotdevice = apple2_slot(space->machine, slotnum);
@@ -492,14 +492,14 @@ static READ8_HANDLER( apple2_c1xx_r )
 static WRITE8_HANDLER ( apple2_c1xx_w )
 {
 	int slotnum;
-	running_device *slotdevice;
+	device_t *slotdevice;
 	UINT8 *rom, *slot_ram;
 	UINT32 rom_length, slot_length;
 
 	// find slot_ram if any
-	rom = memory_region(space->machine, "maincpu");
-	rom_length = memory_region_length(space->machine, "maincpu") & ~0xFFF;
-	slot_length = memory_region_length(space->machine, "maincpu") - rom_length;
+	rom = space->machine->region("maincpu")->base();
+	rom_length = space->machine->region("maincpu")->bytes() & ~0xFFF;
+	slot_length = space->machine->region("maincpu")->bytes() - rom_length;
 	slot_ram = (slot_length > 0) ? &rom[rom_length] : NULL;
 
 	slotnum = ((offset>>8) & 0xf) + 1;
@@ -520,7 +520,7 @@ static WRITE8_HANDLER ( apple2_c1xx_w )
 static READ8_HANDLER( apple2_c4xx_r )
 {
 	int slotnum;
-	running_device *slotdevice;
+	device_t *slotdevice;
 
 	slotnum = ((offset>>8) & 0xf) + 4;
 	slotdevice = apple2_slot(space->machine, slotnum);
@@ -548,14 +548,14 @@ static READ8_HANDLER( apple2_c4xx_r )
 static WRITE8_HANDLER ( apple2_c4xx_w )
 {
 	int slotnum;
-	running_device *slotdevice;
+	device_t *slotdevice;
 	UINT8 *rom, *slot_ram;
 	UINT32 rom_length, slot_length;
 
 	// find slot_ram if any
-	rom = memory_region(space->machine, "maincpu");
-	rom_length = memory_region_length(space->machine, "maincpu") & ~0xFFF;
-	slot_length = memory_region_length(space->machine, "maincpu") - rom_length;
+	rom = space->machine->region("maincpu")->base();
+	rom_length = space->machine->region("maincpu")->bytes() & ~0xFFF;
+	slot_length = space->machine->region("maincpu")->bytes() - rom_length;
 	slot_ram = (slot_length > 0) ? &rom[rom_length] : NULL;
 
 	slotnum = ((offset>>8) & 0xf) + 4;
@@ -581,7 +581,7 @@ static WRITE8_HANDLER ( apple2_c4xx_w )
 static READ8_HANDLER(apple2_cfff_r)
 {
 	// debugger guard
-	if(!space->debugger_access)
+	if(!space->debugger_access())
 	{
 		a2_cnxx_slot = -1;
 		apple2_update_memory(space->machine);
@@ -598,7 +598,7 @@ static WRITE8_HANDLER(apple2_cfff_w)
 
 static READ8_HANDLER ( apple2_c800_r )
 {
-	running_device *slotdevice;
+	device_t *slotdevice;
 
 	slotdevice = apple2_slot(space->machine, a2_cnxx_slot);
 
@@ -612,7 +612,7 @@ static READ8_HANDLER ( apple2_c800_r )
 
 static WRITE8_HANDLER ( apple2_c800_w )
 {
-	running_device *slotdevice;
+	device_t *slotdevice;
 
 	slotdevice = apple2_slot(space->machine, a2_cnxx_slot);
 
@@ -624,7 +624,7 @@ static WRITE8_HANDLER ( apple2_c800_w )
 
 static READ8_HANDLER ( apple2_ce00_r )
 {
-	running_device *slotdevice;
+	device_t *slotdevice;
 
 	slotdevice = apple2_slot(space->machine, a2_cnxx_slot);
 
@@ -638,7 +638,7 @@ static READ8_HANDLER ( apple2_ce00_r )
 
 static WRITE8_HANDLER ( apple2_ce00_w )
 {
-		running_device *slotdevice;
+		device_t *slotdevice;
 
 	slotdevice = apple2_slot(space->machine, a2_cnxx_slot);
 
@@ -1063,7 +1063,7 @@ INTERRUPT_GEN( apple2_interrupt )
 	int irq_freq = 1;
 	int scanline;
 
-	profiler_mark_start(PROFILER_A2INT);
+	g_profiler.start(PROFILER_A2INT);
 
 	scanline = device->machine->primary_screen->vpos();
 
@@ -1079,7 +1079,7 @@ INTERRUPT_GEN( apple2_interrupt )
 
 	device->machine->primary_screen->update_partial(scanline);
 
-	profiler_mark_end();
+	g_profiler.stop();
 }
 
 
@@ -1125,12 +1125,12 @@ READ8_HANDLER ( apple2_c00x_r )
 {
 	UINT8 result = 0;
 
-	if(!space->debugger_access)
+	if(!space->debugger_access())
 	{
 		/* Read the keyboard data and strobe */
-		profiler_mark_start(PROFILER_C00X);
+		g_profiler.start(PROFILER_C00X);
 		result = AY3600_keydata_strobe_r();
-		profiler_mark_end();
+		g_profiler.stop();
 	}
 
 	return result;
@@ -1176,9 +1176,9 @@ READ8_HANDLER ( apple2_c01x_r )
 {
 	UINT8 result = apple2_getfloatingbusvalue(space->machine) & 0x7F;
 
-	if(!space->debugger_access)
+	if(!space->debugger_access())
 	{
-		profiler_mark_start(PROFILER_C01X);
+		g_profiler.start(PROFILER_C01X);
 
 		LOG(("a2 softswitch_r: %04x\n", offset + 0xc010));
 		switch (offset)
@@ -1201,7 +1201,7 @@ READ8_HANDLER ( apple2_c01x_r )
 			case 0x0F:			result |= (apple2_flags & VAR_80COL)		? 0x80 : 0x00;	break;
 		}
 
-		profiler_mark_end();
+		g_profiler.stop();
 	}
 
 	return result;
@@ -1216,9 +1216,9 @@ READ8_HANDLER ( apple2_c01x_r )
 WRITE8_HANDLER( apple2_c01x_w )
 {
 	/* Clear the keyboard strobe - ignore the returned results */
-	profiler_mark_start(PROFILER_C01X);
+	g_profiler.start(PROFILER_C01X);
 	AY3600_anykey_clearstrobe_r();
-	profiler_mark_end();
+	g_profiler.stop();
 }
 
 
@@ -1229,7 +1229,7 @@ WRITE8_HANDLER( apple2_c01x_w )
 
 READ8_HANDLER( apple2_c02x_r )
 {
-	if(!space->debugger_access)
+	if(!space->debugger_access())
 	{
 		apple2_c02x_w(space, offset, 0);
 	}
@@ -1260,11 +1260,11 @@ WRITE8_HANDLER( apple2_c02x_w )
 
 READ8_HANDLER ( apple2_c03x_r )
 {
-	if(!space->debugger_access)
+	if(!space->debugger_access())
 	{
 		if (!offset)
 		{
-			running_device *speaker_device = space->machine->device("a2speaker");
+			device_t *speaker_device = space->machine->device("a2speaker");
 
 			if (a2_speaker_state == 1)
 			{
@@ -1299,7 +1299,7 @@ WRITE8_HANDLER ( apple2_c03x_w )
 
 READ8_HANDLER ( apple2_c05x_r )
 {
-	if(!space->debugger_access)
+	if(!space->debugger_access())
 	{
 		UINT32 mask;
 
@@ -1332,7 +1332,7 @@ WRITE8_HANDLER ( apple2_c05x_w )
   apple2_c06x_r
 ***************************************************************************/
 
-static running_device *cassette_device_image(running_machine *machine)
+static device_t *cassette_device_image(running_machine *machine)
 {
 	return machine->device("cassette");
 }
@@ -1340,7 +1340,7 @@ static running_device *cassette_device_image(running_machine *machine)
 READ8_HANDLER ( apple2_c06x_r )
 {
 	int result = 0;
-	if(!space->debugger_access)
+	if(!space->debugger_access())
 	{
 		switch (offset & 0x0F)
 		{
@@ -1394,7 +1394,7 @@ READ8_HANDLER ( apple2_c06x_r )
 
 READ8_HANDLER ( apple2_c07x_r )
 {
-	if(!space->debugger_access)
+	if(!space->debugger_access())
 	{
 		double x_calibration = attotime_to_double(ATTOTIME_IN_USEC(12));
 		double y_calibration = attotime_to_double(ATTOTIME_IN_USEC(13));
@@ -1439,7 +1439,7 @@ static int apple2_fdc_has_525(running_machine *machine)
 	return apple525_get_count(machine) > 0;
 }
 
-static void apple2_fdc_set_lines(running_device *device, UINT8 lines)
+static void apple2_fdc_set_lines(device_t *device, UINT8 lines)
 {
 	if (apple2_fdc_diskreg & 0x40)
 	{
@@ -1461,7 +1461,7 @@ static void apple2_fdc_set_lines(running_device *device, UINT8 lines)
 
 
 
-static void apple2_fdc_set_enable_lines(running_device *device,int enable_mask)
+static void apple2_fdc_set_enable_lines(device_t *device,int enable_mask)
 {
 	int slot5_enable_mask = 0;
 	int slot6_enable_mask = 0;
@@ -1486,7 +1486,7 @@ static void apple2_fdc_set_enable_lines(running_device *device,int enable_mask)
 
 
 
-static UINT8 apple2_fdc_read_data(running_device *device)
+static UINT8 apple2_fdc_read_data(device_t *device)
 {
 	UINT8 result = 0x00;
 
@@ -1511,7 +1511,7 @@ static UINT8 apple2_fdc_read_data(running_device *device)
 
 
 
-static void apple2_fdc_write_data(running_device *device, UINT8 data)
+static void apple2_fdc_write_data(device_t *device, UINT8 data)
 {
 	if (apple2_fdc_diskreg & 0x40)
 	{
@@ -1533,7 +1533,7 @@ static void apple2_fdc_write_data(running_device *device, UINT8 data)
 
 
 
-static int apple2_fdc_read_status(running_device *device)
+static int apple2_fdc_read_status(device_t *device)
 {
 	int result = 0;
 
@@ -1610,7 +1610,7 @@ void apple2_init_common(running_machine *machine)
 	a2_set = 0;
 
 	/* disable VAR_ROMSWITCH if the ROM is only 16k */
-	if (memory_region_length(machine, "maincpu") < 0x8000)
+	if (machine->region("maincpu")->bytes() < 0x8000)
 		a2_mask &= ~VAR_ROMSWITCH;
 
 	if (messram_get_size(machine->device("messram")) <= 64*1024)

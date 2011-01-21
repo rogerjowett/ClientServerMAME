@@ -18,10 +18,10 @@ struct _segapcm_state
 	sound_stream * stream;
 };
 
-INLINE segapcm_state *get_safe_token(running_device *device)
+INLINE segapcm_state *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
-	assert(device->type() == SOUND_SEGAPCM);
+	assert(device->type() == SEGAPCM);
 	return (segapcm_state *)downcast<legacy_device_base *>(device)->token();
 }
 

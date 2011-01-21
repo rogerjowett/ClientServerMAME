@@ -58,9 +58,9 @@ The source code there implies that *maybe* ff7e and ff7f are also open bus.
 static ADDRESS_MAP_START( aim65_40_mem, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x3fff) AM_RAM
 	AM_RANGE(0xa000, 0xff7f) AM_ROM
-	AM_RANGE(0xffa0, 0xffaf) AM_DEVREADWRITE(M6522_0_TAG, via_r, via_w)
-	AM_RANGE(0xffb0, 0xffbf) AM_DEVREADWRITE(M6522_0_TAG, via_r, via_w)
-	AM_RANGE(0xffc0, 0xffcf) AM_DEVREADWRITE(M6522_0_TAG, via_r, via_w)
+	AM_RANGE(0xffa0, 0xffaf) AM_DEVREADWRITE_MODERN(M6522_0_TAG, via6522_device, read, write)
+	AM_RANGE(0xffb0, 0xffbf) AM_DEVREADWRITE_MODERN(M6522_0_TAG, via6522_device, read, write)
+	AM_RANGE(0xffc0, 0xffcf) AM_DEVREADWRITE_MODERN(M6522_0_TAG, via6522_device, read, write)
 	AM_RANGE(0xffd0, 0xffd3) AM_DEVREADWRITE(M6551_TAG, acia_6551_r, acia_6551_w)
 	AM_RANGE(0xffe0, 0xffff) AM_ROM
 ADDRESS_MAP_END
@@ -131,22 +131,22 @@ static const via6522_interface kb_via_intf =
     MACHINE DRIVERS
 ***************************************************************************/
 
-static MACHINE_DRIVER_START( aim65_40 )
+static MACHINE_CONFIG_START( aim65_40, aim65_40_state )
 	/* basic machine hardware */
-	MDRV_CPU_ADD(M6502_TAG, M6502, 1000000)
-	MDRV_CPU_PROGRAM_MAP(aim65_40_mem)
+	MCFG_CPU_ADD(M6502_TAG, M6502, 1000000)
+	MCFG_CPU_PROGRAM_MAP(aim65_40_mem)
 
 	/* video hardware */
-	MDRV_DEFAULT_LAYOUT(layout_aim65_40)
+	MCFG_DEFAULT_LAYOUT(layout_aim65_40)
 
 	/* sound hardware */
 
 	/* devices */
-	MDRV_VIA6522_ADD(M6522_0_TAG, 0, user_via_intf)
-	MDRV_VIA6522_ADD(M6522_1_TAG, 0, system_via_intf)
-	MDRV_VIA6522_ADD(M6522_2_TAG, 0, kb_via_intf)
-	MDRV_ACIA6551_ADD(M6551_TAG)
-MACHINE_DRIVER_END
+	MCFG_VIA6522_ADD(M6522_0_TAG, 0, user_via_intf)
+	MCFG_VIA6522_ADD(M6522_1_TAG, 0, system_via_intf)
+	MCFG_VIA6522_ADD(M6522_2_TAG, 0, kb_via_intf)
+	MCFG_ACIA6551_ADD(M6551_TAG)
+MACHINE_CONFIG_END
 
 /***************************************************************************
     ROM DEFINITIONS

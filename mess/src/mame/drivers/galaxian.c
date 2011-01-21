@@ -611,7 +611,7 @@ static READ8_DEVICE_HANDLER( konami_sound_timer_r )
 
 static WRITE8_HANDLER( konami_sound_filter_w )
 {
-	running_device *discrete = space->machine->device("konami");
+	device_t *discrete = space->machine->device("konami");
 	static const char *const ayname[2] = { "8910.0", "8910.1" };
 	int which, chan;
 
@@ -991,7 +991,7 @@ static WRITE8_DEVICE_HANDLER( scorpion_protection_w )
 
 static READ8_HANDLER( scorpion_digitalker_intr_r )
 {
-	running_device *digitalker = space->machine->device("digitalker");
+	device_t *digitalker = space->machine->device("digitalker");
 	return digitalker_0_intr_r(digitalker);
 }
 
@@ -1022,7 +1022,7 @@ static const ppi8255_interface scorpion_ppi8255_1_intf =
 
 static INPUT_CHANGED( gmgalax_game_changed )
 {
-	const address_space *space = cputag_get_address_space(field->port->machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(field->port->machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	/* new value is the selected game */
 	gmgalax_selected_game = newval;
@@ -1118,7 +1118,7 @@ static CUSTOM_INPUT( kingball_noise_r )
 	/* bit 5 is the NOISE line from the sound circuit.  The code just verifies
        that it's working, doesn't actually use return value, so we can just use
        rand() */
-	return mame_rand(field->port->machine) & 1;
+	return field->port->machine->rand() & 1;
 }
 
 
@@ -1363,7 +1363,7 @@ static ADDRESS_MAP_START( galaxian_map_base, ADDRESS_SPACE_PROGRAM, 8 )
 	ADDRESS_MAP_UNMAP_HIGH
 	AM_RANGE(0x0000, 0x3fff) AM_ROM
 	AM_RANGE(0x4000, 0x43ff) AM_MIRROR(0x0400) AM_RAM
-	AM_RANGE(0x5000, 0x53ff) AM_MIRROR(0x0400) AM_RAM_WRITE(galaxian_videoram_w) AM_BASE_GENERIC(videoram)
+	AM_RANGE(0x5000, 0x53ff) AM_MIRROR(0x0400) AM_RAM_WRITE(galaxian_videoram_w) AM_BASE_MEMBER(galaxian_state, videoram)
 	AM_RANGE(0x5800, 0x58ff) AM_MIRROR(0x0700) AM_RAM_WRITE(galaxian_objram_w) AM_BASE_GENERIC(spriteram)
 	AM_RANGE(0x6000, 0x6000) AM_MIRROR(0x07ff) AM_READ_PORT("IN0")
 	AM_RANGE(0x6000, 0x6001) AM_MIRROR(0x07f8) AM_WRITE(start_lamp_w)
@@ -1398,7 +1398,7 @@ static ADDRESS_MAP_START( mooncrst_map_base, ADDRESS_SPACE_PROGRAM, 8 )
 	ADDRESS_MAP_UNMAP_HIGH
 	AM_RANGE(0x0000, 0x3fff) AM_ROM
 	AM_RANGE(0x8000, 0x83ff) AM_MIRROR(0x0400) AM_RAM
-	AM_RANGE(0x9000, 0x93ff) AM_MIRROR(0x0400) AM_RAM_WRITE(galaxian_videoram_w) AM_BASE_GENERIC(videoram)
+	AM_RANGE(0x9000, 0x93ff) AM_MIRROR(0x0400) AM_RAM_WRITE(galaxian_videoram_w) AM_BASE_MEMBER(galaxian_state, videoram)
 	AM_RANGE(0x9800, 0x98ff) AM_MIRROR(0x0700) AM_RAM_WRITE(galaxian_objram_w) AM_BASE_GENERIC(spriteram)
 	AM_RANGE(0xa000, 0xa000) AM_MIRROR(0x07ff) AM_READ_PORT("IN0")
 	AM_RANGE(0xa000, 0xa002) AM_MIRROR(0x07f8) AM_WRITE(galaxian_gfxbank_w)
@@ -1430,7 +1430,7 @@ static ADDRESS_MAP_START( dambustr_map, ADDRESS_SPACE_PROGRAM, 8 )
 //  AM_RANGE(0x8000, 0x8000) AM_WRITE(dambustr_bg_color_w)
 //  AM_RANGE(0x8001, 0x8001) AM_WRITE(dambustr_bg_split_line_w)
 	AM_RANGE(0xc000, 0xc3ff) AM_MIRROR(0x0400) AM_RAM
-	AM_RANGE(0xd000, 0xd3ff) AM_MIRROR(0x0400) AM_RAM_WRITE(galaxian_videoram_w) AM_BASE_GENERIC(videoram)
+	AM_RANGE(0xd000, 0xd3ff) AM_MIRROR(0x0400) AM_RAM_WRITE(galaxian_videoram_w) AM_BASE_MEMBER(galaxian_state, videoram)
 	AM_RANGE(0xd800, 0xd8ff) AM_MIRROR(0x0700) AM_RAM_WRITE(galaxian_objram_w) AM_BASE_GENERIC(spriteram)
 	AM_RANGE(0xe000, 0xe000) AM_MIRROR(0x07ff) AM_READ_PORT("IN0")
 	AM_RANGE(0xe004, 0xe007) AM_MIRROR(0x07f8) AM_WRITE(galaxian_lfo_freq_w)
@@ -1452,7 +1452,7 @@ static ADDRESS_MAP_START( theend_map, ADDRESS_SPACE_PROGRAM, 8 )
 	ADDRESS_MAP_UNMAP_HIGH
 	AM_RANGE(0x0000, 0x3fff) AM_ROM
 	AM_RANGE(0x4000, 0x47ff) AM_RAM
-	AM_RANGE(0x4800, 0x4bff) AM_MIRROR(0x0400) AM_RAM_WRITE(galaxian_videoram_w) AM_BASE_GENERIC(videoram)
+	AM_RANGE(0x4800, 0x4bff) AM_MIRROR(0x0400) AM_RAM_WRITE(galaxian_videoram_w) AM_BASE_MEMBER(galaxian_state, videoram)
 	AM_RANGE(0x5000, 0x50ff) AM_MIRROR(0x0700) AM_RAM_WRITE(galaxian_objram_w) AM_BASE_GENERIC(spriteram)
 	AM_RANGE(0x6801, 0x6801) AM_MIRROR(0x07f8) AM_WRITE(irq_enable_w)
 	AM_RANGE(0x6802, 0x6802) AM_MIRROR(0x07f8) AM_WRITE(coin_count_0_w)
@@ -1471,7 +1471,7 @@ static ADDRESS_MAP_START( scobra_map, ADDRESS_SPACE_PROGRAM, 8 )
 	ADDRESS_MAP_UNMAP_HIGH
 	AM_RANGE(0x0000, 0x7fff) AM_ROM
 	AM_RANGE(0x8000, 0x87ff) AM_MIRROR(0x4000) AM_RAM
-	AM_RANGE(0x8800, 0x8bff) AM_MIRROR(0x4400) AM_RAM_WRITE(galaxian_videoram_w) AM_BASE_GENERIC(videoram)
+	AM_RANGE(0x8800, 0x8bff) AM_MIRROR(0x4400) AM_RAM_WRITE(galaxian_videoram_w) AM_BASE_MEMBER(galaxian_state, videoram)
 	AM_RANGE(0x9000, 0x90ff) AM_MIRROR(0x4700) AM_RAM_WRITE(galaxian_objram_w) AM_BASE_GENERIC(spriteram)
 	AM_RANGE(0x9800, 0x9803) AM_MIRROR(0x47fc) AM_DEVREADWRITE("ppi8255_0", ppi8255_r, ppi8255_w)
 	AM_RANGE(0xa000, 0xa003) AM_MIRROR(0x47fc) AM_DEVREADWRITE("ppi8255_1", ppi8255_r, ppi8255_w)
@@ -1492,7 +1492,7 @@ static ADDRESS_MAP_START( frogger_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x3fff) AM_ROM
 	AM_RANGE(0x8000, 0x87ff) AM_RAM
 	AM_RANGE(0x8800, 0x8800) AM_MIRROR(0x07ff) AM_READ(watchdog_reset_r)
-	AM_RANGE(0xa800, 0xabff) AM_MIRROR(0x0400) AM_RAM_WRITE(galaxian_videoram_w) AM_BASE_GENERIC(videoram)
+	AM_RANGE(0xa800, 0xabff) AM_MIRROR(0x0400) AM_RAM_WRITE(galaxian_videoram_w) AM_BASE_MEMBER(galaxian_state, videoram)
 	AM_RANGE(0xb000, 0xb0ff) AM_MIRROR(0x0700) AM_RAM_WRITE(galaxian_objram_w) AM_BASE_GENERIC(spriteram)
 	AM_RANGE(0xb808, 0xb808) AM_MIRROR(0x07e3) AM_WRITE(irq_enable_w)
 	AM_RANGE(0xb80c, 0xb80c) AM_MIRROR(0x07e3) AM_WRITE(galaxian_flip_screen_y_w)
@@ -1508,7 +1508,7 @@ static ADDRESS_MAP_START( turtles_map, ADDRESS_SPACE_PROGRAM, 8 )
 	ADDRESS_MAP_UNMAP_HIGH
 	AM_RANGE(0x0000, 0x7fff) AM_ROM
 	AM_RANGE(0x8000, 0x87ff) AM_MIRROR(0x4000) AM_RAM
-	AM_RANGE(0x9000, 0x93ff) AM_MIRROR(0x4400) AM_RAM_WRITE(galaxian_videoram_w) AM_BASE_GENERIC(videoram)
+	AM_RANGE(0x9000, 0x93ff) AM_MIRROR(0x4400) AM_RAM_WRITE(galaxian_videoram_w) AM_BASE_MEMBER(galaxian_state, videoram)
 	AM_RANGE(0x9800, 0x98ff) AM_MIRROR(0x4700) AM_RAM_WRITE(galaxian_objram_w) AM_BASE_GENERIC(spriteram)
 	AM_RANGE(0xa000, 0xa000) AM_MIRROR(0x47c7) AM_WRITE(scramble_background_red_w)
 	AM_RANGE(0xa008, 0xa008) AM_MIRROR(0x47c7) AM_WRITE(irq_enable_w)
@@ -1529,7 +1529,7 @@ ADDRESS_MAP_END
 static ADDRESS_MAP_START( sfx_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x3fff) AM_ROM
 	AM_RANGE(0x4000, 0x47ff) AM_RAM
-	AM_RANGE(0x4800, 0x4bff) AM_MIRROR(0x0400) AM_RAM_WRITE(galaxian_videoram_w) AM_BASE_GENERIC(videoram)
+	AM_RANGE(0x4800, 0x4bff) AM_MIRROR(0x0400) AM_RAM_WRITE(galaxian_videoram_w) AM_BASE_MEMBER(galaxian_state, videoram)
 	AM_RANGE(0x5000, 0x50ff) AM_MIRROR(0x0700) AM_RAM_WRITE(galaxian_objram_w) AM_BASE_GENERIC(spriteram)
 	AM_RANGE(0x6800, 0x6800) AM_MIRROR(0x07f8) AM_WRITE(scramble_background_red_w)
 	AM_RANGE(0x6801, 0x6801) AM_MIRROR(0x07f8) AM_WRITE(irq_enable_w)
@@ -1558,7 +1558,7 @@ static ADDRESS_MAP_START( jumpbug_map, ADDRESS_SPACE_PROGRAM, 8 )
 	ADDRESS_MAP_UNMAP_HIGH
 	AM_RANGE(0x0000, 0x3fff) AM_ROM
 	AM_RANGE(0x4000, 0x47ff) AM_RAM
-	AM_RANGE(0x4800, 0x4bff) AM_MIRROR(0x0400) AM_RAM_WRITE(galaxian_videoram_w) AM_BASE_GENERIC(videoram)
+	AM_RANGE(0x4800, 0x4bff) AM_MIRROR(0x0400) AM_RAM_WRITE(galaxian_videoram_w) AM_BASE_MEMBER(galaxian_state, videoram)
 	AM_RANGE(0x5000, 0x50ff) AM_MIRROR(0x0700) AM_RAM_WRITE(galaxian_objram_w) AM_BASE_GENERIC(spriteram)
 	AM_RANGE(0x5800, 0x5800) AM_MIRROR(0x00ff) AM_DEVWRITE("aysnd", ay8910_data_w)
 	AM_RANGE(0x5900, 0x5900) AM_MIRROR(0x00ff) AM_DEVWRITE("aysnd", ay8910_address_w)
@@ -1580,7 +1580,7 @@ static ADDRESS_MAP_START( frogf_map, ADDRESS_SPACE_PROGRAM, 8 )
 	ADDRESS_MAP_UNMAP_HIGH
 	AM_RANGE(0x0000, 0x3fff) AM_ROM
 	AM_RANGE(0x8000, 0x87ff) AM_RAM
-	AM_RANGE(0x8800, 0x8bff) AM_MIRROR(0x0400) AM_RAM_WRITE(galaxian_videoram_w) AM_BASE_GENERIC(videoram)
+	AM_RANGE(0x8800, 0x8bff) AM_MIRROR(0x0400) AM_RAM_WRITE(galaxian_videoram_w) AM_BASE_MEMBER(galaxian_state, videoram)
 	AM_RANGE(0x9000, 0x90ff) AM_MIRROR(0x0700) AM_RAM_WRITE(galaxian_objram_w) AM_BASE_GENERIC(spriteram)
 	AM_RANGE(0xa802, 0xa802) AM_MIRROR(0x07f1) AM_WRITE(galaxian_flip_screen_x_w)
 	AM_RANGE(0xa804, 0xa804) AM_MIRROR(0x07f1) AM_WRITE(irq_enable_w)
@@ -1597,7 +1597,7 @@ static ADDRESS_MAP_START( mshuttle_map, ADDRESS_SPACE_PROGRAM, 8 )
 	ADDRESS_MAP_UNMAP_HIGH
 	AM_RANGE(0x0000, 0x7fff) AM_ROM
 	AM_RANGE(0x8000, 0x83ff) AM_RAM
-	AM_RANGE(0x9000, 0x93ff) AM_MIRROR(0x0400) AM_RAM_WRITE(galaxian_videoram_w) AM_BASE_GENERIC(videoram)
+	AM_RANGE(0x9000, 0x93ff) AM_MIRROR(0x0400) AM_RAM_WRITE(galaxian_videoram_w) AM_BASE_MEMBER(galaxian_state, videoram)
 	AM_RANGE(0x9800, 0x98ff) AM_MIRROR(0x0700) AM_RAM_WRITE(galaxian_objram_w) AM_BASE_GENERIC(spriteram)
 	AM_RANGE(0xa000, 0xa000) AM_READ_PORT("IN0")
 	AM_RANGE(0xa000, 0xa000) AM_WRITE(irq_enable_w)
@@ -1956,88 +1956,87 @@ DISCRETE_SOUND_END
  *
  *************************************/
 
-static MACHINE_DRIVER_START( galaxian_base )
+static MACHINE_CONFIG_START( galaxian_base, galaxian_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, GALAXIAN_PIXEL_CLOCK/3/2)
-	MDRV_CPU_PROGRAM_MAP(galaxian_map)
-	MDRV_CPU_VBLANK_INT("screen", interrupt_gen)
+	MCFG_CPU_ADD("maincpu", Z80, GALAXIAN_PIXEL_CLOCK/3/2)
+	MCFG_CPU_PROGRAM_MAP(galaxian_map)
+	MCFG_CPU_VBLANK_INT("screen", interrupt_gen)
 
-	MDRV_WATCHDOG_VBLANK_INIT(8)
+	MCFG_WATCHDOG_VBLANK_INIT(8)
 
 	/* video hardware */
-	MDRV_GFXDECODE(galaxian)
-	MDRV_PALETTE_LENGTH(32)
+	MCFG_GFXDECODE(galaxian)
+	MCFG_PALETTE_LENGTH(32)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_RAW_PARAMS(GALAXIAN_PIXEL_CLOCK, GALAXIAN_HTOTAL, GALAXIAN_HBEND, GALAXIAN_HBSTART, GALAXIAN_VTOTAL, GALAXIAN_VBEND, GALAXIAN_VBSTART)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_RAW_PARAMS(GALAXIAN_PIXEL_CLOCK, GALAXIAN_HTOTAL, GALAXIAN_HBEND, GALAXIAN_HBSTART, GALAXIAN_VTOTAL, GALAXIAN_VBEND, GALAXIAN_VBSTART)
 
-	MDRV_PALETTE_INIT(galaxian)
-	MDRV_VIDEO_START(galaxian)
-	MDRV_VIDEO_UPDATE(galaxian)
+	MCFG_PALETTE_INIT(galaxian)
+	MCFG_VIDEO_START(galaxian)
+	MCFG_VIDEO_UPDATE(galaxian)
 
 	/* blinking frequency is determined by 555 counter with Ra=100k, Rb=10k, C=10uF */
-	MDRV_TIMER_ADD_PERIODIC("stars", galaxian_stars_blink_timer, NSEC(PERIOD_OF_555_ASTABLE_NSEC(100000, 10000, 0.00001)))
+	MCFG_TIMER_ADD_PERIODIC("stars", galaxian_stars_blink_timer, NSEC(PERIOD_OF_555_ASTABLE_NSEC(100000, 10000, 0.00001)))
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-MACHINE_DRIVER_END
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+MACHINE_CONFIG_END
 
 
 
-static MACHINE_DRIVER_START( konami_base )
-	MDRV_IMPORT_FROM( galaxian_base )
+static MACHINE_CONFIG_DERIVED( konami_base, galaxian_base )
 
-	MDRV_PPI8255_ADD( "ppi8255_0", konami_ppi8255_0_intf )
-	MDRV_PPI8255_ADD( "ppi8255_1", konami_ppi8255_1_intf )
-MACHINE_DRIVER_END
+	MCFG_PPI8255_ADD( "ppi8255_0", konami_ppi8255_0_intf )
+	MCFG_PPI8255_ADD( "ppi8255_1", konami_ppi8255_1_intf )
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( konami_sound_1x_ay8910 )
+static MACHINE_CONFIG_FRAGMENT( konami_sound_1x_ay8910 )
 
 	/* 2nd CPU to drive sound */
-	MDRV_CPU_ADD("audiocpu", Z80, KONAMI_SOUND_CLOCK/8)
-	MDRV_CPU_PROGRAM_MAP(frogger_sound_map)
-	MDRV_CPU_IO_MAP(frogger_sound_portmap)
+	MCFG_CPU_ADD("audiocpu", Z80, KONAMI_SOUND_CLOCK/8)
+	MCFG_CPU_PROGRAM_MAP(frogger_sound_map)
+	MCFG_CPU_IO_MAP(frogger_sound_portmap)
 
 	/* sound hardware */
-	MDRV_SOUND_ADD("8910.0", AY8910, KONAMI_SOUND_CLOCK/8)
-	MDRV_SOUND_CONFIG(frogger_ay8910_interface)
-	MDRV_SOUND_ROUTE_EX(0, "konami", 1.0, 0)
-	MDRV_SOUND_ROUTE_EX(1, "konami", 1.0, 1)
-	MDRV_SOUND_ROUTE_EX(2, "konami", 1.0, 2)
+	MCFG_SOUND_ADD("8910.0", AY8910, KONAMI_SOUND_CLOCK/8)
+	MCFG_SOUND_CONFIG(frogger_ay8910_interface)
+	MCFG_SOUND_ROUTE_EX(0, "konami", 1.0, 0)
+	MCFG_SOUND_ROUTE_EX(1, "konami", 1.0, 1)
+	MCFG_SOUND_ROUTE_EX(2, "konami", 1.0, 2)
 
-	MDRV_SOUND_ADD("konami", DISCRETE, 0)
-	MDRV_SOUND_CONFIG_DISCRETE(konami_sound)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.75)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("konami", DISCRETE, 0)
+	MCFG_SOUND_CONFIG_DISCRETE(konami_sound)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.75)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( konami_sound_2x_ay8910 )
+static MACHINE_CONFIG_FRAGMENT( konami_sound_2x_ay8910 )
 
 	/* 2nd CPU to drive sound */
-	MDRV_CPU_ADD("audiocpu", Z80, KONAMI_SOUND_CLOCK/8)
-	MDRV_CPU_PROGRAM_MAP(konami_sound_map)
-	MDRV_CPU_IO_MAP(konami_sound_portmap)
+	MCFG_CPU_ADD("audiocpu", Z80, KONAMI_SOUND_CLOCK/8)
+	MCFG_CPU_PROGRAM_MAP(konami_sound_map)
+	MCFG_CPU_IO_MAP(konami_sound_portmap)
 
 	/* sound hardware */
-	MDRV_SOUND_ADD("8910.0", AY8910, KONAMI_SOUND_CLOCK/8)
-	MDRV_SOUND_CONFIG(konami_ay8910_interface_1)
-	MDRV_SOUND_ROUTE_EX(0, "konami", 1.0, 0)
-	MDRV_SOUND_ROUTE_EX(1, "konami", 1.0, 1)
-	MDRV_SOUND_ROUTE_EX(2, "konami", 1.0, 2)
+	MCFG_SOUND_ADD("8910.0", AY8910, KONAMI_SOUND_CLOCK/8)
+	MCFG_SOUND_CONFIG(konami_ay8910_interface_1)
+	MCFG_SOUND_ROUTE_EX(0, "konami", 1.0, 0)
+	MCFG_SOUND_ROUTE_EX(1, "konami", 1.0, 1)
+	MCFG_SOUND_ROUTE_EX(2, "konami", 1.0, 2)
 
-	MDRV_SOUND_ADD("8910.1", AY8910, KONAMI_SOUND_CLOCK/8)
-	MDRV_SOUND_CONFIG(konami_ay8910_interface_2)
-	MDRV_SOUND_ROUTE_EX(0, "konami", 1.0, 3)
-	MDRV_SOUND_ROUTE_EX(1, "konami", 1.0, 4)
-	MDRV_SOUND_ROUTE_EX(2, "konami", 1.0, 5)
+	MCFG_SOUND_ADD("8910.1", AY8910, KONAMI_SOUND_CLOCK/8)
+	MCFG_SOUND_CONFIG(konami_ay8910_interface_2)
+	MCFG_SOUND_ROUTE_EX(0, "konami", 1.0, 3)
+	MCFG_SOUND_ROUTE_EX(1, "konami", 1.0, 4)
+	MCFG_SOUND_ROUTE_EX(2, "konami", 1.0, 5)
 
-	MDRV_SOUND_ADD("konami", DISCRETE, 0)
-	MDRV_SOUND_CONFIG_DISCRETE(konami_sound)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.5)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("konami", DISCRETE, 0)
+	MCFG_SOUND_CONFIG_DISCRETE(konami_sound)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.5)
+MACHINE_CONFIG_END
 
 
 
@@ -2047,329 +2046,302 @@ MACHINE_DRIVER_END
  *
  *************************************/
 
-static MACHINE_DRIVER_START( galaxian )
-	MDRV_IMPORT_FROM(galaxian_base)
-	MDRV_IMPORT_FROM(galaxian_audio)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( galaxian, galaxian_base )
+	MCFG_FRAGMENT_ADD(galaxian_audio)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( pacmanbl )
-	MDRV_IMPORT_FROM(galaxian)
+static MACHINE_CONFIG_DERIVED( pacmanbl, galaxian )
 
 	/* separate tile/sprite ROMs */
-	MDRV_GFXDECODE(pacmanbl)
-MACHINE_DRIVER_END
+	MCFG_GFXDECODE(pacmanbl)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( tenspot )
-	MDRV_IMPORT_FROM(galaxian)
+static MACHINE_CONFIG_DERIVED( tenspot, galaxian )
 
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_VBLANK_INT("screen", fakechange_interrupt_gen)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_VBLANK_INT("screen", fakechange_interrupt_gen)
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("selectcpu", Z80, GALAXIAN_PIXEL_CLOCK/3/2) // ?? mhz
-	MDRV_CPU_PROGRAM_MAP(tenspot_select_map)
-	//MDRV_CPU_VBLANK_INT("screen", nmi_line_pulse)
+	MCFG_CPU_ADD("selectcpu", Z80, GALAXIAN_PIXEL_CLOCK/3/2) // ?? mhz
+	MCFG_CPU_PROGRAM_MAP(tenspot_select_map)
+	//MCFG_CPU_VBLANK_INT("screen", nmi_line_pulse)
 
 	/* separate tile/sprite ROMs */
-	MDRV_GFXDECODE(tenspot)
-MACHINE_DRIVER_END
+	MCFG_GFXDECODE(tenspot)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( zigzag )
-	MDRV_IMPORT_FROM(galaxian_base)
+static MACHINE_CONFIG_DERIVED( zigzag, galaxian_base )
 
 	/* separate tile/sprite ROMs */
-	MDRV_GFXDECODE(pacmanbl)
+	MCFG_GFXDECODE(pacmanbl)
 
 	/* basic machine hardware */
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(galaxian_map_base)  /* no discrete sound */
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(galaxian_map_base)  /* no discrete sound */
 
 	/* sound hardware */
-	MDRV_SOUND_ADD("aysnd", AY8910, 1789750)
+	MCFG_SOUND_ADD("aysnd", AY8910, 1789750)
 
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( gmgalax )
-	MDRV_IMPORT_FROM(galaxian)
+static MACHINE_CONFIG_DERIVED( gmgalax, galaxian )
 
 	/* banked video hardware */
-	MDRV_GFXDECODE(gmgalax)
-	MDRV_PALETTE_LENGTH(64)
-MACHINE_DRIVER_END
+	MCFG_GFXDECODE(gmgalax)
+	MCFG_PALETTE_LENGTH(64)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( mooncrst )
-
-	MDRV_IMPORT_FROM(galaxian_base)
+static MACHINE_CONFIG_DERIVED( mooncrst, galaxian_base )
 
 	/* alternate memory map */
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(mooncrst_map)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(mooncrst_map)
 
-	MDRV_IMPORT_FROM(mooncrst_audio)
-MACHINE_DRIVER_END
+	MCFG_FRAGMENT_ADD(mooncrst_audio)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( jumpbug )
-	MDRV_IMPORT_FROM(galaxian_base)
+static MACHINE_CONFIG_DERIVED( jumpbug, galaxian_base )
 
-	MDRV_WATCHDOG_VBLANK_INIT(0)
+	MCFG_WATCHDOG_VBLANK_INIT(0)
 
 	/* basic machine hardware */
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(jumpbug_map)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(jumpbug_map)
 
 	/* sound hardware */
-	MDRV_SOUND_ADD("aysnd", AY8910, 1789750)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("aysnd", AY8910, 1789750)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( checkman )
-	MDRV_IMPORT_FROM(mooncrst)
+static MACHINE_CONFIG_DERIVED( checkman, mooncrst )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("audiocpu", Z80, 1620000)	/* 1.62 MHz */
-	MDRV_CPU_PROGRAM_MAP(checkman_sound_map)
-	MDRV_CPU_IO_MAP(checkman_sound_portmap)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)	/* NMIs are triggered by the main CPU */
+	MCFG_CPU_ADD("audiocpu", Z80, 1620000)	/* 1.62 MHz */
+	MCFG_CPU_PROGRAM_MAP(checkman_sound_map)
+	MCFG_CPU_IO_MAP(checkman_sound_portmap)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)	/* NMIs are triggered by the main CPU */
 
 	/* sound hardware */
-	MDRV_SOUND_ADD("aysnd", AY8910, 1789750)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("aysnd", AY8910, 1789750)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( checkmaj )
-	MDRV_IMPORT_FROM(galaxian_base)
-
-	/* basic machine hardware */
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(galaxian_map_base)  /* no discrete sound */
+static MACHINE_CONFIG_DERIVED( checkmaj, galaxian_base )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("audiocpu", Z80, 1620000)
-	MDRV_CPU_PROGRAM_MAP(checkmaj_sound_map)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(galaxian_map_base)  /* no discrete sound */
 
-	MDRV_TIMER_ADD_SCANLINE("irq0", checkmaj_irq0_gen, "screen", 0, 8)
+	/* basic machine hardware */
+	MCFG_CPU_ADD("audiocpu", Z80, 1620000)
+	MCFG_CPU_PROGRAM_MAP(checkmaj_sound_map)
+
+	MCFG_TIMER_ADD_SCANLINE("irq0", checkmaj_irq0_gen, "screen", 0, 8)
 
 	/* sound hardware */
-	MDRV_SOUND_ADD("aysnd", AY8910, 1620000)
-	MDRV_SOUND_CONFIG(checkmaj_ay8910_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 2)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("aysnd", AY8910, 1620000)
+	MCFG_SOUND_CONFIG(checkmaj_ay8910_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 2)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( mshuttle )
-	MDRV_IMPORT_FROM(galaxian_base)
-
-	/* basic machine hardware */
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(mshuttle_map)
-	MDRV_CPU_IO_MAP(mshuttle_portmap)
-
-	/* sound hardware */
-	MDRV_SOUND_ADD("aysnd", AY8910, GALAXIAN_PIXEL_CLOCK/3/4)
-	MDRV_SOUND_CONFIG(cclimber_ay8910_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-
-	MDRV_SOUND_ADD("samples", SAMPLES, 0)
-	MDRV_SOUND_CONFIG(cclimber_samples_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.5)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( kingball )
-	MDRV_IMPORT_FROM(mooncrst)
+static MACHINE_CONFIG_DERIVED( mshuttle, galaxian_base )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("audiocpu", Z80,5000000/2)
-	MDRV_CPU_PROGRAM_MAP(kingball_sound_map)
-	MDRV_CPU_IO_MAP(kingball_sound_portmap)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(mshuttle_map)
+	MCFG_CPU_IO_MAP(mshuttle_portmap)
 
 	/* sound hardware */
-	MDRV_SOUND_ADD("dac", DAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("aysnd", AY8910, GALAXIAN_PIXEL_CLOCK/3/4)
+	MCFG_SOUND_CONFIG(cclimber_ay8910_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+
+	MCFG_SOUND_ADD("samples", SAMPLES, 0)
+	MCFG_SOUND_CONFIG(cclimber_samples_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.5)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( frogger )
-	MDRV_IMPORT_FROM(konami_base)
-	MDRV_IMPORT_FROM(konami_sound_1x_ay8910)
+static MACHINE_CONFIG_DERIVED( kingball, mooncrst )
 
-	/* alternate memory map */
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(frogger_map)
-MACHINE_DRIVER_END
+	/* basic machine hardware */
+	MCFG_CPU_ADD("audiocpu", Z80,5000000/2)
+	MCFG_CPU_PROGRAM_MAP(kingball_sound_map)
+	MCFG_CPU_IO_MAP(kingball_sound_portmap)
 
-
-static MACHINE_DRIVER_START( froggrmc )
-	MDRV_IMPORT_FROM(galaxian_base)
-	MDRV_IMPORT_FROM(konami_sound_1x_ay8910)
-
-	/* alternate memory map */
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(mooncrst_map_base)		/* no discrete sound ! */
-MACHINE_DRIVER_END
+	/* sound hardware */
+	MCFG_SOUND_ADD("dac", DAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( froggers )
-	MDRV_IMPORT_FROM(konami_base)
-	MDRV_IMPORT_FROM(konami_sound_1x_ay8910)
+static MACHINE_CONFIG_DERIVED( frogger, konami_base )
+	MCFG_FRAGMENT_ADD(konami_sound_1x_ay8910)
 
 	/* alternate memory map */
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(theend_map)
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(frogger_map)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( frogf )
-	MDRV_IMPORT_FROM(konami_base)
-	MDRV_IMPORT_FROM(konami_sound_1x_ay8910)
-
-	/* alternate memory map */
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(frogf_map)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( turtles )
-	MDRV_IMPORT_FROM(konami_base)
-	MDRV_IMPORT_FROM(konami_sound_2x_ay8910)
+static MACHINE_CONFIG_DERIVED( froggrmc, galaxian_base )
+	MCFG_FRAGMENT_ADD(konami_sound_1x_ay8910)
 
 	/* alternate memory map */
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(turtles_map)
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(mooncrst_map_base)		/* no discrete sound ! */
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( theend )
-	MDRV_IMPORT_FROM(galaxian_base)
-	MDRV_IMPORT_FROM(konami_sound_2x_ay8910)
-
-	/* alternate memory map */
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(theend_map)
-
-	MDRV_PPI8255_ADD( "ppi8255_0", theend_ppi8255_0_intf )
-	MDRV_PPI8255_ADD( "ppi8255_1", konami_ppi8255_1_intf )
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( scramble )
-	MDRV_IMPORT_FROM(galaxian_base)
-	MDRV_IMPORT_FROM(konami_sound_2x_ay8910)
+static MACHINE_CONFIG_DERIVED( froggers, konami_base )
+	MCFG_FRAGMENT_ADD(konami_sound_1x_ay8910)
 
 	/* alternate memory map */
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(theend_map)
-
-	MDRV_PPI8255_ADD( "ppi8255_0", konami_ppi8255_0_intf )
-	MDRV_PPI8255_ADD( "ppi8255_1", scramble_ppi8255_1_intf )
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(theend_map)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( explorer )
-	MDRV_IMPORT_FROM(konami_base)
+static MACHINE_CONFIG_DERIVED( frogf, konami_base )
+	MCFG_FRAGMENT_ADD(konami_sound_1x_ay8910)
 
 	/* alternate memory map */
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(theend_map)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(frogf_map)
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( turtles, konami_base )
+	MCFG_FRAGMENT_ADD(konami_sound_2x_ay8910)
+
+	/* alternate memory map */
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(turtles_map)
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( theend, galaxian_base )
+	MCFG_FRAGMENT_ADD(konami_sound_2x_ay8910)
+
+	/* alternate memory map */
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(theend_map)
+
+	MCFG_PPI8255_ADD( "ppi8255_0", theend_ppi8255_0_intf )
+	MCFG_PPI8255_ADD( "ppi8255_1", konami_ppi8255_1_intf )
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( scramble, galaxian_base )
+	MCFG_FRAGMENT_ADD(konami_sound_2x_ay8910)
+
+	/* alternate memory map */
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(theend_map)
+
+	MCFG_PPI8255_ADD( "ppi8255_0", konami_ppi8255_0_intf )
+	MCFG_PPI8255_ADD( "ppi8255_1", scramble_ppi8255_1_intf )
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( explorer, konami_base )
+
+	/* alternate memory map */
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(theend_map)
 
 	/* 2nd CPU to drive sound */
-	MDRV_CPU_ADD("audiocpu", Z80,KONAMI_SOUND_CLOCK/8)
-	MDRV_CPU_PROGRAM_MAP(konami_sound_map)
-	MDRV_CPU_IO_MAP(konami_sound_portmap)
+	MCFG_CPU_ADD("audiocpu", Z80,KONAMI_SOUND_CLOCK/8)
+	MCFG_CPU_PROGRAM_MAP(konami_sound_map)
+	MCFG_CPU_IO_MAP(konami_sound_portmap)
 
 	/* sound hardware */
-	MDRV_SOUND_ADD("8910.0", AY8910, KONAMI_SOUND_CLOCK/8)
-	MDRV_SOUND_CONFIG(explorer_ay8910_interface_1)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+	MCFG_SOUND_ADD("8910.0", AY8910, KONAMI_SOUND_CLOCK/8)
+	MCFG_SOUND_CONFIG(explorer_ay8910_interface_1)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
-	MDRV_SOUND_ADD("8910.1", AY8910, KONAMI_SOUND_CLOCK/8)
-	MDRV_SOUND_CONFIG(explorer_ay8910_interface_2)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("8910.1", AY8910, KONAMI_SOUND_CLOCK/8)
+	MCFG_SOUND_CONFIG(explorer_ay8910_interface_2)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( scorpion )
-	MDRV_IMPORT_FROM(theend)
+static MACHINE_CONFIG_DERIVED( scorpion, theend )
 
-	MDRV_PPI8255_RECONFIG( "ppi8255_0", konami_ppi8255_0_intf )
-	MDRV_PPI8255_RECONFIG( "ppi8255_1", scorpion_ppi8255_1_intf )
+	MCFG_PPI8255_RECONFIG( "ppi8255_0", konami_ppi8255_0_intf )
+	MCFG_PPI8255_RECONFIG( "ppi8255_1", scorpion_ppi8255_1_intf )
 
 	/* extra AY8910 with I/O ports */
-	MDRV_SOUND_ADD("8910.2", AY8910, KONAMI_SOUND_CLOCK/8)
-	MDRV_SOUND_CONFIG(scorpion_ay8910_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+	MCFG_SOUND_ADD("8910.2", AY8910, KONAMI_SOUND_CLOCK/8)
+	MCFG_SOUND_CONFIG(scorpion_ay8910_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
-	MDRV_SOUND_ADD("digitalker", DIGITALKER, 4000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.16)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("digitalker", DIGITALKER, 4000000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.16)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( sfx )
-	MDRV_IMPORT_FROM(galaxian_base)
-	MDRV_IMPORT_FROM(konami_sound_2x_ay8910)
+static MACHINE_CONFIG_DERIVED( sfx, galaxian_base )
+	MCFG_FRAGMENT_ADD(konami_sound_2x_ay8910)
 
-	MDRV_WATCHDOG_VBLANK_INIT(0)
+	MCFG_WATCHDOG_VBLANK_INIT(0)
 
 	/* alternate memory map */
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(sfx_map)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(sfx_map)
 
 	/* 3rd CPU for the sample player */
-	MDRV_CPU_ADD("audio2", Z80, KONAMI_SOUND_CLOCK/8)
-	MDRV_CPU_PROGRAM_MAP(sfx_sample_map)
-	MDRV_CPU_IO_MAP(sfx_sample_portmap)
+	MCFG_CPU_ADD("audio2", Z80, KONAMI_SOUND_CLOCK/8)
+	MCFG_CPU_PROGRAM_MAP(sfx_sample_map)
+	MCFG_CPU_IO_MAP(sfx_sample_portmap)
 
-	MDRV_PPI8255_ADD( "ppi8255_0", konami_ppi8255_0_intf )
-	MDRV_PPI8255_ADD( "ppi8255_1", konami_ppi8255_1_intf )
-	MDRV_PPI8255_ADD( "ppi8255_2", sfx_ppi8255_2_intf )
+	MCFG_PPI8255_ADD( "ppi8255_0", konami_ppi8255_0_intf )
+	MCFG_PPI8255_ADD( "ppi8255_1", konami_ppi8255_1_intf )
+	MCFG_PPI8255_ADD( "ppi8255_2", sfx_ppi8255_2_intf )
 
 	/* port on 1st 8910 is used for communication */
-	MDRV_SOUND_MODIFY("8910.0")
-	MDRV_SOUND_CONFIG(sfx_ay8910_interface)
+	MCFG_SOUND_MODIFY("8910.0")
+	MCFG_SOUND_CONFIG(sfx_ay8910_interface)
 
 	/* DAC for the sample player */
-	MDRV_SOUND_ADD("dac", DAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("dac", DAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( scobra )
-	MDRV_IMPORT_FROM(konami_base)
-	MDRV_IMPORT_FROM(konami_sound_2x_ay8910)
+static MACHINE_CONFIG_DERIVED( scobra, konami_base )
+	MCFG_FRAGMENT_ADD(konami_sound_2x_ay8910)
 
 	/* alternate memory map */
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(scobra_map)
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(scobra_map)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( anteater )
-	MDRV_IMPORT_FROM(scobra)
+static MACHINE_CONFIG_DERIVED( anteater, scobra )
 
 	/* quiet down the sounds */
-	MDRV_SOUND_MODIFY("konami")
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.1)
-MACHINE_DRIVER_END
+	MCFG_SOUND_MODIFY("konami")
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.1)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( moonwar )
-
-	/* basic machine hardware */
+static MACHINE_CONFIG_DERIVED( moonwar, scobra )
 	/* same as regular type 1, the only difference is that the bullets are less yellow */
-	MDRV_IMPORT_FROM(scobra)
 
 	/* device config overrides */
-	MDRV_PPI8255_RECONFIG( "ppi8255_0", moonwar_ppi8255_0_intf )
-	MDRV_PPI8255_RECONFIG( "ppi8255_1", konami_ppi8255_1_intf )
+	MCFG_PPI8255_RECONFIG( "ppi8255_0", moonwar_ppi8255_0_intf )
+	MCFG_PPI8255_RECONFIG( "ppi8255_1", konami_ppi8255_1_intf )
 
-	MDRV_PALETTE_INIT(moonwar)
-MACHINE_DRIVER_END
+	MCFG_PALETTE_INIT(moonwar)
+MACHINE_CONFIG_END
 
 
 /*************************************
@@ -2380,7 +2352,7 @@ MACHINE_DRIVER_END
 
 static void decode_mooncrst(running_machine *machine, int length, UINT8 *dest)
 {
-	UINT8 *rom = memory_region(machine, "maincpu");
+	UINT8 *rom = machine->region("maincpu")->base();
 	int offs;
 
 	for (offs = 0; offs < length; offs++)
@@ -2442,8 +2414,8 @@ static void decode_checkman(running_machine *machine)
 		{ 0,2,0,2 },
 		{ 1,4,1,4 }
 	};
-	UINT8 *rombase = memory_region(machine, "maincpu");
-	UINT32 romlength = memory_region_length(machine, "maincpu");
+	UINT8 *rombase = machine->region("maincpu")->base();
+	UINT32 romlength = machine->region("maincpu")->bytes();
 	UINT32 offs;
 
 	for (offs = 0; offs < romlength; offs++)
@@ -2459,8 +2431,8 @@ static void decode_checkman(running_machine *machine)
 
 static void decode_dingoe(running_machine *machine)
 {
-	UINT8 *rombase = memory_region(machine, "maincpu");
-	UINT32 romlength = memory_region_length(machine, "maincpu");
+	UINT8 *rombase = machine->region("maincpu")->base();
+	UINT32 romlength = machine->region("maincpu")->bytes();
 	UINT32 offs;
 
 	for (offs = 0; offs < romlength; offs++)
@@ -2482,7 +2454,7 @@ static void decode_dingoe(running_machine *machine)
 
 static void decode_frogger_sound(running_machine *machine)
 {
-	UINT8 *rombase = memory_region(machine, "audiocpu");
+	UINT8 *rombase = machine->region("audiocpu")->base();
 	UINT32 offs;
 
 	/* the first ROM of the sound CPU has data lines D0 and D1 swapped */
@@ -2493,7 +2465,7 @@ static void decode_frogger_sound(running_machine *machine)
 
 static void decode_frogger_gfx(running_machine *machine)
 {
-	UINT8 *rombase = memory_region(machine, "gfx1");
+	UINT8 *rombase = machine->region("gfx1")->base();
 	UINT32 offs;
 
 	/* the 2nd gfx ROM has data lines D0 and D1 swapped */
@@ -2504,8 +2476,8 @@ static void decode_frogger_gfx(running_machine *machine)
 
 static void decode_anteater_gfx(running_machine *machine)
 {
-	UINT32 romlength = memory_region_length(machine, "gfx1");
-	UINT8 *rombase = memory_region(machine, "gfx1");
+	UINT32 romlength = machine->region("gfx1")->bytes();
+	UINT8 *rombase = machine->region("gfx1")->base();
 	UINT8 *scratch = auto_alloc_array(machine, UINT8, romlength);
 	UINT32 offs;
 
@@ -2524,8 +2496,8 @@ static void decode_anteater_gfx(running_machine *machine)
 
 static void decode_losttomb_gfx(running_machine *machine)
 {
-	UINT32 romlength = memory_region_length(machine, "gfx1");
-	UINT8 *rombase = memory_region(machine, "gfx1");
+	UINT32 romlength = machine->region("gfx1")->bytes();
+	UINT8 *rombase = machine->region("gfx1")->base();
 	UINT8 *scratch = auto_alloc_array(machine, UINT8, romlength);
 	UINT32 offs;
 
@@ -2549,7 +2521,7 @@ static void decode_superbon(running_machine *machine)
 
 	/* Deryption worked out by hand by Chris Hardy. */
 
-	RAM = memory_region(machine, "maincpu");
+	RAM = machine->region("maincpu")->base();
 
 	for (i = 0;i < 0x1000;i++)
 	{
@@ -2601,7 +2573,7 @@ static void common_init(
 
 static void unmap_galaxian_sound(running_machine *machine, offs_t base)
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	memory_unmap_write(space, base + 0x0004, base + 0x0007, 0, 0x07f8);
 	memory_unmap_write(space, base + 0x0800, base + 0x0807, 0, 0x07f8);
@@ -2624,7 +2596,7 @@ static DRIVER_INIT( galaxian )
 
 static DRIVER_INIT( nolock )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	/* same as galaxian... */
 	DRIVER_INIT_CALL(galaxian);
@@ -2636,7 +2608,7 @@ static DRIVER_INIT( nolock )
 
 static DRIVER_INIT( azurian )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	/* yellow bullets instead of white ones */
 	common_init(machine, scramble_draw_bullet, galaxian_draw_background, NULL, NULL);
@@ -2648,14 +2620,14 @@ static DRIVER_INIT( azurian )
 
 static DRIVER_INIT( gmgalax )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	/* video extensions */
 	common_init(machine, galaxian_draw_bullet, galaxian_draw_background, gmgalax_extend_tile_info, gmgalax_extend_sprite_info);
 
 	/* ROM is banked */
 	memory_install_read_bank(space, 0x0000, 0x3fff, 0, 0, "bank1");
-	memory_configure_bank(machine, "bank1", 0, 2, memory_region(machine, "maincpu") + 0x10000, 0x4000);
+	memory_configure_bank(machine, "bank1", 0, 2, machine->region("maincpu")->base() + 0x10000, 0x4000);
 
 	/* callback when the game select is toggled */
 	gmgalax_game_changed(machine->m_portlist.first()->fieldlist, NULL, 0, 0);
@@ -2665,7 +2637,7 @@ static DRIVER_INIT( gmgalax )
 
 static DRIVER_INIT( pisces )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	/* video extensions */
 	common_init(machine, galaxian_draw_bullet, galaxian_draw_background, pisces_extend_tile_info, pisces_extend_sprite_info);
@@ -2677,7 +2649,7 @@ static DRIVER_INIT( pisces )
 
 static DRIVER_INIT( batman2 )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	/* video extensions */
 	common_init(machine, galaxian_draw_bullet, galaxian_draw_background, batman2_extend_tile_info, upper_extend_sprite_info);
@@ -2689,7 +2661,7 @@ static DRIVER_INIT( batman2 )
 
 static DRIVER_INIT( frogg )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	/* same as galaxian... */
 	common_init(machine, galaxian_draw_bullet, frogger_draw_background, frogger_extend_tile_info, frogger_extend_sprite_info);
@@ -2712,7 +2684,7 @@ static DRIVER_INIT( mooncrst )
 	common_init(machine, galaxian_draw_bullet, galaxian_draw_background, mooncrst_extend_tile_info, mooncrst_extend_sprite_info);
 
 	/* decrypt program code */
-	decode_mooncrst(machine, 0x8000, memory_region(machine, "maincpu"));
+	decode_mooncrst(machine, 0x8000, machine->region("maincpu")->base());
 }
 
 
@@ -2725,7 +2697,7 @@ static DRIVER_INIT( mooncrsu )
 
 static DRIVER_INIT( mooncrgx )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	/* video extensions */
 	common_init(machine, galaxian_draw_bullet, galaxian_draw_background, mooncrst_extend_tile_info, mooncrst_extend_sprite_info);
@@ -2737,7 +2709,7 @@ static DRIVER_INIT( mooncrgx )
 
 static DRIVER_INIT( moonqsr )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 	UINT8 *decrypt = auto_alloc_array(machine, UINT8, 0x8000);
 
 	/* video extensions */
@@ -2745,7 +2717,7 @@ static DRIVER_INIT( moonqsr )
 
 	/* decrypt program code */
 	decode_mooncrst(machine, 0x8000, decrypt);
-	memory_set_decrypted_region(space, 0x0000, 0x7fff, decrypt);
+	space->set_decrypted_region(0x0000, 0x7fff, decrypt);
 }
 
 static WRITE8_HANDLER( artic_gfxbank_w )
@@ -2755,7 +2727,7 @@ static WRITE8_HANDLER( artic_gfxbank_w )
 
 static DRIVER_INIT( pacmanbl )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	/* same as galaxian... */
 	DRIVER_INIT_CALL(galaxian);
@@ -2785,15 +2757,15 @@ void tenspot_set_game_bank(running_machine* machine, int bank, int from_game)
 	int x;
 
 	sprintf(tmp,"game_%d_cpu", bank);
-	srcregion = memory_region(machine,tmp);
-	dstregion = memory_region(machine,"maincpu");
+	srcregion = machine->region(tmp)->base();
+	dstregion = machine->region("maincpu")->base();
 	memcpy(dstregion, srcregion, 0x4000);
 
 	sprintf(tmp,"game_%d_temp", bank);
-	srcregion = memory_region(machine,tmp);
-	dstregion = memory_region(machine,"gfx1");
+	srcregion = machine->region(tmp)->base();
+	dstregion = machine->region("gfx1")->base();
 	memcpy(dstregion, srcregion, 0x2000);
-	dstregion = memory_region(machine,"gfx2");
+	dstregion = machine->region("gfx2")->base();
 	memcpy(dstregion, srcregion, 0x2000);
 
 	if (from_game)
@@ -2811,8 +2783,8 @@ void tenspot_set_game_bank(running_machine* machine, int bank, int from_game)
 	}
 
 	sprintf(tmp,"game_%d_prom", bank);
-	srcregion = memory_region(machine,tmp);
-	dstregion = memory_region(machine,"proms");
+	srcregion = machine->region(tmp)->base();
+	dstregion = machine->region("proms")->base();
 	memcpy(dstregion, srcregion, 0x20);
 
 	color_prom = dstregion;
@@ -2821,7 +2793,7 @@ void tenspot_set_game_bank(running_machine* machine, int bank, int from_game)
 
 static DRIVER_INIT( tenspot )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	/* these are needed for batman part 2 to work properly, this banking is probably a property of the artic board,
        which tenspot appears to have copied */
@@ -2858,7 +2830,7 @@ static DRIVER_INIT( devilfsg )
 
 static DRIVER_INIT( zigzag )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	/* video extensions */
 	common_init(machine, NULL, galaxian_draw_background, NULL, NULL);
@@ -2866,13 +2838,13 @@ static DRIVER_INIT( zigzag )
 	/* make ROMs 2 & 3 swappable */
 	memory_install_read_bank(space, 0x2000, 0x2fff, 0, 0, "bank1");
 	memory_install_read_bank(space, 0x3000, 0x3fff, 0, 0, "bank2");
-	memory_configure_bank(machine, "bank1", 0, 2, memory_region(machine, "maincpu") + 0x2000, 0x1000);
-	memory_configure_bank(machine, "bank2", 0, 2, memory_region(machine, "maincpu") + 0x2000, 0x1000);
+	memory_configure_bank(machine, "bank1", 0, 2, machine->region("maincpu")->base() + 0x2000, 0x1000);
+	memory_configure_bank(machine, "bank2", 0, 2, machine->region("maincpu")->base() + 0x2000, 0x1000);
 
 	/* also re-install the fixed ROM area as a bank in order to inform the memory system that
        the fixed area only extends to 0x1fff */
 	memory_install_read_bank(space, 0x0000, 0x1fff, 0, 0, "bank3");
-	memory_set_bankptr(machine, "bank3", memory_region(machine, "maincpu") + 0x0000);
+	memory_set_bankptr(machine, "bank3", machine->region("maincpu")->base() + 0x0000);
 
 	/* handler for doing the swaps */
 	memory_install_write8_handler(space, 0x7002, 0x7002, 0, 0x07f8, zigzag_bankswap_w);
@@ -2898,8 +2870,8 @@ static DRIVER_INIT( jumpbug )
 
 static DRIVER_INIT( checkman )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
-	const address_space *iospace = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_IO);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *iospace = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_IO);
 
 	/* video extensions */
 	common_init(machine, galaxian_draw_bullet, galaxian_draw_background, mooncrst_extend_tile_info, mooncrst_extend_sprite_info);
@@ -2918,7 +2890,7 @@ static DRIVER_INIT( checkman )
 
 static DRIVER_INIT( checkmaj )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	/* video extensions */
 	common_init(machine, galaxian_draw_bullet, galaxian_draw_background, NULL, NULL);
@@ -2933,7 +2905,7 @@ static DRIVER_INIT( checkmaj )
 
 static DRIVER_INIT( dingo )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	/* video extensions */
 	common_init(machine, galaxian_draw_bullet, galaxian_draw_background, NULL, NULL);
@@ -2948,8 +2920,8 @@ static DRIVER_INIT( dingo )
 
 static DRIVER_INIT( dingoe )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
-	const address_space *iospace = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_IO);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *iospace = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_IO);
 
 	/* video extensions */
 	common_init(machine, galaxian_draw_bullet, galaxian_draw_background, mooncrst_extend_tile_info, mooncrst_extend_sprite_info);
@@ -2970,7 +2942,7 @@ static DRIVER_INIT( dingoe )
 
 static DRIVER_INIT( skybase )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	/* video extensions */
 	common_init(machine, galaxian_draw_bullet, galaxian_draw_background, pisces_extend_tile_info, pisces_extend_sprite_info);
@@ -2982,7 +2954,7 @@ static DRIVER_INIT( skybase )
 	memory_install_ram(space, 0x8000, 0x87ff, 0, 0, NULL);
 
 	/* extend ROM */
-	memory_install_rom(space, 0x0000, 0x5fff, 0, 0, memory_region(machine, "maincpu"));
+	memory_install_rom(space, 0x0000, 0x5fff, 0, 0, machine->region("maincpu")->base());
 }
 
 
@@ -3014,7 +2986,7 @@ static DRIVER_INIT( mshuttlj )
 
 static DRIVER_INIT( kingball )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	/* video extensions */
 	common_init(machine, galaxian_draw_bullet, galaxian_draw_background, NULL, NULL);
@@ -3031,7 +3003,7 @@ static DRIVER_INIT( kingball )
 
 static DRIVER_INIT( scorpnmc )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	/* video extensions */
 	common_init(machine, galaxian_draw_bullet, galaxian_draw_background, batman2_extend_tile_info, upper_extend_sprite_info);
@@ -3041,7 +3013,7 @@ static DRIVER_INIT( scorpnmc )
 	memory_install_write8_handler(space, 0xb001, 0xb001, 0, 0x7f8, irq_enable_w);
 
 	/* extra ROM */
-	memory_install_rom(space, 0x5000, 0x67ff, 0, 0, memory_region(machine, "maincpu") + 0x5000);
+	memory_install_rom(space, 0x5000, 0x67ff, 0, 0, machine->region("maincpu")->base() + 0x5000);
 
 	/* install RAM at $4000-$4800 */
 	memory_install_ram(space, 0x4000, 0x47ff, 0, 0, NULL);
@@ -3052,7 +3024,7 @@ static DRIVER_INIT( scorpnmc )
 
 static DRIVER_INIT( thepitm )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	/* video extensions */
 	common_init(machine, galaxian_draw_bullet, galaxian_draw_background, mooncrst_extend_tile_info, mooncrst_extend_sprite_info);
@@ -3065,7 +3037,7 @@ static DRIVER_INIT( thepitm )
 	memory_unmap_write(space, 0xb004, 0xb004, 0, 0x07f8);
 
 	/* extend ROM */
-	memory_install_rom(space, 0x0000, 0x47ff, 0, 0, memory_region(machine, "maincpu"));
+	memory_install_rom(space, 0x0000, 0x47ff, 0, 0, machine->region("maincpu")->base());
 }
 
 /*************************************
@@ -3076,7 +3048,7 @@ static DRIVER_INIT( thepitm )
 
 static DRIVER_INIT( theend )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	/* video extensions */
 	common_init(machine, theend_draw_bullet, galaxian_draw_background, NULL, NULL);
@@ -3095,7 +3067,7 @@ static DRIVER_INIT( scramble )
 
 static DRIVER_INIT( explorer )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	/* video extensions */
 	common_init(machine, scramble_draw_bullet, scramble_draw_background, NULL, NULL);
@@ -3122,13 +3094,13 @@ static DRIVER_INIT( sfx )
 
 	/* sound board has space for extra ROM */
 	memory_install_read_bank(cputag_get_address_space(machine, "audiocpu", ADDRESS_SPACE_PROGRAM), 0x0000, 0x3fff, 0, 0, "bank1");
-	memory_set_bankptr(machine, "bank1", memory_region(machine, "audiocpu"));
+	memory_set_bankptr(machine, "bank1", machine->region("audiocpu")->base());
 }
 
 
 static DRIVER_INIT( atlantis )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	/* video extensions */
 	common_init(machine, scramble_draw_bullet, scramble_draw_background, NULL, NULL);
@@ -3170,7 +3142,7 @@ static DRIVER_INIT( frogger )
 
 static DRIVER_INIT( froggrmc )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	/* video extensions */
 	common_init(machine, NULL, frogger_draw_background, frogger_extend_tile_info, frogger_extend_sprite_info);
@@ -3215,7 +3187,7 @@ static DRIVER_INIT( amidar )
 
 static DRIVER_INIT( scorpion )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	common_init(machine, scramble_draw_bullet, scramble_draw_background, batman2_extend_tile_info, upper_extend_sprite_info);
 
@@ -3224,7 +3196,7 @@ static DRIVER_INIT( scorpion )
 
 	/* extra ROM */
 	memory_install_read_bank(space, 0x5800, 0x67ff, 0, 0, "bank1");
-	memory_set_bankptr(machine, "bank1", memory_region(machine, "maincpu") + 0x5800);
+	memory_set_bankptr(machine, "bank1", machine->region("maincpu")->base() + 0x5800);
 
 	/* no background related */
 //  memory_nop_write(space, 0x6803, 0x6803, 0, 0);
@@ -3232,7 +3204,7 @@ static DRIVER_INIT( scorpion )
 	memory_install_read8_handler(cputag_get_address_space(machine, "audiocpu", ADDRESS_SPACE_PROGRAM), 0x3000, 0x3000, 0, 0, scorpion_digitalker_intr_r);
 /*
 {
-    const UINT8 *rom = memory_region(machine, "speech");
+    const UINT8 *rom = machine->region("speech")->base();
     int i;
 
     for (i = 0; i < 0x2c; i++)

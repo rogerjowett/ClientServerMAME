@@ -1,11 +1,10 @@
 
 
-class changela_state
+class changela_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, changela_state(machine)); }
-
-	changela_state(running_machine &machine) { }
+	changela_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *  videoram;
@@ -47,7 +46,7 @@ public:
 	UINT8    mcu_pc_0;
 
 	/* devices */
-	running_device *mcu;
+	device_t *mcu;
 };
 
 /*----------- defined in video/changela.c -----------*/

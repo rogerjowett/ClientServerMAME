@@ -60,7 +60,7 @@ static INTERRUPT_GEN( avalnche_interrupt )
 
 static VIDEO_UPDATE( avalnche )
 {
-	avalnche_state *state = (avalnche_state *)screen->machine->driver_data;
+	avalnche_state *state = screen->machine->driver_data<avalnche_state>();
 	offs_t offs;
 
 	for (offs = 0; offs < state->videoram_size; offs++)
@@ -93,7 +93,7 @@ static VIDEO_UPDATE( avalnche )
 
 static WRITE8_HANDLER( avalance_video_invert_w )
 {
-	avalnche_state *state = (avalnche_state *)space->machine->driver_data;
+	avalnche_state *state = space->machine->driver_data<avalnche_state>();
 	state->avalance_video_inverted = data & 0x01;
 }
 
@@ -218,48 +218,45 @@ INPUT_PORTS_END
 
 static MACHINE_START( avalnche )
 {
-	avalnche_state *state = (avalnche_state *)machine->driver_data;
+	avalnche_state *state = machine->driver_data<avalnche_state>();
 
 	state_save_register_global(machine, state->avalance_video_inverted);
 }
 
 static MACHINE_RESET( avalnche )
 {
-	avalnche_state *state = (avalnche_state *)machine->driver_data;
+	avalnche_state *state = machine->driver_data<avalnche_state>();
 
 	state->avalance_video_inverted = 0;
 }
 
-static MACHINE_DRIVER_START( avalnche )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(avalnche_state)
+static MACHINE_CONFIG_START( avalnche, avalnche_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6502,MASTER_CLOCK/16)	   /* clock input is the "2H" signal divided by two */
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_VBLANK_INT_HACK(avalnche_interrupt,8)
+	MCFG_CPU_ADD("maincpu", M6502,MASTER_CLOCK/16)	   /* clock input is the "2H" signal divided by two */
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_VBLANK_INT_HACK(avalnche_interrupt,8)
 
-	MDRV_MACHINE_START(avalnche)
-	MDRV_MACHINE_RESET(avalnche)
+	MCFG_MACHINE_START(avalnche)
+	MCFG_MACHINE_RESET(avalnche)
 
 	/* video hardware */
-	MDRV_VIDEO_UPDATE(avalnche)
+	MCFG_VIDEO_UPDATE(avalnche)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 32*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 32*8-1)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("discrete", DISCRETE, 0)
-	MDRV_SOUND_CONFIG_DISCRETE(avalnche)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("discrete", DISCRETE, 0)
+	MCFG_SOUND_CONFIG_DISCRETE(avalnche)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 

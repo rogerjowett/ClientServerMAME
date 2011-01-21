@@ -707,7 +707,7 @@ static GFXDECODE_START( pc1251 )
 	GFXDECODE_ENTRY( "gfx1", 0x0000, pc1251_charlayout, 0, 8 )
 GFXDECODE_END
 
-static const sc61860_cpu_core config =
+static const sc61860_cpu_core pc1401_config =
 {
 	pc1401_reset, pc1401_brk, NULL,
 	pc1401_ina, pc1401_outa,
@@ -715,15 +715,10 @@ static const sc61860_cpu_core config =
 	pc1401_outc
 };
 
-static MACHINE_DRIVER_START( pc1401 )
-	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", SC61860, 192000)        /* 7.8336 MHz */
-	MDRV_CPU_PROGRAM_MAP(pc1401_mem)
-	MDRV_CPU_CONFIG(config)
+static MACHINE_CONFIG_FRAGMENT( pocketc )
+	MCFG_QUANTUM_TIME(HZ(60))
 
-	MDRV_QUANTUM_TIME(HZ(60))
-
-	MDRV_NVRAM_HANDLER( pc1401 )
+	MCFG_NVRAM_HANDLER( pc1401 )
 
 	/*
        aim: show sharp with keyboard
@@ -731,72 +726,78 @@ static MACHINE_DRIVER_START( pc1401 )
        (lcd dot displayed as 2x3 pixel)
        it seems to have 3/4 ratio in the real pc1401 */
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", LCD)
-	MDRV_SCREEN_REFRESH_RATE(20)	/* very early and slow lcd */
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(594, 273)
-	MDRV_SCREEN_VISIBLE_AREA(0, 594-1, 0, 273-1)
-//  MDRV_SCREEN_SIZE(640, 273)
-//  MDRV_SCREEN_VISIBLE_AREA(0, 640-1, 0, 273-1)
-	MDRV_GFXDECODE( pc1401 )
-	MDRV_PALETTE_LENGTH(8*2)
-	MDRV_PALETTE_INIT( pocketc )
-
-	MDRV_VIDEO_START( pocketc )
-	MDRV_VIDEO_UPDATE( pc1401 )
+	MCFG_SCREEN_ADD("screen", LCD)
+	MCFG_SCREEN_REFRESH_RATE(20)	/* very early and slow lcd */
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(594, 273)
+	MCFG_SCREEN_VISIBLE_AREA(0, 594-1, 0, 273-1)
+//  MCFG_SCREEN_SIZE(640, 273)
+//  MCFG_SCREEN_VISIBLE_AREA(0, 640-1, 0, 273-1)
+	MCFG_GFXDECODE( pc1401 )
+	MCFG_PALETTE_LENGTH(8*2)
+	MCFG_PALETTE_INIT( pocketc )
 
 	/* sound hardware */
-	/*MDRV_SOUND_ADD("dac", DAC, pocketc_sound_interface)*/
-MACHINE_DRIVER_END
+	/*MCFG_SOUND_ADD("dac", DAC, pocketc_sound_interface)*/
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( pc1402 )
-	MDRV_IMPORT_FROM( pc1401)
-	MDRV_CPU_MODIFY( "maincpu" )
-	MDRV_CPU_PROGRAM_MAP( pc1402_mem)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_START( pc1401, pc1401_state )
+	MCFG_CPU_ADD("maincpu", SC61860, 192000)        /* 7.8336 MHz */
+	MCFG_CPU_PROGRAM_MAP(pc1401_mem)
+	MCFG_CPU_CONFIG(pc1401_config)
+
+	MCFG_FRAGMENT_ADD(pocketc)
+
+	MCFG_VIDEO_UPDATE( pc1401 )
+
+MACHINE_CONFIG_END
+
+static MACHINE_CONFIG_DERIVED( pc1402, pc1401 )
+	MCFG_CPU_MODIFY( "maincpu" )
+	MCFG_CPU_PROGRAM_MAP( pc1402_mem)
+MACHINE_CONFIG_END
 
 static const sc61860_cpu_core pc1251_config =
 {
-    NULL, pc1251_brk, NULL,
-    pc1251_ina, pc1251_outa,
-    pc1251_inb, pc1251_outb,
-    pc1251_outc
+	NULL, pc1251_brk, NULL,
+	pc1251_ina, pc1251_outa,
+	pc1251_inb, pc1251_outb,
+	pc1251_outc
 };
 
-static MACHINE_DRIVER_START( pc1250 )
-	MDRV_IMPORT_FROM( pc1401 )
-	MDRV_CPU_MODIFY( "maincpu" )
-	MDRV_CPU_PROGRAM_MAP( pc1250_mem)
-	MDRV_CPU_CONFIG( pc1251_config )
+static MACHINE_CONFIG_START( pc1250, pc1251_state )
+	MCFG_CPU_ADD("maincpu", SC61860, 192000)        /* 7.8336 MHz */
+	MCFG_CPU_PROGRAM_MAP( pc1250_mem)
+	MCFG_CPU_CONFIG( pc1251_config )
 
-	MDRV_NVRAM_HANDLER( pc1251 )
+	MCFG_FRAGMENT_ADD(pocketc)
+
+	MCFG_NVRAM_HANDLER( pc1251 )
 
 	/* video hardware */
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_SIZE(608, 300)
-	MDRV_SCREEN_VISIBLE_AREA(0, 608-1, 0, 300-1)
-	MDRV_GFXDECODE( pc1251 )
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_SIZE(608, 300)
+	MCFG_SCREEN_VISIBLE_AREA(0, 608-1, 0, 300-1)
+	MCFG_GFXDECODE( pc1251 )
 
-	MDRV_VIDEO_UPDATE( pc1251 )
-MACHINE_DRIVER_END
+	MCFG_VIDEO_UPDATE( pc1251 )
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( pc1251 )
-	MDRV_IMPORT_FROM( pc1250)
-	MDRV_CPU_MODIFY( "maincpu" )
-	MDRV_CPU_PROGRAM_MAP( pc1251_mem)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( pc1251, pc1250 )
+	MCFG_CPU_MODIFY( "maincpu" )
+	MCFG_CPU_PROGRAM_MAP( pc1251_mem)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( pc1255 )
-	MDRV_IMPORT_FROM( pc1250)
-	MDRV_CPU_MODIFY( "maincpu" )
-	MDRV_CPU_PROGRAM_MAP( pc1255_mem)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( pc1255, pc1250 )
+	MCFG_CPU_MODIFY( "maincpu" )
+	MCFG_CPU_PROGRAM_MAP( pc1255_mem)
+MACHINE_CONFIG_END
 
 static NVRAM_HANDLER( pc1260 )
 {
-	running_device *main_cpu = machine->device("maincpu");
-	UINT8 *ram = memory_region(machine, "maincpu") + 0x4000;
+	device_t *main_cpu = machine->device("maincpu");
+	UINT8 *ram = machine->region("maincpu")->base() + 0x4000;
 	UINT8 *cpu = sc61860_internal_ram(main_cpu);
 
 	if (read_or_write)
@@ -816,90 +817,93 @@ static NVRAM_HANDLER( pc1260 )
 	}
 }
 
-static MACHINE_DRIVER_START( pc1260 )
-	MDRV_IMPORT_FROM( pc1250)
-	MDRV_CPU_MODIFY( "maincpu" )
-	MDRV_CPU_PROGRAM_MAP( pc1260_mem)
+static MACHINE_CONFIG_DERIVED( pc1260, pc1250 )
+	MCFG_CPU_MODIFY( "maincpu" )
+	MCFG_CPU_PROGRAM_MAP( pc1260_mem)
 
-	MDRV_NVRAM_HANDLER( pc1260 )
-MACHINE_DRIVER_END
+	MCFG_NVRAM_HANDLER( pc1260 )
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( pc1261 )
-	MDRV_IMPORT_FROM( pc1260)
-	MDRV_CPU_MODIFY( "maincpu" )
-	MDRV_CPU_PROGRAM_MAP( pc1261_mem)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( pc1261, pc1260 )
+	MCFG_CPU_MODIFY( "maincpu" )
+	MCFG_CPU_PROGRAM_MAP( pc1261_mem)
+MACHINE_CONFIG_END
 
 static const sc61860_cpu_core pc1350_config =
 {
-    NULL, pc1350_brk,NULL,
-    pc1350_ina, pc1350_outa,
-    pc1350_inb, pc1350_outb,
-    pc1350_outc
+	NULL, pc1350_brk,NULL,
+	pc1350_ina, pc1350_outa,
+	pc1350_inb, pc1350_outb,
+	pc1350_outc
 };
 
-static MACHINE_DRIVER_START( pc1350 )
-	MDRV_IMPORT_FROM( pc1401 )
-	MDRV_CPU_MODIFY( "maincpu" )
-	MDRV_CPU_PROGRAM_MAP( pc1350_mem)
-	MDRV_CPU_CONFIG( pc1350_config )
+static MACHINE_CONFIG_START( pc1350, pc1350_state )
+	MCFG_CPU_ADD("maincpu", SC61860, 192000)        /* 7.8336 MHz */
+	MCFG_CPU_PROGRAM_MAP( pc1350_mem)
+	MCFG_CPU_CONFIG( pc1350_config )
 
-	MDRV_MACHINE_START( pc1350 )
-	MDRV_NVRAM_HANDLER( pc1350 )
+	MCFG_FRAGMENT_ADD( pocketc )
+
+	MCFG_MACHINE_START( pc1350 )
+	MCFG_NVRAM_HANDLER( pc1350 )
 
 	/*
        aim: show sharp with keyboard
        resolution depends on the dots of the lcd
        (lcd dot displayed as 2x2 pixel) */
 	/* video hardware */
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_SIZE(640, 252)
-	MDRV_SCREEN_VISIBLE_AREA(0, 640-1, 0, 252-1)
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_SIZE(640, 252)
+	MCFG_SCREEN_VISIBLE_AREA(0, 640-1, 0, 252-1)
 
-	MDRV_VIDEO_UPDATE( pc1350 )
+	MCFG_VIDEO_UPDATE( pc1350 )
 
 	/* internal ram */
-	MDRV_RAM_ADD("messram")
-	MDRV_RAM_DEFAULT_SIZE("4K")
-	MDRV_RAM_EXTRA_OPTIONS("12K,20K")
-MACHINE_DRIVER_END
+	MCFG_RAM_ADD("messram")
+	MCFG_RAM_DEFAULT_SIZE("4K")
+	MCFG_RAM_EXTRA_OPTIONS("12K,20K")
+MACHINE_CONFIG_END
 
 static const sc61860_cpu_core pc1403_config =
 {
-    NULL, pc1403_brk, NULL,
-    pc1403_ina, pc1403_outa,
-    NULL,NULL,
-    pc1403_outc
+	NULL, pc1403_brk, NULL,
+	pc1403_ina, pc1403_outa,
+	NULL,NULL,
+	pc1403_outc
 };
 
-static MACHINE_DRIVER_START( pc1403 )
-	MDRV_IMPORT_FROM( pc1401 )
-	MDRV_CPU_REPLACE( "maincpu", SC61860, 256000 )
-	MDRV_CPU_PROGRAM_MAP( pc1403_mem)
-	MDRV_CPU_CONFIG( pc1403_config )
+static MACHINE_CONFIG_START( pc1403, pc1403_state )
+	MCFG_CPU_ADD("maincpu", SC61860, 192000)        /* 7.8336 MHz */
+	MCFG_CPU_PROGRAM_MAP(pc1401_mem)
+	MCFG_CPU_CONFIG(pc1401_config)
 
-	MDRV_NVRAM_HANDLER( pc1403 )
+	MCFG_FRAGMENT_ADD( pocketc )
+
+	MCFG_CPU_REPLACE( "maincpu", SC61860, 256000 )
+	MCFG_CPU_PROGRAM_MAP( pc1403_mem)
+	MCFG_CPU_CONFIG( pc1403_config )
+
+	MCFG_NVRAM_HANDLER( pc1403 )
 
 	/*
        aim: show sharp with keyboard
        resolution depends on the dots of the lcd
        (lcd dot displayed as 2x2 pixel) */
 	/* video hardware */
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_SIZE(848, 320)
-	MDRV_SCREEN_VISIBLE_AREA(0, 848-1, 0, 320-1)
-//  MDRV_SCREEN_SIZE(848, 361)
-//  MDRV_SCREEN_VISIBLE_AREA(0, 848-1, 0, 361-1)
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_SIZE(848, 320)
+	MCFG_SCREEN_VISIBLE_AREA(0, 848-1, 0, 320-1)
+//  MCFG_SCREEN_SIZE(848, 361)
+//  MCFG_SCREEN_VISIBLE_AREA(0, 848-1, 0, 361-1)
 
-	MDRV_VIDEO_START( pc1403 )
-	MDRV_VIDEO_UPDATE( pc1403 )
-MACHINE_DRIVER_END
+	MCFG_VIDEO_START( pc1403 )
+	MCFG_VIDEO_UPDATE( pc1403 )
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( pc1403h )
-	MDRV_IMPORT_FROM( pc1403)
-	MDRV_CPU_MODIFY( "maincpu" )
-	MDRV_CPU_PROGRAM_MAP( pc1403h_mem)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( pc1403h, pc1403 )
+	MCFG_CPU_MODIFY( "maincpu" )
+	MCFG_CPU_PROGRAM_MAP( pc1403h_mem)
+MACHINE_CONFIG_END
 
 
 ROM_START(pc1401)
@@ -962,10 +966,10 @@ ROM_START( pc1360 )
 	ROM_LOAD( "b4-1360.rom", 0x10000, 0x4000, CRC(0d311e21) SHA1(55987b7b00ddc666db30f35cbf23500b49e7ff09))
 	ROM_LOAD( "b5-1360.rom", 0x14000, 0x4000, CRC(f945f3f7) SHA1(26116d8277212e14bddb64c531f134fbb5c86f9e))
 	ROM_LOAD( "b6-1360.rom", 0x18000, 0x4000, CRC(ae823112) SHA1(9ab458e70752cacfd5d3ed36a8e89f96c63a6f50))
-	ROM_LOAD( "b7-1360.rom", 0x1c000, 0x4000, CRC(ba7384b6) SHA1(95396d506f1d71e66c3ae2d47ffb4b6d10b31401))	
+	ROM_LOAD( "b7-1360.rom", 0x1c000, 0x4000, CRC(ba7384b6) SHA1(95396d506f1d71e66c3ae2d47ffb4b6d10b31401))
 	ROM_REGION(0x100,"gfx1",ROMREGION_ERASEFF)
 ROM_END
-  
+
 ROM_START(pc1403)
 	ROM_REGION(0x10000,"maincpu",0)
 	ROM_LOAD("introm.bin", 0x0000, 0x2000, CRC(588c500b) SHA1(2fed9ebede27e20a8ee4b4b03b9f8cd7808ada5c))
@@ -1005,7 +1009,7 @@ ROM_END
    pc1600
 */
 ROM_START( pc1500 )
-    ROM_REGION( 0x10000, "maincpu", ROMREGION_ERASEFF )	
+    ROM_REGION( 0x10000, "maincpu", ROMREGION_ERASEFF )
 	ROM_LOAD( "sys1500.rom", 0x0000, 0x4000, CRC(d480b50d) SHA1(4bf748ba4d7c2b7cd7da7f3fdefcdd2e4cd41c4e))
     ROM_REGION( 0x10000, "ce150", ROMREGION_ERASEFF )
 	ROM_LOAD( "ce-150.rom", 0x0000, 0x2000, CRC(8fa1df6d) SHA1(a3aa02a641a46c27c0d4c0dc025b0dbe9b5b79c8))

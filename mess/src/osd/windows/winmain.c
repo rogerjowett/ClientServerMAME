@@ -123,6 +123,7 @@ public:
 	FPTR sp() const { return m_stackframe.AddrStack.Offset; }
 	FPTR frame() const { return m_stackframe.AddrFrame.Offset; }
 
+	bool reset();
 	void reset(CONTEXT &context, HANDLE thread);
 	bool unwind();
 
@@ -138,6 +139,7 @@ private:
 	dynamic_bind<BOOL (WINAPI *)(HANDLE, LPCTSTR, BOOL)> m_sym_initialize;
 	dynamic_bind<PVOID (WINAPI *)(HANDLE, DWORD64)> m_sym_function_table_access_64;
 	dynamic_bind<DWORD64 (WINAPI *)(HANDLE, DWORD64)> m_sym_get_module_base_64;
+	dynamic_bind<VOID (WINAPI *)(PCONTEXT)> m_rtl_capture_context;
 
 	static bool		s_initialized;
 };
@@ -252,6 +254,8 @@ static HANDLE watchdog_reset_event;
 static HANDLE watchdog_exit_event;
 static HANDLE watchdog_thread;
 
+static running_machine *g_current_machine;
+
 
 #ifndef MESS
 static const TCHAR helpfile[] = TEXT("docs\\windows.txt");
@@ -275,8 +279,7 @@ bool stack_walker::s_initialized = false;
 //  FUNCTION PROTOTYPES
 //**************************************************************************
 
-static void osd_exit(running_machine &machine);
-
+static BOOL WINAPI control_handler(DWORD type);
 static int is_double_click_start(int argc);
 static DWORD WINAPI watchdog_thread_entry(LPVOID lpParameter);
 static LONG WINAPI exception_filter(struct _EXCEPTION_POINTERS *info);
@@ -304,16 +307,16 @@ const options_entry mame_win_options[] =
 	{ "multithreading;mt",        "0",        OPTION_BOOLEAN,    "enable multithreading; this enables rendering and blitting on a separate thread" },
 	{ "numprocessors;np",         "auto",     0,				 "number of processors; this overrides the number the system reports" },
 	{ "profile",                  "0",        0,                 "enable profiling, specifying the stack depth to track" },
+	{ "bench",                    "0",        0,                 "benchmark for the given number of emulated seconds; implies -video none -nosound -nothrottle" },
 
 	// video options
 	{ NULL,                       NULL,       OPTION_HEADER,     "WINDOWS VIDEO OPTIONS" },
 	{ "video",                    "d3d",      0,                 "video output method: none, gdi, ddraw, or d3d" },
 	{ "numscreens(1-4)",          "1",        0,                 "number of screens to create; usually, you want just one" },
 	{ "window;w",                 "0",        OPTION_BOOLEAN,    "enable window mode; otherwise, full screen mode is assumed" },
-	{ "maximize;max",             "0",        OPTION_BOOLEAN,    "default to maximized windows; otherwise, windows will be minimized" },
+	{ "maximize;max",             "1",        OPTION_BOOLEAN,    "default to maximized windows; otherwise, windows will be minimized" },
 	{ "keepaspect;ka",            "1",        OPTION_BOOLEAN,    "constrain to the proper aspect ratio" },
 	{ "prescale",                 "1",        0,                 "scale screen rendering by this amount in software" },
-	{ "effect",                   "none",     0,                 "name of a PNG file to use for visual effects, or 'none'" },
 	{ "waitvsync",                "0",        OPTION_BOOLEAN,    "enable waiting for the start of VBLANK before flipping screens; reduces tearing effects" },
 	{ "syncrefresh",              "0",        OPTION_BOOLEAN,    "enable using the start of VBLANK for throttling instead of the game time" },
 
@@ -388,6 +391,9 @@ int main(int argc, char *argv[])
 	// initialize common controls
 	InitCommonControls();
 
+	// set a handler to catch ctrl-c
+	SetConsoleCtrlHandler(control_handler, TRUE);
+
 	// allocate symbols
 	symbol_manager local_symbols(argv[0]);
 	symbols = &local_symbols;
@@ -395,6 +401,10 @@ int main(int argc, char *argv[])
 	// set up exception handling
 	pass_thru_filter = SetUnhandledExceptionFilter(exception_filter);
 	SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX);
+
+	// enable stack crawls for asserts
+	extern void (*s_debugger_stack_crawler)();
+	s_debugger_stack_crawler = winmain_dump_stack;
 
 	// if we're a GUI app, out errors to message boxes
 	if (win_is_gui_application() || is_double_click_start(argc))
@@ -407,11 +417,52 @@ int main(int argc, char *argv[])
 	}
 
 	// parse config and cmdline options
-	DWORD result = cli_execute(argc, argv, mame_win_options);
+	DWORD result = 0;
+	{
+		windows_osd_interface osd;
+		result = cli_execute(argc, argv, osd, mame_win_options);
+	}
 
 	// free symbols
 	symbols = NULL;
 	return result;
+}
+
+
+//============================================================
+//  control_handler
+//============================================================
+
+static BOOL WINAPI control_handler(DWORD type)
+{
+	// indicate to the user that we detected something
+	switch (type)
+	{
+		case CTRL_C_EVENT:			fprintf(stderr, "Caught Ctrl+C");					break;
+		case CTRL_BREAK_EVENT:		fprintf(stderr, "Caught Ctrl+break");				break;
+		case CTRL_CLOSE_EVENT:		fprintf(stderr, "Caught console close");			break;
+		case CTRL_LOGOFF_EVENT:		fprintf(stderr, "Caught logoff");					break;
+		case CTRL_SHUTDOWN_EVENT:	fprintf(stderr, "Caught shutdown");					break;
+		default:					fprintf(stderr, "Caught unexpected console event");	break;
+	}
+
+	// if we don't have a machine yet, or if we are handling ctrl+c/ctrl+break,
+	// just terminate hard, without throwing or handling any atexit stuff
+	if (g_current_machine == NULL || type == CTRL_C_EVENT || type == CTRL_BREAK_EVENT)
+	{
+		fprintf(stderr, ", exiting\n");
+		TerminateProcess(GetCurrentProcess(), MAMERR_FATALERROR);
+	}
+
+	// all other situations attempt to do a clean exit
+	else
+	{
+		fprintf(stderr, ", exit requested\n");
+		g_current_machine->schedule_exit();
+	}
+
+	// in all cases we handled it
+	return TRUE;
 }
 
 
@@ -444,31 +495,62 @@ static void output_oslog(running_machine &machine, const char *buffer)
 
 
 //============================================================
-//  osd_init
+//  constructor
 //============================================================
 
-void osd_init(running_machine *machine)
+windows_osd_interface::windows_osd_interface()
 {
+}
+
+
+//============================================================
+//  destructor
+//============================================================
+
+windows_osd_interface::~windows_osd_interface()
+{
+}
+
+
+//============================================================
+//  init
+//============================================================
+
+void windows_osd_interface::init(running_machine &machine)
+{
+	// call our parent
+	osd_interface::init(machine);
+
 	const char *stemp;
 
+	// determine if we are benchmarking, and adjust options appropriately
+	int bench = options_get_int(machine.options(), WINOPTION_BENCH);
+	if (bench > 0)
+	{
+		options_set_bool(machine.options(), OPTION_THROTTLE, false, OPTION_PRIORITY_MAXIMUM);
+		options_set_bool(machine.options(), OPTION_SOUND, false, OPTION_PRIORITY_MAXIMUM);
+		options_set_string(machine.options(), WINOPTION_VIDEO, "none", OPTION_PRIORITY_MAXIMUM);
+		options_set_int(machine.options(), OPTION_SECONDS_TO_RUN, bench, OPTION_PRIORITY_MAXIMUM);
+	}
+
 	// determine if we are profiling, and adjust options appropriately
-	int profile = options_get_int(machine->options(), WINOPTION_PROFILE);
+	int profile = options_get_int(machine.options(), WINOPTION_PROFILE);
 	if (profile > 0)
 	{
-		options_set_bool(machine->options(), OPTION_THROTTLE, false, OPTION_PRIORITY_MAXIMUM);
-		options_set_bool(machine->options(), WINOPTION_MULTITHREADING, false, OPTION_PRIORITY_MAXIMUM);
-		options_set_bool(machine->options(), WINOPTION_NUMPROCESSORS, 1, OPTION_PRIORITY_MAXIMUM);
+		options_set_bool(machine.options(), OPTION_THROTTLE, false, OPTION_PRIORITY_MAXIMUM);
+		options_set_bool(machine.options(), WINOPTION_MULTITHREADING, false, OPTION_PRIORITY_MAXIMUM);
+		options_set_int(machine.options(), WINOPTION_NUMPROCESSORS, 1, OPTION_PRIORITY_MAXIMUM);
 	}
 
 	// thread priority
-	if (!(machine->debug_flags & DEBUG_FLAG_OSD_ENABLED))
-		SetThreadPriority(GetCurrentThread(), options_get_int(machine->options(), WINOPTION_PRIORITY));
+	if (!(machine.debug_flags & DEBUG_FLAG_OSD_ENABLED))
+		SetThreadPriority(GetCurrentThread(), options_get_int(machine.options(), WINOPTION_PRIORITY));
 
 	// ensure we get called on the way out
-	machine->add_notifier(MACHINE_NOTIFY_EXIT, osd_exit);
+	machine.add_notifier(MACHINE_NOTIFY_EXIT, osd_exit);
 
 	// get number of processors
-	stemp = options_get_string(machine->options(), WINOPTION_NUMPROCESSORS);
+	stemp = options_get_string(machine.options(), WINOPTION_NUMPROCESSORS);
 
 	osd_num_processors = 0;
 
@@ -483,10 +565,10 @@ void osd_init(running_machine *machine)
 	}
 
 	// initialize the subsystems
-	winvideo_init(machine);
-	winsound_init(machine);
-	wininput_init(machine);
-	winoutput_init(machine);
+	winvideo_init(&machine);
+	winsound_init(&machine);
+	wininput_init(&machine);
+	winoutput_init(&machine);
 
 	// notify listeners of screen configuration
 	astring tempstring;
@@ -497,8 +579,8 @@ void osd_init(running_machine *machine)
 	}
 
 	// hook up the debugger log
-	if (options_get_bool(machine->options(), WINOPTION_OSLOG))
-		machine->add_logerror_callback(output_oslog);
+	if (options_get_bool(machine.options(), WINOPTION_OSLOG))
+		machine.add_logerror_callback(output_oslog);
 
 	// crank up the multimedia timer resolution to its max
 	// this gives the system much finer timeslices
@@ -511,7 +593,7 @@ void osd_init(running_machine *machine)
 //          mm_task = (*av_set_mm_thread_characteristics)(TEXT("Playback"), &task_index);
 
 	// if a watchdog thread is requested, create one
-	int watchdog = options_get_int(machine->options(), WINOPTION_WATCHDOG);
+	int watchdog = options_get_int(machine.options(), WINOPTION_WATCHDOG);
 	if (watchdog != 0)
 	{
 		watchdog_reset_event = CreateEvent(NULL, FALSE, FALSE, NULL);
@@ -528,6 +610,9 @@ void osd_init(running_machine *machine)
 		profiler = global_alloc(sampling_profiler(1000, profile - 1));
 		profiler->start();
 	}
+
+	// note the existence of a machine
+	g_current_machine = &machine;
 }
 
 
@@ -535,8 +620,11 @@ void osd_init(running_machine *machine)
 //  osd_exit
 //============================================================
 
-static void osd_exit(running_machine &machine)
+void windows_osd_interface::osd_exit(running_machine &machine)
 {
+	// no longer have a machine
+	g_current_machine = NULL;
+
 	// take down the watchdog thread if it exists
 	if (watchdog_thread != NULL)
 	{
@@ -568,6 +656,243 @@ static void osd_exit(running_machine &machine)
 
 	// one last pass at events
 	winwindow_process_events(&machine, 0);
+}
+
+
+//-------------------------------------------------
+//  font_open - attempt to "open" a handle to the
+//  font with the given name
+//-------------------------------------------------
+
+osd_font windows_osd_interface::font_open(const char *_name, int &height)
+{
+	// accept qualifiers from the name
+	astring name(_name);
+	if (name == "default") name = "Tahoma";
+	bool bold = (name.replace(0, "[B]", "") + name.replace(0, "[b]", "") > 0);
+	bool italic = (name.replace(0, "[I]", "") + name.replace(0, "[i]", "") > 0);
+
+	// build a basic LOGFONT description of what we want
+	LOGFONT logfont;
+	logfont.lfHeight = DEFAULT_FONT_HEIGHT;
+	logfont.lfWidth = 0;
+	logfont.lfEscapement = 0;
+	logfont.lfOrientation = 0;
+	logfont.lfWeight = bold ? FW_BOLD : FW_MEDIUM;
+	logfont.lfItalic = italic;
+	logfont.lfUnderline = FALSE;
+	logfont.lfStrikeOut = FALSE;
+	logfont.lfCharSet = ANSI_CHARSET;
+	logfont.lfOutPrecision = OUT_DEFAULT_PRECIS;
+	logfont.lfClipPrecision = CLIP_DEFAULT_PRECIS;
+	logfont.lfQuality = NONANTIALIASED_QUALITY;
+	logfont.lfPitchAndFamily = DEFAULT_PITCH | FF_DONTCARE;
+
+	// copy in the face name
+	TCHAR *face = tstring_from_utf8(name);
+	_tcsncpy(logfont.lfFaceName, face, sizeof(logfont.lfFaceName) / sizeof(TCHAR));
+	logfont.lfFaceName[sizeof(logfont.lfFaceName) / sizeof(TCHAR) - 1] = 0;
+	osd_free(face);
+
+	// create the font
+	height = logfont.lfHeight;
+	osd_font font = reinterpret_cast<osd_font>(CreateFontIndirect(&logfont));
+	if (font == NULL)
+		return NULL;
+
+	// select it into a temp DC and get the real font name
+	HDC dummyDC = CreateCompatibleDC(NULL);
+	HGDIOBJ oldfont = SelectObject(dummyDC, reinterpret_cast<HGDIOBJ>(font));
+	TCHAR realname[100];
+	GetTextFace(dummyDC, ARRAY_LENGTH(realname), realname);
+	SelectObject(dummyDC, oldfont);
+	DeleteDC(dummyDC);
+
+	// if it doesn't match our request, fail
+	char *utf = utf8_from_tstring(realname);
+	int result = mame_stricmp(utf, name);
+	osd_free(utf);
+
+	// if we didn't match, nuke our font and fall back
+	if (result != 0)
+	{
+		DeleteObject(reinterpret_cast<HFONT>(font));
+		font = NULL;
+	}
+	return font;
+}
+
+
+//-------------------------------------------------
+//  font_close - release resources associated with
+//  a given OSD font
+//-------------------------------------------------
+
+void windows_osd_interface::font_close(osd_font font)
+{
+	// delete the font ojbect
+	if (font != NULL)
+		DeleteObject(reinterpret_cast<HFONT>(font));
+}
+
+
+//-------------------------------------------------
+//  font_get_bitmap - allocate and populate a
+//  BITMAP_FORMAT_ARGB32 bitmap containing the
+//  pixel values MAKE_ARGB(0xff,0xff,0xff,0xff)
+//  or MAKE_ARGB(0x00,0xff,0xff,0xff) for each
+//  pixel of a black & white font
+//-------------------------------------------------
+
+bitmap_t *windows_osd_interface::font_get_bitmap(osd_font font, unicode_char chnum, INT32 &width, INT32 &xoffs, INT32 &yoffs)
+{
+	// create a dummy DC to work with
+	HDC dummyDC = CreateCompatibleDC(NULL);
+	HGDIOBJ oldfont = SelectObject(dummyDC, reinterpret_cast<HGDIOBJ>(font));
+
+	// get the text metrics
+	TEXTMETRIC metrics = { 0 };
+	GetTextMetrics(dummyDC, &metrics);
+
+	// get the width of this character
+	ABC abc;
+	if (!GetCharABCWidths(dummyDC, chnum, chnum, &abc))
+	{
+		abc.abcA = 0;
+		abc.abcC = 0;
+		GetCharWidth32(dummyDC, chnum, chnum, reinterpret_cast<LPINT>(&abc.abcB));
+	}
+	width = abc.abcA + abc.abcB + abc.abcC;
+
+	// determine desired bitmap size
+	int bmwidth = (50 + abc.abcA + abc.abcB + abc.abcC + 50 + 31) & ~31;
+	int bmheight = 50 + metrics.tmHeight + 50;
+
+	// describe the bitmap we want
+	BYTE bitmapinfodata[sizeof(BITMAPINFOHEADER) + 2 * sizeof(RGBQUAD)] = { 0 };
+	BITMAPINFO &info = *reinterpret_cast<BITMAPINFO *>(bitmapinfodata);
+	info.bmiHeader.biSize = sizeof(info.bmiHeader);
+	info.bmiHeader.biWidth = bmwidth;
+	info.bmiHeader.biHeight = -bmheight;
+	info.bmiHeader.biPlanes = 1;
+	info.bmiHeader.biBitCount = 1;
+	info.bmiHeader.biCompression = BI_RGB;
+	info.bmiHeader.biSizeImage = 0;
+	info.bmiHeader.biXPelsPerMeter = GetDeviceCaps(dummyDC, HORZRES) / GetDeviceCaps(dummyDC, HORZSIZE);
+	info.bmiHeader.biYPelsPerMeter = GetDeviceCaps(dummyDC, VERTRES) / GetDeviceCaps(dummyDC, VERTSIZE);
+	info.bmiHeader.biClrUsed = 0;
+	info.bmiHeader.biClrImportant = 0;
+	info.bmiColors[0].rgbBlue = info.bmiColors[0].rgbGreen = info.bmiColors[0].rgbRed = 0x00;
+	info.bmiColors[1].rgbBlue = info.bmiColors[1].rgbGreen = info.bmiColors[1].rgbRed = 0xff;
+
+	// create a DIB to render to
+	BYTE *bits;
+	HBITMAP dib = CreateDIBSection(dummyDC, &info, DIB_RGB_COLORS, reinterpret_cast<VOID **>(&bits), NULL, 0);
+	HGDIOBJ oldbitmap = SelectObject(dummyDC, dib);
+
+	// clear the bitmap
+	int rowbytes = bmwidth / 8;
+	memset(bits, 0, rowbytes * bmheight);
+
+	// now draw the character
+	WCHAR tempchar = chnum;
+	SetTextColor(dummyDC, RGB(0xff,0xff,0xff));
+	SetBkColor(dummyDC, RGB(0x00,0x00,0x00));
+	ExtTextOutW(dummyDC, 50 + abc.abcA, 50, ETO_OPAQUE, NULL, &tempchar, 1, NULL);
+
+	// characters are expected to be full-height
+	rectangle actbounds;
+	actbounds.min_y = 50;
+	actbounds.max_y = 50 + metrics.tmHeight - 1;
+
+	// determine the actual left of the character
+	for (actbounds.min_x = 0; actbounds.min_x < rowbytes; actbounds.min_x++)
+	{
+		BYTE *offs = bits + actbounds.min_x;
+		UINT8 summary = 0;
+		for (int y = 0; y < bmheight; y++)
+			summary |= offs[y * rowbytes];
+		if (summary != 0)
+		{
+			actbounds.min_x *= 8;
+			if (!(summary & 0x80)) actbounds.min_x++;
+			if (!(summary & 0xc0)) actbounds.min_x++;
+			if (!(summary & 0xe0)) actbounds.min_x++;
+			if (!(summary & 0xf0)) actbounds.min_x++;
+			if (!(summary & 0xf8)) actbounds.min_x++;
+			if (!(summary & 0xfc)) actbounds.min_x++;
+			if (!(summary & 0xfe)) actbounds.min_x++;
+			break;
+		}
+	}
+
+	// determine the actual right of the character
+	for (actbounds.max_x = rowbytes - 1; actbounds.max_x >= 0; actbounds.max_x--)
+	{
+		BYTE *offs = bits + actbounds.max_x;
+		UINT8 summary = 0;
+		for (int y = 0; y < bmheight; y++)
+			summary |= offs[y * rowbytes];
+		if (summary != 0)
+		{
+			actbounds.max_x *= 8;
+			if (summary & 0x7f) actbounds.max_x++;
+			if (summary & 0x3f) actbounds.max_x++;
+			if (summary & 0x1f) actbounds.max_x++;
+			if (summary & 0x0f) actbounds.max_x++;
+			if (summary & 0x07) actbounds.max_x++;
+			if (summary & 0x03) actbounds.max_x++;
+			if (summary & 0x01) actbounds.max_x++;
+			break;
+		}
+	}
+
+	// allocate a new bitmap
+	bitmap_t *bitmap = NULL;
+	if (actbounds.max_x >= actbounds.min_x && actbounds.max_y >= actbounds.min_y)
+	{
+		bitmap = auto_alloc(&machine(), bitmap_t(actbounds.max_x + 1 - actbounds.min_x, actbounds.max_y + 1 - actbounds.min_y, BITMAP_FORMAT_ARGB32));
+
+		// copy the bits into it
+		for (int y = 0; y < bitmap->height; y++)
+		{
+			UINT32 *dstrow = BITMAP_ADDR32(bitmap, y, 0);
+			UINT8 *srcrow = &bits[(y + actbounds.min_y) * rowbytes];
+			for (int x = 0; x < bitmap->width; x++)
+			{
+				int effx = x + actbounds.min_x;
+				dstrow[x] = ((srcrow[effx / 8] << (effx % 8)) & 0x80) ? MAKE_ARGB(0xff,0xff,0xff,0xff) : MAKE_ARGB(0x00,0xff,0xff,0xff);
+			}
+		}
+
+		// set the final offset values
+		xoffs = actbounds.min_x - (50 + abc.abcA);
+		yoffs = actbounds.max_y - (50 + metrics.tmAscent);
+	}
+
+	// de-select the font and release the DC
+	SelectObject(dummyDC, oldbitmap);
+	DeleteObject(dib);
+	SelectObject(dummyDC, oldfont);
+	DeleteDC(dummyDC);
+	return bitmap;
+}
+
+
+//============================================================
+//  winmain_dump_stack
+//============================================================
+
+void winmain_dump_stack()
+{
+	// set up the stack walker
+	stack_walker walker;
+	if (!walker.reset())
+		return;
+
+	// walk the stack
+	while (walker.unwind())
+		fprintf(stderr, "  %p: %p%s\n", (void *)walker.frame(), (void *)walker.ip(), (symbols == NULL) ? "" : symbols->symbol_for_address(walker.ip()));
 }
 
 
@@ -744,12 +1069,11 @@ static LONG WINAPI exception_filter(struct _EXCEPTION_POINTERS *info)
 
 	// walk the stack
 	while (walker.unwind())
-		fprintf(stderr, "  %p: %p%s\n", (void *)walker.frame(), (void *)walker.ip(), symbols->symbol_for_address(walker.ip()));
+		fprintf(stderr, "  %p: %p%s\n", (void *)walker.frame(), (void *)walker.ip(), (symbols == NULL) ? "" : symbols->symbol_for_address(walker.ip()));
 
 	// exit
 	return EXCEPTION_CONTINUE_SEARCH;
 }
-
 
 
 //**************************************************************************
@@ -767,7 +1091,8 @@ stack_walker::stack_walker()
 	  m_stack_walk_64(TEXT("dbghelp.dll"), "StackWalk64"),
 	  m_sym_initialize(TEXT("dbghelp.dll"), "SymInitialize"),
 	  m_sym_function_table_access_64(TEXT("dbghelp.dll"), "SymFunctionTableAccess64"),
-	  m_sym_get_module_base_64(TEXT("dbghelp.dll"), "SymGetModuleBase64")
+	  m_sym_get_module_base_64(TEXT("dbghelp.dll"), "SymGetModuleBase64"),
+	  m_rtl_capture_context(TEXT("kernel32.dll"), "RtlCaptureContext")
 {
 	// zap the structs
 	memset(&m_stackframe, 0, sizeof(m_stackframe));
@@ -785,6 +1110,34 @@ stack_walker::stack_walker()
 //-------------------------------------------------
 //  reset - set up a new context
 //-------------------------------------------------
+
+bool stack_walker::reset()
+{
+	// set up the initial state
+	if (!m_rtl_capture_context)
+		return false;
+	(*m_rtl_capture_context)(&m_context);
+	m_thread = GetCurrentThread();
+	m_first = true;
+
+	// initialize the stackframe
+	memset(&m_stackframe, 0, sizeof(m_stackframe));
+	m_stackframe.AddrPC.Mode = AddrModeFlat;
+	m_stackframe.AddrFrame.Mode = AddrModeFlat;
+	m_stackframe.AddrStack.Mode = AddrModeFlat;
+
+	// pull architecture-specific fields from the context
+#ifdef PTR64
+	m_stackframe.AddrPC.Offset = m_context.Rip;
+	m_stackframe.AddrFrame.Offset = m_context.Rsp;
+	m_stackframe.AddrStack.Offset = m_context.Rsp;
+#else
+	m_stackframe.AddrPC.Offset = m_context.Eip;
+	m_stackframe.AddrFrame.Offset = m_context.Ebp;
+	m_stackframe.AddrStack.Offset = m_context.Esp;
+#endif
+	return true;
+}
 
 void stack_walker::reset(CONTEXT &initial, HANDLE thread)
 {

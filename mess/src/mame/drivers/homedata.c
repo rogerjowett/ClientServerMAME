@@ -226,7 +226,7 @@ Custom: GX61A01
 
 static INTERRUPT_GEN( homedata_irq )
 {
-	homedata_state *state = (homedata_state *)device->machine->driver_data;
+	homedata_state *state = device->machine->driver_data<homedata_state>();
 	state->vblank = 1;
 	cpu_set_input_line(device, M6809_FIRQ_LINE, HOLD_LINE);
 }
@@ -247,7 +247,7 @@ static INTERRUPT_GEN( upd7807_irq )
 
 static READ8_HANDLER( mrokumei_keyboard_r )
 {
-	homedata_state *state = (homedata_state *)space->machine->driver_data;
+	homedata_state *state = space->machine->driver_data<homedata_state>();
 	int res = 0x3f,i;
 	static const char *const keynames[] = { "KEY0", "KEY1", "KEY2", "KEY3", "KEY4" };
 
@@ -283,23 +283,23 @@ static READ8_HANDLER( mrokumei_keyboard_r )
 
 static WRITE8_HANDLER( mrokumei_keyboard_select_w )
 {
-	homedata_state *state = (homedata_state *)space->machine->driver_data;
+	homedata_state *state = space->machine->driver_data<homedata_state>();
 	state->keyb = data;
 }
 
 
 static READ8_HANDLER( mrokumei_sound_io_r )
 {
-	homedata_state *state = (homedata_state *)space->machine->driver_data;
+	homedata_state *state = space->machine->driver_data<homedata_state>();
 	if (state->sndbank & 4)
 		return(soundlatch_r(space, 0));
 	else
-		return memory_region(space->machine, "audiocpu")[0x10000 + offset + (state->sndbank & 1) * 0x10000];
+		return space->machine->region("audiocpu")->base()[0x10000 + offset + (state->sndbank & 1) * 0x10000];
 }
 
 static WRITE8_HANDLER( mrokumei_sound_bank_w )
 {
-	homedata_state *state = (homedata_state *)space->machine->driver_data;
+	homedata_state *state = space->machine->driver_data<homedata_state>();
 	/* bit 0 = ROM bank
        bit 2 = ROM or soundlatch
      */
@@ -308,7 +308,7 @@ static WRITE8_HANDLER( mrokumei_sound_bank_w )
 
 static WRITE8_HANDLER( mrokumei_sound_io_w )
 {
-	homedata_state *state = (homedata_state *)space->machine->driver_data;
+	homedata_state *state = space->machine->driver_data<homedata_state>();
 	switch (offset & 0xff)
 	{
 		case 0x40:
@@ -322,7 +322,7 @@ static WRITE8_HANDLER( mrokumei_sound_io_w )
 
 static WRITE8_HANDLER( mrokumei_sound_cmd_w )
 {
-	homedata_state *state = (homedata_state *)space->machine->driver_data;
+	homedata_state *state = space->machine->driver_data<homedata_state>();
 	soundlatch_w(space, offset, data);
 	cpu_set_input_line(state->audiocpu, 0, HOLD_LINE);
 }
@@ -338,19 +338,19 @@ static WRITE8_HANDLER( mrokumei_sound_cmd_w )
 
 static READ8_HANDLER( reikaids_upd7807_porta_r )
 {
-	homedata_state *state = (homedata_state *)space->machine->driver_data;
+	homedata_state *state = space->machine->driver_data<homedata_state>();
 	return state->upd7807_porta;
 }
 
 static WRITE8_HANDLER( reikaids_upd7807_porta_w )
 {
-	homedata_state *state = (homedata_state *)space->machine->driver_data;
+	homedata_state *state = space->machine->driver_data<homedata_state>();
 	state->upd7807_porta = data;
 }
 
 static WRITE8_HANDLER( reikaids_upd7807_portc_w )
 {
-	homedata_state *state = (homedata_state *)space->machine->driver_data;
+	homedata_state *state = space->machine->driver_data<homedata_state>();
 
 	/* port C layout:
        7 coin counter
@@ -379,7 +379,7 @@ static WRITE8_HANDLER( reikaids_upd7807_portc_w )
 
 static READ8_HANDLER( reikaids_io_r )
 {
-	homedata_state *state = (homedata_state *)space->machine->driver_data;
+	homedata_state *state = space->machine->driver_data<homedata_state>();
 	int res = input_port_read(space->machine, "IN2");	// bit 4 = coin, bit 5 = service
 
 	res |= BIT(state->upd7807_portc, 2) * 0x01;		// bit 0 = upd7807 status
@@ -397,14 +397,14 @@ static READ8_HANDLER( reikaids_io_r )
 
 static READ8_HANDLER( reikaids_snd_command_r )
 {
-	homedata_state *state = (homedata_state *)space->machine->driver_data;
+	homedata_state *state = space->machine->driver_data<homedata_state>();
 	//logerror("%04x: sndmcd_r (%02x)\n", cpu_get_pc(space->cpu), state->snd_command);
 	return state->snd_command;
 }
 
 static WRITE8_HANDLER( reikaids_snd_command_w )
 {
-	homedata_state *state = (homedata_state *)space->machine->driver_data;
+	homedata_state *state = space->machine->driver_data<homedata_state>();
 	state->snd_command = data;
 	//logerror("%04x: coprocessor_command_w %02x\n", cpu_get_pc(space->cpu), data);
 }
@@ -420,21 +420,21 @@ static WRITE8_HANDLER( reikaids_snd_command_w )
 
 static WRITE8_HANDLER( pteacher_snd_command_w )
 {
-	homedata_state *state = (homedata_state *)space->machine->driver_data;
+	homedata_state *state = space->machine->driver_data<homedata_state>();
 	//logerror("%04x: snd_command_w %02x\n", cpu_get_pc(space->cpu), data);
 	state->from_cpu = data;
 }
 
 static READ8_HANDLER( pteacher_snd_r )
 {
-	homedata_state *state = (homedata_state *)space->machine->driver_data;
+	homedata_state *state = space->machine->driver_data<homedata_state>();
 	//logerror("%04x: pteacher_snd_r %02x\n",cpu_get_pc(space->cpu),to_cpu);
 	return state->to_cpu;
 }
 
 static READ8_HANDLER( pteacher_io_r )
 {
-	homedata_state *state = (homedata_state *)space->machine->driver_data;
+	homedata_state *state = space->machine->driver_data<homedata_state>();
 	/* bit 6: !vblank
      * bit 7: visible page
      * other bits seem unused
@@ -452,7 +452,7 @@ static READ8_HANDLER( pteacher_io_r )
 
 static READ8_HANDLER( pteacher_keyboard_r )
 {
-	homedata_state *state = (homedata_state *)space->machine->driver_data;
+	homedata_state *state = space->machine->driver_data<homedata_state>();
 	static const char *const keynames[] = { "KEY0", "KEY1", "KEY2", "KEY3", "KEY4", "KEY5" };
 	int dips = input_port_read(space->machine, "DSW");
 
@@ -476,7 +476,7 @@ static READ8_HANDLER( pteacher_keyboard_r )
 
 static READ8_HANDLER( pteacher_upd7807_porta_r )
 {
-	homedata_state *state = (homedata_state *)space->machine->driver_data;
+	homedata_state *state = space->machine->driver_data<homedata_state>();
 	if (!BIT(state->upd7807_portc, 6))
 		state->upd7807_porta = state->from_cpu;
 	else
@@ -487,20 +487,20 @@ static READ8_HANDLER( pteacher_upd7807_porta_r )
 
 static WRITE8_HANDLER( pteacher_snd_answer_w )
 {
-	homedata_state *state = (homedata_state *)space->machine->driver_data;
+	homedata_state *state = space->machine->driver_data<homedata_state>();
 	state->to_cpu = data;
 	//logerror("%04x: to_cpu = %02x\n", cpu_get_pc(space->cpu), state->to_cpu);
 }
 
 static WRITE8_HANDLER( pteacher_upd7807_porta_w )
 {
-	homedata_state *state = (homedata_state *)space->machine->driver_data;
+	homedata_state *state = space->machine->driver_data<homedata_state>();
 	state->upd7807_porta = data;
 }
 
 static WRITE8_HANDLER( pteacher_upd7807_portc_w )
 {
-	homedata_state *state = (homedata_state *)space->machine->driver_data;
+	homedata_state *state = space->machine->driver_data<homedata_state>();
 	/* port C layout:
        7 coin counter
        6 enable message from main CPU on port A
@@ -529,7 +529,7 @@ static WRITE8_HANDLER( pteacher_upd7807_portc_w )
 
 static WRITE8_HANDLER( bankswitch_w )
 {
-	int last_bank = (memory_region_length(space->machine, "maincpu") - 0x10000) / 0x4000;
+	int last_bank = (space->machine->region("maincpu")->bytes() - 0x10000) / 0x4000;
 
 	/* last bank is fixed and is #0 for us, other banks start from #1 (hence data+1 below)*/
 	if (data < last_bank)
@@ -1147,7 +1147,7 @@ GFXDECODE_END
 
 static MACHINE_START( homedata )
 {
-	homedata_state *state = (homedata_state *)machine->driver_data;
+	homedata_state *state = machine->driver_data<homedata_state>();
 
 	state->maincpu = machine->device("maincpu");
 	state->audiocpu = machine->device("audiocpu");
@@ -1168,11 +1168,11 @@ static MACHINE_START( homedata )
 
 static MACHINE_START( reikaids )
 {
-	homedata_state *state = (homedata_state *)machine->driver_data;
-	UINT8 *ROM = memory_region(machine, "maincpu");
+	homedata_state *state = machine->driver_data<homedata_state>();
+	UINT8 *ROM = machine->region("maincpu")->base();
 
 	memory_configure_bank(machine, "bank1", 0, 8, &ROM[0xc000], 0x4000);
-	memory_configure_bank(machine, "bank2", 0, 4, memory_region(machine, "audiocpu"), 0x10000);
+	memory_configure_bank(machine, "bank2", 0, 4, machine->region("audiocpu")->base(), 0x10000);
 
 	MACHINE_START_CALL(homedata);
 
@@ -1185,11 +1185,11 @@ static MACHINE_START( reikaids )
 
 static MACHINE_START( pteacher )
 {
-	homedata_state *state = (homedata_state *)machine->driver_data;
-	UINT8 *ROM = memory_region(machine, "maincpu");
+	homedata_state *state = machine->driver_data<homedata_state>();
+	UINT8 *ROM = machine->region("maincpu")->base();
 
 	memory_configure_bank(machine, "bank1", 0, 4, &ROM[0xc000], 0x4000);
-	memory_configure_bank(machine, "bank2", 0, 4, memory_region(machine, "audiocpu"), 0x10000);
+	memory_configure_bank(machine, "bank2", 0, 4, machine->region("audiocpu")->base(), 0x10000);
 
 	MACHINE_START_CALL(homedata);
 
@@ -1203,7 +1203,7 @@ static MACHINE_START( pteacher )
 
 static MACHINE_RESET( homedata )
 {
-	homedata_state *state = (homedata_state *)machine->driver_data;
+	homedata_state *state = machine->driver_data<homedata_state>();
 
 	state->visible_page = 0;
 	state->flipscreen = 0;
@@ -1221,8 +1221,8 @@ static MACHINE_RESET( homedata )
 
 static MACHINE_RESET( pteacher )
 {
-	homedata_state *state = (homedata_state *)machine->driver_data;
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	homedata_state *state = machine->driver_data<homedata_state>();
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	/* on reset, ports are set as input (high impedance), therefore 0xff output */
 	pteacher_upd7807_portc_w(space, 0, 0xff);
@@ -1238,8 +1238,8 @@ static MACHINE_RESET( pteacher )
 
 static MACHINE_RESET( reikaids )
 {
-	homedata_state *state = (homedata_state *)machine->driver_data;
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	homedata_state *state = machine->driver_data<homedata_state>();
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	/* on reset, ports are set as input (high impedance), therefore 0xff output */
 	reikaids_upd7807_portc_w(space, 0, 0xff);
@@ -1252,49 +1252,46 @@ static MACHINE_RESET( reikaids )
 	state->gfx_bank[1] = 0;	// this is not used by reikaids
 }
 
-static MACHINE_DRIVER_START( mrokumei )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(homedata_state)
+static MACHINE_CONFIG_START( mrokumei, homedata_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6809, 16000000/4)	/* 4MHz ? */
-	MDRV_CPU_PROGRAM_MAP(mrokumei_map)
-	MDRV_CPU_VBLANK_INT("screen", homedata_irq)	/* also triggered by the blitter */
+	MCFG_CPU_ADD("maincpu", M6809, 16000000/4)	/* 4MHz ? */
+	MCFG_CPU_PROGRAM_MAP(mrokumei_map)
+	MCFG_CPU_VBLANK_INT("screen", homedata_irq)	/* also triggered by the blitter */
 
-	MDRV_CPU_ADD("audiocpu", Z80, 16000000/4)	/* 4MHz ? */
-	MDRV_CPU_PROGRAM_MAP(mrokumei_sound_map)
-	MDRV_CPU_IO_MAP(mrokumei_sound_io_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 16000000/4)	/* 4MHz ? */
+	MCFG_CPU_PROGRAM_MAP(mrokumei_sound_map)
+	MCFG_CPU_IO_MAP(mrokumei_sound_io_map)
 
-	MDRV_MACHINE_START(homedata)
-	MDRV_MACHINE_RESET(homedata)
+	MCFG_MACHINE_START(homedata)
+	MCFG_MACHINE_RESET(homedata)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(59)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(59)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
 	// visible area can be changed at runtime
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 54*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 54*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(mrokumei)
-	MDRV_PALETTE_LENGTH(0x8000)
+	MCFG_GFXDECODE(mrokumei)
+	MCFG_PALETTE_LENGTH(0x8000)
 
-	MDRV_PALETTE_INIT(mrokumei)
-	MDRV_VIDEO_START(mrokumei)
-	MDRV_VIDEO_UPDATE(mrokumei)
-	MDRV_VIDEO_EOF(homedata)
+	MCFG_PALETTE_INIT(mrokumei)
+	MCFG_VIDEO_START(mrokumei)
+	MCFG_VIDEO_UPDATE(mrokumei)
+	MCFG_VIDEO_EOF(homedata)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("snsnd", SN76489A, 16000000/4)     // SN76489AN actually
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_SOUND_ADD("snsnd", SN76489A, 16000000/4)     // SN76489AN actually
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MDRV_SOUND_ADD("dac", DAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("dac", DAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 /**************************************************************************/
@@ -1321,125 +1318,115 @@ static const UPD7810_CONFIG upd_config =
 };
 
 
-static MACHINE_DRIVER_START( reikaids )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(homedata_state)
+static MACHINE_CONFIG_START( reikaids, homedata_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6809, 16000000/4)	/* 4MHz ? */
-	MDRV_CPU_PROGRAM_MAP(reikaids_map)
-	MDRV_CPU_VBLANK_INT("screen", homedata_irq)	/* also triggered by the blitter */
+	MCFG_CPU_ADD("maincpu", M6809, 16000000/4)	/* 4MHz ? */
+	MCFG_CPU_PROGRAM_MAP(reikaids_map)
+	MCFG_CPU_VBLANK_INT("screen", homedata_irq)	/* also triggered by the blitter */
 
-	MDRV_CPU_ADD("audiocpu", UPD7807, 8000000)	/* ??? MHz (max speed for the 7807 is 12MHz) */
-	MDRV_CPU_CONFIG(upd_config)
-	MDRV_CPU_PROGRAM_MAP(reikaids_upd7807_map)
-	MDRV_CPU_IO_MAP(reikaids_upd7807_io_map)
-	MDRV_CPU_VBLANK_INT("screen", upd7807_irq)
+	MCFG_CPU_ADD("audiocpu", UPD7807, 8000000)	/* ??? MHz (max speed for the 7807 is 12MHz) */
+	MCFG_CPU_CONFIG(upd_config)
+	MCFG_CPU_PROGRAM_MAP(reikaids_upd7807_map)
+	MCFG_CPU_IO_MAP(reikaids_upd7807_io_map)
+	MCFG_CPU_VBLANK_INT("screen", upd7807_irq)
 
-	MDRV_QUANTUM_TIME(HZ(30000))	// very high interleave required to sync for startup tests
+	MCFG_QUANTUM_TIME(HZ(30000))	// very high interleave required to sync for startup tests
 
-	MDRV_MACHINE_START(reikaids)
-	MDRV_MACHINE_RESET(reikaids)
+	MCFG_MACHINE_START(reikaids)
+	MCFG_MACHINE_RESET(reikaids)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(59)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(256, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 255, 16, 256-1-16)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(59)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(256, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 255, 16, 256-1-16)
 
-	MDRV_GFXDECODE(reikaids)
-	MDRV_PALETTE_LENGTH(0x8000)
+	MCFG_GFXDECODE(reikaids)
+	MCFG_PALETTE_LENGTH(0x8000)
 
-	MDRV_PALETTE_INIT(reikaids)
-	MDRV_VIDEO_START(reikaids)
-	MDRV_VIDEO_UPDATE(reikaids)
-	MDRV_VIDEO_EOF(homedata)
+	MCFG_PALETTE_INIT(reikaids)
+	MCFG_VIDEO_START(reikaids)
+	MCFG_VIDEO_UPDATE(reikaids)
+	MCFG_VIDEO_EOF(homedata)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM2203, 3000000)
-	MDRV_SOUND_CONFIG(ym2203_config)
-	MDRV_SOUND_ROUTE(0, "mono", 0.25)
-	MDRV_SOUND_ROUTE(1, "mono", 0.25)
-	MDRV_SOUND_ROUTE(2, "mono", 0.25)
-	MDRV_SOUND_ROUTE(3, "mono", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM2203, 3000000)
+	MCFG_SOUND_CONFIG(ym2203_config)
+	MCFG_SOUND_ROUTE(0, "mono", 0.25)
+	MCFG_SOUND_ROUTE(1, "mono", 0.25)
+	MCFG_SOUND_ROUTE(2, "mono", 0.25)
+	MCFG_SOUND_ROUTE(3, "mono", 1.0)
 
-	MDRV_SOUND_ADD("dac", DAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("dac", DAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
+MACHINE_CONFIG_END
 
 
 /**************************************************************************/
 
-static MACHINE_DRIVER_START( pteacher )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(homedata_state)
+static MACHINE_CONFIG_START( pteacher, homedata_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6809, 16000000/4)	/* 4MHz ? */
-	MDRV_CPU_PROGRAM_MAP(pteacher_map)
-	MDRV_CPU_VBLANK_INT("screen", homedata_irq)	/* also triggered by the blitter */
+	MCFG_CPU_ADD("maincpu", M6809, 16000000/4)	/* 4MHz ? */
+	MCFG_CPU_PROGRAM_MAP(pteacher_map)
+	MCFG_CPU_VBLANK_INT("screen", homedata_irq)	/* also triggered by the blitter */
 
-	MDRV_CPU_ADD("audiocpu", UPD7807, 9000000)	/* 9MHz ? */
-	MDRV_CPU_CONFIG(upd_config)
-	MDRV_CPU_PROGRAM_MAP(pteacher_upd7807_map)
-	MDRV_CPU_IO_MAP(pteacher_upd7807_io_map)
-	MDRV_CPU_VBLANK_INT("screen", upd7807_irq)
+	MCFG_CPU_ADD("audiocpu", UPD7807, 9000000)	/* 9MHz ? */
+	MCFG_CPU_CONFIG(upd_config)
+	MCFG_CPU_PROGRAM_MAP(pteacher_upd7807_map)
+	MCFG_CPU_IO_MAP(pteacher_upd7807_io_map)
+	MCFG_CPU_VBLANK_INT("screen", upd7807_irq)
 
-	MDRV_QUANTUM_TIME(HZ(6000))	// should be enough
+	MCFG_QUANTUM_TIME(HZ(6000))	// should be enough
 
-	MDRV_MACHINE_START(pteacher)
-	MDRV_MACHINE_RESET(pteacher)
+	MCFG_MACHINE_START(pteacher)
+	MCFG_MACHINE_RESET(pteacher)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(59)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(59)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
 	// visible area can be changed at runtime
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 54*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 54*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(pteacher)
-	MDRV_PALETTE_LENGTH(0x8000)
+	MCFG_GFXDECODE(pteacher)
+	MCFG_PALETTE_LENGTH(0x8000)
 
-	MDRV_PALETTE_INIT(pteacher)
-	MDRV_VIDEO_START(pteacher)
-	MDRV_VIDEO_UPDATE(pteacher)
-	MDRV_VIDEO_EOF(homedata)
+	MCFG_PALETTE_INIT(pteacher)
+	MCFG_VIDEO_START(pteacher)
+	MCFG_VIDEO_UPDATE(pteacher)
+	MCFG_VIDEO_EOF(homedata)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("snsnd", SN76489A, 16000000/4)     // SN76489AN actually
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_SOUND_ADD("snsnd", SN76489A, 16000000/4)     // SN76489AN actually
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MDRV_SOUND_ADD("dac", DAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("dac", DAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( mjkinjas )
+static MACHINE_CONFIG_DERIVED( mjkinjas, pteacher )
 
-	MDRV_IMPORT_FROM(pteacher)
+	MCFG_CPU_MODIFY("audiocpu")
+	MCFG_CPU_CLOCK(11000000)	/* 11MHz ? */
+MACHINE_CONFIG_END
 
-	MDRV_CPU_MODIFY("audiocpu")
-	MDRV_CPU_CLOCK(11000000)	/* 11MHz ? */
-MACHINE_DRIVER_END
-
-static MACHINE_DRIVER_START( lemnangl )
-
-	MDRV_IMPORT_FROM(pteacher)
+static MACHINE_CONFIG_DERIVED( lemnangl, pteacher )
 
 	/* video hardware */
-	MDRV_GFXDECODE(lemnangl)
+	MCFG_GFXDECODE(lemnangl)
 
-	MDRV_VIDEO_START(lemnangl)
-MACHINE_DRIVER_END
+	MCFG_VIDEO_START(lemnangl)
+MACHINE_CONFIG_END
 
 static INPUT_PORTS_START( mirderby )
 INPUT_PORTS_END
@@ -1547,52 +1534,49 @@ GFXDECODE_END
 
 /* clocks are 16mhz and 9mhz */
 
-static MACHINE_DRIVER_START( mirderby )
+static MACHINE_CONFIG_START( mirderby, homedata_state )
 
-	/* driver data */
-	MDRV_DRIVER_DATA(homedata_state)
-
-	MDRV_CPU_ADD("maincpu", M6809, 16000000/8)	/* 2 Mhz */
-	MDRV_CPU_PROGRAM_MAP(cpu2_map)
+	MCFG_CPU_ADD("maincpu", M6809, 16000000/8)	/* 2 Mhz */
+	MCFG_CPU_PROGRAM_MAP(cpu2_map)
 
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("cpu0", Z80, 16000000/4)	/* 4 Mhz */
-	MDRV_DEVICE_DISABLE()
-	MDRV_CPU_PROGRAM_MAP(cpu0_map)
+	MCFG_CPU_ADD("cpu0", Z80, 16000000/4)	/* 4 Mhz */
+	MCFG_DEVICE_DISABLE()
+	MCFG_CPU_PROGRAM_MAP(cpu0_map)
 
-	MDRV_CPU_ADD("cpu1", M6809, 16000000/8)	/* 2 Mhz */
-	MDRV_CPU_PROGRAM_MAP(cpu1_map)
-	MDRV_DEVICE_DISABLE()
-	//MDRV_CPU_VBLANK_INT("screen", mirderby_irq)
+	MCFG_CPU_ADD("cpu1", M6809, 16000000/8)	/* 2 Mhz */
+	MCFG_CPU_PROGRAM_MAP(cpu1_map)
+	MCFG_DEVICE_DISABLE()
+	//MCFG_CPU_VBLANK_INT("screen", mirderby_irq)
 
 
-	MDRV_QUANTUM_TIME(HZ(6000))
+	MCFG_QUANTUM_TIME(HZ(6000))
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(59)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 54*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(59)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 54*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(mirderby)
-	MDRV_PALETTE_LENGTH(0x8000)
+	MCFG_GFXDECODE(mirderby)
+	MCFG_PALETTE_LENGTH(0x8000)
 
-	MDRV_PALETTE_INIT(mirderby)
-	MDRV_VIDEO_START(mirderby)
-	MDRV_VIDEO_UPDATE(mirderby)
+	MCFG_PALETTE_INIT(mirderby)
+	MCFG_VIDEO_START(mirderby)
+	MCFG_VIDEO_UPDATE(mirderby)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM2203, 2000000)
-	MDRV_SOUND_ROUTE(0, "mono", 0.25)
-	MDRV_SOUND_ROUTE(1, "mono", 0.25)
-	MDRV_SOUND_ROUTE(2, "mono", 0.25)
-	MDRV_SOUND_ROUTE(3, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2203, 2000000)
+	MCFG_SOUND_ROUTE(0, "mono", 0.25)
+	MCFG_SOUND_ROUTE(1, "mono", 0.25)
+	MCFG_SOUND_ROUTE(2, "mono", 0.25)
+	MCFG_SOUND_ROUTE(3, "mono", 1.0)
+MACHINE_CONFIG_END
 
 /**************************************************************************/
 
@@ -2060,13 +2044,13 @@ static DRIVER_INIT( mjikaga )
 
 static DRIVER_INIT( reikaids )
 {
-	homedata_state *state = (homedata_state *)machine->driver_data;
+	homedata_state *state = machine->driver_data<homedata_state>();
 	state->priority = 0;
 }
 
 static DRIVER_INIT( battlcry )
 {
-	homedata_state *state = (homedata_state *)machine->driver_data;
+	homedata_state *state = machine->driver_data<homedata_state>();
 	state->priority = 1; /* priority and initial value for bank write */
 }
 

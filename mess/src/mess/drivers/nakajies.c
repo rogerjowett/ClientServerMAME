@@ -197,15 +197,14 @@ disabled). Perhaps power on/off related??
 #include "sound/speaker.h"
 
 
-class nakajies_state
+class nakajies_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, nakajies_state(machine)); }
-
-	nakajies_state(running_machine &machine) { }
+	nakajies_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* Device lookups */
-	running_device *cpu;
+	device_t *cpu;
 
 	/* IRQ handling */
 	UINT8	irq_enabled;
@@ -240,7 +239,7 @@ ADDRESS_MAP_END
 
 static void nakajies_update_irqs( running_machine *machine )
 {
-	nakajies_state *state = (nakajies_state *)machine->driver_data;
+	nakajies_state *state = machine->driver_data<nakajies_state>();
 	UINT8 irq = state->irq_enabled & state->irq_active;
 	UINT8 vector = 0xff;
 
@@ -272,7 +271,7 @@ static READ8_HANDLER( irq_clear_r )
 
 static WRITE8_HANDLER( irq_clear_w )
 {
-	nakajies_state *state = (nakajies_state *)space->machine->driver_data;
+	nakajies_state *state = space->machine->driver_data<nakajies_state>();
 
 	state->irq_active &= ~data;
 	nakajies_update_irqs( space->machine );
@@ -281,7 +280,7 @@ static WRITE8_HANDLER( irq_clear_w )
 
 static READ8_HANDLER( irq_enable_r )
 {
-	nakajies_state *state = (nakajies_state *)space->machine->driver_data;
+	nakajies_state *state = space->machine->driver_data<nakajies_state>();
 
 	return state->irq_enabled;
 }
@@ -289,7 +288,7 @@ static READ8_HANDLER( irq_enable_r )
 
 static WRITE8_HANDLER( irq_enable_w )
 {
-	nakajies_state *state = (nakajies_state *)space->machine->driver_data;
+	nakajies_state *state = space->machine->driver_data<nakajies_state>();
 
 	state->irq_enabled = data;
 	nakajies_update_irqs( space->machine );
@@ -311,7 +310,7 @@ ADDRESS_MAP_END
 
 static INPUT_CHANGED( trigger_irq )
 {
-	nakajies_state *state = (nakajies_state *)field->port->machine->driver_data;
+	nakajies_state *state = field->port->machine->driver_data<nakajies_state>();
 	UINT8 irqs = input_port_read( field->port->machine, "debug" );
 
 	state->irq_active |= irqs;
@@ -334,7 +333,7 @@ INPUT_PORTS_END
 
 static MACHINE_RESET( nakajies )
 {
-	nakajies_state *state = (nakajies_state *)machine->driver_data;
+	nakajies_state *state = machine->driver_data<nakajies_state>();
 
 	state->cpu = machine->device( "v20hl" );
 	state->irq_enabled = 0;
@@ -372,80 +371,73 @@ static GFXDECODE_START( drwrt400 )
 GFXDECODE_END
 
 
-static MACHINE_DRIVER_START( nakajies210 )
-	MDRV_CPU_ADD( "v20hl", V20, X301 / 2 )
-	MDRV_CPU_PROGRAM_MAP( nakajies210_map)
-	MDRV_CPU_IO_MAP( nakajies_io_map)
+static MACHINE_CONFIG_START( nakajies210, nakajies_state )
+	MCFG_CPU_ADD( "v20hl", V20, X301 / 2 )
+	MCFG_CPU_PROGRAM_MAP( nakajies210_map)
+	MCFG_CPU_IO_MAP( nakajies_io_map)
 
-	MDRV_DRIVER_DATA( nakajies_state )
+	MCFG_MACHINE_RESET( nakajies )
 
-	MDRV_MACHINE_RESET( nakajies )
-
-	MDRV_SCREEN_ADD( "screen", LCD )
-	MDRV_SCREEN_REFRESH_RATE( 50 )	/* Wild guess */
-	MDRV_SCREEN_FORMAT( BITMAP_FORMAT_INDEXED16 )
-	MDRV_SCREEN_SIZE( 80 * 6, 8 * 8 )
-	MDRV_SCREEN_VISIBLE_AREA( 0, 6 * 80 - 1, 0, 8 * 8 - 1 )
-	MDRV_GFXDECODE(wales210)
-	MDRV_PALETTE_LENGTH( 2 )
+	MCFG_SCREEN_ADD( "screen", LCD )
+	MCFG_SCREEN_REFRESH_RATE( 50 )	/* Wild guess */
+	MCFG_SCREEN_FORMAT( BITMAP_FORMAT_INDEXED16 )
+	MCFG_SCREEN_SIZE( 80 * 6, 8 * 8 )
+	MCFG_SCREEN_VISIBLE_AREA( 0, 6 * 80 - 1, 0, 8 * 8 - 1 )
+	MCFG_GFXDECODE(wales210)
+	MCFG_PALETTE_LENGTH( 2 )
 
 	/* sound */
-	MDRV_SPEAKER_STANDARD_MONO( "mono" )
-	MDRV_SOUND_ADD( "speaker", SPEAKER, 0 )
-	MDRV_SOUND_ROUTE( ALL_OUTPUTS, "mono", 1.00 )
-MACHINE_DRIVER_END
+	MCFG_SPEAKER_STANDARD_MONO( "mono" )
+	MCFG_SOUND_ADD( "speaker", SPEAKER_SOUND, 0 )
+	MCFG_SOUND_ROUTE( ALL_OUTPUTS, "mono", 1.00 )
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( dator3k )
-	MDRV_IMPORT_FROM( nakajies210 )
-	MDRV_GFXDECODE(dator3k)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( dator3k, nakajies210 )
+	MCFG_GFXDECODE(dator3k)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( nakajies220 )
-	MDRV_CPU_ADD( "v20hl", V20, X301 / 2 )
-	MDRV_CPU_PROGRAM_MAP( nakajies220_map)
-	MDRV_CPU_IO_MAP( nakajies_io_map)
+static MACHINE_CONFIG_START( nakajies220, nakajies_state )
+	MCFG_CPU_ADD( "v20hl", V20, X301 / 2 )
+	MCFG_CPU_PROGRAM_MAP( nakajies220_map)
+	MCFG_CPU_IO_MAP( nakajies_io_map)
 
-	MDRV_DRIVER_DATA( nakajies_state )
+	MCFG_MACHINE_RESET( nakajies )
 
-	MDRV_MACHINE_RESET( nakajies )
-
-	MDRV_SCREEN_ADD( "screen", LCD )
-	MDRV_SCREEN_REFRESH_RATE( 50 )	/* Wild guess */
-	MDRV_SCREEN_FORMAT( BITMAP_FORMAT_INDEXED16 )
-	MDRV_SCREEN_SIZE( 80 * 6, 8 * 8 )
-	MDRV_SCREEN_VISIBLE_AREA( 0, 6 * 80 - 1, 0, 8 * 8 - 1 )
-	MDRV_GFXDECODE(drwrt400)
-	MDRV_PALETTE_LENGTH( 2 )
+	MCFG_SCREEN_ADD( "screen", LCD )
+	MCFG_SCREEN_REFRESH_RATE( 50 )	/* Wild guess */
+	MCFG_SCREEN_FORMAT( BITMAP_FORMAT_INDEXED16 )
+	MCFG_SCREEN_SIZE( 80 * 6, 8 * 8 )
+	MCFG_SCREEN_VISIBLE_AREA( 0, 6 * 80 - 1, 0, 8 * 8 - 1 )
+	MCFG_GFXDECODE(drwrt400)
+	MCFG_PALETTE_LENGTH( 2 )
 
 	/* sound */
-	MDRV_SPEAKER_STANDARD_MONO( "mono" )
-	MDRV_SOUND_ADD( "speaker", SPEAKER, 0 )
-	MDRV_SOUND_ROUTE( ALL_OUTPUTS, "mono", 1.00 )
-MACHINE_DRIVER_END
+	MCFG_SPEAKER_STANDARD_MONO( "mono" )
+	MCFG_SOUND_ADD( "speaker", SPEAKER_SOUND, 0 )
+	MCFG_SOUND_ROUTE( ALL_OUTPUTS, "mono", 1.00 )
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( nakajies250 )
-	MDRV_CPU_ADD( "v20hl", V20, X301 / 2 )
-	MDRV_CPU_PROGRAM_MAP( nakajies250_map)
-	MDRV_CPU_IO_MAP( nakajies_io_map)
+static MACHINE_CONFIG_START( nakajies250, nakajies_state )
+	MCFG_CPU_ADD( "v20hl", V20, X301 / 2 )
+	MCFG_CPU_PROGRAM_MAP( nakajies250_map)
+	MCFG_CPU_IO_MAP( nakajies_io_map)
 
-	MDRV_DRIVER_DATA( nakajies_state )
+	MCFG_MACHINE_RESET( nakajies )
 
-	MDRV_MACHINE_RESET( nakajies )
-
-	MDRV_SCREEN_ADD( "screen", LCD )
-	MDRV_SCREEN_REFRESH_RATE( 50 )  /* Wild guess */
-	MDRV_SCREEN_FORMAT( BITMAP_FORMAT_INDEXED16 )
-	MDRV_SCREEN_SIZE( 80 * 6, 8 * 8 )
-	MDRV_SCREEN_VISIBLE_AREA( 0, 6 * 80 - 1, 0, 8 * 8 - 1 )
-	MDRV_GFXDECODE(drwrt200)
-	MDRV_PALETTE_LENGTH( 2 )
+	MCFG_SCREEN_ADD( "screen", LCD )
+	MCFG_SCREEN_REFRESH_RATE( 50 )  /* Wild guess */
+	MCFG_SCREEN_FORMAT( BITMAP_FORMAT_INDEXED16 )
+	MCFG_SCREEN_SIZE( 80 * 6, 8 * 8 )
+	MCFG_SCREEN_VISIBLE_AREA( 0, 6 * 80 - 1, 0, 8 * 8 - 1 )
+	MCFG_GFXDECODE(drwrt200)
+	MCFG_PALETTE_LENGTH( 2 )
 
 	/* sound */
-	MDRV_SPEAKER_STANDARD_MONO( "mono" )
-	MDRV_SOUND_ADD( "speaker", SPEAKER, 0 )
-	MDRV_SOUND_ROUTE( ALL_OUTPUTS, "mono", 1.00 )
-MACHINE_DRIVER_END
+	MCFG_SPEAKER_STANDARD_MONO( "mono" )
+	MCFG_SOUND_ADD( "speaker", SPEAKER_SOUND, 0 )
+	MCFG_SOUND_ROUTE( ALL_OUTPUTS, "mono", 1.00 )
+MACHINE_CONFIG_END
 
 
 ROM_START(drwrt400)
@@ -481,11 +473,14 @@ ROM_START(drwrt200)
 	ROM_LOAD("drwrt200.bin", 0x000000, 0x100000, CRC(3c39483c) SHA1(48293e6bdb7e7322d76da7174b716243c0ab7c2c) )
 ROM_END
 
+ROM_START( es210_es )
+	ROM_REGION( 0x80000, "bios", 0 )
+	ROM_LOAD("nakajima_es.ic303", 0x00000, 0x80000, CRC(214d73ce) SHA1(ce9967c5b2d122ebebe9401278d8ea374e8fb289))
+ROM_END
+
 /*    YEAR  NAME      PARENT    COMPAT  MACHINE      INPUT     INIT    COMPANY    FULLNAME            FLAGS */
 COMP( 199?, wales210,        0, 0,      nakajies210, nakajies, 0,      "Walther", "ES-210",           GAME_NOT_WORKING )	/* German */
 COMP( 199?, dator3k,  wales210, 0,      dator3k,     nakajies, 0,      "Dator",   "Dator 3000",       GAME_NOT_WORKING )	/* Spanish */
+COMP( 199?, es210_es, wales210, 0,      nakajies210, nakajies, 0,      "Nakajima","ES-210 (Spain)",   GAME_NOT_WORKING )	/* Spanish */
 COMP( 1996, drwrt400, wales210, 0,      nakajies220, nakajies, 0,      "NTS",     "DreamWriter T400", GAME_NOT_WORKING )	/* English */
 COMP( 199?, drwrt200, wales210, 0,      nakajies250, nakajies, 0,      "NTS",     "DreamWriter T200", GAME_NOT_WORKING )	/* English */
-
-
-

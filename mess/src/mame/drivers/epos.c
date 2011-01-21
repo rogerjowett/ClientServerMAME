@@ -36,7 +36,7 @@
 
 static WRITE8_HANDLER( dealer_decrypt_rom )
 {
-	epos_state *state = (epos_state *)space->machine->driver_data;
+	epos_state *state = space->machine->driver_data<epos_state>();
 
 	if (offset & 0x04)
 		state->counter = (state->counter + 1) & 0x03;
@@ -365,7 +365,7 @@ INPUT_PORTS_END
 
 static MACHINE_START( epos )
 {
-	epos_state *state = (epos_state *)machine->driver_data;
+	epos_state *state = machine->driver_data<epos_state>();
 
 	state_save_register_global(machine, state->palette);
 	state_save_register_global(machine, state->counter);
@@ -373,7 +373,7 @@ static MACHINE_START( epos )
 
 static MACHINE_RESET( epos )
 {
-	epos_state *state = (epos_state *)machine->driver_data;
+	epos_state *state = machine->driver_data<epos_state>();
 
 	state->palette = 0;
 	state->counter = 0;
@@ -382,7 +382,7 @@ static MACHINE_RESET( epos )
 
 static MACHINE_START( dealer )
 {
-	UINT8 *ROM = memory_region(machine, "maincpu");
+	UINT8 *ROM = machine->region("maincpu")->base();
 	memory_configure_bank(machine, "bank1", 0, 4, &ROM[0x0000], 0x10000);
 	memory_configure_bank(machine, "bank2", 0, 2, &ROM[0x6000], 0x1000);
 
@@ -392,68 +392,62 @@ static MACHINE_START( dealer )
 	MACHINE_START_CALL(epos);
 }
 
-static MACHINE_DRIVER_START( epos )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(epos_state)
+static MACHINE_CONFIG_START( epos, epos_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, 11000000/4)	/* 2.75 MHz (see notes) */
-	MDRV_CPU_PROGRAM_MAP(epos_map)
-	MDRV_CPU_IO_MAP(io_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80, 11000000/4)	/* 2.75 MHz (see notes) */
+	MCFG_CPU_PROGRAM_MAP(epos_map)
+	MCFG_CPU_IO_MAP(io_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_MACHINE_RESET(epos)
-	MDRV_MACHINE_RESET(epos)
+	MCFG_MACHINE_RESET(epos)
+	MCFG_MACHINE_RESET(epos)
 
 	/* video hardware */
-	MDRV_VIDEO_UPDATE(epos)
+	MCFG_VIDEO_UPDATE(epos)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(272, 241)
-	MDRV_SCREEN_VISIBLE_AREA(0, 271, 0, 235)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(272, 241)
+	MCFG_SCREEN_VISIBLE_AREA(0, 271, 0, 235)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("aysnd", AY8910, 11000000/4)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("aysnd", AY8910, 11000000/4)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( dealer )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(epos_state)
+static MACHINE_CONFIG_START( dealer, epos_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, 11000000/4)	/* 2.75 MHz (see notes) */
-	MDRV_CPU_PROGRAM_MAP(dealer_map)
-	MDRV_CPU_IO_MAP(dealer_io_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80, 11000000/4)	/* 2.75 MHz (see notes) */
+	MCFG_CPU_PROGRAM_MAP(dealer_map)
+	MCFG_CPU_IO_MAP(dealer_io_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_PPI8255_ADD( "ppi8255", ppi8255_intf )
+	MCFG_PPI8255_ADD( "ppi8255", ppi8255_intf )
 
-	MDRV_MACHINE_START(dealer)
-	MDRV_MACHINE_RESET(epos)
+	MCFG_MACHINE_START(dealer)
+	MCFG_MACHINE_RESET(epos)
 
 	/* video hardware */
-	MDRV_VIDEO_UPDATE(epos)
+	MCFG_VIDEO_UPDATE(epos)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(272, 241)
-	MDRV_SCREEN_VISIBLE_AREA(0, 271, 0, 235)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(272, 241)
+	MCFG_SCREEN_VISIBLE_AREA(0, 271, 0, 235)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("aysnd", AY8910, 11000000/4)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("aysnd", AY8910, 11000000/4)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 /*************************************
@@ -618,7 +612,7 @@ ROM_END
 
 static DRIVER_INIT( dealer )
 {
-	UINT8 *rom = memory_region(machine, "maincpu");
+	UINT8 *rom = machine->region("maincpu")->base();
 	int A;
 
 	/* Key 0 */

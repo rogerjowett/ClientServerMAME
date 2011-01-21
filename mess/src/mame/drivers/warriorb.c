@@ -166,13 +166,13 @@ static MACHINE_RESET( taito_dualscreen );
 
 static void reset_sound_region( running_machine *machine )
 {
-	warriorb_state *state = (warriorb_state *)machine->driver_data;
+	warriorb_state *state = machine->driver_data<warriorb_state>();
 	memory_set_bank(machine, "bank10", state->banknum);
 }
 
 static WRITE8_HANDLER( sound_bankswitch_w )
 {
-	warriorb_state *state = (warriorb_state *)space->machine->driver_data;
+	warriorb_state *state = space->machine->driver_data<warriorb_state>();
 
 	state->banknum = data & 7;
 	reset_sound_region(space->machine);
@@ -180,7 +180,7 @@ static WRITE8_HANDLER( sound_bankswitch_w )
 
 static WRITE16_HANDLER( warriorb_sound_w )
 {
-	warriorb_state *state = (warriorb_state *)space->machine->driver_data;
+	warriorb_state *state = space->machine->driver_data<warriorb_state>();
 
 	if (offset == 0)
 		tc0140syt_port_w(state->tc0140syt, 0, data & 0xff);
@@ -190,7 +190,7 @@ static WRITE16_HANDLER( warriorb_sound_w )
 
 static READ16_HANDLER( warriorb_sound_r )
 {
-	warriorb_state *state = (warriorb_state *)space->machine->driver_data;
+	warriorb_state *state = space->machine->driver_data<warriorb_state>();
 
 	if (offset == 1)
 		return ((tc0140syt_comm_r(state->tc0140syt, 0) & 0xff));
@@ -201,8 +201,8 @@ static READ16_HANDLER( warriorb_sound_r )
 
 static WRITE8_HANDLER( warriorb_pancontrol )
 {
-	warriorb_state *state = (warriorb_state *)space->machine->driver_data;
-	running_device *flt = NULL;
+	warriorb_state *state = space->machine->driver_data<warriorb_state>();
+	device_t *flt = NULL;
 	offset &= 3;
 
 	switch (offset)
@@ -221,7 +221,7 @@ static WRITE8_HANDLER( warriorb_pancontrol )
 
 static WRITE16_HANDLER( tc0100scn_dual_screen_w )
 {
-	warriorb_state *state = (warriorb_state *)space->machine->driver_data;
+	warriorb_state *state = space->machine->driver_data<warriorb_state>();
 
 	tc0100scn_word_w(state->tc0100scn_1, offset, data, mem_mask);
 	tc0100scn_word_w(state->tc0100scn_2, offset, data, mem_mask);
@@ -417,9 +417,9 @@ GFXDECODE_END
 **************************************************************/
 
 /* handler called by the YM2610 emulator when the internal timers cause an IRQ */
-static void irqhandler( running_device *device, int irq )
+static void irqhandler( device_t *device, int irq )
 {
-	warriorb_state *state = (warriorb_state *)device->machine->driver_data;
+	warriorb_state *state = device->machine->driver_data<warriorb_state>();
 	cpu_set_input_line(state->audiocpu, 0, irq ? ASSERT_LINE : CLEAR_LINE);
 }
 
@@ -538,9 +538,9 @@ static STATE_POSTLOAD( warriorb_postload )
 
 static MACHINE_START( warriorb )
 {
-	warriorb_state *state = (warriorb_state *)machine->driver_data;
+	warriorb_state *state = machine->driver_data<warriorb_state>();
 
-	memory_configure_bank(machine, "bank10", 0, 8, memory_region(machine, "audiocpu") + 0xc000, 0x4000);
+	memory_configure_bank(machine, "bank10", 0, 8, machine->region("audiocpu")->base() + 0xc000, 0x4000);
 
 	state->maincpu = machine->device("maincpu");
 	state->audiocpu = machine->device("audiocpu");
@@ -563,7 +563,7 @@ static MACHINE_START( warriorb )
 
 static MACHINE_RESET( taito_dualscreen )
 {
-	warriorb_state *state = (warriorb_state *)machine->driver_data;
+	warriorb_state *state = machine->driver_data<warriorb_state>();
 
 	state->banknum = 0;
 
@@ -571,144 +571,138 @@ static MACHINE_RESET( taito_dualscreen )
 	sound_global_enable(machine, 1);	/* mixer enabled */
 }
 
-static MACHINE_DRIVER_START( darius2d )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(warriorb_state)
+static MACHINE_CONFIG_START( darius2d, warriorb_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 12000000)	/* 12 MHz ??? (Might well be 16!) */
-	MDRV_CPU_PROGRAM_MAP(darius2d_map)
-	MDRV_CPU_VBLANK_INT("lscreen", irq4_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, 12000000)	/* 12 MHz ??? (Might well be 16!) */
+	MCFG_CPU_PROGRAM_MAP(darius2d_map)
+	MCFG_CPU_VBLANK_INT("lscreen", irq4_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80,16000000/4)	/* 4 MHz ? */
-	MDRV_CPU_PROGRAM_MAP(z80_sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80,16000000/4)	/* 4 MHz ? */
+	MCFG_CPU_PROGRAM_MAP(z80_sound_map)
 
-	MDRV_MACHINE_START( warriorb )
-	MDRV_MACHINE_RESET( taito_dualscreen )
+	MCFG_MACHINE_START( warriorb )
+	MCFG_MACHINE_RESET( taito_dualscreen )
 
-	MDRV_TC0220IOC_ADD("tc0220ioc", darius2d_io_intf)
+	MCFG_TC0220IOC_ADD("tc0220ioc", darius2d_io_intf)
 
 	/* video hardware */
-	MDRV_GFXDECODE(warriorb)
-	MDRV_PALETTE_LENGTH(4096*2)
-	MDRV_DEFAULT_LAYOUT(layout_dualhsxs)
+	MCFG_GFXDECODE(warriorb)
+	MCFG_PALETTE_LENGTH(4096*2)
+	MCFG_DEFAULT_LAYOUT(layout_dualhsxs)
 
-	MDRV_SCREEN_ADD("lscreen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_SIZE(40*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 3*8, 32*8-1)
+	MCFG_SCREEN_ADD("lscreen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_SIZE(40*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 3*8, 32*8-1)
 
-	MDRV_SCREEN_ADD("rscreen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_SIZE(40*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 3*8, 32*8-1)
+	MCFG_SCREEN_ADD("rscreen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_SIZE(40*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 3*8, 32*8-1)
 
-	MDRV_VIDEO_START(warriorb)
-	MDRV_VIDEO_UPDATE(warriorb)
+	MCFG_VIDEO_START(warriorb)
+	MCFG_VIDEO_UPDATE(warriorb)
 
-	MDRV_TC0100SCN_ADD("tc0100scn_1", darius2d_tc0100scn_intf_l)
-	MDRV_TC0100SCN_ADD("tc0100scn_2", darius2d_tc0100scn_intf_r)
-	MDRV_TC0110PCR_ADD("tc0110pcr_1", darius2d_tc0110pcr_intf_l)
-	MDRV_TC0110PCR_ADD("tc0110pcr_2", darius2d_tc0110pcr_intf_r)
+	MCFG_TC0100SCN_ADD("tc0100scn_1", darius2d_tc0100scn_intf_l)
+	MCFG_TC0100SCN_ADD("tc0100scn_2", darius2d_tc0100scn_intf_r)
+	MCFG_TC0110PCR_ADD("tc0110pcr_1", darius2d_tc0110pcr_intf_l)
+	MCFG_TC0110PCR_ADD("tc0110pcr_2", darius2d_tc0110pcr_intf_r)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2610, 16000000/2)
-	MDRV_SOUND_CONFIG(ym2610_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker",  0.25)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.25)
-	MDRV_SOUND_ROUTE(1, "2610.1.l", 1.0)
-	MDRV_SOUND_ROUTE(1, "2610.1.r", 1.0)
-	MDRV_SOUND_ROUTE(2, "2610.2.l", 1.0)
-	MDRV_SOUND_ROUTE(2, "2610.2.r", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM2610, 16000000/2)
+	MCFG_SOUND_CONFIG(ym2610_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker",  0.25)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.25)
+	MCFG_SOUND_ROUTE(1, "2610.1.l", 1.0)
+	MCFG_SOUND_ROUTE(1, "2610.1.r", 1.0)
+	MCFG_SOUND_ROUTE(2, "2610.2.l", 1.0)
+	MCFG_SOUND_ROUTE(2, "2610.2.r", 1.0)
 
-	MDRV_SOUND_ADD("2610.1.l", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ADD("2610.1.r", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
-	MDRV_SOUND_ADD("2610.2.l", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ADD("2610.2.r", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("2610.1.l", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ADD("2610.1.r", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("2610.2.l", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ADD("2610.2.r", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
 
-	MDRV_TC0140SYT_ADD("tc0140syt", warriorb_tc0140syt_intf)
-MACHINE_DRIVER_END
+	MCFG_TC0140SYT_ADD("tc0140syt", warriorb_tc0140syt_intf)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( warriorb )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(warriorb_state)
+static MACHINE_CONFIG_START( warriorb, warriorb_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 16000000)	/* 16 MHz ? */
-	MDRV_CPU_PROGRAM_MAP(warriorb_map)
-	MDRV_CPU_VBLANK_INT("lscreen", irq4_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, 16000000)	/* 16 MHz ? */
+	MCFG_CPU_PROGRAM_MAP(warriorb_map)
+	MCFG_CPU_VBLANK_INT("lscreen", irq4_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80,16000000/4)	/* 4 MHz ? */
-	MDRV_CPU_PROGRAM_MAP(z80_sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80,16000000/4)	/* 4 MHz ? */
+	MCFG_CPU_PROGRAM_MAP(z80_sound_map)
 
-	MDRV_MACHINE_START( warriorb )
-	MDRV_MACHINE_RESET( taito_dualscreen )
+	MCFG_MACHINE_START( warriorb )
+	MCFG_MACHINE_RESET( taito_dualscreen )
 
-	MDRV_TC0510NIO_ADD("tc0510nio", warriorb_io_intf)
+	MCFG_TC0510NIO_ADD("tc0510nio", warriorb_io_intf)
 
 	/* video hardware */
-	MDRV_GFXDECODE(warriorb)
-	MDRV_PALETTE_LENGTH(4096*2)
-	MDRV_DEFAULT_LAYOUT(layout_dualhsxs)
+	MCFG_GFXDECODE(warriorb)
+	MCFG_PALETTE_LENGTH(4096*2)
+	MCFG_DEFAULT_LAYOUT(layout_dualhsxs)
 
-	MDRV_SCREEN_ADD("lscreen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_SIZE(40*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 2*8, 32*8-1)
+	MCFG_SCREEN_ADD("lscreen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_SIZE(40*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 2*8, 32*8-1)
 
-	MDRV_SCREEN_ADD("rscreen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_SIZE(40*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 2*8, 32*8-1)
+	MCFG_SCREEN_ADD("rscreen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_SIZE(40*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 2*8, 32*8-1)
 
-	MDRV_VIDEO_START(warriorb)
-	MDRV_VIDEO_UPDATE(warriorb)
+	MCFG_VIDEO_START(warriorb)
+	MCFG_VIDEO_UPDATE(warriorb)
 
-	MDRV_TC0100SCN_ADD("tc0100scn_1", warriorb_tc0100scn_intf_l)
-	MDRV_TC0100SCN_ADD("tc0100scn_2", warriorb_tc0100scn_intf_r)
-	MDRV_TC0110PCR_ADD("tc0110pcr_1", darius2d_tc0110pcr_intf_l)
-	MDRV_TC0110PCR_ADD("tc0110pcr_2", darius2d_tc0110pcr_intf_r)
+	MCFG_TC0100SCN_ADD("tc0100scn_1", warriorb_tc0100scn_intf_l)
+	MCFG_TC0100SCN_ADD("tc0100scn_2", warriorb_tc0100scn_intf_r)
+	MCFG_TC0110PCR_ADD("tc0110pcr_1", darius2d_tc0110pcr_intf_l)
+	MCFG_TC0110PCR_ADD("tc0110pcr_2", darius2d_tc0110pcr_intf_r)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2610, 16000000/2)
-	MDRV_SOUND_CONFIG(ym2610_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker",  0.25)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.25)
-	MDRV_SOUND_ROUTE(1, "2610.1.l", 1.0)
-	MDRV_SOUND_ROUTE(1, "2610.1.r", 1.0)
-	MDRV_SOUND_ROUTE(2, "2610.2.l", 1.0)
-	MDRV_SOUND_ROUTE(2, "2610.2.r", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM2610, 16000000/2)
+	MCFG_SOUND_CONFIG(ym2610_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker",  0.25)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.25)
+	MCFG_SOUND_ROUTE(1, "2610.1.l", 1.0)
+	MCFG_SOUND_ROUTE(1, "2610.1.r", 1.0)
+	MCFG_SOUND_ROUTE(2, "2610.2.l", 1.0)
+	MCFG_SOUND_ROUTE(2, "2610.2.r", 1.0)
 
-	MDRV_SOUND_ADD("2610.1.l", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ADD("2610.1.r", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
-	MDRV_SOUND_ADD("2610.2.l", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ADD("2610.2.r", FILTER_VOLUME, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("2610.1.l", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ADD("2610.1.r", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("2610.2.l", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ADD("2610.2.r", FILTER_VOLUME, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
 
-	MDRV_TC0140SYT_ADD("tc0140syt", warriorb_tc0140syt_intf)
-MACHINE_DRIVER_END
+	MCFG_TC0140SYT_ADD("tc0140syt", warriorb_tc0140syt_intf)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************

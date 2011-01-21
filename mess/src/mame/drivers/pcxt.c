@@ -238,7 +238,7 @@ static VIDEO_UPDATE( filetto )
 static void vga_bitmap_layer(running_machine *machine, bitmap_t *bitmap,const rectangle *cliprect)
 {
 	int x,y,z;
-	UINT8 *region = memory_region(machine, "user1");
+	UINT8 *region = machine->region("user1")->base();
 	static UINT32 cur_bank;
 
 	/*TODO: might be a different descramble algorythm plus plain bg bank*/
@@ -316,11 +316,11 @@ static WRITE8_HANDLER( vga_vram_w )
 /*end of Video HW file*/
 
 static struct {
-	running_device	*pit8253;
-	running_device	*pic8259_1;
-	running_device	*pic8259_2;
-	running_device	*dma8237_1;
-	running_device	*dma8237_2;
+	device_t	*pit8253;
+	device_t	*pic8259_1;
+	device_t	*pic8259_2;
+	device_t	*dma8237_1;
+	device_t	*dma8237_2;
 } filetto_devices;
 
 
@@ -382,7 +382,7 @@ static WRITE8_HANDLER( disk_iobank_w )
 	if (newbank != bank)
 	{
 		bank = newbank;
-		memory_set_bankptr(space->machine,  "bank1",memory_region(space->machine, "user1") + 0x10000 * bank );
+		memory_set_bankptr(space->machine,  "bank1",space->machine->region("user1")->base() + 0x10000 * bank );
 	}
 
 	lastvalue = data;
@@ -454,8 +454,8 @@ static READ8_DEVICE_HANDLER( port_c_r )
 static WRITE8_DEVICE_HANDLER( port_b_w )
 {
 	port_b_data = data;
-// running_device *beep = device->machine->device("beep");
-// running_device *cvsd = device->machine->device("cvsd");
+// device_t *beep = device->machine->device("beep");
+// device_t *cvsd = device->machine->device("cvsd");
 //  hc55516_digit_w(cvsd, data);
 //  popmessage("%02x\n",data);
 //  beep_set_state(beep, 0);
@@ -563,7 +563,7 @@ static READ8_HANDLER( pc_dma_read_byte )
 	offs_t page_offset = (((offs_t) dma_offset[0][dma_channel]) << 16)
 		& 0xFF0000;
 
-	return memory_read_byte(space, page_offset + offset);
+	return space->read_byte(page_offset + offset);
 }
 
 
@@ -572,7 +572,7 @@ static WRITE8_HANDLER( pc_dma_write_byte )
 	offs_t page_offset = (((offs_t) dma_offset[0][dma_channel]) << 16)
 		& 0xFF0000;
 
-	memory_write_byte(space, page_offset + offset, data);
+	space->write_byte(page_offset + offset, data);
 }
 
 static READ8_HANDLER(dma_page_select_r)
@@ -617,7 +617,7 @@ static WRITE8_HANDLER(dma_page_select_w)
 	}
 }
 
-static void set_dma_channel(running_device *device, int channel, int state)
+static void set_dma_channel(device_t *device, int channel, int state)
 {
 	if (!state) dma_channel = channel;
 }
@@ -684,7 +684,7 @@ static ADDRESS_MAP_START( filetto_io, ADDRESS_SPACE_IO, 8 )
 	AM_RANGE(0x0040, 0x0043) AM_DEVREADWRITE("pit8253", pit8253_r, pit8253_w)    //8253 PIT
 	AM_RANGE(0x0060, 0x0063) AM_DEVREADWRITE("ppi8255_0", ppi8255_r, ppi8255_w)  //PPI 8255
 	AM_RANGE(0x0064, 0x0066) AM_DEVREADWRITE("ppi8255_1", ppi8255_r, ppi8255_w)  //PPI 8255
-	AM_RANGE(0x0070, 0x007f) AM_READWRITE(mc146818_port_r,mc146818_port_w)
+	AM_RANGE(0x0070, 0x007f) AM_DEVREADWRITE_MODERN("rtc", mc146818_device, read, write)
 	AM_RANGE(0x0080, 0x0087) AM_READWRITE(dma_page_select_r,dma_page_select_w)
 	AM_RANGE(0x00a0, 0x00af) AM_DEVREADWRITE("pic8259_2", pic8259_r, pic8259_w )
 //  AM_RANGE(0x0200, 0x020f) AM_RAM //game port
@@ -713,7 +713,7 @@ static ADDRESS_MAP_START( tetriskr_io, ADDRESS_SPACE_IO, 8 )
 	AM_RANGE(0x0040, 0x0043) AM_DEVREADWRITE("pit8253", pit8253_r, pit8253_w)    //8253 PIT
 	AM_RANGE(0x0060, 0x0063) AM_DEVREADWRITE("ppi8255_0", ppi8255_r, ppi8255_w)  //PPI 8255
 	AM_RANGE(0x0064, 0x0066) AM_DEVREADWRITE("ppi8255_1", ppi8255_r, ppi8255_w)  //PPI 8255
-	AM_RANGE(0x0070, 0x007f) AM_READWRITE(mc146818_port_r,mc146818_port_w)
+	AM_RANGE(0x0070, 0x007f) AM_DEVREADWRITE_MODERN("rtc", mc146818_device, read, write)
 	AM_RANGE(0x0080, 0x0087) AM_READWRITE(dma_page_select_r,dma_page_select_w)
 	AM_RANGE(0x00a0, 0x00af) AM_DEVREADWRITE("pic8259_2", pic8259_r, pic8259_w )
 	AM_RANGE(0x0200, 0x020f) AM_RAM //game port
@@ -917,92 +917,96 @@ static MACHINE_RESET( filetto )
 	filetto_devices.dma8237_2 = machine->device( "dma8237_2" );
 }
 
-static MACHINE_DRIVER_START( filetto )
-	MDRV_CPU_ADD("maincpu", I8088, 8000000) //or regular PC-XT 14318180/3 clock?
-	MDRV_CPU_PROGRAM_MAP(filetto_map)
-	MDRV_CPU_IO_MAP(filetto_io)
+static MACHINE_CONFIG_START( filetto, driver_device )
+	MCFG_CPU_ADD("maincpu", I8088, 8000000) //or regular PC-XT 14318180/3 clock?
+	MCFG_CPU_PROGRAM_MAP(filetto_map)
+	MCFG_CPU_IO_MAP(filetto_io)
 
-	MDRV_MACHINE_RESET( filetto )
+	MCFG_MACHINE_RESET( filetto )
 
-	MDRV_PIT8253_ADD( "pit8253", pc_pit8253_config )
+	MCFG_PIT8253_ADD( "pit8253", pc_pit8253_config )
 
-	MDRV_PPI8255_ADD( "ppi8255_0", filetto_ppi8255_intf[0] )
-	MDRV_PPI8255_ADD( "ppi8255_1", filetto_ppi8255_intf[1] )
+	MCFG_PPI8255_ADD( "ppi8255_0", filetto_ppi8255_intf[0] )
+	MCFG_PPI8255_ADD( "ppi8255_1", filetto_ppi8255_intf[1] )
 
-	MDRV_I8237_ADD( "dma8237_1", XTAL_14_31818MHz/3, dma8237_1_config )
+	MCFG_I8237_ADD( "dma8237_1", XTAL_14_31818MHz/3, dma8237_1_config )
 
-	MDRV_PIC8259_ADD( "pic8259_1", pic8259_1_config )
+	MCFG_PIC8259_ADD( "pic8259_1", pic8259_1_config )
 
-	MDRV_PIC8259_ADD( "pic8259_2", pic8259_2_config )
+	MCFG_PIC8259_ADD( "pic8259_2", pic8259_2_config )
 
-	MDRV_GFXDECODE(filetto)
+	MCFG_MC146818_ADD( "rtc", MC146818_STANDARD )
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(640, 480)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 640-1, 0*8, 480-1)
+	MCFG_GFXDECODE(filetto)
 
-	MDRV_PALETTE_LENGTH(0x300)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(640, 480)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 640-1, 0*8, 480-1)
 
-	MDRV_PALETTE_INIT(filetto)
+	MCFG_PALETTE_LENGTH(0x300)
 
-	MDRV_VIDEO_START(filetto)
-	MDRV_VIDEO_UPDATE(filetto)
+	MCFG_PALETTE_INIT(filetto)
 
-	/*Sound Hardware*/
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-
-	MDRV_SOUND_ADD("voice", HC55516, 8000000/4)//8923S-UM5100 is a HC55536 with ROM hook-up
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.60)
-
-//  PC "buzzer" sound
-	MDRV_SOUND_ADD("beep", BEEP, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.33)
-MACHINE_DRIVER_END
-
-static MACHINE_DRIVER_START( tetriskr )
-	MDRV_CPU_ADD("maincpu", I8088, 14318180/3)
-	MDRV_CPU_PROGRAM_MAP(filetto_map)
-	MDRV_CPU_IO_MAP(tetriskr_io)
-
-	MDRV_MACHINE_RESET( filetto )
-
-	MDRV_PIT8253_ADD( "pit8253", pc_pit8253_config )
-
-	MDRV_PPI8255_ADD( "ppi8255_0", filetto_ppi8255_intf[0] )
-	MDRV_PPI8255_ADD( "ppi8255_1", filetto_ppi8255_intf[1] )
-
-	MDRV_I8237_ADD( "dma8237_1", XTAL_14_31818MHz/3, dma8237_1_config )
-
-	MDRV_PIC8259_ADD( "pic8259_1", pic8259_1_config )
-
-	MDRV_PIC8259_ADD( "pic8259_2", pic8259_2_config )
-
-	MDRV_GFXDECODE(tetriskr)
-
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(640, 480)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 640-1, 0*8, 480-1)
-
-	MDRV_PALETTE_LENGTH(0x300)
-
-	MDRV_PALETTE_INIT(filetto)
-
-	MDRV_VIDEO_START(tetriskr)
-	MDRV_VIDEO_UPDATE(tetriskr)
+	MCFG_VIDEO_START(filetto)
+	MCFG_VIDEO_UPDATE(filetto)
 
 	/*Sound Hardware*/
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+
+	MCFG_SOUND_ADD("voice", HC55516, 8000000/4)//8923S-UM5100 is a HC55536 with ROM hook-up
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.60)
 
 //  PC "buzzer" sound
-	MDRV_SOUND_ADD("beep", BEEP, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.33)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("beep", BEEP, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.33)
+MACHINE_CONFIG_END
+
+static MACHINE_CONFIG_START( tetriskr, driver_device )
+	MCFG_CPU_ADD("maincpu", I8088, 14318180/3)
+	MCFG_CPU_PROGRAM_MAP(filetto_map)
+	MCFG_CPU_IO_MAP(tetriskr_io)
+
+	MCFG_MACHINE_RESET( filetto )
+
+	MCFG_PIT8253_ADD( "pit8253", pc_pit8253_config )
+
+	MCFG_PPI8255_ADD( "ppi8255_0", filetto_ppi8255_intf[0] )
+	MCFG_PPI8255_ADD( "ppi8255_1", filetto_ppi8255_intf[1] )
+
+	MCFG_I8237_ADD( "dma8237_1", XTAL_14_31818MHz/3, dma8237_1_config )
+
+	MCFG_PIC8259_ADD( "pic8259_1", pic8259_1_config )
+
+	MCFG_PIC8259_ADD( "pic8259_2", pic8259_2_config )
+
+	MCFG_MC146818_ADD( "rtc", MC146818_STANDARD )
+
+	MCFG_GFXDECODE(tetriskr)
+
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(640, 480)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 640-1, 0*8, 480-1)
+
+	MCFG_PALETTE_LENGTH(0x300)
+
+	MCFG_PALETTE_INIT(filetto)
+
+	MCFG_VIDEO_START(tetriskr)
+	MCFG_VIDEO_UPDATE(tetriskr)
+
+	/*Sound Hardware*/
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+
+//  PC "buzzer" sound
+	MCFG_SOUND_ADD("beep", BEEP, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.33)
+MACHINE_CONFIG_END
 
 ROM_START( filetto )
 	ROM_REGION( 0x100000, "maincpu", 0 )
@@ -1060,8 +1064,8 @@ static DRIVER_INIT( tetriskr )
 {
 	int i,j,k;
 	int index=0;
-	UINT8 *region = memory_region(machine, "user1");
-	UINT8 *gfx = memory_region(machine, "gfx2");
+	UINT8 *region = machine->region("user1")->base();
+	UINT8 *gfx = machine->region("gfx2")->base();
 
 	for(i=0;i<0x20000;i++)
 	{
