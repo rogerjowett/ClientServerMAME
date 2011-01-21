@@ -103,7 +103,7 @@ Dip Locations and factory settings verified with manual
 
 static TIMER_CALLBACK( soundlatch_callback )
 {
-	bombjack_state *state = (bombjack_state *)machine->driver_data;
+	bombjack_state *state = machine->driver_data<bombjack_state>();
 	state->latch = param;
 }
 
@@ -115,7 +115,7 @@ static WRITE8_HANDLER( bombjack_soundlatch_w )
 
 static READ8_HANDLER( bombjack_soundlatch_r )
 {
-	bombjack_state *state = (bombjack_state *)space->machine->driver_data;
+	bombjack_state *state = space->machine->driver_data<bombjack_state>();
 	int res;
 
 	res = state->latch;
@@ -328,7 +328,7 @@ GFXDECODE_END
 
 static MACHINE_START( bombjack )
 {
-	bombjack_state *state = (bombjack_state *)machine->driver_data;
+	bombjack_state *state = machine->driver_data<bombjack_state>();
 
 	state_save_register_global(machine, state->latch);
 	state_save_register_global(machine, state->background_image);
@@ -337,57 +337,54 @@ static MACHINE_START( bombjack )
 
 static MACHINE_RESET( bombjack )
 {
-	bombjack_state *state = (bombjack_state *)machine->driver_data;
+	bombjack_state *state = machine->driver_data<bombjack_state>();
 
 	state->latch = 0;
 	state->background_image = 0;
 }
 
 
-static MACHINE_DRIVER_START( bombjack )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(bombjack_state)
+static MACHINE_CONFIG_START( bombjack, bombjack_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, 4000000)	/* 4 MHz */
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_VBLANK_INT("screen", nmi_line_pulse)
+	MCFG_CPU_ADD("maincpu", Z80, 4000000)	/* 4 MHz */
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_VBLANK_INT("screen", nmi_line_pulse)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 3072000)	/* 3.072 MHz????? */
-	MDRV_CPU_PROGRAM_MAP(audio_map)
-	MDRV_CPU_IO_MAP(audio_io_map)
-	MDRV_CPU_VBLANK_INT("screen", nmi_line_pulse)
+	MCFG_CPU_ADD("audiocpu", Z80, 3072000)	/* 3.072 MHz????? */
+	MCFG_CPU_PROGRAM_MAP(audio_map)
+	MCFG_CPU_IO_MAP(audio_io_map)
+	MCFG_CPU_VBLANK_INT("screen", nmi_line_pulse)
 
-	MDRV_MACHINE_START(bombjack)
-	MDRV_MACHINE_RESET(bombjack)
+	MCFG_MACHINE_START(bombjack)
+	MCFG_MACHINE_RESET(bombjack)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(bombjack)
-	MDRV_PALETTE_LENGTH(128)
+	MCFG_GFXDECODE(bombjack)
+	MCFG_PALETTE_LENGTH(128)
 
-	MDRV_VIDEO_START(bombjack)
-	MDRV_VIDEO_UPDATE(bombjack)
+	MCFG_VIDEO_START(bombjack)
+	MCFG_VIDEO_UPDATE(bombjack)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ay1", AY8910, 1500000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.13)
+	MCFG_SOUND_ADD("ay1", AY8910, 1500000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.13)
 
-	MDRV_SOUND_ADD("ay2", AY8910, 1500000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.13)
+	MCFG_SOUND_ADD("ay2", AY8910, 1500000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.13)
 
-	MDRV_SOUND_ADD("ay3", AY8910, 1500000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.13)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ay3", AY8910, 1500000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.13)
+MACHINE_CONFIG_END
 
 
 

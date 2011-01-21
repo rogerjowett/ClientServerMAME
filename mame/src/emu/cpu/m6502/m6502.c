@@ -70,8 +70,9 @@ struct _m6502_Regs
 
 	device_irq_callback irq_callback;
 	legacy_cpu_device *device;
-	const address_space *space;
-	const address_space *io;
+	address_space *space;
+	direct_read_data *direct;
+	address_space *io;
 	int		int_occured;
 	int		icount;
 
@@ -84,7 +85,7 @@ struct _m6502_Regs
 	m6510_port_write_func port_write;
 };
 
-INLINE m6502_Regs *get_safe_token(running_device *device)
+INLINE m6502_Regs *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
 	assert(device->type() == M6502 ||
@@ -99,8 +100,8 @@ INLINE m6502_Regs *get_safe_token(running_device *device)
 	return (m6502_Regs *)downcast<legacy_cpu_device *>(device)->token();
 }
 
-static UINT8 default_rdmem_id(const address_space *space, offs_t offset) { return memory_read_byte_8le(space, offset); }
-static void default_wdmem_id(const address_space *space, offs_t offset, UINT8 data) { memory_write_byte_8le(space, offset, data); }
+static UINT8 default_rdmem_id(address_space *space, offs_t offset) { return space->read_byte(offset); }
+static void default_wdmem_id(address_space *space, offs_t offset, UINT8 data) { space->write_byte(offset, data); }
 
 /***************************************************************
  * include the opcode macros, functions and tables
@@ -135,6 +136,7 @@ static void m6502_common_init(legacy_cpu_device *device, device_irq_callback irq
 	cpustate->irq_callback = irqcallback;
 	cpustate->device = device;
 	cpustate->space = device->space(AS_PROGRAM);
+	cpustate->direct = &cpustate->space->direct();
 	cpustate->subtype = subtype;
 	cpustate->insn = insn;
 	cpustate->rdmem_id = default_rdmem_id;
@@ -328,7 +330,7 @@ static CPU_INIT( n2a03 )
    Bit 7 of address $4011 (the PSG's DPCM control register), when set,
    causes an IRQ to be generated.  This function allows the IRQ to be called
    from the PSG core when such an occasion arises. */
-void n2a03_irq(running_device *device)
+void n2a03_irq(device_t *device)
 {
 	m6502_Regs *cpustate = get_safe_token(device);
 

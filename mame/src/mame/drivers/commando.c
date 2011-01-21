@@ -226,7 +226,7 @@ static INTERRUPT_GEN( commando_interrupt )
 
 static MACHINE_START( commando )
 {
-	commando_state *state = (commando_state *)machine->driver_data;
+	commando_state *state = machine->driver_data<commando_state>();
 
 	state->audiocpu = machine->device("audiocpu");
 
@@ -236,7 +236,7 @@ static MACHINE_START( commando )
 
 static MACHINE_RESET( commando )
 {
-	commando_state *state = (commando_state *)machine->driver_data;
+	commando_state *state = machine->driver_data<commando_state>();
 
 	state->scroll_x[0] = 0;
 	state->scroll_x[1] = 0;
@@ -245,50 +245,47 @@ static MACHINE_RESET( commando )
 }
 
 
-static MACHINE_DRIVER_START( commando )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(commando_state)
+static MACHINE_CONFIG_START( commando, commando_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, PHI_MAIN)	// ???
-	MDRV_CPU_PROGRAM_MAP(commando_map)
-	MDRV_CPU_VBLANK_INT("screen", commando_interrupt)
+	MCFG_CPU_ADD("maincpu", Z80, PHI_MAIN)	// ???
+	MCFG_CPU_PROGRAM_MAP(commando_map)
+	MCFG_CPU_VBLANK_INT("screen", commando_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z80, PHI_B)	// 3 MHz
-	MDRV_CPU_PROGRAM_MAP(sound_map)
-	MDRV_CPU_VBLANK_INT_HACK(irq0_line_hold, 4)
+	MCFG_CPU_ADD("audiocpu", Z80, PHI_B)	// 3 MHz
+	MCFG_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_VBLANK_INT_HACK(irq0_line_hold, 4)
 
-	MDRV_MACHINE_START(commando)
-	MDRV_MACHINE_RESET(commando)
+	MCFG_MACHINE_START(commando)
+	MCFG_MACHINE_RESET(commando)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_BUFFERS_SPRITERAM)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_BUFFERS_SPRITERAM)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(commando)
-	MDRV_PALETTE_LENGTH(256)
+	MCFG_GFXDECODE(commando)
+	MCFG_PALETTE_LENGTH(256)
 
-	MDRV_PALETTE_INIT(RRRR_GGGG_BBBB)
-	MDRV_VIDEO_START(commando)
-	MDRV_VIDEO_UPDATE(commando)
-	MDRV_VIDEO_EOF(commando)
+	MCFG_PALETTE_INIT(RRRR_GGGG_BBBB)
+	MCFG_VIDEO_START(commando)
+	MCFG_VIDEO_UPDATE(commando)
+	MCFG_VIDEO_EOF(commando)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ym1", YM2203, PHI_B/2)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
+	MCFG_SOUND_ADD("ym1", YM2203, PHI_B/2)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
 
-	MDRV_SOUND_ADD("ym2", YM2203, PHI_B/2)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ym2", YM2203, PHI_B/2)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
+MACHINE_CONFIG_END
 
 
 /* ROMs */
@@ -521,12 +518,12 @@ ROM_END
 
 static DRIVER_INIT( commando )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
-	UINT8 *rom = memory_region(machine, "maincpu");
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	UINT8 *rom = machine->region("maincpu")->base();
 	UINT8 *decrypt = auto_alloc_array(machine, UINT8, 0xc000);
 	int A;
 
-	memory_set_decrypted_region(space, 0x0000, 0xbfff, decrypt);
+	space->set_decrypted_region(0x0000, 0xbfff, decrypt);
 
 	// the first opcode is *not* encrypted
 	decrypt[0] = rom[0];
@@ -541,12 +538,12 @@ static DRIVER_INIT( commando )
 
 static DRIVER_INIT( spaceinv )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
-	UINT8 *rom = memory_region(machine, "maincpu");
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	UINT8 *rom = machine->region("maincpu")->base();
 	UINT8 *decrypt = auto_alloc_array(machine, UINT8, 0xc000);
 	int A;
 
-	memory_set_decrypted_region(space, 0x0000, 0xbfff, decrypt);
+	space->set_decrypted_region(0x0000, 0xbfff, decrypt);
 
 	// the first opcode *is* encrypted
 	for (A = 0; A < 0xc000; A++)

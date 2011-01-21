@@ -76,19 +76,19 @@ Sound Board 1b11107
 
 static WRITE8_HANDLER( video_page_select_w )
 {
-	cvs_state *state = (cvs_state *)space->machine->driver_data;
+	cvs_state *state = space->machine->driver_data<cvs_state>();
 	state->page = offset & 0x03;
 }
 
 static WRITE8_HANDLER( io_page_select_w )
 {
-	cvs_state *state = (cvs_state *)space->machine->driver_data;
+	cvs_state *state = space->machine->driver_data<cvs_state>();
 	state->io_page = offset & 0x03;
 }
 
 static WRITE8_HANDLER( quasar_video_w )
 {
-	cvs_state *state = (cvs_state *)space->machine->driver_data;
+	cvs_state *state = space->machine->driver_data<cvs_state>();
 
 	switch (state->page)
 	{
@@ -101,7 +101,7 @@ static WRITE8_HANDLER( quasar_video_w )
 
 static READ8_HANDLER( quasar_IO_r )
 {
-	cvs_state *state = (cvs_state *)space->machine->driver_data;
+	cvs_state *state = space->machine->driver_data<cvs_state>();
 	UINT8 ans = 0;
 
 	switch (state->io_page)
@@ -117,7 +117,7 @@ static READ8_HANDLER( quasar_IO_r )
 
 static WRITE8_HANDLER( quasar_bullet_w )
 {
-	cvs_state *state = (cvs_state *)space->machine->driver_data;
+	cvs_state *state = space->machine->driver_data<cvs_state>();
 	state->bullet_ram[offset] = (data ^ 0xff);
 }
 
@@ -312,21 +312,24 @@ static const s2636_interface s2636_0_config =
 {
 	"screen",
 	0x100,
-	CVS_S2636_Y_OFFSET, CVS_S2636_X_OFFSET
+	CVS_S2636_Y_OFFSET, CVS_S2636_X_OFFSET,
+	NULL
 };
 
 static const s2636_interface s2636_1_config =
 {
 	"screen",
 	0x100,
-	CVS_S2636_Y_OFFSET, CVS_S2636_X_OFFSET
+	CVS_S2636_Y_OFFSET, CVS_S2636_X_OFFSET,
+	NULL
 };
 
 static const s2636_interface s2636_2_config =
 {
 	"screen",
 	0x100,
-	CVS_S2636_Y_OFFSET, CVS_S2636_X_OFFSET
+	CVS_S2636_Y_OFFSET, CVS_S2636_X_OFFSET,
+	NULL
 };
 
 // ****************************************
@@ -335,7 +338,7 @@ static const s2636_interface s2636_2_config =
 
 static MACHINE_START( quasar )
 {
-	cvs_state *state = (cvs_state *)machine->driver_data;
+	cvs_state *state = machine->driver_data<cvs_state>();
 
 	MACHINE_START_CALL(cvs);
 
@@ -347,7 +350,7 @@ static MACHINE_START( quasar )
 
 static MACHINE_RESET( quasar )
 {
-	cvs_state *state = (cvs_state *)machine->driver_data;
+	cvs_state *state = machine->driver_data<cvs_state>();
 
 	MACHINE_RESET_CALL(cvs);
 
@@ -356,51 +359,48 @@ static MACHINE_RESET( quasar )
 	state->io_page = 8;
 }
 
-static MACHINE_DRIVER_START( quasar )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(cvs_state)
+static MACHINE_CONFIG_START( quasar, cvs_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", S2650, 14318000/4)	/* 14 mhz crystal divide by 4 on board */
-	MDRV_CPU_PROGRAM_MAP(quasar)
-	MDRV_CPU_IO_MAP(quasar_io)
-	MDRV_CPU_VBLANK_INT("screen", quasar_interrupt)
+	MCFG_CPU_ADD("maincpu", S2650, 14318000/4)	/* 14 mhz crystal divide by 4 on board */
+	MCFG_CPU_PROGRAM_MAP(quasar)
+	MCFG_CPU_IO_MAP(quasar_io)
+	MCFG_CPU_VBLANK_INT("screen", quasar_interrupt)
 
-	MDRV_CPU_ADD("soundcpu",I8035,6000000)			/* 6MHz crystal divide by 15 in CPU */
-	MDRV_CPU_PROGRAM_MAP(sound_map)
-	MDRV_CPU_IO_MAP(sound_portmap)
+	MCFG_CPU_ADD("soundcpu",I8035,6000000)			/* 6MHz crystal divide by 15 in CPU */
+	MCFG_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_IO_MAP(sound_portmap)
 
-	MDRV_MACHINE_START(quasar)
-	MDRV_MACHINE_RESET(quasar)
+	MCFG_MACHINE_START(quasar)
+	MCFG_MACHINE_RESET(quasar)
 
-	MDRV_QUANTUM_TIME(HZ(6000))
+	MCFG_QUANTUM_TIME(HZ(6000))
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(50)							/* From dot clock */
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(256, 256)
-	MDRV_SCREEN_VISIBLE_AREA(1*8+1, 29*8-1, 2*8, 32*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(50)							/* From dot clock */
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(256, 256)
+	MCFG_SCREEN_VISIBLE_AREA(1*8+1, 29*8-1, 2*8, 32*8-1)
 
-	MDRV_GFXDECODE(quasar)
-	MDRV_PALETTE_LENGTH((64+1)*8+(4*256))
+	MCFG_GFXDECODE(quasar)
+	MCFG_PALETTE_LENGTH((64+1)*8+(4*256))
 
-	MDRV_S2636_ADD("s2636_0", s2636_0_config)
-	MDRV_S2636_ADD("s2636_1", s2636_1_config)
-	MDRV_S2636_ADD("s2636_2", s2636_2_config)
+	MCFG_S2636_ADD("s2636_0", s2636_0_config)
+	MCFG_S2636_ADD("s2636_1", s2636_1_config)
+	MCFG_S2636_ADD("s2636_2", s2636_2_config)
 
-	MDRV_PALETTE_INIT(quasar)
-	MDRV_VIDEO_START(quasar)
-	MDRV_VIDEO_UPDATE(quasar)
+	MCFG_PALETTE_INIT(quasar)
+	MCFG_VIDEO_START(quasar)
+	MCFG_VIDEO_UPDATE(quasar)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("dac", DAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("dac", DAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 ROM_START( quasar )
 	ROM_REGION( 0x8000, "maincpu", 0 )

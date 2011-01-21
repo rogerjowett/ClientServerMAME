@@ -55,7 +55,7 @@ So this is the correct behavior of real hardware, not an emulation bug.
 
 static INTERRUPT_GEN( nemesis_interrupt )
 {
-	nemesis_state *state = (nemesis_state *)device->machine->driver_data;
+	nemesis_state *state = device->machine->driver_data<nemesis_state>();
 
 	if (state->irq_on)
 		cpu_set_input_line(device, 1, HOLD_LINE);
@@ -63,7 +63,7 @@ static INTERRUPT_GEN( nemesis_interrupt )
 
 static INTERRUPT_GEN( konamigt_interrupt )
 {
-	nemesis_state *state = (nemesis_state *)device->machine->driver_data;
+	nemesis_state *state = device->machine->driver_data<nemesis_state>();
 
 	if (cpu_getiloops(device) == 0)
 	{
@@ -79,7 +79,7 @@ static INTERRUPT_GEN( konamigt_interrupt )
 
 static INTERRUPT_GEN( gx400_interrupt )
 {
-	nemesis_state *state = (nemesis_state *)device->machine->driver_data;
+	nemesis_state *state = device->machine->driver_data<nemesis_state>();
 
 	switch (cpu_getiloops(device))
 	{
@@ -102,7 +102,7 @@ static INTERRUPT_GEN( gx400_interrupt )
 
 static INTERRUPT_GEN( salamand_interrupt )
 {
-	nemesis_state *state = (nemesis_state *)device->machine->driver_data;
+	nemesis_state *state = device->machine->driver_data<nemesis_state>();
 
 	if (state->irq_on)
 		cpu_set_input_line(device, 1, HOLD_LINE);
@@ -110,7 +110,7 @@ static INTERRUPT_GEN( salamand_interrupt )
 
 static INTERRUPT_GEN( blkpnthr_interrupt )
 {
-	nemesis_state *state = (nemesis_state *)device->machine->driver_data;
+	nemesis_state *state = device->machine->driver_data<nemesis_state>();
 
 	if (state->irq_on)
 		cpu_set_input_line(device, 2, HOLD_LINE);
@@ -119,7 +119,7 @@ static INTERRUPT_GEN( blkpnthr_interrupt )
 
 static WRITE16_HANDLER( gx400_irq1_enable_word_w )
 {
-	nemesis_state *state = (nemesis_state *)space->machine->driver_data;
+	nemesis_state *state = space->machine->driver_data<nemesis_state>();
 
 	if (ACCESSING_BITS_0_7)
 		state->irq1_on = data & 0x0001;
@@ -130,7 +130,7 @@ static WRITE16_HANDLER( gx400_irq1_enable_word_w )
 
 static WRITE16_HANDLER( gx400_irq2_enable_word_w )
 {
-	nemesis_state *state = (nemesis_state *)space->machine->driver_data;
+	nemesis_state *state = space->machine->driver_data<nemesis_state>();
 
 	if (ACCESSING_BITS_0_7)
 		state->irq2_on = data & 0x0001;
@@ -141,7 +141,7 @@ static WRITE16_HANDLER( gx400_irq2_enable_word_w )
 
 static WRITE16_HANDLER( gx400_irq4_enable_word_w )
 {
-	nemesis_state *state = (nemesis_state *)space->machine->driver_data;
+	nemesis_state *state = space->machine->driver_data<nemesis_state>();
 
 	if (ACCESSING_BITS_8_15)
 		state->irq4_on = data & 0x0100;
@@ -149,7 +149,7 @@ static WRITE16_HANDLER( gx400_irq4_enable_word_w )
 
 static WRITE16_HANDLER( nemesis_irq_enable_word_w )
 {
-	nemesis_state *state = (nemesis_state *)space->machine->driver_data;
+	nemesis_state *state = space->machine->driver_data<nemesis_state>();
 
 	if (ACCESSING_BITS_0_7)
 		state->irq_on = data & 0xff;
@@ -160,7 +160,7 @@ static WRITE16_HANDLER( nemesis_irq_enable_word_w )
 
 static WRITE16_HANDLER( konamigt_irq_enable_word_w )
 {
-	nemesis_state *state = (nemesis_state *)space->machine->driver_data;
+	nemesis_state *state = space->machine->driver_data<nemesis_state>();
 
 	if (ACCESSING_BITS_0_7)
 		state->irq_on = data & 0xff;
@@ -171,7 +171,7 @@ static WRITE16_HANDLER( konamigt_irq_enable_word_w )
 
 static WRITE16_HANDLER( konamigt_irq2_enable_word_w )
 {
-	nemesis_state *state = (nemesis_state *)space->machine->driver_data;
+	nemesis_state *state = space->machine->driver_data<nemesis_state>();
 
 	if (ACCESSING_BITS_0_7)
 		state->irq2_on = data & 0xff;
@@ -183,13 +183,13 @@ static WRITE16_HANDLER( konamigt_irq2_enable_word_w )
 
 static READ16_HANDLER( gx400_sharedram_word_r )
 {
-	nemesis_state *state = (nemesis_state *)space->machine->driver_data;
+	nemesis_state *state = space->machine->driver_data<nemesis_state>();
 	return state->gx400_shared_ram[offset];
 }
 
 static WRITE16_HANDLER( gx400_sharedram_word_w )
 {
-	nemesis_state *state = (nemesis_state *)space->machine->driver_data;
+	nemesis_state *state = space->machine->driver_data<nemesis_state>();
 
 	if (ACCESSING_BITS_0_7)
 		state->gx400_shared_ram[offset] = data;
@@ -225,7 +225,7 @@ static READ16_HANDLER( konamigt_input_word_r )
 
 static WRITE16_HANDLER( selected_ip_word_w )
 {
-	nemesis_state *state = (nemesis_state *)space->machine->driver_data;
+	nemesis_state *state = space->machine->driver_data<nemesis_state>();
 
 	if (ACCESSING_BITS_0_7)
 		state->selected_ip = data & 0xff;	// latch the value
@@ -233,7 +233,7 @@ static WRITE16_HANDLER( selected_ip_word_w )
 
 static READ16_HANDLER( selected_ip_word_r )
 {
-	nemesis_state *state = (nemesis_state *)space->machine->driver_data;
+	nemesis_state *state = space->machine->driver_data<nemesis_state>();
 
 	switch (state->selected_ip & 0xf)
 	{												// From WEC Le Mans Schems:
@@ -255,7 +255,7 @@ static WRITE16_HANDLER( nemesis_soundlatch_word_w )
 
 static WRITE8_DEVICE_HANDLER( gx400_speech_start_w )
 {
-	nemesis_state *state = (nemesis_state *)device->machine->driver_data;
+	nemesis_state *state = device->machine->driver_data<nemesis_state>();
 
 	/* the voice data is not in a rom but in sound RAM at $8000 */
 	vlm5030_set_rom(device, state->gx400_shared_ram + 0x4000);
@@ -277,7 +277,7 @@ static READ8_DEVICE_HANDLER( nemesis_portA_r )
    bit 5:     vlm5030 busy
    bit 7:     unused by this software version. Bubble Memory version uses this bit.
 */
-	nemesis_state *state = (nemesis_state *)device->machine->driver_data;
+	nemesis_state *state = device->machine->driver_data<nemesis_state>();
 	int res = (state->audiocpu->total_cycles() / 1024) & 0x2f; // this should be 0x0f, but it doesn't work
 
 	res |= 0xd0;
@@ -571,7 +571,7 @@ ADDRESS_MAP_END
 
 static READ8_HANDLER( wd_r )
 {
-	nemesis_state *state = (nemesis_state *)space->machine->driver_data;
+	nemesis_state *state = space->machine->driver_data<nemesis_state>();
 	state->frame_counter ^= 1;
 	return state->frame_counter;
 }
@@ -1614,10 +1614,10 @@ static const ay8910_interface ay8910_interface_2 =
 	DEVCB_DEVICE_HANDLER("k007232", k005289_control_B_w)
 };
 
-static void sound_irq(running_device *device, int state)
+static void sound_irq(device_t *device, int state)
 {
 /* Interrupts _are_ generated, I wonder where they go.. */
-// nemesis_state *driver_state = (nemesis_state *)device->machine->driver_data;
+// nemesis_state *driver_state = device->machine->driver_data<nemesis_state>();
 // cpu_set_input_line(driver_state->audiocpu, 0, HOLD_LINE);
 }
 
@@ -1631,7 +1631,7 @@ static const ym3812_interface ym3812_config =
 	sound_irq
 };
 
-static void volume_callback(running_device *device, int v)
+static void volume_callback(device_t *device, int v)
 {
 	k007232_set_volume(device, 0, (v >> 4) * 0x11, 0);
 	k007232_set_volume(device, 1, 0, (v & 0x0f) * 0x11);
@@ -1646,7 +1646,7 @@ static const k007232_interface k007232_config =
 
 static MACHINE_START( nemesis )
 {
-	nemesis_state *state = (nemesis_state *)machine->driver_data;
+	nemesis_state *state = machine->driver_data<nemesis_state>();
 
 	state->maincpu = machine->device<cpu_device>("maincpu");
 	state->audiocpu = machine->device<cpu_device>("audiocpu");
@@ -1667,7 +1667,7 @@ static MACHINE_START( nemesis )
 
 static MACHINE_RESET( nemesis )
 {
-	nemesis_state *state = (nemesis_state *)machine->driver_data;
+	nemesis_state *state = machine->driver_data<nemesis_state>();
 
 	state->irq_on = 0;
 	state->irq1_on = 0;
@@ -1682,459 +1682,432 @@ static MACHINE_RESET( nemesis )
 	state->irq_port_last = 0;
 }
 
-static MACHINE_DRIVER_START( nemesis )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(nemesis_state)
+static MACHINE_CONFIG_START( nemesis, nemesis_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000,18432000/2)         /* 9.216 MHz? */
+	MCFG_CPU_ADD("maincpu", M68000,18432000/2)         /* 9.216 MHz? */
 //          14318180/2, /* From schematics, should be accurate */
-	MDRV_CPU_PROGRAM_MAP(nemesis_map)
-	MDRV_CPU_VBLANK_INT("screen", nemesis_interrupt)
+	MCFG_CPU_PROGRAM_MAP(nemesis_map)
+	MCFG_CPU_VBLANK_INT("screen", nemesis_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z80,14318180/4) /* From schematics, should be accurate */
-	MDRV_CPU_PROGRAM_MAP(sound_map)	/* fixed */
+	MCFG_CPU_ADD("audiocpu", Z80,14318180/4) /* From schematics, should be accurate */
+	MCFG_CPU_PROGRAM_MAP(sound_map)	/* fixed */
 
-	MDRV_MACHINE_START(nemesis)
-	MDRV_MACHINE_RESET(nemesis)
+	MCFG_MACHINE_START(nemesis)
+	MCFG_MACHINE_RESET(nemesis)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE((18432000.0/4)/(288*264))		/* ??? */
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE((18432000.0/4)/(288*264))		/* ??? */
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(nemesis)
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_GFXDECODE(nemesis)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(nemesis)
-	MDRV_VIDEO_UPDATE(nemesis)
+	MCFG_VIDEO_START(nemesis)
+	MCFG_VIDEO_UPDATE(nemesis)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ay1", AY8910, 14318180/8)
-	MDRV_SOUND_CONFIG(ay8910_interface_1)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)	/* verified with OST */
+	MCFG_SOUND_ADD("ay1", AY8910, 14318180/8)
+	MCFG_SOUND_CONFIG(ay8910_interface_1)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)	/* verified with OST */
 
-	MDRV_SOUND_ADD("ay2", AY8910, 14318180/8)
-	MDRV_SOUND_CONFIG(ay8910_interface_2)	/* fixed */
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)	/* verified with OST */
+	MCFG_SOUND_ADD("ay2", AY8910, 14318180/8)
+	MCFG_SOUND_CONFIG(ay8910_interface_2)	/* fixed */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)	/* verified with OST */
 
-	MDRV_SOUND_ADD("k007232", K005289, 3579545/2)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.35)	/* verified with OST */
+	MCFG_SOUND_ADD("k007232", K005289, 3579545/2)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.35)	/* verified with OST */
 
-	MDRV_SOUND_ADD("vlm", VLM5030, 3579545)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.70)	/* unused */
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("vlm", VLM5030, 3579545)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.70)	/* unused */
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( gx400 )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(nemesis_state)
+static MACHINE_CONFIG_START( gx400, nemesis_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000,18432000/2)     /* 9.216MHz */
-	MDRV_CPU_PROGRAM_MAP(gx400_map)
-	MDRV_CPU_VBLANK_INT_HACK(gx400_interrupt,3)
+	MCFG_CPU_ADD("maincpu", M68000,18432000/2)     /* 9.216MHz */
+	MCFG_CPU_PROGRAM_MAP(gx400_map)
+	MCFG_CPU_VBLANK_INT_HACK(gx400_interrupt,3)
 
-	MDRV_CPU_ADD("audiocpu", Z80,14318180/4)        /* 3.579545 MHz */
-	MDRV_CPU_PROGRAM_MAP(gx400_sound_map)
-	MDRV_CPU_VBLANK_INT("screen", nmi_line_pulse)	/* interrupts are triggered by the main CPU */
+	MCFG_CPU_ADD("audiocpu", Z80,14318180/4)        /* 3.579545 MHz */
+	MCFG_CPU_PROGRAM_MAP(gx400_sound_map)
+	MCFG_CPU_VBLANK_INT("screen", nmi_line_pulse)	/* interrupts are triggered by the main CPU */
 
-	MDRV_MACHINE_START(nemesis)
-	MDRV_MACHINE_RESET(nemesis)
+	MCFG_MACHINE_START(nemesis)
+	MCFG_MACHINE_RESET(nemesis)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE((18432000.0/4)/(288*264))		/* 60.606060 Hz */
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE((18432000.0/4)/(288*264))		/* 60.606060 Hz */
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(nemesis)
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_GFXDECODE(nemesis)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(nemesis)
-	MDRV_VIDEO_UPDATE(nemesis)
+	MCFG_VIDEO_START(nemesis)
+	MCFG_VIDEO_UPDATE(nemesis)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ay1", AY8910, 14318180/8)
-	MDRV_SOUND_CONFIG(ay8910_interface_1)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)	/* verified with OST */
+	MCFG_SOUND_ADD("ay1", AY8910, 14318180/8)
+	MCFG_SOUND_CONFIG(ay8910_interface_1)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)	/* verified with OST */
 
-	MDRV_SOUND_ADD("ay2", AY8910, 14318180/8)
-	MDRV_SOUND_CONFIG(ay8910_interface_2)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)	/* verified with OST */
+	MCFG_SOUND_ADD("ay2", AY8910, 14318180/8)
+	MCFG_SOUND_CONFIG(ay8910_interface_2)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)	/* verified with OST */
 
-	MDRV_SOUND_ADD("k007232", K005289, 3579545/2)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.35)	/* verified with OST */
+	MCFG_SOUND_ADD("k007232", K005289, 3579545/2)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.35)	/* verified with OST */
 
-	MDRV_SOUND_ADD("vlm", VLM5030, 3579545)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.70)	/* unused */
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("vlm", VLM5030, 3579545)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.70)	/* unused */
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( konamigt )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(nemesis_state)
+static MACHINE_CONFIG_START( konamigt, nemesis_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000,18432000/2)         /* 9.216 MHz? */
-	MDRV_CPU_PROGRAM_MAP(konamigt_map)
-	MDRV_CPU_VBLANK_INT_HACK(konamigt_interrupt,2)
+	MCFG_CPU_ADD("maincpu", M68000,18432000/2)         /* 9.216 MHz? */
+	MCFG_CPU_PROGRAM_MAP(konamigt_map)
+	MCFG_CPU_VBLANK_INT_HACK(konamigt_interrupt,2)
 
-	MDRV_CPU_ADD("audiocpu", Z80,14318180/4)        /* 3.579545 MHz */
-	MDRV_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80,14318180/4)        /* 3.579545 MHz */
+	MCFG_CPU_PROGRAM_MAP(sound_map)
 
-	MDRV_MACHINE_START(nemesis)
-	MDRV_MACHINE_RESET(nemesis)
+	MCFG_MACHINE_START(nemesis)
+	MCFG_MACHINE_RESET(nemesis)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE((18432000.0/4)/(288*264))		/* 60.606060 Hz */
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE((18432000.0/4)/(288*264))		/* 60.606060 Hz */
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(nemesis)
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_GFXDECODE(nemesis)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(nemesis)
-	MDRV_VIDEO_UPDATE(nemesis)
+	MCFG_VIDEO_START(nemesis)
+	MCFG_VIDEO_UPDATE(nemesis)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ay1", AY8910, 14318180/8)
-	MDRV_SOUND_CONFIG(ay8910_interface_1)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.85)
+	MCFG_SOUND_ADD("ay1", AY8910, 14318180/8)
+	MCFG_SOUND_CONFIG(ay8910_interface_1)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.85)
 
-	MDRV_SOUND_ADD("ay2", AY8910, 14318180/8)
-	MDRV_SOUND_CONFIG(ay8910_interface_2)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
+	MCFG_SOUND_ADD("ay2", AY8910, 14318180/8)
+	MCFG_SOUND_CONFIG(ay8910_interface_2)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
 
-	MDRV_SOUND_ADD("k007232", K005289, 3579545/2)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.60)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("k007232", K005289, 3579545/2)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.60)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( rf2_gx400 )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(nemesis_state)
+static MACHINE_CONFIG_START( rf2_gx400, nemesis_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000,18432000/2)     /* 9.216MHz */
-	MDRV_CPU_PROGRAM_MAP(rf2_gx400_map)
-	MDRV_CPU_VBLANK_INT_HACK(gx400_interrupt,3)
+	MCFG_CPU_ADD("maincpu", M68000,18432000/2)     /* 9.216MHz */
+	MCFG_CPU_PROGRAM_MAP(rf2_gx400_map)
+	MCFG_CPU_VBLANK_INT_HACK(gx400_interrupt,3)
 
-	MDRV_CPU_ADD("audiocpu", Z80,14318180/4)        /* 3.579545 MHz */
-	MDRV_CPU_PROGRAM_MAP(gx400_sound_map)
-	MDRV_CPU_VBLANK_INT("screen", nmi_line_pulse)	/* interrupts are triggered by the main CPU */
+	MCFG_CPU_ADD("audiocpu", Z80,14318180/4)        /* 3.579545 MHz */
+	MCFG_CPU_PROGRAM_MAP(gx400_sound_map)
+	MCFG_CPU_VBLANK_INT("screen", nmi_line_pulse)	/* interrupts are triggered by the main CPU */
 
-	MDRV_MACHINE_START(nemesis)
-	MDRV_MACHINE_RESET(nemesis)
+	MCFG_MACHINE_START(nemesis)
+	MCFG_MACHINE_RESET(nemesis)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE((18432000.0/4)/(288*264))		/* 60.606060 Hz */
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE((18432000.0/4)/(288*264))		/* 60.606060 Hz */
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(nemesis)
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_GFXDECODE(nemesis)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(nemesis)
-	MDRV_VIDEO_UPDATE(nemesis)
+	MCFG_VIDEO_START(nemesis)
+	MCFG_VIDEO_UPDATE(nemesis)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ay1", AY8910, 14318180/8)
-	MDRV_SOUND_CONFIG(ay8910_interface_1)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.85)
+	MCFG_SOUND_ADD("ay1", AY8910, 14318180/8)
+	MCFG_SOUND_CONFIG(ay8910_interface_1)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.85)
 
-	MDRV_SOUND_ADD("ay2", AY8910, 14318180/8)
-	MDRV_SOUND_CONFIG(ay8910_interface_2)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
+	MCFG_SOUND_ADD("ay2", AY8910, 14318180/8)
+	MCFG_SOUND_CONFIG(ay8910_interface_2)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
 
-	MDRV_SOUND_ADD("k007232", K005289, 3579545/2)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.60)
+	MCFG_SOUND_ADD("k007232", K005289, 3579545/2)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.60)
 
-	MDRV_SOUND_ADD("vlm", VLM5030, 3579545)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.70)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("vlm", VLM5030, 3579545)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.70)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( salamand )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(nemesis_state)
+static MACHINE_CONFIG_START( salamand, nemesis_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000,18432000/2)       /* 9.216MHz */
-	MDRV_CPU_PROGRAM_MAP(salamand_map)
-	MDRV_CPU_VBLANK_INT("screen", salamand_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000,18432000/2)       /* 9.216MHz */
+	MCFG_CPU_PROGRAM_MAP(salamand_map)
+	MCFG_CPU_VBLANK_INT("screen", salamand_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 3579545)         /* 3.579545 MHz */
-	MDRV_CPU_PROGRAM_MAP(sal_sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 3579545)         /* 3.579545 MHz */
+	MCFG_CPU_PROGRAM_MAP(sal_sound_map)
 
-	MDRV_MACHINE_START(nemesis)
-	MDRV_MACHINE_RESET(nemesis)
+	MCFG_MACHINE_START(nemesis)
+	MCFG_MACHINE_RESET(nemesis)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_UPDATE_AFTER_VBLANK)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_AFTER_VBLANK)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE((18432000.0/4)/(288*264))		/* 60.606060 Hz */
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC((264-256)*125/2))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE((18432000.0/4)/(288*264))		/* 60.606060 Hz */
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC((264-256)*125/2))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(nemesis)
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_GFXDECODE(nemesis)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(nemesis)
-	MDRV_VIDEO_UPDATE(nemesis)
+	MCFG_VIDEO_START(nemesis)
+	MCFG_VIDEO_UPDATE(nemesis)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("vlm", VLM5030, 3579545)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.60)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.60)
+	MCFG_SOUND_ADD("vlm", VLM5030, 3579545)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.60)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.60)
 
-	MDRV_SOUND_ADD("k007232", K007232, 3579545)
-	MDRV_SOUND_CONFIG(k007232_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.10)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.10)
-	MDRV_SOUND_ROUTE(1, "lspeaker", 0.10)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.10)
+	MCFG_SOUND_ADD("k007232", K007232, 3579545)
+	MCFG_SOUND_CONFIG(k007232_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.10)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.10)
+	MCFG_SOUND_ROUTE(1, "lspeaker", 0.10)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.10)
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, 3579545)
-	MDRV_SOUND_CONFIG(ym2151_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2151, 3579545)
+	MCFG_SOUND_CONFIG(ym2151_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( blkpnthr )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(nemesis_state)
+static MACHINE_CONFIG_START( blkpnthr, nemesis_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000,18432000/2)         /* 9.216 MHz? */
-	MDRV_CPU_PROGRAM_MAP(blkpnthr_map)
-	MDRV_CPU_VBLANK_INT("screen", blkpnthr_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000,18432000/2)         /* 9.216 MHz? */
+	MCFG_CPU_PROGRAM_MAP(blkpnthr_map)
+	MCFG_CPU_VBLANK_INT("screen", blkpnthr_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 3579545)        /* 3.579545 MHz */
-	MDRV_CPU_PROGRAM_MAP(blkpnthr_sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 3579545)        /* 3.579545 MHz */
+	MCFG_CPU_PROGRAM_MAP(blkpnthr_sound_map)
 
-	MDRV_MACHINE_START(nemesis)
-	MDRV_MACHINE_RESET(nemesis)
+	MCFG_MACHINE_START(nemesis)
+	MCFG_MACHINE_RESET(nemesis)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE((18432000.0/4)/(288*264))		/* 60.606060 Hz */
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE((18432000.0/4)/(288*264))		/* 60.606060 Hz */
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(nemesis)
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_GFXDECODE(nemesis)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(nemesis)
-	MDRV_VIDEO_UPDATE(nemesis)
+	MCFG_VIDEO_START(nemesis)
+	MCFG_VIDEO_UPDATE(nemesis)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("k007232", K007232, 3579545)
-	MDRV_SOUND_CONFIG(k007232_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.10)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.10)
-	MDRV_SOUND_ROUTE(1, "lspeaker", 0.10)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.10)
+	MCFG_SOUND_ADD("k007232", K007232, 3579545)
+	MCFG_SOUND_CONFIG(k007232_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.10)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.10)
+	MCFG_SOUND_ROUTE(1, "lspeaker", 0.10)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.10)
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, 3579545)
-	MDRV_SOUND_CONFIG(ym2151_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2151, 3579545)
+	MCFG_SOUND_CONFIG(ym2151_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( citybomb )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(nemesis_state)
+static MACHINE_CONFIG_START( citybomb, nemesis_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000,18432000/2)         /* 9.216 MHz? */
-	MDRV_CPU_PROGRAM_MAP(citybomb_map)
-	MDRV_CPU_VBLANK_INT("screen", salamand_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000,18432000/2)         /* 9.216 MHz? */
+	MCFG_CPU_PROGRAM_MAP(citybomb_map)
+	MCFG_CPU_VBLANK_INT("screen", salamand_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 3579545)        /* 3.579545 MHz */
-	MDRV_CPU_PROGRAM_MAP(city_sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 3579545)        /* 3.579545 MHz */
+	MCFG_CPU_PROGRAM_MAP(city_sound_map)
 
-	MDRV_MACHINE_START(nemesis)
-	MDRV_MACHINE_RESET(nemesis)
+	MCFG_MACHINE_START(nemesis)
+	MCFG_MACHINE_RESET(nemesis)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE((18432000.0/4)/(288*264))		/* 60.606060 Hz */
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE((18432000.0/4)/(288*264))		/* 60.606060 Hz */
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(nemesis)
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_GFXDECODE(nemesis)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(nemesis)
-	MDRV_VIDEO_UPDATE(nemesis)
+	MCFG_VIDEO_START(nemesis)
+	MCFG_VIDEO_UPDATE(nemesis)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("k007232", K007232, 3579545)
-	MDRV_SOUND_CONFIG(k007232_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.30)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.30)
-	MDRV_SOUND_ROUTE(1, "lspeaker", 0.30)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.30)
+	MCFG_SOUND_ADD("k007232", K007232, 3579545)
+	MCFG_SOUND_CONFIG(k007232_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.30)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.30)
+	MCFG_SOUND_ROUTE(1, "lspeaker", 0.30)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.30)
 
-	MDRV_SOUND_ADD("ymsnd", YM3812, 3579545)
-	MDRV_SOUND_CONFIG(ym3812_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM3812, 3579545)
+	MCFG_SOUND_CONFIG(ym3812_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
 
-	MDRV_SOUND_ADD("k051649", K051649, 3579545/2)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.38)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.38)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("k051649", K051649, 3579545/2)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.38)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.38)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( nyanpani )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(nemesis_state)
+static MACHINE_CONFIG_START( nyanpani, nemesis_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000,18432000/2)         /* 9.216 MHz? */
-	MDRV_CPU_PROGRAM_MAP(nyanpani_map)
-	MDRV_CPU_VBLANK_INT("screen", salamand_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000,18432000/2)         /* 9.216 MHz? */
+	MCFG_CPU_PROGRAM_MAP(nyanpani_map)
+	MCFG_CPU_VBLANK_INT("screen", salamand_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 3579545)        /* 3.579545 MHz */
-	MDRV_CPU_PROGRAM_MAP(city_sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 3579545)        /* 3.579545 MHz */
+	MCFG_CPU_PROGRAM_MAP(city_sound_map)
 
-	MDRV_MACHINE_START(nemesis)
-	MDRV_MACHINE_RESET(nemesis)
+	MCFG_MACHINE_START(nemesis)
+	MCFG_MACHINE_RESET(nemesis)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE((18432000.0/4)/(288*264))		/* 60.606060 Hz */
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE((18432000.0/4)/(288*264))		/* 60.606060 Hz */
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(nemesis)
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_GFXDECODE(nemesis)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(nemesis)
-	MDRV_VIDEO_UPDATE(nemesis)
+	MCFG_VIDEO_START(nemesis)
+	MCFG_VIDEO_UPDATE(nemesis)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("k007232", K007232, 3579545)
-	MDRV_SOUND_CONFIG(k007232_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.30)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.30)
-	MDRV_SOUND_ROUTE(1, "lspeaker", 0.30)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.30)
+	MCFG_SOUND_ADD("k007232", K007232, 3579545)
+	MCFG_SOUND_CONFIG(k007232_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.30)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.30)
+	MCFG_SOUND_ROUTE(1, "lspeaker", 0.30)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.30)
 
-	MDRV_SOUND_ADD("ymsnd", YM3812, 3579545)
-	MDRV_SOUND_CONFIG(ym3812_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM3812, 3579545)
+	MCFG_SOUND_CONFIG(ym3812_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
 
-	MDRV_SOUND_ADD("k051649", K051649, 3579545/2)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.38)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.38)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("k051649", K051649, 3579545/2)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.38)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.38)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( hcrash )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(nemesis_state)
+static MACHINE_CONFIG_START( hcrash, nemesis_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000,18432000/3)         /* 6.144MHz */
-	MDRV_CPU_PROGRAM_MAP(hcrash_map)
-	MDRV_CPU_VBLANK_INT_HACK(konamigt_interrupt,2)
+	MCFG_CPU_ADD("maincpu", M68000,18432000/3)         /* 6.144MHz */
+	MCFG_CPU_PROGRAM_MAP(hcrash_map)
+	MCFG_CPU_VBLANK_INT_HACK(konamigt_interrupt,2)
 
-	MDRV_CPU_ADD("audiocpu", Z80,14318180/4)       /* 3.579545 MHz */
-	MDRV_CPU_PROGRAM_MAP(sal_sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80,14318180/4)       /* 3.579545 MHz */
+	MCFG_CPU_PROGRAM_MAP(sal_sound_map)
 
-	MDRV_MACHINE_START(nemesis)
-	MDRV_MACHINE_RESET(nemesis)
+	MCFG_MACHINE_START(nemesis)
+	MCFG_MACHINE_RESET(nemesis)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE((18432000.0/4)/(288*264))		/* 60.606060 Hz */
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE((18432000.0/4)/(288*264))		/* 60.606060 Hz */
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(nemesis)
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_GFXDECODE(nemesis)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(nemesis)
-	MDRV_VIDEO_UPDATE(nemesis)
+	MCFG_VIDEO_START(nemesis)
+	MCFG_VIDEO_UPDATE(nemesis)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("vlm", VLM5030, 3579545)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.60)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.60)
+	MCFG_SOUND_ADD("vlm", VLM5030, 3579545)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.60)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.60)
 
-	MDRV_SOUND_ADD("k007232", K007232, 3579545)
-	MDRV_SOUND_CONFIG(k007232_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.10)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.10)
-	MDRV_SOUND_ROUTE(1, "lspeaker", 0.10)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.10)
+	MCFG_SOUND_ADD("k007232", K007232, 3579545)
+	MCFG_SOUND_CONFIG(k007232_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.10)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.10)
+	MCFG_SOUND_ROUTE(1, "lspeaker", 0.10)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.10)
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, 3579545)
-	MDRV_SOUND_CONFIG(ym2151_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2151, 3579545)
+	MCFG_SOUND_CONFIG(ym2151_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 /***************************************************************************
 

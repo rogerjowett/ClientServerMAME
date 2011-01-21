@@ -12,7 +12,7 @@
 
 #define xxxx 0x00
 
-static const UINT8 ga2_v25_opcode_table[256] = {
+const UINT8 ga2_v25_opcode_table[256] = {
      xxxx,xxxx,0xEA,xxxx,xxxx,0x8B,xxxx,xxxx,xxxx,xxxx,xxxx,xxxx,xxxx,xxxx,xxxx,xxxx,
      xxxx,xxxx,xxxx,xxxx,xxxx,xxxx,xxxx,xxxx,xxxx,xxxx,xxxx,xxxx,xxxx,xxxx,xxxx,0xFA,
      xxxx,xxxx,xxxx,xxxx,xxxx,xxxx,xxxx,xxxx,xxxx,xxxx,xxxx,xxxx,0x49,xxxx,xxxx,xxxx,
@@ -33,42 +33,21 @@ static const UINT8 ga2_v25_opcode_table[256] = {
 
 #undef xxxx
 
-static void nec_v25_cpu_decrypt(running_machine *machine)
+void decrypt_ga2_protrom(running_machine *machine)
 {
 	int i;
-	const address_space *space = cputag_get_address_space(machine, "mcu", ADDRESS_SPACE_PROGRAM);
-	UINT8 *rom = memory_region(machine, "mcu");
-	UINT8* decrypted = auto_alloc_array(machine, UINT8, 0x100000);
+	UINT8 *rom = machine->region("mcu")->base();
 	UINT8* temp = auto_alloc_array(machine, UINT8, 0x100000);
-
-	// set CPU3 opcode base
-	memory_set_decrypted_region(space, 0x00000, 0xfffff, decrypted);
 
 	// make copy of ROM so original can be overwritten
 	memcpy(temp, rom, 0x10000);
 
+	// unscramble the address lines
 	for(i = 0; i < 0x10000; i++)
-	{
-		int j = BITSWAP16(i, 14, 11, 15, 12, 13, 4, 3, 7, 5, 10, 2, 8, 9, 6, 1, 0);
-
-		// normal ROM data with address swap undone
-		rom[i] = temp[j];
-
-		// decryped opcodes with address swap undone
-		decrypted[i] = ga2_v25_opcode_table[ temp[j] ];
-	}
-
-	memcpy(rom+0xf0000, rom, 0x10000);
-	memcpy(decrypted+0xf0000, decrypted, 0x10000);
+		rom[i] = temp[BITSWAP16(i, 14, 11, 15, 12, 13, 4, 3, 7, 5, 10, 2, 8, 9, 6, 1, 0)];
 
 	auto_free(machine, temp);
 }
-
-void decrypt_ga2_protrom(running_machine *machine)
-{
-	nec_v25_cpu_decrypt(machine);
-}
-
 
 WRITE16_HANDLER( ga2_dpram_w )
 {
@@ -134,7 +113,7 @@ WRITE16_HANDLER(sonic_level_load_protection)
 		}
 		else
 		{
-			const UINT8 *ROM = memory_region(space->machine, "maincpu");
+			const UINT8 *ROM = space->machine->region("maincpu")->base();
 			level =  *((ROM + LEVEL_ORDER_ARRAY) + (system32_workram[CLEARED_LEVELS / 2] * 2) - 1);
 			level |= *((ROM + LEVEL_ORDER_ARRAY) + (system32_workram[CLEARED_LEVELS / 2] * 2) - 2) << 8;
 		}
@@ -184,7 +163,7 @@ WRITE16_HANDLER(brival_protection_w)
 	};
 	char ret[32];
 	int curProtType;
-	UINT8 *ROM = memory_region(space->machine, "maincpu");
+	UINT8 *ROM = space->machine->region("maincpu")->base();
 
 	switch (offset)
 	{
@@ -226,19 +205,19 @@ WRITE16_HANDLER(brival_protection_w)
  ******************************************************************************
  ******************************************************************************/
 
-void darkedge_fd1149_vblank(running_device *device)
+void darkedge_fd1149_vblank(device_t *device)
 {
-	const address_space *space = cpu_get_address_space(device, ADDRESS_SPACE_PROGRAM);
+	address_space *space = cpu_get_address_space(device, ADDRESS_SPACE_PROGRAM);
 
-	memory_write_word(space, 0x20f072, 0);
-	memory_write_word(space, 0x20f082, 0);
+	space->write_word(0x20f072, 0);
+	space->write_word(0x20f082, 0);
 
-	if( memory_read_byte(space, 0x20a12c) != 0 )
+	if( space->read_byte(0x20a12c) != 0 )
 	{
-		memory_write_byte(space, 0x20a12c, memory_read_byte(space, 0x20a12c)-1 );
+		space->write_byte(0x20a12c, space->read_byte(0x20a12c)-1 );
 
-		if( memory_read_byte(space, 0x20a12c) == 0 )
-			memory_write_byte(space, 0x20a12e, 1);
+		if( space->read_byte(0x20a12c) == 0 )
+			space->write_byte(0x20a12e, 1);
 	}
 }
 
@@ -267,7 +246,7 @@ READ16_HANDLER( darkedge_protection_r )
 
 WRITE16_HANDLER( dbzvrvs_protection_w )
 {
-	memory_write_word( space, 0x2080c8, memory_read_word( space, 0x200044 ) );
+	space->write_word( 0x2080c8, space->read_word( 0x200044 ) );
 }
 
 
@@ -331,12 +310,12 @@ WRITE16_HANDLER( jleague_protection_w )
 		// Map team browser selection to opponent browser selection
 		// using same lookup table that V60 uses for sound sample mapping.
 		case 0:
-			memory_write_byte( space, 0x20f708, memory_read_word( space, 0x7bbc0 + data*2 ) );
+			space->write_byte( 0x20f708, space->read_word( 0x7bbc0 + data*2 ) );
 			break;
 
 		// move on to team browser
 		case 4/2:
-			memory_write_byte( space, 0x200016, data & 0xff );
+			space->write_byte( 0x200016, data & 0xff );
 			break;
 
 		default:

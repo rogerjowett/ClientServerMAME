@@ -4,12 +4,11 @@
 
 *************************************************************************/
 
-class pktgaldx_state
+class pktgaldx_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, pktgaldx_state(machine)); }
-
-	pktgaldx_state(running_machine &machine) { }
+	pktgaldx_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT16 *  pf1_rowscroll;
@@ -22,8 +21,8 @@ public:
 	UINT16*   pktgaldb_sprites;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *deco16ic;
+	device_t *maincpu;
+	device_t *deco16ic;
 };
 
 

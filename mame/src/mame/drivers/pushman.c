@@ -49,7 +49,7 @@ static WRITE16_HANDLER( pushman_control_w )
 
 static READ16_HANDLER( pushman_68705_r )
 {
-	pushman_state *state = (pushman_state *)space->machine->driver_data;
+	pushman_state *state = space->machine->driver_data<pushman_state>();
 
 	if (offset == 0)
 		return state->latch;
@@ -67,7 +67,7 @@ static READ16_HANDLER( pushman_68705_r )
 
 static WRITE16_HANDLER( pushman_68705_w )
 {
-	pushman_state *state = (pushman_state *)space->machine->driver_data;
+	pushman_state *state = space->machine->driver_data<pushman_state>();
 
 	if (ACCESSING_BITS_8_15)
 		state->shared_ram[2 * offset] = data >> 8;
@@ -85,7 +85,7 @@ static WRITE16_HANDLER( pushman_68705_w )
 /* ElSemi - Bouncing balls protection. */
 static READ16_HANDLER( bballs_68705_r )
 {
-	pushman_state *state = (pushman_state *)space->machine->driver_data;
+	pushman_state *state = space->machine->driver_data<pushman_state>();
 
 	if (offset == 0)
 		return state->latch;
@@ -102,7 +102,7 @@ static READ16_HANDLER( bballs_68705_r )
 
 static WRITE16_HANDLER( bballs_68705_w )
 {
-	pushman_state *state = (pushman_state *)space->machine->driver_data;
+	pushman_state *state = space->machine->driver_data<pushman_state>();
 
 	if (ACCESSING_BITS_8_15)
 		state->shared_ram[2 * offset] = data >> 8;
@@ -131,13 +131,13 @@ static WRITE16_HANDLER( bballs_68705_w )
 
 static READ8_HANDLER( pushman_68000_r )
 {
-	pushman_state *state = (pushman_state *)space->machine->driver_data;
+	pushman_state *state = space->machine->driver_data<pushman_state>();
 	return state->shared_ram[offset];
 }
 
 static WRITE8_HANDLER( pushman_68000_w )
 {
-	pushman_state *state = (pushman_state *)space->machine->driver_data;
+	pushman_state *state = space->machine->driver_data<pushman_state>();
 
 	if (offset == 2 && (state->shared_ram[2] & 2) == 0 && data & 2)
 	{
@@ -401,9 +401,9 @@ GFXDECODE_END
 
 /******************************************************************************/
 
-static void irqhandler(running_device *device, int irq)
+static void irqhandler(device_t *device, int irq)
 {
-	pushman_state *state = (pushman_state *)device->machine->driver_data;
+	pushman_state *state = device->machine->driver_data<pushman_state>();
 	cpu_set_input_line(state->audiocpu, 0, irq ? ASSERT_LINE : CLEAR_LINE);
 }
 
@@ -420,7 +420,7 @@ static const ym2203_interface ym2203_config =
 
 static MACHINE_START( pushman )
 {
-	pushman_state *state = (pushman_state *)machine->driver_data;
+	pushman_state *state = machine->driver_data<pushman_state>();
 
 	state->maincpu = machine->device("maincpu");
 	state->audiocpu = machine->device("audiocpu");
@@ -434,7 +434,7 @@ static MACHINE_START( pushman )
 
 static MACHINE_RESET( pushman )
 {
-	pushman_state *state = (pushman_state *)machine->driver_data;
+	pushman_state *state = machine->driver_data<pushman_state>();
 
 	state->latch = 0;
 	state->new_latch = 0;
@@ -444,106 +444,100 @@ static MACHINE_RESET( pushman )
 	memset(state->shared_ram, 0, ARRAY_LENGTH(state->shared_ram));
 }
 
-static MACHINE_DRIVER_START( pushman )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(pushman_state)
+static MACHINE_CONFIG_START( pushman, pushman_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 8000000)
-	MDRV_CPU_PROGRAM_MAP(pushman_map)
-	MDRV_CPU_VBLANK_INT("screen", irq2_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, 8000000)
+	MCFG_CPU_PROGRAM_MAP(pushman_map)
+	MCFG_CPU_VBLANK_INT("screen", irq2_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 4000000)
-	MDRV_CPU_PROGRAM_MAP(sound_map)
-	MDRV_CPU_IO_MAP(sound_io_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 4000000)
+	MCFG_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_IO_MAP(sound_io_map)
 
 	/* ElSemi. Reversed the CPU order so the sound callback works with bballs */
-	MDRV_CPU_ADD("mcu", M68705, 4000000)	/* No idea */
-	MDRV_CPU_PROGRAM_MAP(mcu_map)
+	MCFG_CPU_ADD("mcu", M68705, 4000000)	/* No idea */
+	MCFG_CPU_PROGRAM_MAP(mcu_map)
 
-	MDRV_QUANTUM_TIME(HZ(3600))
+	MCFG_QUANTUM_TIME(HZ(3600))
 
-	MDRV_MACHINE_START(pushman)
-	MDRV_MACHINE_RESET(pushman)
+	MCFG_MACHINE_START(pushman)
+	MCFG_MACHINE_RESET(pushman)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(pushman)
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_GFXDECODE(pushman)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_VIDEO_START(pushman)
-	MDRV_VIDEO_UPDATE(pushman)
+	MCFG_VIDEO_START(pushman)
+	MCFG_VIDEO_UPDATE(pushman)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ym1", YM2203, 2000000)
-	MDRV_SOUND_CONFIG(ym2203_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
+	MCFG_SOUND_ADD("ym1", YM2203, 2000000)
+	MCFG_SOUND_CONFIG(ym2203_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
 
-	MDRV_SOUND_ADD("ym2", YM2203, 2000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ym2", YM2203, 2000000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
+MACHINE_CONFIG_END
 
 static MACHINE_RESET( bballs )
 {
-	pushman_state *state = (pushman_state *)machine->driver_data;
+	pushman_state *state = machine->driver_data<pushman_state>();
 
 	MACHINE_RESET_CALL(pushman);
 
 	state->latch = 0x400;
 }
 
-static MACHINE_DRIVER_START( bballs )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(pushman_state)
+static MACHINE_CONFIG_START( bballs, pushman_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 8000000)
-	MDRV_CPU_PROGRAM_MAP(bballs_map)
-	MDRV_CPU_VBLANK_INT("screen", irq2_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, 8000000)
+	MCFG_CPU_PROGRAM_MAP(bballs_map)
+	MCFG_CPU_VBLANK_INT("screen", irq2_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 4000000)
-	MDRV_CPU_PROGRAM_MAP(sound_map)
-	MDRV_CPU_IO_MAP(sound_io_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 4000000)
+	MCFG_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_IO_MAP(sound_io_map)
 
-	MDRV_QUANTUM_TIME(HZ(3600))
+	MCFG_QUANTUM_TIME(HZ(3600))
 
-	MDRV_MACHINE_START(pushman)
-	MDRV_MACHINE_RESET(bballs)
+	MCFG_MACHINE_START(pushman)
+	MCFG_MACHINE_RESET(bballs)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(pushman)
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_GFXDECODE(pushman)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_VIDEO_START(pushman)
-	MDRV_VIDEO_UPDATE(pushman)
+	MCFG_VIDEO_START(pushman)
+	MCFG_VIDEO_UPDATE(pushman)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ym1", YM2203, 2000000)
-	MDRV_SOUND_CONFIG(ym2203_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
+	MCFG_SOUND_ADD("ym1", YM2203, 2000000)
+	MCFG_SOUND_CONFIG(ym2203_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
 
-	MDRV_SOUND_ADD("ym2", YM2203, 2000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ym2", YM2203, 2000000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************/

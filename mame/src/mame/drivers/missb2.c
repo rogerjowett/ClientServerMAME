@@ -24,7 +24,7 @@ OKI M6295 sound ROM dump is bad.
 
 static VIDEO_UPDATE( missb2 )
 {
-	bublbobl_state *state = (bublbobl_state *)screen->machine->driver_data;
+	bublbobl_state *state = screen->machine->driver_data<bublbobl_state>();
 	int offs;
 	int sx, sy, xc, yc;
 	int gfx_num, gfx_attr, gfx_offs;
@@ -55,7 +55,7 @@ static VIDEO_UPDATE( missb2 )
 
 	sx = 0;
 
-	prom = memory_region(screen->machine, "proms");
+	prom = screen->machine->region("proms")->base();
 	for (offs = 0; offs < state->objectram_size; offs += 4)
 	{
 		/* skip empty sprites */
@@ -125,7 +125,7 @@ INLINE void bg_changecolor_RRRRGGGGBBBBxxxx( running_machine *machine, pen_t col
 
 static WRITE8_HANDLER( bg_paletteram_RRRRGGGGBBBBxxxx_be_w )
 {
-	bublbobl_state *state = (bublbobl_state *)space->machine->driver_data;
+	bublbobl_state *state = space->machine->driver_data<bublbobl_state>();
 	state->bg_paletteram[offset] = data;
 	bg_changecolor_RRRRGGGGBBBBxxxx(space->machine, offset / 2, state->bg_paletteram[offset | 1] | (state->bg_paletteram[offset & ~1] << 8));
 }
@@ -184,7 +184,7 @@ ADDRESS_MAP_END
 static ADDRESS_MAP_START( sound_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x7fff) AM_ROM
 	AM_RANGE(0x8000, 0x8fff) AM_RAM
-	AM_RANGE(0x9000, 0x9000) AM_DEVREADWRITE("oki", okim6295_r, okim6295_w)
+	AM_RANGE(0x9000, 0x9000) AM_DEVREADWRITE_MODERN("oki", okim6295_device, read, write)
 	AM_RANGE(0xa000, 0xa001) AM_DEVREADWRITE("ymsnd", ym3526_r, ym3526_w)
 	AM_RANGE(0xb000, 0xb000) AM_READ(soundlatch_r) AM_WRITENOP // message for main cpu
 	AM_RANGE(0xb001, 0xb001) AM_READNOP AM_WRITE(bublbobl_sh_nmi_enable_w)	// bit 0: message pending for main cpu, bit 1: message pending for sound cpu
@@ -335,7 +335,7 @@ GFXDECODE_END
 /* Sound Interfaces */
 
 // Handler called by the 3526 emulator when the internal timers cause an IRQ
-static void irqhandler(running_device *device, int irq)
+static void irqhandler(device_t *device, int irq)
 {
 	logerror("YM3526 firing an IRQ\n");
 //  cputag_set_input_line(device->machine, "audiocpu", 0, irq ? ASSERT_LINE : CLEAR_LINE);
@@ -357,7 +357,7 @@ static INTERRUPT_GEN( missb2_interrupt )
 
 static MACHINE_START( missb2 )
 {
-	bublbobl_state *state = (bublbobl_state *)machine->driver_data;
+	bublbobl_state *state = machine->driver_data<bublbobl_state>();
 
 	state->maincpu = machine->device("maincpu");
 	state->audiocpu = machine->device("audiocpu");
@@ -372,60 +372,57 @@ static MACHINE_START( missb2 )
 
 static MACHINE_RESET( missb2 )
 {
-	bublbobl_state *state = (bublbobl_state *)machine->driver_data;
+	bublbobl_state *state = machine->driver_data<bublbobl_state>();
 
 	state->sound_nmi_enable = 0;
 	state->pending_nmi = 0;
 	state->sound_status = 0;
 }
 
-static MACHINE_DRIVER_START( missb2 )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(bublbobl_state)
+static MACHINE_CONFIG_START( missb2, bublbobl_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, MAIN_XTAL/4)	// 6 MHz
-	MDRV_CPU_PROGRAM_MAP(master_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80, MAIN_XTAL/4)	// 6 MHz
+	MCFG_CPU_PROGRAM_MAP(master_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("slave", Z80, MAIN_XTAL/4)	// 6 MHz
-	MDRV_CPU_PROGRAM_MAP(slave_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("slave", Z80, MAIN_XTAL/4)	// 6 MHz
+	MCFG_CPU_PROGRAM_MAP(slave_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80, MAIN_XTAL/8)	// 3 MHz
-	MDRV_CPU_PROGRAM_MAP(sound_map)
-//  MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
-	MDRV_CPU_VBLANK_INT("screen", missb2_interrupt)
+	MCFG_CPU_ADD("audiocpu", Z80, MAIN_XTAL/8)	// 3 MHz
+	MCFG_CPU_PROGRAM_MAP(sound_map)
+//  MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_VBLANK_INT("screen", missb2_interrupt)
 
-	MDRV_QUANTUM_TIME(HZ(6000)) // 100 CPU slices per frame - a high value to ensure proper synchronization of the CPUs
+	MCFG_QUANTUM_TIME(HZ(6000)) // 100 CPU slices per frame - a high value to ensure proper synchronization of the CPUs
 
-	MDRV_MACHINE_START(missb2)
-	MDRV_MACHINE_RESET(missb2)
+	MCFG_MACHINE_START(missb2)
+	MCFG_MACHINE_RESET(missb2)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(missb2)
-	MDRV_PALETTE_LENGTH(512)
+	MCFG_GFXDECODE(missb2)
+	MCFG_PALETTE_LENGTH(512)
 
-	MDRV_VIDEO_UPDATE(missb2)
+	MCFG_VIDEO_UPDATE(missb2)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM3526, MAIN_XTAL/8)
-	MDRV_SOUND_CONFIG(ym3526_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
+	MCFG_SOUND_ADD("ymsnd", YM3526, MAIN_XTAL/8)
+	MCFG_SOUND_CONFIG(ym3526_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
 
-	MDRV_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.4)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.4)
+MACHINE_CONFIG_END
 
 /* ROMs */
 
@@ -464,8 +461,8 @@ ROM_END
 
 static void configure_banks( running_machine* machine )
 {
-	UINT8 *ROM = memory_region(machine, "maincpu");
-	UINT8 *SLAVE = memory_region(machine, "slave");
+	UINT8 *ROM = machine->region("maincpu")->base();
+	UINT8 *SLAVE = machine->region("slave")->base();
 
 	memory_configure_bank(machine, "bank1", 0, 8, &ROM[0x10000], 0x4000);
 
@@ -476,7 +473,7 @@ static void configure_banks( running_machine* machine )
 
 static DRIVER_INIT( missb2 )
 {
-	bublbobl_state *state = (bublbobl_state *)machine->driver_data;
+	bublbobl_state *state = machine->driver_data<bublbobl_state>();
 
 	configure_banks(machine);
 	state->video_enable = 0;

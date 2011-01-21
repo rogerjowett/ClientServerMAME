@@ -27,6 +27,7 @@ Notes:
 #include "emu.h"
 #include "cpu/z80/z80.h"
 #include "sound/ay8910.h"
+#include "machine/nvram.h"
 
 /* it uses the same palette layout as in naughtyb */
 PALETTE_INIT( naughtyb );
@@ -70,7 +71,7 @@ static WRITE8_HANDLER( ettrivia_control_w )
 
 static READ8_HANDLER( ettrivia_question_r )
 {
-	UINT8 *QUESTIONS = memory_region(space->machine, "user1");
+	UINT8 *QUESTIONS = space->machine->region("user1")->base();
 	return QUESTIONS[offset + 0x10000 * question_bank];
 }
 
@@ -118,7 +119,7 @@ static WRITE8_HANDLER( b800_w )
 
 static ADDRESS_MAP_START( cpu_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0x87ff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0x8000, 0x87ff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0x9000, 0x9000) AM_WRITE(ettrivia_control_w)
 	AM_RANGE(0x9800, 0x9800) AM_WRITENOP
 	AM_RANGE(0xa000, 0xa000) AM_WRITENOP
@@ -237,43 +238,43 @@ static INTERRUPT_GEN( ettrivia_interrupt )
 		cpu_set_input_line(device, 0, HOLD_LINE);
 }
 
-static MACHINE_DRIVER_START( ettrivia )
-	MDRV_CPU_ADD("maincpu", Z80,12000000/4-48000) //should be ok, it gives the 300 interrupts expected
-	MDRV_CPU_PROGRAM_MAP(cpu_map)
-	MDRV_CPU_IO_MAP(io_map)
-	MDRV_CPU_VBLANK_INT("screen", ettrivia_interrupt)
+static MACHINE_CONFIG_START( ettrivia, driver_device )
+	MCFG_CPU_ADD("maincpu", Z80,12000000/4-48000) //should be ok, it gives the 300 interrupts expected
+	MCFG_CPU_PROGRAM_MAP(cpu_map)
+	MCFG_CPU_IO_MAP(io_map)
+	MCFG_CPU_VBLANK_INT("screen", ettrivia_interrupt)
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(256, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 0*8, 28*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(256, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 0*8, 28*8-1)
 
-	MDRV_GFXDECODE(ettrivia)
-	MDRV_PALETTE_LENGTH(256)
+	MCFG_GFXDECODE(ettrivia)
+	MCFG_PALETTE_LENGTH(256)
 
-	MDRV_PALETTE_INIT(naughtyb)
-	MDRV_VIDEO_START(ettrivia)
-	MDRV_VIDEO_UPDATE(ettrivia)
+	MCFG_PALETTE_INIT(naughtyb)
+	MCFG_VIDEO_START(ettrivia)
+	MCFG_VIDEO_UPDATE(ettrivia)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ay1", AY8910, 1500000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+	MCFG_SOUND_ADD("ay1", AY8910, 1500000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
-	MDRV_SOUND_ADD("ay2", AY8910, 1500000)
-	MDRV_SOUND_CONFIG(ay8912_interface_2)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+	MCFG_SOUND_ADD("ay2", AY8910, 1500000)
+	MCFG_SOUND_CONFIG(ay8912_interface_2)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
-	MDRV_SOUND_ADD("ay3", AY8910, 1500000)
-	MDRV_SOUND_CONFIG(ay8912_interface_3)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ay3", AY8910, 1500000)
+	MCFG_SOUND_CONFIG(ay8912_interface_3)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+MACHINE_CONFIG_END
 
 ROM_START( promutrv )
 	ROM_REGION( 0x10000, "maincpu", 0 )

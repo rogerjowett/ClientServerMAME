@@ -66,7 +66,7 @@ static const eeprom_interface eeprom_intf =
 
 static READ16_HANDLER( rng_sysregs_r )
 {
-	rungun_state *state = (rungun_state *)space->machine->driver_data;
+	rungun_state *state = space->machine->driver_data<rungun_state>();
 	UINT16 data = 0;
 
 	switch (offset)
@@ -110,7 +110,7 @@ static READ16_HANDLER( rng_sysregs_r )
 
 static WRITE16_HANDLER( rng_sysregs_w )
 {
-	rungun_state *state = (rungun_state *)space->machine->driver_data;
+	rungun_state *state = space->machine->driver_data<rungun_state>();
 
 	COMBINE_DATA(state->sysreg + offset);
 
@@ -158,7 +158,7 @@ static WRITE16_HANDLER( sound_cmd2_w )
 
 static WRITE16_HANDLER( sound_irq_w )
 {
-	rungun_state *state = (rungun_state *)space->machine->driver_data;
+	rungun_state *state = space->machine->driver_data<rungun_state>();
 
 	if (ACCESSING_BITS_8_15)
 		cpu_set_input_line(state->audiocpu, 0, HOLD_LINE);
@@ -166,7 +166,7 @@ static WRITE16_HANDLER( sound_irq_w )
 
 static READ16_HANDLER( sound_status_msb_r )
 {
-	rungun_state *state = (rungun_state *)space->machine->driver_data;
+	rungun_state *state = space->machine->driver_data<rungun_state>();
 
 	if (ACCESSING_BITS_8_15)
 		return(state->sound_status << 8);
@@ -176,7 +176,7 @@ static READ16_HANDLER( sound_status_msb_r )
 
 static INTERRUPT_GEN(rng_interrupt)
 {
-	rungun_state *state = (rungun_state *)device->machine->driver_data;
+	rungun_state *state = device->machine->driver_data<rungun_state>();
 
 	if (state->sysreg[0x0c / 2] & 0x09)
 		cpu_set_input_line(device, M68K_IRQ_5, ASSERT_LINE);
@@ -215,13 +215,13 @@ ADDRESS_MAP_END
 
 static WRITE8_HANDLER( sound_status_w )
 {
-	rungun_state *state = (rungun_state *)space->machine->driver_data;
+	rungun_state *state = space->machine->driver_data<rungun_state>();
 	state->sound_status = data;
 }
 
 static WRITE8_HANDLER( z80ctrl_w )
 {
-	rungun_state *state = (rungun_state *)space->machine->driver_data;
+	rungun_state *state = space->machine->driver_data<rungun_state>();
 
 	state->z80_control = data;
 
@@ -233,7 +233,7 @@ static WRITE8_HANDLER( z80ctrl_w )
 
 static INTERRUPT_GEN(audio_interrupt)
 {
-	rungun_state *state = (rungun_state *)device->machine->driver_data;
+	rungun_state *state = device->machine->driver_data<rungun_state>();
 
 	if (state->z80_control & 0x80)
 		return;
@@ -361,8 +361,8 @@ static const k053247_interface rng_k055673_intf =
 
 static MACHINE_START( rng )
 {
-	rungun_state *state = (rungun_state *)machine->driver_data;
-	UINT8 *ROM = memory_region(machine, "soundcpu");
+	rungun_state *state = machine->driver_data<rungun_state>();
+	UINT8 *ROM = machine->region("soundcpu")->base();
 
 	memory_configure_bank(machine, "bank2", 0, 8, &ROM[0x10000], 0x4000);
 
@@ -382,7 +382,7 @@ static MACHINE_START( rng )
 
 static MACHINE_RESET( rng )
 {
-	rungun_state *state = (rungun_state *)machine->driver_data;
+	rungun_state *state = machine->driver_data<rungun_state>();
 
 	k054539_init_flags(machine->device("k054539_1"), K054539_REVERSE_STEREO);
 
@@ -393,61 +393,58 @@ static MACHINE_RESET( rng )
 	state->sound_status = 0;
 }
 
-static MACHINE_DRIVER_START( rng )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(rungun_state)
+static MACHINE_CONFIG_START( rng, rungun_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 16000000)
-	MDRV_CPU_PROGRAM_MAP(rungun_map)
-	MDRV_CPU_VBLANK_INT("screen", rng_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, 16000000)
+	MCFG_CPU_PROGRAM_MAP(rungun_map)
+	MCFG_CPU_VBLANK_INT("screen", rng_interrupt)
 
-	MDRV_CPU_ADD("soundcpu", Z80, 10000000) // 8Mhz (10Mhz is much safer in self-test due to heavy sync)
-	MDRV_CPU_PROGRAM_MAP(rungun_sound_map)
-	MDRV_CPU_PERIODIC_INT(audio_interrupt, 480)
+	MCFG_CPU_ADD("soundcpu", Z80, 10000000) // 8Mhz (10Mhz is much safer in self-test due to heavy sync)
+	MCFG_CPU_PROGRAM_MAP(rungun_sound_map)
+	MCFG_CPU_PERIODIC_INT(audio_interrupt, 480)
 
-	MDRV_QUANTUM_TIME(HZ(6000)) // higher if sound stutters
+	MCFG_QUANTUM_TIME(HZ(6000)) // higher if sound stutters
 
-	MDRV_GFXDECODE(rungun)
+	MCFG_GFXDECODE(rungun)
 
-	MDRV_MACHINE_START(rng)
-	MDRV_MACHINE_RESET(rng)
+	MCFG_MACHINE_START(rng)
+	MCFG_MACHINE_RESET(rng)
 
-	MDRV_EEPROM_ADD("eeprom", eeprom_intf)
+	MCFG_EEPROM_ADD("eeprom", eeprom_intf)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_HAS_HIGHLIGHTS | VIDEO_UPDATE_BEFORE_VBLANK)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS | VIDEO_HAS_HIGHLIGHTS | VIDEO_UPDATE_BEFORE_VBLANK)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(88, 88+384-1, 24, 24+224-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(88, 88+384-1, 24, 24+224-1)
 
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_VIDEO_START(rng)
-	MDRV_VIDEO_UPDATE(rng)
+	MCFG_VIDEO_START(rng)
+	MCFG_VIDEO_UPDATE(rng)
 
-	MDRV_K053936_ADD("k053936", rng_k053936_intf)
-	MDRV_K055673_ADD("k055673", rng_k055673_intf)
-	MDRV_K053252_ADD("k053252")
+	MCFG_K053936_ADD("k053936", rng_k053936_intf)
+	MCFG_K055673_ADD("k055673", rng_k055673_intf)
+	MCFG_K053252_ADD("k053252")
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("k054539_1", K054539, 48000)
-	MDRV_SOUND_CONFIG(k054539_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("k054539_1", K054539, 48000)
+	MCFG_SOUND_CONFIG(k054539_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
 
-	MDRV_SOUND_ADD("k054539_2", K054539, 48000)
-	MDRV_SOUND_CONFIG(k054539_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("k054539_2", K054539, 48000)
+	MCFG_SOUND_CONFIG(k054539_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 
 ROM_START( rungun )

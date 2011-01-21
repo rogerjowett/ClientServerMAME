@@ -21,8 +21,8 @@ struct _speaker_interface
 	const INT16 *levels;	/* optional: pointer to level lookup table */
 };
 
-void speaker_level_w (running_device *device, int new_level);
+void speaker_level_w (device_t *device, int new_level);
 
-DECLARE_LEGACY_SOUND_DEVICE(SPEAKER, speaker);
+DECLARE_LEGACY_SOUND_DEVICE(SPEAKER_SOUND, speaker_sound);
 
 #endif /* __SPEAKER_H__ */

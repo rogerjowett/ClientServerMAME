@@ -461,7 +461,7 @@ static void I386OP(decode_two_byte)(i386_state *cpustate)
 
 /*************************************************************************/
 
-static UINT64 i386_debug_segbase(void *globalref, void *ref, UINT32 params, const UINT64 *param)
+static UINT64 i386_debug_segbase(symbol_table &table, void *ref, int params, const UINT64 *param)
 {
 	legacy_cpu_device *device = (legacy_cpu_device *)ref;
 	i386_state *cpustate = get_safe_token(device);
@@ -482,7 +482,7 @@ static UINT64 i386_debug_segbase(void *globalref, void *ref, UINT32 params, cons
 	return result;
 }
 
-static UINT64 i386_debug_seglimit(void *globalref, void *ref, UINT32 params, const UINT64 *param)
+static UINT64 i386_debug_seglimit(symbol_table &table, void *ref, int params, const UINT64 *param)
 {
 	legacy_cpu_device *device = (legacy_cpu_device *)ref;
 	i386_state *cpustate = get_safe_token(device);
@@ -501,8 +501,8 @@ static UINT64 i386_debug_seglimit(void *globalref, void *ref, UINT32 params, con
 
 static CPU_DEBUG_INIT( i386 )
 {
-	symtable_add_function(device->debug()->symtable(), "segbase", (void *)device, 1, 1, i386_debug_segbase);
-	symtable_add_function(device->debug()->symtable(), "seglimit", (void *)device, 1, 1, i386_debug_seglimit);
+	device->debug()->symtable().add("segbase", (void *)device, 1, 1, i386_debug_segbase);
+	device->debug()->symtable().add("seglimit", (void *)device, 1, 1, i386_debug_seglimit);
 }
 
 /*************************************************************************/
@@ -549,6 +549,7 @@ static CPU_INIT( i386 )
 	cpustate->irq_callback = irqcallback;
 	cpustate->device = device;
 	cpustate->program = device->space(AS_PROGRAM);
+	cpustate->direct = &cpustate->program->direct();
 	cpustate->io = device->space(AS_IO);
 
 	state_save_register_device_item_array(device, 0,	cpustate->reg.d);
@@ -648,6 +649,7 @@ static CPU_RESET( i386 )
 	cpustate->irq_callback = save_irqcallback;
 	cpustate->device = device;
 	cpustate->program = device->space(AS_PROGRAM);
+	cpustate->direct = &cpustate->program->direct();
 	cpustate->io = device->space(AS_IO);
 
 	cpustate->sreg[CS].selector = 0xf000;
@@ -1103,6 +1105,7 @@ static CPU_RESET( i486 )
 	cpustate->irq_callback = save_irqcallback;
 	cpustate->device = device;
 	cpustate->program = device->space(AS_PROGRAM);
+	cpustate->direct = &cpustate->program->direct();
 	cpustate->io = device->space(AS_IO);
 
 	cpustate->sreg[CS].selector = 0xf000;
@@ -1219,6 +1222,7 @@ static CPU_RESET( pentium )
 	cpustate->irq_callback = save_irqcallback;
 	cpustate->device = device;
 	cpustate->program = device->space(AS_PROGRAM);
+	cpustate->direct = &cpustate->program->direct();
 	cpustate->io = device->space(AS_IO);
 
 	cpustate->sreg[CS].selector = 0xf000;
@@ -1350,6 +1354,7 @@ static CPU_RESET( mediagx )
 	cpustate->irq_callback = save_irqcallback;
 	cpustate->device = device;
 	cpustate->program = device->space(AS_PROGRAM);
+	cpustate->direct = &cpustate->program->direct();
 	cpustate->io = device->space(AS_IO);
 
 	cpustate->sreg[CS].selector = 0xf000;

@@ -193,16 +193,12 @@ Board contains only 29 ROMs and not much else.
 #include "sound/es5506.h"
 #include "includes/taito_f3.h"
 #include "audio/taito_en.h"
+#include "includes/undrfire.h"
 
 #include "cbombers.lh"
 
-VIDEO_START( undrfire );
-VIDEO_UPDATE( undrfire );
-VIDEO_UPDATE( cbombers );
-
 static UINT16 coin_word;
 static UINT16 port_sel = 0;
-extern UINT16 undrfire_rotate_ctrl[8];
 static int frame_counter=0;
 
 static UINT32 *undrfire_ram;	/* will be read in video for gun target calcs */
@@ -297,7 +293,7 @@ static WRITE32_HANDLER( undrfire_input_w )
 
 			if (ACCESSING_BITS_0_7)
 			{
-				running_device *device = space->machine->device("eeprom");
+				device_t *device = space->machine->device("eeprom");
 				eeprom_set_clock_line(device, (data & 0x20) ? ASSERT_LINE : CLEAR_LINE);
 				eeprom_write_bit(device, data & 0x40);
 				eeprom_set_cs_line(device, (data & 0x10) ? CLEAR_LINE : ASSERT_LINE);
@@ -718,72 +714,72 @@ static const tc0480scp_interface undrfire_tc0480scp_intf =
 	0		/* col_base */
 };
 
-static MACHINE_DRIVER_START( undrfire )
+static MACHINE_CONFIG_START( undrfire, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68EC020, 16000000)	/* 16 MHz */
-	MDRV_CPU_PROGRAM_MAP(undrfire_map)
-	MDRV_CPU_VBLANK_INT("screen", undrfire_interrupt)
+	MCFG_CPU_ADD("maincpu", M68EC020, 16000000)	/* 16 MHz */
+	MCFG_CPU_PROGRAM_MAP(undrfire_map)
+	MCFG_CPU_VBLANK_INT("screen", undrfire_interrupt)
 
-	MDRV_EEPROM_ADD("eeprom", undrfire_eeprom_interface)
+	MCFG_EEPROM_ADD("eeprom", undrfire_eeprom_interface)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(40*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0, 40*8-1, 3*8, 32*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(40*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0, 40*8-1, 3*8, 32*8-1)
 
-	MDRV_GFXDECODE(undrfire)
-	MDRV_PALETTE_LENGTH(16384)
+	MCFG_GFXDECODE(undrfire)
+	MCFG_PALETTE_LENGTH(16384)
 
-	MDRV_VIDEO_START(undrfire)
-	MDRV_VIDEO_UPDATE(undrfire)
+	MCFG_VIDEO_START(undrfire)
+	MCFG_VIDEO_UPDATE(undrfire)
 
-	MDRV_TC0100SCN_ADD("tc0100scn", undrfire_tc0100scn_intf)
-	MDRV_TC0480SCP_ADD("tc0480scp", undrfire_tc0480scp_intf)
+	MCFG_TC0100SCN_ADD("tc0100scn", undrfire_tc0100scn_intf)
+	MCFG_TC0480SCP_ADD("tc0480scp", undrfire_tc0480scp_intf)
 
 	/* sound hardware */
-	MDRV_IMPORT_FROM(taito_f3_sound)
-MACHINE_DRIVER_END
+	MCFG_FRAGMENT_ADD(taito_f3_sound)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( cbombers )
+static MACHINE_CONFIG_START( cbombers, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68EC020, 16000000)	/* 16 MHz */
-	MDRV_CPU_PROGRAM_MAP(cbombers_cpua_map)
-	MDRV_CPU_VBLANK_INT("screen", irq4_line_hold)
+	MCFG_CPU_ADD("maincpu", M68EC020, 16000000)	/* 16 MHz */
+	MCFG_CPU_PROGRAM_MAP(cbombers_cpua_map)
+	MCFG_CPU_VBLANK_INT("screen", irq4_line_hold)
 
-	MDRV_CPU_ADD("sub", M68000, 16000000)	/* 16 MHz */
-	MDRV_CPU_PROGRAM_MAP(cbombers_cpub_map)
-	MDRV_CPU_VBLANK_INT("screen", irq4_line_hold)
+	MCFG_CPU_ADD("sub", M68000, 16000000)	/* 16 MHz */
+	MCFG_CPU_PROGRAM_MAP(cbombers_cpub_map)
+	MCFG_CPU_VBLANK_INT("screen", irq4_line_hold)
 
-	MDRV_QUANTUM_TIME(HZ(480))	/* CPU slices - Need to interleave Cpu's 1 & 3 */
+	MCFG_QUANTUM_TIME(HZ(480))	/* CPU slices - Need to interleave Cpu's 1 & 3 */
 
-	MDRV_EEPROM_ADD("eeprom", undrfire_eeprom_interface)
+	MCFG_EEPROM_ADD("eeprom", undrfire_eeprom_interface)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(40*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0, 40*8-1, 3*8, 32*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(40*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0, 40*8-1, 3*8, 32*8-1)
 
-	MDRV_GFXDECODE(cbombers)
-	MDRV_PALETTE_LENGTH(16384)
+	MCFG_GFXDECODE(cbombers)
+	MCFG_PALETTE_LENGTH(16384)
 
-	MDRV_VIDEO_START(undrfire)
-	MDRV_VIDEO_UPDATE(cbombers)
+	MCFG_VIDEO_START(undrfire)
+	MCFG_VIDEO_UPDATE(cbombers)
 
-	MDRV_TC0100SCN_ADD("tc0100scn", undrfire_tc0100scn_intf)
-	MDRV_TC0480SCP_ADD("tc0480scp", undrfire_tc0480scp_intf)
+	MCFG_TC0100SCN_ADD("tc0100scn", undrfire_tc0100scn_intf)
+	MCFG_TC0480SCP_ADD("tc0480scp", undrfire_tc0480scp_intf)
 
 	/* sound hardware */
-	MDRV_IMPORT_FROM(taito_f3_sound)
-MACHINE_DRIVER_END
+	MCFG_FRAGMENT_ADD(taito_f3_sound)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************
@@ -966,8 +962,8 @@ ROM_END
 static DRIVER_INIT( undrfire )
 {
 	UINT32 offset,i;
-	UINT8 *gfx = memory_region(machine, "gfx3");
-	int size=memory_region_length(machine, "gfx3");
+	UINT8 *gfx = machine->region("gfx3")->base();
+	int size=machine->region("gfx3")->bytes();
 	int data;
 
 	/* make piv tile GFX format suitable for gfxdecode */
@@ -995,8 +991,8 @@ static DRIVER_INIT( undrfire )
 static DRIVER_INIT( cbombers )
 {
 	UINT32 offset,i;
-	UINT8 *gfx = memory_region(machine, "gfx3");
-	int size=memory_region_length(machine, "gfx3");
+	UINT8 *gfx = machine->region("gfx3")->base();
+	int size=machine->region("gfx3")->bytes();
 	int data;
 
 

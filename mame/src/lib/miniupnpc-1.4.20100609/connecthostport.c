@@ -9,6 +9,7 @@
  * uncomment the following line in order to use gethostbyname() */
 /* #define USE_GETHOSTBYNAME */
 
+#define WINVER 0x0501
 #include <string.h>
 #include <stdio.h>
 #ifdef WIN32

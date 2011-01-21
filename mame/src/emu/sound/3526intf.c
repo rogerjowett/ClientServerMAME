@@ -30,14 +30,14 @@ struct _ym3526_state
 	emu_timer *		timer[2];
 	void *			chip;
 	const ym3526_interface *intf;
-	running_device *device;
+	device_t *device;
 };
 
 
-INLINE ym3526_state *get_safe_token(running_device *device)
+INLINE ym3526_state *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
-	assert(device->type() == SOUND_YM3526);
+	assert(device->type() == YM3526);
 	return (ym3526_state *)downcast<legacy_device_base *>(device)->token();
 }
 

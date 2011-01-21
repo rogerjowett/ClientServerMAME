@@ -14,12 +14,11 @@
 
 #define MCLK 16000000
 
-class cultures_state
+class cultures_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, cultures_state(machine)); }
-
-	cultures_state(running_machine &machine) { }
+	cultures_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *   bg0_videoram;
@@ -43,30 +42,30 @@ public:
 
 static TILE_GET_INFO( get_bg1_tile_info )
 {
-	cultures_state *state = (cultures_state *)machine->driver_data;
-	UINT8 *region = memory_region(machine, "gfx3") + 0x200000 + 0x80000 * state->bg1_bank;
+	cultures_state *state = machine->driver_data<cultures_state>();
+	UINT8 *region = machine->region("gfx3")->base() + 0x200000 + 0x80000 * state->bg1_bank;
 	int code = region[tile_index * 2] + (region[tile_index * 2 + 1] << 8);
 	SET_TILE_INFO(2, code, code >> 12, 0);
 }
 
 static TILE_GET_INFO( get_bg2_tile_info )
 {
-	cultures_state *state = (cultures_state *)machine->driver_data;
-	UINT8 *region = memory_region(machine, "gfx2") + 0x200000 + 0x80000 * state->bg2_bank;
+	cultures_state *state = machine->driver_data<cultures_state>();
+	UINT8 *region = machine->region("gfx2")->base() + 0x200000 + 0x80000 * state->bg2_bank;
 	int code = region[tile_index * 2] + (region[tile_index * 2 + 1] << 8);
 	SET_TILE_INFO(1, code, code >> 12, 0);
 }
 
 static TILE_GET_INFO( get_bg0_tile_info )
 {
-	cultures_state *state = (cultures_state *)machine->driver_data;
+	cultures_state *state = machine->driver_data<cultures_state>();
 	int code = state->bg0_videoram[tile_index * 2] + (state->bg0_videoram[tile_index * 2 + 1] << 8);
 	SET_TILE_INFO(0, code, code >> 12, 0);
 }
 
 static VIDEO_START( cultures )
 {
-	cultures_state *state = (cultures_state *)machine->driver_data;
+	cultures_state *state = machine->driver_data<cultures_state>();
 	state->bg0_tilemap = tilemap_create(machine, get_bg0_tile_info,tilemap_scan_rows, 8, 8, 64, 128);
 	state->bg1_tilemap = tilemap_create(machine, get_bg1_tile_info,tilemap_scan_rows, 8, 8, 512, 512);
 	state->bg2_tilemap = tilemap_create(machine, get_bg2_tile_info,tilemap_scan_rows, 8, 8, 512, 512);
@@ -85,7 +84,7 @@ static VIDEO_START( cultures )
 
 static VIDEO_UPDATE( cultures )
 {
-	cultures_state *state = (cultures_state *)screen->machine->driver_data;
+	cultures_state *state = screen->machine->driver_data<cultures_state>();
 	int attr;
 
 	// tilemaps attributes
@@ -115,14 +114,14 @@ static VIDEO_UPDATE( cultures )
 
 static WRITE8_HANDLER( cpu_bankswitch_w )
 {
-	cultures_state *state = (cultures_state *)space->machine->driver_data;
+	cultures_state *state = space->machine->driver_data<cultures_state>();
 	memory_set_bank(space->machine, "bank1", data & 0x0f);
 	state->video_bank = ~data & 0x20;
 }
 
 static WRITE8_HANDLER( bg0_videoram_w )
 {
-	cultures_state *state = (cultures_state *)space->machine->driver_data;
+	cultures_state *state = space->machine->driver_data<cultures_state>();
 	if (state->video_bank == 0)
 	{
 		int r, g, b, datax;
@@ -145,14 +144,14 @@ static WRITE8_HANDLER( bg0_videoram_w )
 
 static WRITE8_HANDLER( misc_w )
 {
-	cultures_state *state = (cultures_state *)space->machine->driver_data;
+	cultures_state *state = space->machine->driver_data<cultures_state>();
 	int new_bank = data & 0xf;
 
 	if (state->old_bank != new_bank)
 	{
 		// oki banking
-		UINT8 *src = memory_region(space->machine, "oki") + 0x40000 + 0x20000 * new_bank;
-		UINT8 *dst = memory_region(space->machine, "oki") + 0x20000;
+		UINT8 *src = space->machine->region("oki")->base() + 0x40000 + 0x20000 * new_bank;
+		UINT8 *dst = space->machine->region("oki")->base() + 0x20000;
 		memcpy(dst, src, 0x20000);
 
 		state->old_bank = new_bank;
@@ -163,7 +162,7 @@ static WRITE8_HANDLER( misc_w )
 
 static WRITE8_HANDLER( bg_bank_w )
 {
-	cultures_state *state = (cultures_state *)space->machine->driver_data;
+	cultures_state *state = space->machine->driver_data<cultures_state>();
 	if (state->bg1_bank != (data & 3))
 	{
 		state->bg1_bank = data & 3;
@@ -199,7 +198,7 @@ static ADDRESS_MAP_START( cultures_io_map, ADDRESS_SPACE_IO, 8 )
 	AM_RANGE(0x80, 0x80) AM_WRITE(cpu_bankswitch_w)
 	AM_RANGE(0x90, 0x90) AM_WRITE(misc_w)
 	AM_RANGE(0xa0, 0xa0) AM_WRITE(bg_bank_w)
-	AM_RANGE(0xc0, 0xc0) AM_DEVREADWRITE("oki", okim6295_r, okim6295_w)
+	AM_RANGE(0xc0, 0xc0) AM_DEVREADWRITE_MODERN("oki", okim6295_device, read, write)
 	AM_RANGE(0xd0, 0xd0) AM_READ_PORT("SW1_A")
 	AM_RANGE(0xd1, 0xd1) AM_READ_PORT("SW1_B")
 	AM_RANGE(0xd2, 0xd2) AM_READ_PORT("SW2_A")
@@ -353,15 +352,15 @@ GFXDECODE_END
 
 static INTERRUPT_GEN( cultures_interrupt )
 {
-	cultures_state *state = (cultures_state *)device->machine->driver_data;
+	cultures_state *state = device->machine->driver_data<cultures_state>();
 	if (state->irq_enable)
 		cpu_set_input_line(device, 0, HOLD_LINE);
 }
 
 static MACHINE_START( cultures )
 {
-	cultures_state *state = (cultures_state *)machine->driver_data;
-	UINT8 *ROM = memory_region(machine, "maincpu");
+	cultures_state *state = machine->driver_data<cultures_state>();
+	UINT8 *ROM = machine->region("maincpu")->base();
 
 	memory_configure_bank(machine, "bank1", 0, 16, &ROM[0x0000], 0x4000);
 
@@ -377,7 +376,7 @@ static MACHINE_START( cultures )
 
 static MACHINE_RESET( cultures )
 {
-	cultures_state *state = (cultures_state *)machine->driver_data;
+	cultures_state *state = machine->driver_data<cultures_state>();
 	state->old_bank = -1;
 	state->video_bank = 0;
 	state->irq_enable = 0;
@@ -385,40 +384,37 @@ static MACHINE_RESET( cultures )
 	state->bg2_bank = 0;
 }
 
-static MACHINE_DRIVER_START( cultures )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(cultures_state)
+static MACHINE_CONFIG_START( cultures, cultures_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, MCLK/2) /* 8.000 MHz */
-	MDRV_CPU_PROGRAM_MAP(cultures_map)
-	MDRV_CPU_IO_MAP(cultures_io_map)
-	MDRV_CPU_VBLANK_INT("screen", cultures_interrupt)
+	MCFG_CPU_ADD("maincpu", Z80, MCLK/2) /* 8.000 MHz */
+	MCFG_CPU_PROGRAM_MAP(cultures_map)
+	MCFG_CPU_IO_MAP(cultures_io_map)
+	MCFG_CPU_VBLANK_INT("screen", cultures_interrupt)
 
-	MDRV_MACHINE_START(cultures)
-	MDRV_MACHINE_RESET(cultures)
+	MCFG_MACHINE_START(cultures)
+	MCFG_MACHINE_RESET(cultures)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 48*8-1, 0*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 48*8-1, 0*8, 30*8-1)
 
-	MDRV_GFXDECODE(culture)
-	MDRV_PALETTE_LENGTH(0x2000)
+	MCFG_GFXDECODE(culture)
+	MCFG_PALETTE_LENGTH(0x2000)
 
-	MDRV_VIDEO_START(cultures)
-	MDRV_VIDEO_UPDATE(cultures)
+	MCFG_VIDEO_START(cultures)
+	MCFG_VIDEO_UPDATE(cultures)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_OKIM6295_ADD("oki", (MCLK/1024)*132, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", (MCLK/1024)*132, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
+MACHINE_CONFIG_END
 
 /*
 

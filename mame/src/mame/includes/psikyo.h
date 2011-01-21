@@ -4,12 +4,11 @@
 
 *************************************************************************/
 
-class psikyo_state
+class psikyo_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, psikyo_state(machine)); }
-
-	psikyo_state(running_machine &machine) { }
+	psikyo_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT32 *       vram_0;
@@ -33,7 +32,7 @@ public:
 	int            z80_nmi, mcu_status;
 
 	/* devices */
-	running_device *audiocpu;
+	device_t *audiocpu;
 
 	/* game-specific */
 	// 1945 MCU

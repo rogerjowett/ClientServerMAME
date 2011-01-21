@@ -363,7 +363,7 @@ WRITE8_HANDLER( indyheat_analog_w )
 MACHINE_START( leland )
 {
 	/* allocate extra stuff */
-	battery_ram = auto_alloc_array(machine, UINT8, LELAND_BATTERY_RAM_SIZE);
+	battery_ram = reinterpret_cast<UINT8 *>(memory_get_shared(*machine, "battery"));
 
 	/* start scanline interrupts going */
 	master_int_timer = timer_alloc(machine, leland_interrupt_callback, NULL);
@@ -396,27 +396,22 @@ MACHINE_RESET( leland )
 	alternate_bank = 0;
 
 	/* initialize the master banks */
-	master_length = memory_region_length(machine, "master");
-	master_base = memory_region(machine, "master");
+	master_length = machine->region("master")->bytes();
+	master_base = machine->region("master")->base();
 	(*leland_update_master_bank)(machine);
 
 	/* initialize the slave banks */
-	slave_length = memory_region_length(machine, "slave");
-	slave_base = memory_region(machine, "slave");
+	slave_length = machine->region("slave")->bytes();
+	slave_base = machine->region("slave")->base();
 	if (slave_length > 0x10000)
 		memory_set_bankptr(machine, "bank3", &slave_base[0x10000]);
-
-	/* if we have an I80186 CPU, reset it */
-	device_t *audiocpu = machine->device("audiocpu");
-	if (audiocpu != NULL && audiocpu->type() == I80186)
-		leland_80186_sound_init();
 }
 
 
 MACHINE_START( ataxx )
 {
 	/* set the odd data banks */
-	battery_ram = auto_alloc_array(machine, UINT8, LELAND_BATTERY_RAM_SIZE);
+	battery_ram = reinterpret_cast<UINT8 *>(memory_get_shared(*machine, "battery"));
 	extra_tram = auto_alloc_array(machine, UINT8, ATAXX_EXTRA_TRAM_SIZE);
 
 	/* start scanline interrupts going */
@@ -430,8 +425,8 @@ MACHINE_RESET( ataxx )
 	timer_adjust_oneshot(master_int_timer, machine->primary_screen->time_until_pos(8), 8);
 
 	/* initialize the XROM */
-	xrom_length = memory_region_length(machine, "user1");
-	xrom_base = memory_region(machine, "user1");
+	xrom_length = machine->region("user1")->bytes();
+	xrom_base = machine->region("user1")->base();
 	xrom1_addr = 0;
 	xrom2_addr = 0;
 
@@ -445,18 +440,15 @@ MACHINE_RESET( ataxx )
 	master_bank = 0;
 
 	/* initialize the master banks */
-	master_length = memory_region_length(machine, "master");
-	master_base = memory_region(machine, "master");
+	master_length = machine->region("master")->bytes();
+	master_base = machine->region("master")->base();
 	ataxx_bankswitch(machine);
 
 	/* initialize the slave banks */
-	slave_length = memory_region_length(machine, "slave");
-	slave_base = memory_region(machine, "slave");
+	slave_length = machine->region("slave")->bytes();
+	slave_base = machine->region("slave")->base();
 	if (slave_length > 0x10000)
 		memory_set_bankptr(machine, "bank3", &slave_base[0x10000]);
-
-	/* reset the 80186 */
-	leland_80186_sound_init();
 }
 
 
@@ -520,7 +512,7 @@ WRITE8_HANDLER( leland_master_alt_bankswitch_w )
 	(*leland_update_master_bank)(space->machine);
 
 	/* sound control is in the rest */
-	leland_80186_control_w(space, offset, data);
+	leland_80186_control_w(space->machine->device("custom"), offset, data);
 }
 
 
@@ -912,17 +904,6 @@ WRITE8_HANDLER( ataxx_battery_ram_w )
 }
 
 
-NVRAM_HANDLER( leland )
-{
-	if (read_or_write)
-		mame_fwrite(file, battery_ram, LELAND_BATTERY_RAM_SIZE);
-	else if (file)
-		mame_fread(file, battery_ram, LELAND_BATTERY_RAM_SIZE);
-	else
-		memset(battery_ram, 0x00, LELAND_BATTERY_RAM_SIZE);
-}
-
-
 
 /*************************************
  *
@@ -1176,7 +1157,7 @@ READ8_HANDLER( leland_master_input_r )
 
 WRITE8_HANDLER( leland_master_output_w )
 {
-	running_device *eeprom;
+	device_t *eeprom;
 
 	switch (offset)
 	{
@@ -1463,8 +1444,8 @@ READ8_HANDLER( leland_raster_r )
 void leland_rotate_memory(running_machine *machine, const char *cpuname)
 {
 	int startaddr = 0x10000;
-	int banks = (memory_region_length(machine, cpuname) - startaddr) / 0x8000;
-	UINT8 *ram = memory_region(machine, cpuname);
+	int banks = (machine->region(cpuname)->bytes() - startaddr) / 0x8000;
+	UINT8 *ram = machine->region(cpuname)->base();
 	UINT8 temp[0x2000];
 	int i;
 

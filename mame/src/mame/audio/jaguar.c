@@ -183,13 +183,13 @@ static WRITE32_HANDLER( dsp_flags_w );
 
 void jaguar_dsp_suspend(running_machine *machine)
 {
-	cputag_suspend(machine, "audiocpu", SUSPEND_REASON_SPIN, 1);
+	machine->device<cpu_device>("audiocpu")->suspend(SUSPEND_REASON_SPIN, 1);
 }
 
 
 void jaguar_dsp_resume(running_machine *machine)
 {
-	cputag_resume(machine, "audiocpu", SUSPEND_REASON_SPIN);
+	machine->device<cpu_device>("audiocpu")->resume(SUSPEND_REASON_SPIN);
 }
 
 
@@ -212,7 +212,7 @@ static void update_gpu_irq(running_machine *machine)
 }
 
 
-void jaguar_external_int(running_device *device, int state)
+void jaguar_external_int(device_t *device, int state)
 {
 	if (state != CLEAR_LINE)
 		gpu_irq_state |= 1;
@@ -252,13 +252,13 @@ void cojag_sound_init(running_machine *machine)
 		jaguar_wave_rom[0x200 + i] = (int)(32767. * sin(2.0 * M_PI * (double)i / (double)0x80));
 
 		/* F1DA00 = traingle wave with noise */
-		jaguar_wave_rom[0x280 + i] = jaguar_wave_rom[0x000 + i] * (mame_rand(machine) % 32768) / 32768;
+		jaguar_wave_rom[0x280 + i] = jaguar_wave_rom[0x000 + i] * (machine->rand() % 32768) / 32768;
 
 		/* F1DC00 = spike */
 		jaguar_wave_rom[0x300 + i] = (i == 0x40) ? 32767 : 0;
 
 		/* F1DE00 = white noise */
-		jaguar_wave_rom[0x380 + i] = mame_rand(machine) % 32768;
+		jaguar_wave_rom[0x380 + i] = machine->rand() % 32768;
 	}
 
 #if ENABLE_SPEEDUP_HACKS

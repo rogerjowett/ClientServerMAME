@@ -163,15 +163,12 @@ OSC3: 48.384MHz
 #include "cpu/i960/i960.h"
 #include "cpu/m37710/m37710.h"
 #include "sound/c352.h"
+#include "machine/nvram.h"
 #include "namcofl.lh"
+#include "includes/namcofl.h"
 
 
 static emu_timer *raster_interrupt_timer;
-
-VIDEO_START( namcofl );
-VIDEO_UPDATE( namcofl );
-
-extern WRITE32_HANDLER(namcofl_spritebank_w);
 
 static UINT32 *namcofl_workram;
 static UINT16 *namcofl_shareram;
@@ -200,11 +197,11 @@ static WRITE32_HANDLER( namcofl_sysreg_w )
 		if (data == 0)	// RAM at 00000000, ROM at 10000000
 		{
 			memory_set_bankptr(space->machine,  "bank1", namcofl_workram );
-			memory_set_bankptr(space->machine,  "bank2", memory_region(space->machine, "maincpu") );
+			memory_set_bankptr(space->machine,  "bank2", space->machine->region("maincpu")->base() );
 		}
 		else		// ROM at 00000000, RAM at 10000000
 		{
-			memory_set_bankptr(space->machine,  "bank1", memory_region(space->machine, "maincpu") );
+			memory_set_bankptr(space->machine,  "bank1", space->machine->region("maincpu")->base() );
 			memory_set_bankptr(space->machine,  "bank2", namcofl_workram );
 		}
 	}
@@ -240,7 +237,7 @@ static ADDRESS_MAP_START( namcofl_mem, ADDRESS_SPACE_PROGRAM, 32 )
 	AM_RANGE(0x00000000, 0x000fffff) AM_RAMBANK("bank1")
 	AM_RANGE(0x10000000, 0x100fffff) AM_RAMBANK("bank2")
 	AM_RANGE(0x20000000, 0x201fffff) AM_ROM AM_REGION("user1", 0)	/* data */
-	AM_RANGE(0x30000000, 0x30001fff) AM_RAM	AM_BASE_SIZE_GENERIC(nvram) /* nvram */
+	AM_RANGE(0x30000000, 0x30001fff) AM_RAM	AM_SHARE("nvram") /* nvram */
 	AM_RANGE(0x30100000, 0x30100003) AM_WRITE(namcofl_spritebank_w)
 	AM_RANGE(0x30284000, 0x3028bfff) AM_READWRITE(namcofl_share_r, namcofl_share_w)
 	AM_RANGE(0x30300000, 0x30303fff) AM_RAM /* COMRAM */
@@ -583,46 +580,46 @@ static MACHINE_RESET( namcofl )
 	timer_set(machine, machine->primary_screen->time_until_pos(machine->primary_screen->visible_area().max_y + 3, 0), NULL, 0, network_interrupt_callback);
 	timer_set(machine, machine->primary_screen->time_until_pos(machine->primary_screen->visible_area().max_y + 1, 0), NULL, 0, vblank_interrupt_callback);
 
-	memory_set_bankptr(machine,  "bank1", memory_region(machine, "maincpu") );
+	memory_set_bankptr(machine,  "bank1", machine->region("maincpu")->base() );
 	memory_set_bankptr(machine,  "bank2", namcofl_workram );
 
 	memset(namcofl_workram, 0x00, 0x100000);
 }
 
 
-static MACHINE_DRIVER_START( namcofl )
-	MDRV_CPU_ADD("maincpu", I960, 20000000)	// i80960KA-20 == 20 MHz part
-	MDRV_CPU_PROGRAM_MAP(namcofl_mem)
+static MACHINE_CONFIG_START( namcofl, driver_device )
+	MCFG_CPU_ADD("maincpu", I960, 20000000)	// i80960KA-20 == 20 MHz part
+	MCFG_CPU_PROGRAM_MAP(namcofl_mem)
 
-	MDRV_CPU_ADD("mcu", M37702, 48384000/3)
-	MDRV_CPU_PROGRAM_MAP(namcoc75_am)
-	MDRV_CPU_IO_MAP(namcoc75_io)
-	MDRV_CPU_VBLANK_INT_HACK(mcu_interrupt, 3)
+	MCFG_CPU_ADD("mcu", M37702, 48384000/3)
+	MCFG_CPU_PROGRAM_MAP(namcoc75_am)
+	MCFG_CPU_IO_MAP(namcoc75_io)
+	MCFG_CPU_VBLANK_INT_HACK(mcu_interrupt, 3)
 
-	MDRV_MACHINE_START(namcofl)
-	MDRV_MACHINE_RESET(namcofl)
-	MDRV_NVRAM_HANDLER(generic_1fill)
+	MCFG_MACHINE_START(namcofl)
+	MCFG_MACHINE_RESET(namcofl)
+	MCFG_NVRAM_ADD_1FILL("nvram")
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(NAMCONB1_HTOTAL, NAMCONB1_VTOTAL)
-	MDRV_SCREEN_VISIBLE_AREA(0, NAMCONB1_HBSTART-1, 0, NAMCONB1_VBSTART-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(NAMCONB1_HTOTAL, NAMCONB1_VTOTAL)
+	MCFG_SCREEN_VISIBLE_AREA(0, NAMCONB1_HBSTART-1, 0, NAMCONB1_VBSTART-1)
 
-	MDRV_PALETTE_LENGTH(8192)
+	MCFG_PALETTE_LENGTH(8192)
 
-	MDRV_GFXDECODE(2)
+	MCFG_GFXDECODE(2)
 
-	MDRV_VIDEO_START(namcofl)
-	MDRV_VIDEO_UPDATE(namcofl)
+	MCFG_VIDEO_START(namcofl)
+	MCFG_VIDEO_UPDATE(namcofl)
 
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
-	MDRV_SOUND_ADD("c352", C352, 48384000/3)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 1.00)
-	MDRV_SOUND_ROUTE(1, "lspeaker", 1.00)
-	MDRV_SOUND_ROUTE(2, "rspeaker", 1.00)
-	MDRV_SOUND_ROUTE(3, "lspeaker", 1.00)
-MACHINE_DRIVER_END
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SOUND_ADD("c352", C352, 48384000/3)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 1.00)
+	MCFG_SOUND_ROUTE(1, "lspeaker", 1.00)
+	MCFG_SOUND_ROUTE(2, "rspeaker", 1.00)
+	MCFG_SOUND_ROUTE(3, "lspeaker", 1.00)
+MACHINE_CONFIG_END
 
 ROM_START( speedrcr )
 	ROM_REGION( 0x200000, "maincpu", 0 ) // i960 program
@@ -811,7 +808,7 @@ static void namcofl_common_init(running_machine *machine)
 {
 	namcofl_workram = auto_alloc_array(machine, UINT32, 0x100000/4);
 
-	memory_set_bankptr(machine,  "bank1", memory_region(machine, "maincpu") );
+	memory_set_bankptr(machine,  "bank1", machine->region("maincpu")->base() );
 	memory_set_bankptr(machine,  "bank2", namcofl_workram );
 }
 

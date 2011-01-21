@@ -57,12 +57,11 @@ struct CPS1config
 };
 
 
-class cps_state
+class cps_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, cps_state(machine)); }
-
-	cps_state(running_machine &machine) { }
+	cps_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	// cps1
@@ -128,10 +127,10 @@ public:
 	int          cps_version;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *audiocpu;
-	running_device *msm_1;	// fcrash
-	running_device *msm_2;	// fcrash
+	device_t *maincpu;
+	device_t *audiocpu;
+	device_t *msm_1;	// fcrash
+	device_t *msm_2;	// fcrash
 };
 
 /*----------- defined in drivers/cps1.c -----------*/

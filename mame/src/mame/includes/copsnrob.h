@@ -4,12 +4,14 @@
 
 *************************************************************************/
 
-class copsnrob_state
+#include "sound/discrete.h"
+
+
+class copsnrob_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, copsnrob_state(machine)); }
-
-	copsnrob_state(running_machine &machine) { }
+	copsnrob_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *        videoram;
@@ -22,6 +24,7 @@ public:
 
 	/* misc */
 	UINT8          misc;
+	UINT8          ic_h3_data;
 };
 
 
@@ -33,3 +36,9 @@ READ8_HANDLER( copsnrob_gun_position_r );
 /*----------- defined in video/copsnrob.c -----------*/
 
 VIDEO_UPDATE( copsnrob );
+
+
+/*----------- defined in audio/copsnrob.c -----------*/
+
+DISCRETE_SOUND_EXTERN( copsnrob );
+WRITE8_HANDLER( copsnrob_misc_w );

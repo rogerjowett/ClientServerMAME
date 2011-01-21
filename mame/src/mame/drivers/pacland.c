@@ -176,20 +176,7 @@ Notes:
 #include "cpu/m6809/m6809.h"
 #include "cpu/m6800/m6800.h"
 #include "sound/namco.h"
-
-
-extern UINT8 *pacland_videoram,*pacland_videoram2,*pacland_spriteram;
-
-WRITE8_HANDLER( pacland_videoram_w );
-WRITE8_HANDLER( pacland_videoram2_w );
-WRITE8_HANDLER( pacland_scroll0_w );
-WRITE8_HANDLER( pacland_scroll1_w );
-WRITE8_HANDLER( pacland_bankswitch_w );
-
-PALETTE_INIT( pacland );
-VIDEO_START( pacland );
-VIDEO_UPDATE( pacland );
-
+#include "includes/pacland.h"
 
 static WRITE8_HANDLER( pacland_subreset_w )
 {
@@ -267,7 +254,7 @@ ADDRESS_MAP_END
 static ADDRESS_MAP_START( mcu_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x001f) AM_READWRITE(hd63701_internal_registers_r, hd63701_internal_registers_w)
 	AM_RANGE(0x0080, 0x00ff) AM_RAM
-	AM_RANGE(0x1000, 0x13ff) AM_DEVREADWRITE("namco", namcos1_cus30_r, namcos1_cus30_w) AM_BASE(&namco_wavedata)		/* PSG device, shared RAM */
+	AM_RANGE(0x1000, 0x13ff) AM_DEVREADWRITE("namco", namcos1_cus30_r, namcos1_cus30_w)		/* PSG device, shared RAM */
 	AM_RANGE(0x2000, 0x3fff) AM_WRITE(watchdog_reset_w)		/* watchdog? */
 	AM_RANGE(0x4000, 0x7fff) AM_WRITE(pacland_irq_2_ctrl_w)
 	AM_RANGE(0x8000, 0xbfff) AM_ROM
@@ -411,42 +398,42 @@ static const namco_interface namco_config =
 
 
 
-static MACHINE_DRIVER_START( pacland )
+static MACHINE_CONFIG_START( pacland, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6809, 49152000/32)	/* 1.536 MHz */
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_assert)
+	MCFG_CPU_ADD("maincpu", M6809, 49152000/32)	/* 1.536 MHz */
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_assert)
 
-	MDRV_CPU_ADD("mcu", HD63701, 49152000/8)	/* 1.536 MHz? */
-	MDRV_CPU_PROGRAM_MAP(mcu_map)
-	MDRV_CPU_IO_MAP(mcu_port_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_assert)
+	MCFG_CPU_ADD("mcu", HD63701, 49152000/8)	/* 1.536 MHz? */
+	MCFG_CPU_PROGRAM_MAP(mcu_map)
+	MCFG_CPU_IO_MAP(mcu_port_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_assert)
 
-	MDRV_QUANTUM_TIME(HZ(6000))	/* we need heavy synching between the MCU and the CPU */
+	MCFG_QUANTUM_TIME(HZ(6000))	/* we need heavy synching between the MCU and the CPU */
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60.606060)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(3*8, 39*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60.606060)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(3*8, 39*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(pacland)
-	MDRV_PALETTE_LENGTH(256*4+256*4+64*16)
+	MCFG_GFXDECODE(pacland)
+	MCFG_PALETTE_LENGTH(256*4+256*4+64*16)
 
-	MDRV_PALETTE_INIT(pacland)
-	MDRV_VIDEO_START(pacland)
-	MDRV_VIDEO_UPDATE(pacland)
+	MCFG_PALETTE_INIT(pacland)
+	MCFG_VIDEO_START(pacland)
+	MCFG_VIDEO_UPDATE(pacland)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("namco", NAMCO_CUS30, 49152000/2/1024)
-	MDRV_SOUND_CONFIG(namco_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("namco", NAMCO_CUS30, 49152000/2/1024)
+	MCFG_SOUND_CONFIG(namco_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************

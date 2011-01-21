@@ -67,25 +67,25 @@ TODO:
 /* Sound comm between CPU's */
 static READ8_HANDLER( sraider_sound_low_r )
 {
-	ladybug_state *state = (ladybug_state *)space->machine->driver_data;
+	ladybug_state *state = space->machine->driver_data<ladybug_state>();
 	return state->sound_low;
 }
 
 static READ8_HANDLER( sraider_sound_high_r )
 {
-	ladybug_state *state = (ladybug_state *)space->machine->driver_data;
+	ladybug_state *state = space->machine->driver_data<ladybug_state>();
 	return state->sound_high;
 }
 
 static WRITE8_HANDLER( sraider_sound_low_w )
 {
-	ladybug_state *state = (ladybug_state *)space->machine->driver_data;
+	ladybug_state *state = space->machine->driver_data<ladybug_state>();
 	state->sound_low = data;
 }
 
 static WRITE8_HANDLER( sraider_sound_high_w )
 {
-	ladybug_state *state = (ladybug_state *)space->machine->driver_data;
+	ladybug_state *state = space->machine->driver_data<ladybug_state>();
 	state->sound_high = data;
 }
 
@@ -100,7 +100,7 @@ static READ8_HANDLER( sraider_8005_r )
 /* Unknown IO */
 static WRITE8_HANDLER( sraider_misc_w )
 {
-	ladybug_state *state = (ladybug_state *)space->machine->driver_data;
+	ladybug_state *state = space->machine->driver_data<ladybug_state>();
 
 	switch(offset)
 	{
@@ -189,7 +189,7 @@ ADDRESS_MAP_END
 
 static INPUT_CHANGED( coin1_inserted )
 {
-	ladybug_state *state = (ladybug_state *)field->port->machine->driver_data;
+	ladybug_state *state = field->port->machine->driver_data<ladybug_state>();
 
 	/* left coin insertion causes an NMI */
 	cpu_set_input_line(state->maincpu, INPUT_LINE_NMI, newval ? ASSERT_LINE : CLEAR_LINE);
@@ -197,7 +197,7 @@ static INPUT_CHANGED( coin1_inserted )
 
 static INPUT_CHANGED( coin2_inserted )
 {
-	ladybug_state *state = (ladybug_state *)field->port->machine->driver_data;
+	ladybug_state *state = field->port->machine->driver_data<ladybug_state>();
 
 	/* right coin insertion causes an IRQ */
 	if (newval)
@@ -724,13 +724,13 @@ GFXDECODE_END
 
 static MACHINE_START( ladybug )
 {
-	ladybug_state *state = (ladybug_state *)machine->driver_data;
+	ladybug_state *state = machine->driver_data<ladybug_state>();
 	state->maincpu = machine->device("maincpu");
 }
 
 static MACHINE_START( sraider )
 {
-	ladybug_state *state = (ladybug_state *)machine->driver_data;
+	ladybug_state *state = machine->driver_data<ladybug_state>();
 
 	state->maincpu = machine->device("maincpu");
 
@@ -752,7 +752,7 @@ static MACHINE_START( sraider )
 
 static MACHINE_RESET( sraider )
 {
-	ladybug_state *state = (ladybug_state *)machine->driver_data;
+	ladybug_state *state = machine->driver_data<ladybug_state>();
 	int i;
 
 	state->grid_color = 0;
@@ -773,95 +773,89 @@ static MACHINE_RESET( sraider )
 		state->weird_value[i] = 0;
 }
 
-static MACHINE_DRIVER_START( ladybug )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(ladybug_state)
+static MACHINE_CONFIG_START( ladybug, ladybug_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, 4000000)	/* 4 MHz */
-	MDRV_CPU_PROGRAM_MAP(ladybug_map)
+	MCFG_CPU_ADD("maincpu", Z80, 4000000)	/* 4 MHz */
+	MCFG_CPU_PROGRAM_MAP(ladybug_map)
 
-	MDRV_MACHINE_START(ladybug)
+	MCFG_MACHINE_START(ladybug)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(1*8, 31*8-1, 4*8, 28*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(1*8, 31*8-1, 4*8, 28*8-1)
 
-	MDRV_GFXDECODE(ladybug)
-	MDRV_PALETTE_LENGTH(4*8+4*16)
+	MCFG_GFXDECODE(ladybug)
+	MCFG_PALETTE_LENGTH(4*8+4*16)
 
-	MDRV_PALETTE_INIT(ladybug)
-	MDRV_VIDEO_START(ladybug)
-	MDRV_VIDEO_UPDATE(ladybug)
+	MCFG_PALETTE_INIT(ladybug)
+	MCFG_VIDEO_START(ladybug)
+	MCFG_VIDEO_UPDATE(ladybug)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("sn1", SN76489, 4000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SOUND_ADD("sn1", SN76489, 4000000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-	MDRV_SOUND_ADD("sn2", SN76489, 4000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("sn2", SN76489, 4000000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( sraider )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(ladybug_state)
+static MACHINE_CONFIG_START( sraider, ladybug_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, 4000000)	/* 4 MHz */
-	MDRV_CPU_PROGRAM_MAP(sraider_cpu1_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80, 4000000)	/* 4 MHz */
+	MCFG_CPU_PROGRAM_MAP(sraider_cpu1_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("sub", Z80, 4000000)	/* 4 MHz */
-	MDRV_CPU_PROGRAM_MAP(sraider_cpu2_map)
-	MDRV_CPU_IO_MAP(sraider_cpu2_io_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("sub", Z80, 4000000)	/* 4 MHz */
+	MCFG_CPU_PROGRAM_MAP(sraider_cpu2_map)
+	MCFG_CPU_IO_MAP(sraider_cpu2_io_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_MACHINE_START(sraider)
-	MDRV_MACHINE_RESET(sraider)
+	MCFG_MACHINE_START(sraider)
+	MCFG_MACHINE_RESET(sraider)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(1*8, 31*8-1, 4*8, 28*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(1*8, 31*8-1, 4*8, 28*8-1)
 
-	MDRV_GFXDECODE(sraider)
-	MDRV_PALETTE_LENGTH(4*8+4*16+32+2)
+	MCFG_GFXDECODE(sraider)
+	MCFG_PALETTE_LENGTH(4*8+4*16+32+2)
 
-	MDRV_PALETTE_INIT(sraider)
-	MDRV_VIDEO_START(sraider)
-	MDRV_VIDEO_UPDATE(sraider)
-	MDRV_VIDEO_EOF(sraider)
+	MCFG_PALETTE_INIT(sraider)
+	MCFG_VIDEO_START(sraider)
+	MCFG_VIDEO_UPDATE(sraider)
+	MCFG_VIDEO_EOF(sraider)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("sn1", SN76489, 4000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SOUND_ADD("sn1", SN76489, 4000000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-	MDRV_SOUND_ADD("sn2", SN76489, 4000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SOUND_ADD("sn2", SN76489, 4000000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-	MDRV_SOUND_ADD("sn3", SN76489, 4000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SOUND_ADD("sn3", SN76489, 4000000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-	MDRV_SOUND_ADD("sn4", SN76489, 4000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SOUND_ADD("sn4", SN76489, 4000000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-	MDRV_SOUND_ADD("sn5", SN76489, 4000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("sn5", SN76489, 4000000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************
@@ -1068,12 +1062,12 @@ static DRIVER_INIT( dorodon )
 	/* decode the opcodes */
 
 	offs_t i;
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 	UINT8 *decrypted = auto_alloc_array(machine, UINT8, 0x6000);
-	UINT8 *rom = memory_region(machine, "maincpu");
-	UINT8 *table = memory_region(machine, "user1");
+	UINT8 *rom = machine->region("maincpu")->base();
+	UINT8 *table = machine->region("user1")->base();
 
-	memory_set_decrypted_region(space, 0x0000, 0x5fff, decrypted);
+	space->set_decrypted_region(0x0000, 0x5fff, decrypted);
 
 	for (i = 0; i < 0x6000; i++)
 		decrypted[i] = table[rom[i]];

@@ -60,6 +60,7 @@
 #include "cpu/z80/z80.h"
 #include "sound/ay8910.h"
 #include "video/v9938.h"
+#include "machine/nvram.h"
 #include "deprecat.h"
 
 #define VDP_MEM             0x40000
@@ -128,7 +129,7 @@ static READ8_HANDLER( mux_r )
 
 static ADDRESS_MAP_START( main_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0xbfff) AM_ROM
-	AM_RANGE(0xc000, 0xdfff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0xc000, 0xdfff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0xf000, 0xffff) AM_RAM
 ADDRESS_MAP_END
 
@@ -237,38 +238,38 @@ static const ay8910_interface ay8910_config =
 *           Machine Driver            *
 **************************************/
 
-static MACHINE_DRIVER_START( big10 )
+static MACHINE_CONFIG_START( big10, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, MASTER_CLOCK/6)	/* guess */
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_IO_MAP(main_io)
-	MDRV_CPU_VBLANK_INT_HACK(big10_interrupt, 262)
+	MCFG_CPU_ADD("maincpu", Z80, MASTER_CLOCK/6)	/* guess */
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_IO_MAP(main_io)
+	MCFG_CPU_VBLANK_INT_HACK(big10_interrupt, 262)
 
-	MDRV_MACHINE_RESET(big10)
+	MCFG_MACHINE_RESET(big10)
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 
-	MDRV_SCREEN_SIZE(512 + 32, (212 + 28) * 2)
-	MDRV_SCREEN_VISIBLE_AREA(0, 512 + 32 - 1, 0, (212 + 28) * 2 - 1)
+	MCFG_SCREEN_SIZE(512 + 32, (212 + 28) * 2)
+	MCFG_SCREEN_VISIBLE_AREA(0, 512 + 32 - 1, 0, (212 + 28) * 2 - 1)
 
-	MDRV_PALETTE_LENGTH(512)
-	MDRV_PALETTE_INIT(v9938)
-	MDRV_VIDEO_START(big10)
-	MDRV_VIDEO_UPDATE(generic_bitmapped)
+	MCFG_PALETTE_LENGTH(512)
+	MCFG_PALETTE_INIT(v9938)
+	MCFG_VIDEO_START(big10)
+	MCFG_VIDEO_UPDATE(generic_bitmapped)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("aysnd", AY8910, MASTER_CLOCK/12)	/* guess */
-	MDRV_SOUND_CONFIG(ay8910_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
-MACHINE_DRIVER_END
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("aysnd", AY8910, MASTER_CLOCK/12)	/* guess */
+	MCFG_SOUND_CONFIG(ay8910_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
+MACHINE_CONFIG_END
 
 
 /**************************************

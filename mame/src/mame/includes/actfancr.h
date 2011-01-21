@@ -4,12 +4,11 @@
 
 *************************************************************************/
 
-class actfancr_state
+class actfancr_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, actfancr_state(machine)); }
-
-	actfancr_state(running_machine &machine) { }
+	actfancr_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *        pf1_data;
@@ -28,8 +27,8 @@ public:
 	int            trio_control_select;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *audiocpu;
+	device_t *maincpu;
+	device_t *audiocpu;
 };
 
 

@@ -18,14 +18,14 @@ struct _ymf262_state
 	emu_timer *		timer[2];
 	void *			chip;
 	const ymf262_interface *intf;
-	running_device *device;
+	device_t *device;
 };
 
 
-INLINE ymf262_state *get_safe_token(running_device *device)
+INLINE ymf262_state *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
-	assert(device->type() == SOUND_YMF262);
+	assert(device->type() == YMF262);
 	return (ymf262_state *)downcast<legacy_device_base *>(device)->token();
 }
 

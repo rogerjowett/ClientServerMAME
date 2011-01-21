@@ -278,12 +278,11 @@ uPC1352C @ N3
 #include "cpu/i8085/i8085.h"
 #include "sound/ay8910.h"
 
-class dwarfd_state
+class dwarfd_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, dwarfd_state(machine)); }
-
-	dwarfd_state(running_machine &machine) { }
+	dwarfd_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *  dw_ram;
@@ -350,7 +349,7 @@ enum
 
 static WRITE8_HANDLER (i8275_preg_w) //param reg
 {
-	dwarfd_state *state = (dwarfd_state *)space->machine->driver_data;
+	dwarfd_state *state = space->machine->driver_data<dwarfd_state>();
 
 	switch (state->i8275Command)
 	{
@@ -471,7 +470,7 @@ static READ8_HANDLER (i8275_preg_r) //param reg
 
 static WRITE8_HANDLER (i8275_creg_w) //comand reg
 {
-	dwarfd_state *state = (dwarfd_state *)space->machine->driver_data;
+	dwarfd_state *state = space->machine->driver_data<dwarfd_state>();
 
 	switch (data>>5)
 	{
@@ -516,7 +515,7 @@ static READ8_HANDLER (i8275_sreg_r) //status
 
 static READ8_HANDLER(dwarfd_ram_r)
 {
-	dwarfd_state *state = (dwarfd_state *)space->machine->driver_data;
+	dwarfd_state *state = space->machine->driver_data<dwarfd_state>();
 
 	if (state->crt_access == 0)
 	{
@@ -532,7 +531,7 @@ static READ8_HANDLER(dwarfd_ram_r)
 
 static WRITE8_HANDLER(dwarfd_ram_w)
 {
-	dwarfd_state *state = (dwarfd_state *)space->machine->driver_data;
+	dwarfd_state *state = space->machine->driver_data<dwarfd_state>();
 	state->dw_ram[offset] = data;
 }
 
@@ -569,7 +568,7 @@ static WRITE8_HANDLER(output2_w)
 
 static READ8_HANDLER(qc_b8_r)
 {
-	return mame_rand(space->machine);
+	return space->machine->rand();
 }
 
 static ADDRESS_MAP_START( mem_map, ADDRESS_SPACE_PROGRAM, 8 )
@@ -683,7 +682,7 @@ static VIDEO_START(dwarfd)
 
 static void drawCrt( running_machine *machine, bitmap_t *bitmap,const rectangle *cliprect )
 {
-	dwarfd_state *state = (dwarfd_state *)machine->driver_data;
+	dwarfd_state *state = machine->driver_data<dwarfd_state>();
 	int x, y;
 	for (y = 0; y < maxy; y++)
 	{
@@ -726,7 +725,7 @@ static void drawCrt( running_machine *machine, bitmap_t *bitmap,const rectangle 
 					if ((tile & 0xc0) == 0xc0)
 					{
 						b = 1;
-						tile = mame_rand(machine) & 0x7f;//(tile >> 2) & 0xf;
+						tile = machine->rand() & 0x7f;//(tile >> 2) & 0xf;
 					}
 				}
 				else
@@ -751,7 +750,7 @@ static VIDEO_UPDATE( dwarfd )
 
 static WRITE_LINE_DEVICE_HANDLER( dwarfd_sod_callback )
 {
-	dwarfd_state *driver_state = (dwarfd_state *)device->machine->driver_data;
+	dwarfd_state *driver_state = device->machine->driver_data<dwarfd_state>();
 	driver_state->crt_access = state;
 }
 
@@ -768,7 +767,7 @@ static I8085_CONFIG( dwarfd_i8085_config )
 #define NUM_LINES 25
 static INTERRUPT_GEN( dwarfd_interrupt )
 {
-	dwarfd_state *state = (dwarfd_state *)device->machine->driver_data;
+	dwarfd_state *state = device->machine->driver_data<dwarfd_state>();
 
 	if (cpu_getiloops(device) < NUM_LINES)
 	{
@@ -888,9 +887,9 @@ static PALETTE_INIT(dwarfd)
 
 	for (i = 0; i < 256; i++)
 	{
-		int r = mame_rand(machine)|0x80;
-		int g = mame_rand(machine)|0x80;
-		int b = mame_rand(machine)|0x80;
+		int r = machine->rand()|0x80;
+		int g = machine->rand()|0x80;
+		int b = machine->rand()|0x80;
 		if (i == 0) r = g = b = 0;
 
 		palette_set_color(machine,i,MAKE_RGB(r,g,b));
@@ -914,7 +913,7 @@ static const ay8910_interface ay8910_config =
 
 static MACHINE_START( dwarfd )
 {
-	dwarfd_state *state = (dwarfd_state *)machine->driver_data;
+	dwarfd_state *state = machine->driver_data<dwarfd_state>();
 
 	state_save_register_global(machine, state->bank);
 	state_save_register_global(machine, state->line);
@@ -938,7 +937,7 @@ static MACHINE_START( dwarfd )
 
 static MACHINE_RESET( dwarfd )
 {
-	dwarfd_state *state = (dwarfd_state *)machine->driver_data;
+	dwarfd_state *state = machine->driver_data<dwarfd_state>();
 
 	state->bank = 0;
 	state->line = 0;
@@ -958,51 +957,47 @@ static MACHINE_RESET( dwarfd )
 	state->i8275HorizontalRetrace = 0;
 }
 
-static MACHINE_DRIVER_START( dwarfd )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(dwarfd_state)
+static MACHINE_CONFIG_START( dwarfd, dwarfd_state )
 
 	/* basic machine hardware */
 	/* FIXME: The 8085A had a max clock of 6MHz, internally divided by 2! */
-	MDRV_CPU_ADD("maincpu", I8085A, 10595000/3*2)        /* ? MHz */
-	MDRV_CPU_CONFIG(dwarfd_i8085_config)
-	MDRV_CPU_PROGRAM_MAP(mem_map)
-	MDRV_CPU_IO_MAP(io_map)
+	MCFG_CPU_ADD("maincpu", I8085A, 10595000/3*2)        /* ? MHz */
+	MCFG_CPU_CONFIG(dwarfd_i8085_config)
+	MCFG_CPU_PROGRAM_MAP(mem_map)
+	MCFG_CPU_IO_MAP(io_map)
 
-	MDRV_CPU_VBLANK_INT_HACK(dwarfd_interrupt,NUM_LINES+4) //16 +vblank + 1 unused
+	MCFG_CPU_VBLANK_INT_HACK(dwarfd_interrupt,NUM_LINES+4) //16 +vblank + 1 unused
 
-	MDRV_MACHINE_START(dwarfd)
-	MDRV_MACHINE_RESET(dwarfd)
+	MCFG_MACHINE_START(dwarfd)
+	MCFG_MACHINE_RESET(dwarfd)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(272*2, 200)
-	MDRV_SCREEN_VISIBLE_AREA(0, 272*2-1, 0, 200-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(272*2, 200)
+	MCFG_SCREEN_VISIBLE_AREA(0, 272*2-1, 0, 200-1)
 
-	MDRV_GFXDECODE(dwarfd)
-	MDRV_PALETTE_LENGTH(0x100)
-	MDRV_PALETTE_INIT(dwarfd)
+	MCFG_GFXDECODE(dwarfd)
+	MCFG_PALETTE_LENGTH(0x100)
+	MCFG_PALETTE_INIT(dwarfd)
 
-	MDRV_VIDEO_START(dwarfd)
-	MDRV_VIDEO_UPDATE(dwarfd)
+	MCFG_VIDEO_START(dwarfd)
+	MCFG_VIDEO_UPDATE(dwarfd)
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("aysnd", AY8910, 1500000)
-	MDRV_SOUND_CONFIG(ay8910_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("aysnd", AY8910, 1500000)
+	MCFG_SOUND_CONFIG(ay8910_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( qc )
-	MDRV_IMPORT_FROM( dwarfd )
+static MACHINE_CONFIG_DERIVED( qc, dwarfd )
 
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(qc_map)
-	MDRV_CPU_IO_MAP(qc_io_map)
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(qc_map)
+	MCFG_CPU_IO_MAP(qc_io_map)
+MACHINE_CONFIG_END
 
 ROM_START( dwarfd )
 	ROM_REGION( 0x10000, "maincpu", 0 )
@@ -1141,13 +1136,13 @@ ROM_END
 
 static DRIVER_INIT(dwarfd)
 {
-	dwarfd_state *state = (dwarfd_state *)machine->driver_data;
+	dwarfd_state *state = machine->driver_data<dwarfd_state>();
 	int i;
 	UINT8 *src, *dst;
 
 	/* expand gfx roms */
-	src = memory_region(machine, "gfx1");
-	dst = memory_region(machine, "gfx2");
+	src = machine->region("gfx1")->base();
+	dst = machine->region("gfx2")->base();
 
 	for (i = 0; i < 0x4000; i++)
 	{
@@ -1160,7 +1155,7 @@ static DRIVER_INIT(dwarfd)
 	}
 
 	/* use low bit as 'interpolation' bit */
-	src = memory_region(machine, "gfx2");
+	src = machine->region("gfx2")->base();
 	for (i = 0; i < 0x8000; i++)
 	{
 		if (src[i] & 0x10)
@@ -1194,12 +1189,12 @@ static DRIVER_INIT(qc)
 	DRIVER_INIT_CALL(dwarfd);
 
 	// hacks for program to proceed
-	memory_region(machine, "maincpu")[0x6564] = 0x00;
-	memory_region(machine, "maincpu")[0x6565] = 0x00;
+	machine->region("maincpu")->base()[0x6564] = 0x00;
+	machine->region("maincpu")->base()[0x6565] = 0x00;
 
-	memory_region(machine, "maincpu")[0x59b2] = 0x00;
-	memory_region(machine, "maincpu")[0x59b3] = 0x00;
-	memory_region(machine, "maincpu")[0x59b4] = 0x00;
+	machine->region("maincpu")->base()[0x59b2] = 0x00;
+	machine->region("maincpu")->base()[0x59b3] = 0x00;
+	machine->region("maincpu")->base()[0x59b4] = 0x00;
 
 }
 

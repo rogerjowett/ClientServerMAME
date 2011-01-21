@@ -80,7 +80,7 @@ static const eeprom_interface eeprom_intf =
 
 static WRITE16_HANDLER( wbeachvl_coin_eeprom_w )
 {
-	playmark_state *state = (playmark_state *)space->machine->driver_data;
+	playmark_state *state = space->machine->driver_data<playmark_state>();
 
 	if (ACCESSING_BITS_0_7)
 	{
@@ -99,7 +99,7 @@ static WRITE16_HANDLER( wbeachvl_coin_eeprom_w )
 
 static WRITE16_HANDLER( hotmind_coin_eeprom_w )
 {
-	playmark_state *state = (playmark_state *)space->machine->driver_data;
+	playmark_state *state = space->machine->driver_data<playmark_state>();
 
 	if (ACCESSING_BITS_0_7)
 	{
@@ -119,7 +119,7 @@ static WRITE16_HANDLER( hrdtimes_coin_w )
 
 static WRITE16_HANDLER( playmark_snd_command_w )
 {
-	playmark_state *state = (playmark_state *)space->machine->driver_data;
+	playmark_state *state = space->machine->driver_data<playmark_state>();
 
 	if (ACCESSING_BITS_0_7)
 	{
@@ -131,7 +131,7 @@ static WRITE16_HANDLER( playmark_snd_command_w )
 
 static READ8_HANDLER( playmark_snd_command_r )
 {
-	playmark_state *state = (playmark_state *)space->machine->driver_data;
+	playmark_state *state = space->machine->driver_data<playmark_state>();
 	int data = 0;
 
 	if ((state->oki_control & 0x38) == 0x30)
@@ -141,7 +141,7 @@ static READ8_HANDLER( playmark_snd_command_r )
 	}
 	else if ((state->oki_control & 0x38) == 0x28)
 	{
-		data = (okim6295_r(state->oki, 0) & 0x0f);
+		data = (state->oki->read(*space, 0) & 0x0f);
 		// logerror("PC$%03x PortB reading %02x from the OKI status port\n", cpu_get_previouspc(space->cpu), data);
 	}
 
@@ -150,7 +150,7 @@ static READ8_HANDLER( playmark_snd_command_r )
 
 static READ8_HANDLER( playmark_snd_flag_r )
 {
-	playmark_state *state = (playmark_state *)space->machine->driver_data;
+	playmark_state *state = space->machine->driver_data<playmark_state>();
 
 	if (state->snd_flag)
 	{
@@ -164,13 +164,13 @@ static READ8_HANDLER( playmark_snd_flag_r )
 
 static WRITE8_DEVICE_HANDLER( playmark_oki_banking_w )
 {
-	playmark_state *state = (playmark_state *)device->machine->driver_data;
+	playmark_state *state = device->machine->driver_data<playmark_state>();
 
 	if (state->old_oki_bank != (data & 7))
 	{
 		state->old_oki_bank = data & 7;
 
-		if (((state->old_oki_bank - 1) * 0x40000) < memory_region_length(device->machine, "oki"))
+		if (((state->old_oki_bank - 1) * 0x40000) < device->machine->region("oki")->bytes())
 		{
 			downcast<okim6295_device *>(device)->set_bank_base(0x40000 * (state->old_oki_bank - 1));
 		}
@@ -179,14 +179,14 @@ static WRITE8_DEVICE_HANDLER( playmark_oki_banking_w )
 
 static WRITE8_HANDLER( playmark_oki_w )
 {
-	playmark_state *state = (playmark_state *)space->machine->driver_data;
+	playmark_state *state = space->machine->driver_data<playmark_state>();
 	state->oki_command = data;
 }
 
-static WRITE8_DEVICE_HANDLER( playmark_snd_control_w )
+static WRITE8_HANDLER( playmark_snd_control_w )
 {
-	playmark_state *state = (playmark_state *)device->machine->driver_data;
-//  const address_space *space = cputag_get_address_space(device->machine, "audiocpu", ADDRESS_SPACE_PROGRAM);
+	playmark_state *state = space->machine->driver_data<playmark_state>();
+//  address_space *space = cputag_get_address_space(device->machine, "audiocpu", ADDRESS_SPACE_PROGRAM);
 
     /*  This port controls communications to and from the 68K, and the OKI
         device.
@@ -206,7 +206,8 @@ static WRITE8_DEVICE_HANDLER( playmark_snd_control_w )
 	if ((data & 0x38) == 0x18)
 	{
 		// logerror("PC$%03x Writing %02x to OKI1, PortC=%02x, Code=%02x\n",cpu_get_previouspc(space->cpu),playmark_oki_command,playmark_oki_control,playmark_snd_command);
-		okim6295_w(device, 0, state->oki_command);
+		okim6295_device *oki = space->machine->device<okim6295_device>("oki");
+		oki->write(*space, 0, state->oki_command);
 	}
 }
 
@@ -333,7 +334,7 @@ ADDRESS_MAP_END
 static ADDRESS_MAP_START( playmark_sound_io_map, ADDRESS_SPACE_IO, 8 )
 	AM_RANGE(0x00, 0x00) AM_DEVWRITE("oki", playmark_oki_banking_w)
 	AM_RANGE(0x01, 0x01) AM_READWRITE(playmark_snd_command_r, playmark_oki_w)
-	AM_RANGE(0x02, 0x02) AM_READ(playmark_snd_flag_r) AM_DEVWRITE("oki", playmark_snd_control_w)
+	AM_RANGE(0x02, 0x02) AM_READWRITE(playmark_snd_flag_r, playmark_snd_control_w)
 	AM_RANGE(PIC16C5x_T0, PIC16C5x_T0) AM_READ(PIC16C5X_T0_clk_r)
 ADDRESS_MAP_END
 
@@ -907,9 +908,9 @@ GFXDECODE_END
 
 static MACHINE_START( playmark )
 {
-	playmark_state *state = (playmark_state *)machine->driver_data;
+	playmark_state *state = machine->driver_data<playmark_state>();
 
-	state->oki = machine->device("oki");
+	state->oki = machine->device<okim6295_device>("oki");
 	state->eeprom = machine->device("eeprom");
 
 	state_save_register_global(machine, state->bgscrollx);
@@ -929,7 +930,7 @@ static MACHINE_START( playmark )
 
 static MACHINE_RESET( playmark )
 {
-	playmark_state *state = (playmark_state *)machine->driver_data;
+	playmark_state *state = machine->driver_data<playmark_state>();
 
 	state->bgscrollx = 0;
 	state->bgscrolly = 0;
@@ -945,202 +946,187 @@ static MACHINE_RESET( playmark )
 	state->old_oki_bank = 0;
 }
 
-static MACHINE_DRIVER_START( bigtwin )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(playmark_state)
+static MACHINE_CONFIG_START( bigtwin, playmark_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 12000000)	/* 12 MHz */
-	MDRV_CPU_PROGRAM_MAP(bigtwin_main_map)
-	MDRV_CPU_VBLANK_INT("screen", irq2_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, 12000000)	/* 12 MHz */
+	MCFG_CPU_PROGRAM_MAP(bigtwin_main_map)
+	MCFG_CPU_VBLANK_INT("screen", irq2_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", PIC16C57, 12000000)	/* 3MHz */
+	MCFG_CPU_ADD("audiocpu", PIC16C57, 12000000)	/* 3MHz */
 	/* Program and Data Maps are internal to the MCU */
-	MDRV_CPU_IO_MAP(playmark_sound_io_map)
+	MCFG_CPU_IO_MAP(playmark_sound_io_map)
 
-	MDRV_MACHINE_START(playmark)
-	MDRV_MACHINE_RESET(playmark)
+	MCFG_MACHINE_START(playmark)
+	MCFG_MACHINE_RESET(playmark)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(58)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 64*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 2*8, 32*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(58)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 64*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 2*8, 32*8-1)
 
-	MDRV_GFXDECODE(playmark)
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_GFXDECODE(playmark)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_VIDEO_START(bigtwin)
-	MDRV_VIDEO_UPDATE(bigtwin)
+	MCFG_VIDEO_START(bigtwin)
+	MCFG_VIDEO_UPDATE(bigtwin)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_OKIM6295_ADD("oki", 1000000, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 1000000, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( wbeachvl )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(playmark_state)
+static MACHINE_CONFIG_START( wbeachvl, playmark_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 12000000)	/* 12 MHz */
-	MDRV_CPU_PROGRAM_MAP(wbeachvl_main_map)
-	MDRV_CPU_VBLANK_INT("screen", irq2_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, 12000000)	/* 12 MHz */
+	MCFG_CPU_PROGRAM_MAP(wbeachvl_main_map)
+	MCFG_CPU_VBLANK_INT("screen", irq2_line_hold)
 
-//  MDRV_CPU_ADD("audiocpu", PIC16C57, 12000000)   /* 3MHz */
+//  MCFG_CPU_ADD("audiocpu", PIC16C57, 12000000)   /* 3MHz */
 	/* Program and Data Maps are internal to the MCU */
-//  MDRV_CPU_IO_MAP(playmark_sound_io_map)
+//  MCFG_CPU_IO_MAP(playmark_sound_io_map)
 
-	MDRV_EEPROM_ADD("eeprom", eeprom_intf)
-	MDRV_EEPROM_DEFAULT_VALUE(0)
+	MCFG_EEPROM_ADD("eeprom", eeprom_intf)
+	MCFG_EEPROM_DEFAULT_VALUE(0)
 
-	MDRV_MACHINE_START(playmark)
-	MDRV_MACHINE_RESET(playmark)
+	MCFG_MACHINE_START(playmark)
+	MCFG_MACHINE_RESET(playmark)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(58)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 64*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 2*8, 32*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(58)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 64*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 2*8, 32*8-1)
 
-	MDRV_GFXDECODE(wbeachvl)
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_GFXDECODE(wbeachvl)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(wbeachvl)
-	MDRV_VIDEO_UPDATE(wbeachvl)
+	MCFG_VIDEO_START(wbeachvl)
+	MCFG_VIDEO_UPDATE(wbeachvl)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_OKIM6295_ADD("oki", 1000000, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 1000000, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( excelsr )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(playmark_state)
+static MACHINE_CONFIG_START( excelsr, playmark_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 12000000)	/* 12 MHz */
-	MDRV_CPU_PROGRAM_MAP(excelsr_main_map)
-	MDRV_CPU_VBLANK_INT("screen", irq2_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, 12000000)	/* 12 MHz */
+	MCFG_CPU_PROGRAM_MAP(excelsr_main_map)
+	MCFG_CPU_VBLANK_INT("screen", irq2_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", PIC16C57, 12000000)	/* 3MHz */
+	MCFG_CPU_ADD("audiocpu", PIC16C57, 12000000)	/* 3MHz */
 	/* Program and Data Maps are internal to the MCU */
-	MDRV_CPU_IO_MAP(playmark_sound_io_map)
+	MCFG_CPU_IO_MAP(playmark_sound_io_map)
 
-	MDRV_MACHINE_START(playmark)
-	MDRV_MACHINE_RESET(playmark)
+	MCFG_MACHINE_START(playmark)
+	MCFG_MACHINE_RESET(playmark)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(58)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 64*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 2*8, 32*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(58)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 64*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 2*8, 32*8-1)
 
-	MDRV_GFXDECODE(excelsr)
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_GFXDECODE(excelsr)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_VIDEO_START(excelsr)
-	MDRV_VIDEO_UPDATE(excelsr)
+	MCFG_VIDEO_START(excelsr)
+	MCFG_VIDEO_UPDATE(excelsr)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_OKIM6295_ADD("oki", 1000000, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 1000000, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( hotmind )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(playmark_state)
+static MACHINE_CONFIG_START( hotmind, playmark_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, XTAL_24MHz/2)	/* verified on pcb */
-	MDRV_CPU_PROGRAM_MAP(hotmind_main_map)
-	MDRV_CPU_VBLANK_INT("screen", irq2_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, XTAL_24MHz/2)	/* verified on pcb */
+	MCFG_CPU_PROGRAM_MAP(hotmind_main_map)
+	MCFG_CPU_VBLANK_INT("screen", irq2_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", PIC16C57, XTAL_24MHz/2)	/* verified on pcb */
+	MCFG_CPU_ADD("audiocpu", PIC16C57, XTAL_24MHz/2)	/* verified on pcb */
 	/* Program and Data Maps are internal to the MCU */
-	MDRV_CPU_IO_MAP(playmark_sound_io_map)
+	MCFG_CPU_IO_MAP(playmark_sound_io_map)
 
-	MDRV_EEPROM_ADD("eeprom", eeprom_intf)
-	MDRV_EEPROM_DEFAULT_VALUE(0)
+	MCFG_EEPROM_ADD("eeprom", eeprom_intf)
+	MCFG_EEPROM_DEFAULT_VALUE(0)
 
-	MDRV_MACHINE_START(playmark)
-	MDRV_MACHINE_RESET(playmark)
+	MCFG_MACHINE_START(playmark)
+	MCFG_MACHINE_RESET(playmark)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(58)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 64*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(58)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 64*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(hrdtimes)
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_GFXDECODE(hrdtimes)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_VIDEO_START(hotmind)
-	MDRV_VIDEO_UPDATE(hrdtimes)
+	MCFG_VIDEO_START(hotmind)
+	MCFG_VIDEO_UPDATE(hrdtimes)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_OKIM6295_ADD("oki", XTAL_1MHz, OKIM6295_PIN7_HIGH)  /* verified on pcb */
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", XTAL_1MHz, OKIM6295_PIN7_HIGH)  /* verified on pcb */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( hrdtimes )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(playmark_state)
+static MACHINE_CONFIG_START( hrdtimes, playmark_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, XTAL_24MHz/2)	/* verified on pcb */
-	MDRV_CPU_PROGRAM_MAP(hrdtimes_main_map)
-	MDRV_CPU_VBLANK_INT("screen", irq6_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, XTAL_24MHz/2)	/* verified on pcb */
+	MCFG_CPU_PROGRAM_MAP(hrdtimes_main_map)
+	MCFG_CPU_VBLANK_INT("screen", irq6_line_hold)
 
-//  MDRV_CPU_ADD("audiocpu", PIC16C57, XTAL_24MHz/2)    /* verified on pcb */
+//  MCFG_CPU_ADD("audiocpu", PIC16C57, XTAL_24MHz/2)    /* verified on pcb */
 	/* Program and Data Maps are internal to the MCU */
-//  MDRV_CPU_IO_MAP(playmark_sound_io_map)
+//  MCFG_CPU_IO_MAP(playmark_sound_io_map)
 
-	MDRV_MACHINE_START(playmark)
-	MDRV_MACHINE_RESET(playmark)
+	MCFG_MACHINE_START(playmark)
+	MCFG_MACHINE_RESET(playmark)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(58)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 64*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(58)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 64*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(hrdtimes)
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_GFXDECODE(hrdtimes)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_VIDEO_START(hrdtimes)
-	MDRV_VIDEO_UPDATE(hrdtimes)
+	MCFG_VIDEO_START(hrdtimes)
+	MCFG_VIDEO_UPDATE(hrdtimes)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_OKIM6295_ADD("oki", XTAL_1MHz, OKIM6295_PIN7_HIGH) /* verified on pcb */
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", XTAL_1MHz, OKIM6295_PIN7_HIGH) /* verified on pcb */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 /***************************************************************************
 
@@ -1462,9 +1448,9 @@ static UINT8 playmark_asciitohex(UINT8 data)
 
 static DRIVER_INIT( bigtwin )
 {
-	playmark_state *state = (playmark_state *)machine->driver_data;
-	UINT8 *playmark_PICROM_HEX = memory_region(machine, "user1");
-	UINT16 *playmark_PICROM = (UINT16 *)memory_region(machine, "audiocpu");
+	playmark_state *state = machine->driver_data<playmark_state>();
+	UINT8 *playmark_PICROM_HEX = machine->region("user1")->base();
+	UINT16 *playmark_PICROM = (UINT16 *)machine->region("audiocpu")->base();
 	INT32 offs, data;
 	UINT16 src_pos = 0;
 	UINT16 dst_pos = 0;

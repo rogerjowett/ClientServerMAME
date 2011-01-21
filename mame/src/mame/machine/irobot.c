@@ -123,7 +123,7 @@ WRITE8_HANDLER( irobot_statwr_w )
 
 WRITE8_HANDLER( irobot_out0_w )
 {
-	UINT8 *RAM = memory_region(space->machine, "maincpu");
+	UINT8 *RAM = space->machine->region("maincpu")->base();
 
 	irobot_out0 = data;
 	switch (data & 0x60)
@@ -145,7 +145,7 @@ WRITE8_HANDLER( irobot_out0_w )
 
 WRITE8_HANDLER( irobot_rom_banksel_w )
 {
-	UINT8 *RAM = memory_region(space->machine, "maincpu");
+	UINT8 *RAM = space->machine->region("maincpu")->base();
 
 	switch ((data & 0x0E) >> 1)
 	{
@@ -190,7 +190,7 @@ static TIMER_CALLBACK( scanline_callback )
 
 MACHINE_RESET( irobot )
 {
-	UINT8 *MB = memory_region(machine, "mathbox");
+	UINT8 *MB = machine->region("mathbox")->base();
 
 	/* initialize the memory regions */
 	mbROM		= MB + 0x00000;
@@ -370,7 +370,7 @@ static void irmb_dout(const irmb_ops *curop, UINT32 d)
 /* Convert microcode roms to a more usable form */
 static void load_oproms(running_machine *machine)
 {
-	UINT8 *MB = memory_region(machine, "proms") + 0x20;
+	UINT8 *MB = machine->region("proms")->base() + 0x20;
 	int i;
 
 	/* allocate RAM */
@@ -588,7 +588,7 @@ static void irmb_run(running_machine *machine)
 	UINT32 SP = 0;
 	UINT32 icount = 0;
 
-	profiler_mark_start(PROFILER_USER1);
+	g_profiler.start(PROFILER_USER1);
 
 	while ((prevop->flags & (FL_DPSEL | FL_carry)) != (FL_DPSEL | FL_carry))
 	{
@@ -841,7 +841,7 @@ default:	case 0x3f:	IXOR(irmb_din(curop), 0);							break;
 				irmb_latch = Y;
 		}
 	}
-	profiler_mark_end();
+	g_profiler.stop();
 
 	logerror("%d instructions for Mathbox \n", icount);
 

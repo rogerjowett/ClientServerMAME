@@ -396,10 +396,10 @@ static READ32_HANDLER( dragngun_service_r )
 static READ32_HANDLER( lockload_gun_mirror_r )
 {
 //logerror("%08x:Read gun %d\n",cpu_get_pc(space->cpu),offset);
-//return ((mame_rand(space->machine)%0xffff)<<16) | mame_rand(space->machine)%0xffff;
+//return ((space->machine->rand()%0xffff)<<16) | space->machine->rand()%0xffff;
 	if (offset) /* Mirror of player 1 and player 2 fire buttons */
-		return input_port_read(space->machine, "IN4") | ((mame_rand(space->machine)%0xff)<<16);
-	return input_port_read(space->machine, "IN3") | input_port_read(space->machine, "LIGHT0_X") | (input_port_read(space->machine, "LIGHT0_X")<<16) | (input_port_read(space->machine, "LIGHT0_X")<<24); //((mame_rand(space->machine)%0xff)<<16);
+		return input_port_read(space->machine, "IN4") | ((space->machine->rand()%0xff)<<16);
+	return input_port_read(space->machine, "IN3") | input_port_read(space->machine, "LIGHT0_X") | (input_port_read(space->machine, "LIGHT0_X")<<16) | (input_port_read(space->machine, "LIGHT0_X")<<24); //((space->machine->rand()%0xff)<<16);
 }
 
 static READ32_HANDLER( dragngun_prot_r )
@@ -495,7 +495,7 @@ static WRITE32_HANDLER( tattass_control_w )
 	static int readBitCount=0;
 	static int byteAddr=0;
 	eeprom_device *eeprom = space->machine->device<eeprom_device>("eeprom");
-	const address_space *eeprom_space = eeprom->space();
+	address_space *eeprom_space = eeprom->space();
 
 	/* Eprom in low byte */
 	if (mem_mask==0x000000ff) { /* Byte write to low byte only (different from word writing including low byte) */
@@ -545,7 +545,7 @@ static WRITE32_HANDLER( tattass_control_w )
 				int d=readBitCount/8;
 				int m=7-(readBitCount%8);
 				int a=(byteAddr+d)%1024;
-				int b=memory_read_byte(eeprom_space, a);
+				int b=eeprom_space->read_byte(a);
 
 				tattass_eprom_bit=(b>>m)&1;
 
@@ -562,7 +562,7 @@ static WRITE32_HANDLER( tattass_control_w )
 					int b=(buffer[24]<<7)|(buffer[25]<<6)|(buffer[26]<<5)|(buffer[27]<<4)
 						|(buffer[28]<<3)|(buffer[29]<<2)|(buffer[30]<<1)|(buffer[31]<<0);
 
-					memory_write_byte(eeprom_space, byteAddr, b);
+					eeprom_space->write_byte(byteAddr, b);
 				}
 				lastClock=data&0x20;
 				return;
@@ -577,7 +577,7 @@ static WRITE32_HANDLER( tattass_control_w )
 
 				/* Check for read command */
 				if (buffer[0] && buffer[1]) {
-					tattass_eprom_bit=(memory_read_byte(eeprom_space, byteAddr)>>7)&1;
+					tattass_eprom_bit=(eeprom_space->read_byte(byteAddr)>>7)&1;
 					readBitCount=1;
 					pendingCommand=1;
 				}
@@ -804,7 +804,7 @@ static ADDRESS_MAP_START( dragngun_map, ADDRESS_SPACE_PROGRAM, 32 )
 
 	AM_RANGE(0x300000, 0x3fffff) AM_ROM
 
-	AM_RANGE(0x400000, 0x400003) AM_DEVREADWRITE8("oki3", okim6295_r, okim6295_w, 0x000000ff)
+	AM_RANGE(0x400000, 0x400003) AM_DEVREADWRITE8_MODERN("oki3", okim6295_device, read, write, 0x000000ff)
 	AM_RANGE(0x410000, 0x410003) AM_WRITENOP /* Some kind of serial bit-stream - digital volume control? */
 	AM_RANGE(0x420000, 0x420003) AM_DEVREADWRITE("eeprom", dragngun_eeprom_r, dragngun_eeprom_w)
 	AM_RANGE(0x438000, 0x438003) AM_READ(dragngun_lightgun_r)
@@ -854,7 +854,7 @@ static ADDRESS_MAP_START( lockload_map, ADDRESS_SPACE_PROGRAM, 32 )
 
 	AM_RANGE(0x300000, 0x3fffff) AM_ROM
 
-	AM_RANGE(0x400000, 0x400003) AM_DEVREADWRITE8("oki3", okim6295_r, okim6295_w, 0x000000ff)
+	AM_RANGE(0x400000, 0x400003) AM_DEVREADWRITE8_MODERN("oki3", okim6295_device, read, write, 0x000000ff)
 	AM_RANGE(0x420000, 0x420003) AM_DEVREADWRITE("eeprom", dragngun_eeprom_r, dragngun_eeprom_w)
 //  AM_RANGE(0x430000, 0x43001f) AM_WRITE(dragngun_lightgun_w)
 //  AM_RANGE(0x438000, 0x438003) AM_READ(dragngun_lightgun_r)
@@ -979,8 +979,8 @@ static READ8_HANDLER(deco32_bsmt_status_r)
 static ADDRESS_MAP_START( sound_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x000000, 0x00ffff) AM_ROM
 	AM_RANGE(0x110000, 0x110001) AM_DEVREADWRITE("ymsnd", ym2151_r, ym2151_w)
-	AM_RANGE(0x120000, 0x120001) AM_DEVREADWRITE("oki1", okim6295_r, okim6295_w)
-	AM_RANGE(0x130000, 0x130001) AM_DEVREADWRITE("oki2", okim6295_r, okim6295_w)
+	AM_RANGE(0x120000, 0x120001) AM_DEVREADWRITE_MODERN("oki1", okim6295_device, read, write)
+	AM_RANGE(0x130000, 0x130001) AM_DEVREADWRITE_MODERN("oki2", okim6295_device, read, write)
 	AM_RANGE(0x140000, 0x140001) AM_READ(soundlatch_r)
 	AM_RANGE(0x1f0000, 0x1f1fff) AM_RAMBANK("bank8")
 	AM_RANGE(0x1fec00, 0x1fec01) AM_WRITE(h6280_timer_w)
@@ -1009,8 +1009,8 @@ static ADDRESS_MAP_START( nslasher_sound, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x7fff) AM_ROM
 	AM_RANGE(0x8000, 0x87ff) AM_RAM
 	AM_RANGE(0xa000, 0xa001) AM_DEVREADWRITE("ymsnd", ym2151_r, ym2151_w)
-	AM_RANGE(0xb000, 0xb000) AM_DEVREADWRITE("oki1", okim6295_r, okim6295_w)
-	AM_RANGE(0xc000, 0xc000) AM_DEVREADWRITE("oki2", okim6295_r, okim6295_w)
+	AM_RANGE(0xb000, 0xb000) AM_DEVREADWRITE_MODERN("oki1", okim6295_device, read, write)
+	AM_RANGE(0xc000, 0xc000) AM_DEVREADWRITE_MODERN("oki2", okim6295_device, read, write)
 	AM_RANGE(0xd000, 0xd000) AM_READ(latch_r)
 ADDRESS_MAP_END
 
@@ -1597,12 +1597,12 @@ GFXDECODE_END
 
 /**********************************************************************************/
 
-static void sound_irq(running_device *device, int state)
+static void sound_irq(device_t *device, int state)
 {
 	cputag_set_input_line(device->machine, "audiocpu", 1, state); /* IRQ 2 */
 }
 
-static void sound_irq_nslasher(running_device *device, int state)
+static void sound_irq_nslasher(device_t *device, int state)
 {
 	/* bit 0 of nslasher_sound_irq specifies IRQ from sound chip */
 	if (state)
@@ -1655,327 +1655,327 @@ static INTERRUPT_GEN( tattass_snd_interrupt )
 	cpu_set_input_line(device, M6809_FIRQ_LINE, HOLD_LINE);
 }
 
-static MACHINE_DRIVER_START( captaven )
+static MACHINE_CONFIG_START( captaven, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", ARM, XTAL_28MHz/4) /* verified on pcb (Data East 101 custom)*/
-	MDRV_CPU_PROGRAM_MAP(captaven_map)
-	MDRV_CPU_VBLANK_INT("screen", deco32_vbl_interrupt)
+	MCFG_CPU_ADD("maincpu", ARM, XTAL_28MHz/4) /* verified on pcb (Data East 101 custom)*/
+	MCFG_CPU_PROGRAM_MAP(captaven_map)
+	MCFG_CPU_VBLANK_INT("screen", deco32_vbl_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", H6280, XTAL_32_22MHz/4/3)  /* pin 10 is 32mhz/4, pin 14 is High so internal divisor is 3 (verified on pcb) */
-	MDRV_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_ADD("audiocpu", H6280, XTAL_32_22MHz/4/3)  /* pin 10 is 32mhz/4, pin 14 is High so internal divisor is 3 (verified on pcb) */
+	MCFG_CPU_PROGRAM_MAP(sound_map)
 
-	MDRV_MACHINE_RESET(deco32)
+	MCFG_MACHINE_RESET(deco32)
 
-	MDRV_TIMER_ADD("int_timer", interrupt_gen)
+	MCFG_TIMER_ADD("int_timer", interrupt_gen)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_BUFFERS_SPRITERAM)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_BUFFERS_SPRITERAM)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(42*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(42*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
 
-	MDRV_GFXDECODE(captaven)
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_GFXDECODE(captaven)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(captaven)
-	MDRV_VIDEO_EOF(captaven)
-	MDRV_VIDEO_UPDATE(captaven)
+	MCFG_VIDEO_START(captaven)
+	MCFG_VIDEO_EOF(captaven)
+	MCFG_VIDEO_UPDATE(captaven)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, XTAL_32_22MHz/9) /* verified on pcb */
-	MDRV_SOUND_CONFIG(ym2151_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.42)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.42)
+	MCFG_SOUND_ADD("ymsnd", YM2151, XTAL_32_22MHz/9) /* verified on pcb */
+	MCFG_SOUND_CONFIG(ym2151_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.42)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.42)
 
-	MDRV_OKIM6295_ADD("oki1", XTAL_32_22MHz/32, OKIM6295_PIN7_HIGH)  /* verified on pcb; pin 7 is floating to 2.5V (left unconnected), so I presume High */
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+	MCFG_OKIM6295_ADD("oki1", XTAL_32_22MHz/32, OKIM6295_PIN7_HIGH)  /* verified on pcb; pin 7 is floating to 2.5V (left unconnected), so I presume High */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
 
-	MDRV_OKIM6295_ADD("oki2", XTAL_32_22MHz/16, OKIM6295_PIN7_HIGH) /* verified on pcb; pin 7 is floating to 2.5V (left unconnected), so I presume High */
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.35)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.35)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki2", XTAL_32_22MHz/16, OKIM6295_PIN7_HIGH) /* verified on pcb; pin 7 is floating to 2.5V (left unconnected), so I presume High */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.35)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.35)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( fghthist )
+static MACHINE_CONFIG_START( fghthist, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", ARM, 28000000/4)
-	MDRV_CPU_PROGRAM_MAP(fghthist_map)
-	MDRV_CPU_VBLANK_INT("screen", deco32_vbl_interrupt)
+	MCFG_CPU_ADD("maincpu", ARM, 28000000/4)
+	MCFG_CPU_PROGRAM_MAP(fghthist_map)
+	MCFG_CPU_VBLANK_INT("screen", deco32_vbl_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", H6280, 32220000/8)
-	MDRV_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_ADD("audiocpu", H6280, 32220000/8)
+	MCFG_CPU_PROGRAM_MAP(sound_map)
 
-	MDRV_EEPROM_93C46_ADD("eeprom")
+	MCFG_EEPROM_93C46_ADD("eeprom")
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_BUFFERS_SPRITERAM )
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_BUFFERS_SPRITERAM )
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(42*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(42*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
 
-	MDRV_GFXDECODE(fghthist)
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_GFXDECODE(fghthist)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(fghthist)
-	MDRV_VIDEO_UPDATE(fghthist)
+	MCFG_VIDEO_START(fghthist)
+	MCFG_VIDEO_UPDATE(fghthist)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, 32220000/9)
-	MDRV_SOUND_CONFIG(ym2151_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.42)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.42)
+	MCFG_SOUND_ADD("ymsnd", YM2151, 32220000/9)
+	MCFG_SOUND_CONFIG(ym2151_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.42)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.42)
 
-	MDRV_OKIM6295_ADD("oki1", 32220000/32, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+	MCFG_OKIM6295_ADD("oki1", 32220000/32, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
 
-	MDRV_OKIM6295_ADD("oki2", 32220000/16, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.35)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.35)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki2", 32220000/16, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.35)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.35)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( fghthsta )
+static MACHINE_CONFIG_START( fghthsta, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", ARM, 28000000/4)
-	MDRV_CPU_PROGRAM_MAP(fghthsta_memmap)
-	MDRV_CPU_VBLANK_INT("screen", deco32_vbl_interrupt)
+	MCFG_CPU_ADD("maincpu", ARM, 28000000/4)
+	MCFG_CPU_PROGRAM_MAP(fghthsta_memmap)
+	MCFG_CPU_VBLANK_INT("screen", deco32_vbl_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", H6280, 32220000/8)
-	MDRV_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_ADD("audiocpu", H6280, 32220000/8)
+	MCFG_CPU_PROGRAM_MAP(sound_map)
 
-	MDRV_EEPROM_93C46_ADD("eeprom")
+	MCFG_EEPROM_93C46_ADD("eeprom")
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_BUFFERS_SPRITERAM )
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_BUFFERS_SPRITERAM )
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(42*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(42*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
 
-	MDRV_GFXDECODE(fghthist)
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_GFXDECODE(fghthist)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(fghthist)
-	MDRV_VIDEO_UPDATE(fghthist)
+	MCFG_VIDEO_START(fghthist)
+	MCFG_VIDEO_UPDATE(fghthist)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, 32220000/9)
-	MDRV_SOUND_CONFIG(ym2151_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.42)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.42)
+	MCFG_SOUND_ADD("ymsnd", YM2151, 32220000/9)
+	MCFG_SOUND_CONFIG(ym2151_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.42)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.42)
 
-	MDRV_OKIM6295_ADD("oki1", 32220000/32, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+	MCFG_OKIM6295_ADD("oki1", 32220000/32, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
 
-	MDRV_OKIM6295_ADD("oki2", 32220000/16, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.35)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.35)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki2", 32220000/16, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.35)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.35)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( dragngun )
+static MACHINE_CONFIG_START( dragngun, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", ARM, 28000000/4)
-	MDRV_CPU_PROGRAM_MAP(dragngun_map)
-	MDRV_CPU_VBLANK_INT("screen", deco32_vbl_interrupt)
+	MCFG_CPU_ADD("maincpu", ARM, 28000000/4)
+	MCFG_CPU_PROGRAM_MAP(dragngun_map)
+	MCFG_CPU_VBLANK_INT("screen", deco32_vbl_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", H6280, 32220000/8)
-	MDRV_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_ADD("audiocpu", H6280, 32220000/8)
+	MCFG_CPU_PROGRAM_MAP(sound_map)
 
-	MDRV_MACHINE_RESET(deco32)
-	MDRV_EEPROM_93C46_ADD("eeprom")
+	MCFG_MACHINE_RESET(deco32)
+	MCFG_EEPROM_93C46_ADD("eeprom")
 
-	MDRV_TIMER_ADD("int_timer", interrupt_gen)
+	MCFG_TIMER_ADD("int_timer", interrupt_gen)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_BUFFERS_SPRITERAM )
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_BUFFERS_SPRITERAM )
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(42*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(42*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
 
-	MDRV_GFXDECODE(dragngun)
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_GFXDECODE(dragngun)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(dragngun)
-	MDRV_VIDEO_UPDATE(dragngun)
-	MDRV_VIDEO_EOF(dragngun)
+	MCFG_VIDEO_START(dragngun)
+	MCFG_VIDEO_UPDATE(dragngun)
+	MCFG_VIDEO_EOF(dragngun)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, 32220000/9)
-	MDRV_SOUND_CONFIG(ym2151_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.42)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.42)
+	MCFG_SOUND_ADD("ymsnd", YM2151, 32220000/9)
+	MCFG_SOUND_CONFIG(ym2151_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.42)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.42)
 
-	MDRV_OKIM6295_ADD("oki1", 32220000/32, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+	MCFG_OKIM6295_ADD("oki1", 32220000/32, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
 
-	MDRV_OKIM6295_ADD("oki2", 32220000/16, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.35)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.35)
+	MCFG_OKIM6295_ADD("oki2", 32220000/16, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.35)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.35)
 
-	MDRV_OKIM6295_ADD("oki3", 32220000/32, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki3", 32220000/32, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( lockload )
+static MACHINE_CONFIG_START( lockload, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", ARM, 28000000/4)
-	MDRV_CPU_PROGRAM_MAP(lockload_map)
-	MDRV_CPU_VBLANK_INT_HACK(deco32_vbl_interrupt,2) // From 2
+	MCFG_CPU_ADD("maincpu", ARM, 28000000/4)
+	MCFG_CPU_PROGRAM_MAP(lockload_map)
+	MCFG_CPU_VBLANK_INT_HACK(deco32_vbl_interrupt,2) // From 2
 
-	MDRV_CPU_ADD("audiocpu", H6280, 32220000/8)
-	MDRV_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_ADD("audiocpu", H6280, 32220000/8)
+	MCFG_CPU_PROGRAM_MAP(sound_map)
 
-	MDRV_MACHINE_RESET(deco32)
-	MDRV_EEPROM_93C46_ADD("eeprom")
+	MCFG_MACHINE_RESET(deco32)
+	MCFG_EEPROM_93C46_ADD("eeprom")
 
-	MDRV_TIMER_ADD("int_timer", interrupt_gen)
+	MCFG_TIMER_ADD("int_timer", interrupt_gen)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_BUFFERS_SPRITERAM )
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_BUFFERS_SPRITERAM )
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(42*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(42*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
 
-	MDRV_GFXDECODE(dragngun)
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_GFXDECODE(dragngun)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(lockload)
-	MDRV_VIDEO_UPDATE(dragngun)
-	MDRV_VIDEO_EOF(dragngun)
+	MCFG_VIDEO_START(lockload)
+	MCFG_VIDEO_UPDATE(dragngun)
+	MCFG_VIDEO_EOF(dragngun)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, 32220000/9)
-	MDRV_SOUND_CONFIG(ym2151_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.42)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.42)
+	MCFG_SOUND_ADD("ymsnd", YM2151, 32220000/9)
+	MCFG_SOUND_CONFIG(ym2151_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.42)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.42)
 
-	MDRV_OKIM6295_ADD("oki1", 32220000/32, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+	MCFG_OKIM6295_ADD("oki1", 32220000/32, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
 
-	MDRV_OKIM6295_ADD("oki2", 32220000/16, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.35)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.35)
+	MCFG_OKIM6295_ADD("oki2", 32220000/16, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.35)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.35)
 
-	MDRV_OKIM6295_ADD("oki3", 32220000/32, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki3", 32220000/32, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( tattass )
+static MACHINE_CONFIG_START( tattass, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", ARM, 28000000/4) /* Unconfirmed */
-	MDRV_CPU_PROGRAM_MAP(tattass_map)
-	MDRV_CPU_VBLANK_INT("screen", deco32_vbl_interrupt)
+	MCFG_CPU_ADD("maincpu", ARM, 28000000/4) /* Unconfirmed */
+	MCFG_CPU_PROGRAM_MAP(tattass_map)
+	MCFG_CPU_VBLANK_INT("screen", deco32_vbl_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", M6809, 2000000)
-	MDRV_CPU_PROGRAM_MAP(tattass_sound_map)
-	MDRV_CPU_PERIODIC_INT(tattass_snd_interrupt, 489) /* Fixed FIRQ of 489Hz as measured on real (pinball) machine */
+	MCFG_CPU_ADD("audiocpu", M6809, 2000000)
+	MCFG_CPU_PROGRAM_MAP(tattass_sound_map)
+	MCFG_CPU_PERIODIC_INT(tattass_snd_interrupt, 489) /* Fixed FIRQ of 489Hz as measured on real (pinball) machine */
 
-	MDRV_EEPROM_ADD("eeprom", eeprom_interface_tattass)
+	MCFG_EEPROM_ADD("eeprom", eeprom_interface_tattass)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_BUFFERS_SPRITERAM )
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_BUFFERS_SPRITERAM )
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(42*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(42*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
 
-	MDRV_GFXDECODE(tattass)
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_GFXDECODE(tattass)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(nslasher)
-	MDRV_VIDEO_UPDATE(nslasher)
+	MCFG_VIDEO_START(nslasher)
+	MCFG_VIDEO_UPDATE(nslasher)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("bsmt", BSMT2000, 24000000)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("bsmt", BSMT2000, 24000000)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( nslasher )
+static MACHINE_CONFIG_START( nslasher, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", ARM, 28322000/4)
-	MDRV_CPU_PROGRAM_MAP(nslasher_map)
-	MDRV_CPU_VBLANK_INT("screen", deco32_vbl_interrupt)
+	MCFG_CPU_ADD("maincpu", ARM, 28322000/4)
+	MCFG_CPU_PROGRAM_MAP(nslasher_map)
+	MCFG_CPU_VBLANK_INT("screen", deco32_vbl_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 32220000/9)
-	MDRV_CPU_PROGRAM_MAP(nslasher_sound)
-	MDRV_CPU_IO_MAP(nslasher_io_sound)
+	MCFG_CPU_ADD("audiocpu", Z80, 32220000/9)
+	MCFG_CPU_PROGRAM_MAP(nslasher_sound)
+	MCFG_CPU_IO_MAP(nslasher_io_sound)
 
-	MDRV_QUANTUM_TIME(HZ(6000))	/* to improve main<->audio comms */
+	MCFG_QUANTUM_TIME(HZ(6000))	/* to improve main<->audio comms */
 
-	MDRV_EEPROM_93C46_ADD("eeprom")
+	MCFG_EEPROM_93C46_ADD("eeprom")
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_BUFFERS_SPRITERAM )
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_BUFFERS_SPRITERAM )
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(42*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(42*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
 
-	MDRV_GFXDECODE(nslasher)
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_GFXDECODE(nslasher)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(nslasher)
-	MDRV_VIDEO_UPDATE(nslasher)
+	MCFG_VIDEO_START(nslasher)
+	MCFG_VIDEO_UPDATE(nslasher)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, 32220000/9)
-	MDRV_SOUND_CONFIG(ym2151_interface_nslasher)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.40)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.40)
+	MCFG_SOUND_ADD("ymsnd", YM2151, 32220000/9)
+	MCFG_SOUND_CONFIG(ym2151_interface_nslasher)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.40)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.40)
 
-	MDRV_OKIM6295_ADD("oki1", 32220000/32, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.80)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.80)
+	MCFG_OKIM6295_ADD("oki1", 32220000/32, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.80)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.80)
 
-	MDRV_OKIM6295_ADD("oki2", 32220000/16, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.10)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.10)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki2", 32220000/16, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.10)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.10)
+MACHINE_CONFIG_END
 
 /**********************************************************************************/
 
@@ -2974,9 +2974,9 @@ static DRIVER_INIT( captaven )
 
 static DRIVER_INIT( dragngun )
 {
-	UINT32 *ROM = (UINT32 *)memory_region(machine, "maincpu");
-	const UINT8 *SRC_RAM = memory_region(machine, "gfx1");
-	UINT8 *DST_RAM = memory_region(machine, "gfx2");
+	UINT32 *ROM = (UINT32 *)machine->region("maincpu")->base();
+	const UINT8 *SRC_RAM = machine->region("gfx1")->base();
+	UINT8 *DST_RAM = machine->region("gfx2")->base();
 
 	deco74_decrypt_gfx(machine, "gfx1");
 	deco74_decrypt_gfx(machine, "gfx2");
@@ -2998,8 +2998,8 @@ static DRIVER_INIT( fghthist )
 
 static DRIVER_INIT( lockload )
 {
-	UINT8 *RAM = memory_region(machine, "maincpu");
-//  UINT32 *ROM = (UINT32 *)memory_region(machine, "maincpu");
+	UINT8 *RAM = machine->region("maincpu")->base();
+//  UINT32 *ROM = (UINT32 *)machine->region("maincpu")->base();
 
 	deco74_decrypt_gfx(machine, "gfx1");
 	deco74_decrypt_gfx(machine, "gfx2");
@@ -3015,7 +3015,7 @@ static DRIVER_INIT( lockload )
 
 static DRIVER_INIT( tattass )
 {
-	UINT8 *RAM = memory_region(machine, "gfx1");
+	UINT8 *RAM = machine->region("gfx1")->base();
 	UINT8 *tmp = auto_alloc_array(machine, UINT8, 0x80000);
 
 	/* Reorder bitplanes to make decoding easier */
@@ -3023,7 +3023,7 @@ static DRIVER_INIT( tattass )
 	memcpy(RAM+0x80000,RAM+0x100000,0x80000);
 	memcpy(RAM+0x100000,tmp,0x80000);
 
-	RAM = memory_region(machine, "gfx2");
+	RAM = machine->region("gfx2")->base();
 	memcpy(tmp,RAM+0x80000,0x80000);
 	memcpy(RAM+0x80000,RAM+0x100000,0x80000);
 	memcpy(RAM+0x100000,tmp,0x80000);
@@ -3036,7 +3036,7 @@ static DRIVER_INIT( tattass )
 
 static DRIVER_INIT( nslasher )
 {
-	UINT8 *RAM = memory_region(machine, "gfx1");
+	UINT8 *RAM = machine->region("gfx1")->base();
 	UINT8 *tmp = auto_alloc_array(machine, UINT8, 0x80000);
 
 	/* Reorder bitplanes to make decoding easier */
@@ -3044,7 +3044,7 @@ static DRIVER_INIT( nslasher )
 	memcpy(RAM+0x80000,RAM+0x100000,0x80000);
 	memcpy(RAM+0x100000,tmp,0x80000);
 
-	RAM = memory_region(machine, "gfx2");
+	RAM = machine->region("gfx2")->base();
 	memcpy(tmp,RAM+0x80000,0x80000);
 	memcpy(RAM+0x80000,RAM+0x100000,0x80000);
 	memcpy(RAM+0x100000,tmp,0x80000);

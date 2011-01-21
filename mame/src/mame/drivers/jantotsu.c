@@ -99,12 +99,11 @@ dumped by sayu
 #include "sound/sn76496.h"
 #include "sound/msm5205.h"
 
-class jantotsu_state
+class jantotsu_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, jantotsu_state(machine)); }
-
-	jantotsu_state(running_machine &machine) { }
+	jantotsu_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* video-related */
 	UINT8    *bitmap;
@@ -129,7 +128,7 @@ public:
 
 static VIDEO_START(jantotsu)
 {
-	jantotsu_state *state = (jantotsu_state *)machine->driver_data;
+	jantotsu_state *state = machine->driver_data<jantotsu_state>();
 
 	state->bitmap = auto_alloc_array(machine, UINT8, 0x8000);
 	state_save_register_global_pointer(machine, state->bitmap, 0x8000);
@@ -137,7 +136,7 @@ static VIDEO_START(jantotsu)
 
 static VIDEO_UPDATE(jantotsu)
 {
-	jantotsu_state *state = (jantotsu_state *)screen->machine->driver_data;
+	jantotsu_state *state = screen->machine->driver_data<jantotsu_state>();
 	int x, y, i;
 	int count = 0;
 
@@ -174,19 +173,19 @@ static VIDEO_UPDATE(jantotsu)
 /* banked vram */
 static READ8_HANDLER( jantotsu_bitmap_r )
 {
-	jantotsu_state *state = (jantotsu_state *)space->machine->driver_data;
+	jantotsu_state *state = space->machine->driver_data<jantotsu_state>();
 	return state->bitmap[offset + ((state->vram_bank & 3) * 0x2000)];
 }
 
 static WRITE8_HANDLER( jantotsu_bitmap_w )
 {
-	jantotsu_state *state = (jantotsu_state *)space->machine->driver_data;
+	jantotsu_state *state = space->machine->driver_data<jantotsu_state>();
 	state->bitmap[offset + ((state->vram_bank & 3) * 0x2000)] = data;
 }
 
 static WRITE8_HANDLER( bankaddr_w )
 {
-	jantotsu_state *state = (jantotsu_state *)space->machine->driver_data;
+	jantotsu_state *state = space->machine->driver_data<jantotsu_state>();
 
 	state->vram_bank = ((data & 0xc0) >> 6); // top 2 bits?
 
@@ -230,7 +229,7 @@ static PALETTE_INIT( jantotsu )
 /*Multiplexer is mapped as 6-bits reads,bits 6 & 7 are always connected to the coin mechs.*/
 static READ8_HANDLER( jantotsu_mux_r )
 {
-	jantotsu_state *state = (jantotsu_state *)space->machine->driver_data;
+	jantotsu_state *state = space->machine->driver_data<jantotsu_state>();
 	UINT8 coin_port = input_port_read(space->machine, "COINS");
 
 	//  printf("%02x\n", state->mux_data);
@@ -252,7 +251,7 @@ static READ8_HANDLER( jantotsu_mux_r )
 
 static WRITE8_HANDLER( jantotsu_mux_w )
 {
-	jantotsu_state *state = (jantotsu_state *)space->machine->driver_data;
+	jantotsu_state *state = space->machine->driver_data<jantotsu_state>();
 	state->mux_data = ~data;
 }
 
@@ -267,7 +266,7 @@ static READ8_HANDLER( jantotsu_dsw2_r )
 
 static WRITE8_DEVICE_HANDLER( jan_adpcm_w )
 {
-	jantotsu_state *state = (jantotsu_state *)device->machine->driver_data;
+	jantotsu_state *state = device->machine->driver_data<jantotsu_state>();
 
 	switch (offset)
 	{
@@ -290,9 +289,9 @@ static WRITE8_DEVICE_HANDLER( jan_adpcm_w )
 	}
 }
 
-static void jan_adpcm_int( running_device *device )
+static void jan_adpcm_int( device_t *device )
 {
-	jantotsu_state *state = (jantotsu_state *)device->machine->driver_data;
+	jantotsu_state *state = device->machine->driver_data<jantotsu_state>();
 
 	if (state->adpcm_pos >= 0x10000 || state->adpcm_idle)
 	{
@@ -302,7 +301,7 @@ static void jan_adpcm_int( running_device *device )
 	}
 	else
 	{
-		UINT8 *ROM = memory_region(device->machine, "adpcm");
+		UINT8 *ROM = device->machine->region("adpcm")->base();
 
 		state->adpcm_data = ((state->adpcm_trigger ? (ROM[state->adpcm_pos] & 0x0f) : (ROM[state->adpcm_pos] & 0xf0) >> 4));
 		msm5205_data_w(device, state->adpcm_data & 0xf);
@@ -477,7 +476,7 @@ static const msm5205_interface msm5205_config =
 
 static MACHINE_START( jantotsu )
 {
-	jantotsu_state *state = (jantotsu_state *)machine->driver_data;
+	jantotsu_state *state = machine->driver_data<jantotsu_state>();
 
 	state_save_register_global(machine, state->vram_bank);
 	state_save_register_global(machine, state->mux_data);
@@ -489,7 +488,7 @@ static MACHINE_START( jantotsu )
 
 static MACHINE_RESET( jantotsu )
 {
-	jantotsu_state *state = (jantotsu_state *)machine->driver_data;
+	jantotsu_state *state = machine->driver_data<jantotsu_state>();
 
 	/*Load hard-wired background color.*/
 	state->col_bank = (input_port_read(machine, "DSW2") & 0xc0) >> 3;
@@ -502,47 +501,44 @@ static MACHINE_RESET( jantotsu )
 	state->adpcm_trigger = 0;
 }
 
-static MACHINE_DRIVER_START( jantotsu )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(jantotsu_state)
+static MACHINE_CONFIG_START( jantotsu, jantotsu_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80,18432000/4)
-	MDRV_CPU_PROGRAM_MAP(jantotsu_map)
-	MDRV_CPU_IO_MAP(jantotsu_io)
-	MDRV_CPU_VBLANK_INT("screen", nmi_line_pulse)
+	MCFG_CPU_ADD("maincpu", Z80,18432000/4)
+	MCFG_CPU_PROGRAM_MAP(jantotsu_map)
+	MCFG_CPU_IO_MAP(jantotsu_io)
+	MCFG_CPU_VBLANK_INT("screen", nmi_line_pulse)
 
-	MDRV_MACHINE_START(jantotsu)
-	MDRV_MACHINE_RESET(jantotsu)
+	MCFG_MACHINE_START(jantotsu)
+	MCFG_MACHINE_RESET(jantotsu)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) //not accurate
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(256, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 256-1, 16, 240-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) //not accurate
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(256, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 256-1, 16, 240-1)
 
-	MDRV_PALETTE_INIT(jantotsu)
-	MDRV_PALETTE_LENGTH(0x20)
+	MCFG_PALETTE_INIT(jantotsu)
+	MCFG_PALETTE_LENGTH(0x20)
 
-	MDRV_VIDEO_START(jantotsu)
-	MDRV_VIDEO_UPDATE(jantotsu)
+	MCFG_VIDEO_START(jantotsu)
+	MCFG_VIDEO_UPDATE(jantotsu)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("sn1", SN76489A, 18432000/4)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_SOUND_ADD("sn1", SN76489A, 18432000/4)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MDRV_SOUND_ADD("sn2", SN76489A, 18432000/4)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_SOUND_ADD("sn2", SN76489A, 18432000/4)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MDRV_SOUND_ADD("adpcm", MSM5205, 384000)
-	MDRV_SOUND_CONFIG(msm5205_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("adpcm", MSM5205, 384000)
+	MCFG_SOUND_CONFIG(msm5205_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
+MACHINE_CONFIG_END
 
 
 /*************************************

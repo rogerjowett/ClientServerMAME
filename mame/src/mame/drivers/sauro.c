@@ -124,25 +124,8 @@ Stephh's notes (based on the games Z80 code and some tests) :
 #include "cpu/z80/z80.h"
 #include "sound/3812intf.h"
 #include "sound/sp0256.h"
-
-extern UINT8 *tecfri_videoram;
-extern UINT8 *tecfri_colorram;
-extern UINT8 *tecfri_videoram2;
-extern UINT8 *tecfri_colorram2;
-
-WRITE8_HANDLER( tecfri_videoram_w );
-WRITE8_HANDLER( tecfri_colorram_w );
-WRITE8_HANDLER( tecfri_videoram2_w );
-WRITE8_HANDLER( tecfri_colorram2_w );
-WRITE8_HANDLER( tecfri_scroll_bg_w );
-WRITE8_HANDLER( sauro_scroll_fg_w );
-WRITE8_HANDLER( sauro_palette_bank_w );
-
-VIDEO_START( sauro );
-VIDEO_START( trckydoc );
-
-VIDEO_UPDATE( sauro );
-VIDEO_UPDATE( trckydoc );
+#include "includes/sauro.h"
+#include "machine/nvram.h"
 
 
 static WRITE8_HANDLER( sauro_sound_command_w )
@@ -182,12 +165,12 @@ static WRITE8_DEVICE_HANDLER( adpcm_w )
 
 static ADDRESS_MAP_START( sauro_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0xdfff) AM_ROM
-	AM_RANGE(0xe000, 0xe7ff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
-	AM_RANGE(0xe800, 0xebff) AM_RAM AM_BASE_SIZE_GENERIC(spriteram)
-	AM_RANGE(0xf000, 0xf3ff) AM_RAM_WRITE(tecfri_videoram_w) AM_BASE(&tecfri_videoram)
-	AM_RANGE(0xf400, 0xf7ff) AM_RAM_WRITE(tecfri_colorram_w) AM_BASE(&tecfri_colorram)
-	AM_RANGE(0xf800, 0xfbff) AM_RAM_WRITE(tecfri_videoram2_w) AM_BASE(&tecfri_videoram2)
-	AM_RANGE(0xfc00, 0xffff) AM_RAM_WRITE(tecfri_colorram2_w) AM_BASE(&tecfri_colorram2)
+	AM_RANGE(0xe000, 0xe7ff) AM_RAM AM_SHARE("nvram")
+	AM_RANGE(0xe800, 0xebff) AM_RAM AM_BASE_SIZE_MEMBER(sauro_state, spriteram, spriteram_size)
+	AM_RANGE(0xf000, 0xf3ff) AM_RAM_WRITE(tecfri_videoram_w) AM_BASE_MEMBER(sauro_state, videoram)
+	AM_RANGE(0xf400, 0xf7ff) AM_RAM_WRITE(tecfri_colorram_w) AM_BASE_MEMBER(sauro_state, colorram)
+	AM_RANGE(0xf800, 0xfbff) AM_RAM_WRITE(tecfri_videoram2_w) AM_BASE_MEMBER(sauro_state, videoram2)
+	AM_RANGE(0xfc00, 0xffff) AM_RAM_WRITE(tecfri_colorram2_w) AM_BASE_MEMBER(sauro_state, colorram2)
 ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( sauro_io_map, ADDRESS_SPACE_IO, 8 )
@@ -228,10 +211,10 @@ ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( trckydoc_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0xdfff) AM_ROM
-	AM_RANGE(0xe000, 0xe7ff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
-	AM_RANGE(0xe800, 0xebff) AM_RAM AM_MIRROR(0x400) AM_BASE_SIZE_GENERIC(spriteram)
-	AM_RANGE(0xf000, 0xf3ff) AM_RAM_WRITE(tecfri_videoram_w) AM_BASE(&tecfri_videoram)
-	AM_RANGE(0xf400, 0xf7ff) AM_RAM_WRITE(tecfri_colorram_w) AM_BASE(&tecfri_colorram)
+	AM_RANGE(0xe000, 0xe7ff) AM_RAM AM_SHARE("nvram")
+	AM_RANGE(0xe800, 0xebff) AM_RAM AM_MIRROR(0x400) AM_BASE_SIZE_MEMBER(sauro_state, spriteram, spriteram_size)
+	AM_RANGE(0xf000, 0xf3ff) AM_RAM_WRITE(tecfri_videoram_w) AM_BASE_MEMBER(sauro_state, videoram)
+	AM_RANGE(0xf400, 0xf7ff) AM_RAM_WRITE(tecfri_colorram_w) AM_BASE_MEMBER(sauro_state, colorram)
 	AM_RANGE(0xf800, 0xf800) AM_READ_PORT("DSW1")
 	AM_RANGE(0xf808, 0xf808) AM_READ_PORT("DSW2")
 	AM_RANGE(0xf810, 0xf810) AM_READ_PORT("P1")
@@ -388,65 +371,64 @@ static INTERRUPT_GEN( sauro_interrupt )
 	cpu_set_input_line(device, 0, HOLD_LINE);
 }
 
-static MACHINE_DRIVER_START( tecfri )
-	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, XTAL_20MHz/4)       /* verified on pcb */
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+static MACHINE_CONFIG_START( tecfri, sauro_state )
 
-	MDRV_NVRAM_HANDLER(generic_1fill)
+	/* basic machine hardware */
+	MCFG_CPU_ADD("maincpu", Z80, XTAL_20MHz/4)       /* verified on pcb */
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
+
+	MCFG_NVRAM_ADD_1FILL("nvram")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(55.72)   /* verified on pcb */
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(5000))  // frames per second, vblank duration (otherwise sprites lag)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32 * 8, 32 * 8)
-	MDRV_SCREEN_VISIBLE_AREA(1 * 8, 31 * 8 - 1, 2 * 8, 30 * 8 - 1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(55.72)   /* verified on pcb */
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(5000))  // frames per second, vblank duration (otherwise sprites lag)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32 * 8, 32 * 8)
+	MCFG_SCREEN_VISIBLE_AREA(1 * 8, 31 * 8 - 1, 2 * 8, 30 * 8 - 1)
 
-	MDRV_PALETTE_LENGTH(1024)
-	MDRV_PALETTE_INIT(RRRR_GGGG_BBBB)
+	MCFG_PALETTE_LENGTH(1024)
+	MCFG_PALETTE_INIT(RRRR_GGGG_BBBB)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM3812, XTAL_20MHz/8)       /* verified on pcb */
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM3812, XTAL_20MHz/8)       /* verified on pcb */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( trckydoc )
-	MDRV_IMPORT_FROM(tecfri)
+static MACHINE_CONFIG_DERIVED( trckydoc, tecfri )
 
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(trckydoc_map)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(trckydoc_map)
 
-	MDRV_GFXDECODE(trckydoc)
+	MCFG_GFXDECODE(trckydoc)
 
-	MDRV_VIDEO_START(trckydoc)
-	MDRV_VIDEO_UPDATE(trckydoc)
+	MCFG_VIDEO_START(trckydoc)
+	MCFG_VIDEO_UPDATE(trckydoc)
 
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( sauro )
-	MDRV_IMPORT_FROM(tecfri)
+static MACHINE_CONFIG_DERIVED( sauro, tecfri )
 
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(sauro_map)
-	MDRV_CPU_IO_MAP(sauro_io_map)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(sauro_map)
+	MCFG_CPU_IO_MAP(sauro_io_map)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 4000000)	// 4 MHz?
-	MDRV_CPU_PROGRAM_MAP(sauro_sound_map)
-	MDRV_CPU_PERIODIC_INT(sauro_interrupt, 8*60) // ?
+	MCFG_CPU_ADD("audiocpu", Z80, 4000000)	// 4 MHz?
+	MCFG_CPU_PROGRAM_MAP(sauro_sound_map)
+	MCFG_CPU_PERIODIC_INT(sauro_interrupt, 8*60) // ?
 
-	MDRV_GFXDECODE(sauro)
+	MCFG_GFXDECODE(sauro)
 
-	MDRV_VIDEO_START(sauro)
-	MDRV_VIDEO_UPDATE(sauro)
+	MCFG_VIDEO_START(sauro)
+	MCFG_VIDEO_UPDATE(sauro)
 
-	MDRV_SOUND_ADD("speech", SP0256, 3120000)
-	MDRV_SOUND_CONFIG(sauro_sp256)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("speech", SP0256, 3120000)
+	MCFG_SOUND_CONFIG(sauro_sp256)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 /***************************************************************************
 
@@ -539,7 +521,7 @@ static DRIVER_INIT( tecfri )
 	/* This game doesn't like all memory to be initialized to zero, it won't
        initialize the high scores */
 
-	UINT8 *RAM = memory_region(machine, "maincpu");
+	UINT8 *RAM = machine->region("maincpu")->base();
 
 	memset(&RAM[0xe000], 0, 0x100);
 	RAM[0xe000] = 1;

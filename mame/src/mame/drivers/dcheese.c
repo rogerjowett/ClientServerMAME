@@ -47,9 +47,9 @@
  *
  *************************************/
 
-static void update_irq_state( running_device *cpu )
+static void update_irq_state( device_t *cpu )
 {
-	dcheese_state *state = (dcheese_state *)cpu->machine->driver_data;
+	dcheese_state *state = cpu->machine->driver_data<dcheese_state>();
 
 	int i;
 	for (i = 1; i < 5; i++)
@@ -59,7 +59,7 @@ static void update_irq_state( running_device *cpu )
 
 static IRQ_CALLBACK( irq_callback )
 {
-	dcheese_state *state = (dcheese_state *)device->machine->driver_data;
+	dcheese_state *state = device->machine->driver_data<dcheese_state>();
 
 	/* auto-ack the IRQ */
 	state->irq_state[irqline] = 0;
@@ -72,7 +72,7 @@ static IRQ_CALLBACK( irq_callback )
 
 void dcheese_signal_irq( running_machine *machine, int which )
 {
-	dcheese_state *state = (dcheese_state *)machine->driver_data;
+	dcheese_state *state = machine->driver_data<dcheese_state>();
 
 	state->irq_state[which] = 1;
 	update_irq_state(state->maincpu);
@@ -95,7 +95,7 @@ static INTERRUPT_GEN( dcheese_vblank )
 
 static MACHINE_START( dcheese )
 {
-	dcheese_state *state = (dcheese_state *)machine->driver_data;
+	dcheese_state *state = machine->driver_data<dcheese_state>();
 
 	state->maincpu = machine->device("maincpu");
 	state->audiocpu = machine->device("audiocpu");
@@ -119,7 +119,7 @@ static MACHINE_START( dcheese )
 
 static CUSTOM_INPUT( sound_latch_state_r )
 {
-	dcheese_state *state = (dcheese_state *)field->port->machine->driver_data;
+	dcheese_state *state = field->port->machine->driver_data<dcheese_state>();
 	return state->soundlatch_full;
 }
 
@@ -138,7 +138,7 @@ static WRITE16_HANDLER( eeprom_control_w )
 
 static WRITE16_HANDLER( sound_command_w )
 {
-	dcheese_state *state = (dcheese_state *)space->machine->driver_data;
+	dcheese_state *state = space->machine->driver_data<dcheese_state>();
 
 	if (ACCESSING_BITS_0_7)
 	{
@@ -159,7 +159,7 @@ static WRITE16_HANDLER( sound_command_w )
 
 static READ8_HANDLER( sound_command_r )
 {
-	dcheese_state *state = (dcheese_state *)space->machine->driver_data;
+	dcheese_state *state = space->machine->driver_data<dcheese_state>();
 
 	/* read the latch and clear the IRQ */
 	state->soundlatch_full = 0;
@@ -177,7 +177,7 @@ static READ8_HANDLER( sound_status_r )
 
 static WRITE8_HANDLER( sound_control_w )
 {
-	dcheese_state *state = (dcheese_state *)space->machine->driver_data;
+	dcheese_state *state = space->machine->driver_data<dcheese_state>();
 	UINT8 diff = data ^ state->sound_control;
 	state->sound_control = data;
 
@@ -192,7 +192,7 @@ static WRITE8_HANDLER( sound_control_w )
 
 static WRITE8_DEVICE_HANDLER( bsmt_data_w )
 {
-	dcheese_state *state = (dcheese_state *)device->machine->driver_data;
+	dcheese_state *state = device->machine->driver_data<dcheese_state>();
 
 	/* writes come in pairs; even bytes latch, odd bytes write */
 	if (offset % 2 == 0)
@@ -405,52 +405,48 @@ INPUT_PORTS_END
  *
  *************************************/
 
-static MACHINE_DRIVER_START( dcheese )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(dcheese_state)
+static MACHINE_CONFIG_START( dcheese, dcheese_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, MAIN_OSC)
-	MDRV_CPU_PROGRAM_MAP(main_cpu_map)
-	MDRV_CPU_VBLANK_INT("screen", dcheese_vblank)
+	MCFG_CPU_ADD("maincpu", M68000, MAIN_OSC)
+	MCFG_CPU_PROGRAM_MAP(main_cpu_map)
+	MCFG_CPU_VBLANK_INT("screen", dcheese_vblank)
 
-	MDRV_CPU_ADD("audiocpu", M6809, SOUND_OSC/16)
-	MDRV_CPU_PROGRAM_MAP(sound_cpu_map)
-	MDRV_CPU_PERIODIC_INT(irq1_line_hold, 480)	/* accurate for fredmem */
+	MCFG_CPU_ADD("audiocpu", M6809, SOUND_OSC/16)
+	MCFG_CPU_PROGRAM_MAP(sound_cpu_map)
+	MCFG_CPU_PERIODIC_INT(irq1_line_hold, 480)	/* accurate for fredmem */
 
-	MDRV_MACHINE_START(dcheese)
+	MCFG_MACHINE_START(dcheese)
 
-	MDRV_EEPROM_93C46_ADD("eeprom")
-	MDRV_TICKET_DISPENSER_ADD("ticket", 200, TICKET_MOTOR_ACTIVE_HIGH, TICKET_STATUS_ACTIVE_LOW)
+	MCFG_EEPROM_93C46_ADD("eeprom")
+	MCFG_TICKET_DISPENSER_ADD("ticket", 200, TICKET_MOTOR_ACTIVE_HIGH, TICKET_STATUS_ACTIVE_LOW)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(360, 262)	/* guess, need to see what the games write to the vid registers */
-	MDRV_SCREEN_VISIBLE_AREA(0, 319, 0, 239)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(360, 262)	/* guess, need to see what the games write to the vid registers */
+	MCFG_SCREEN_VISIBLE_AREA(0, 319, 0, 239)
 
-	MDRV_PALETTE_LENGTH(65534)
+	MCFG_PALETTE_LENGTH(65534)
 
-	MDRV_PALETTE_INIT(dcheese)
-	MDRV_VIDEO_START(dcheese)
-	MDRV_VIDEO_UPDATE(dcheese)
+	MCFG_PALETTE_INIT(dcheese)
+	MCFG_VIDEO_START(dcheese)
+	MCFG_VIDEO_UPDATE(dcheese)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("bsmt", BSMT2000, SOUND_OSC)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.2)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.2)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("bsmt", BSMT2000, SOUND_OSC)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.2)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.2)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( fredmem )
-	MDRV_IMPORT_FROM(dcheese)
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_VISIBLE_AREA(0, 359, 0, 239)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( fredmem, dcheese )
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_VISIBLE_AREA(0, 359, 0, 239)
+MACHINE_CONFIG_END
 
 
 

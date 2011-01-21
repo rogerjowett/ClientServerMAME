@@ -4,12 +4,11 @@
 
 *************************************************************************/
 
-class cbuster_state
+class cbuster_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, cbuster_state(machine)); }
-
-	cbuster_state(running_machine &machine) { }
+	cbuster_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT16 *  pf1_rowscroll;
@@ -23,9 +22,9 @@ public:
 	int       pri;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *audiocpu;
-	running_device *deco16ic;
+	device_t *maincpu;
+	device_t *audiocpu;
+	device_t *deco16ic;
 };
 
 

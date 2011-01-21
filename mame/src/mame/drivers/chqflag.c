@@ -28,7 +28,7 @@ static WRITE8_DEVICE_HANDLER( k007232_extvolume_w );
 
 static INTERRUPT_GEN( chqflag_interrupt )
 {
-	chqflag_state *state = (chqflag_state *)device->machine->driver_data;
+	chqflag_state *state = device->machine->driver_data<chqflag_state>();
 
 	if (cpu_getiloops(device) == 0)
 	{
@@ -44,9 +44,9 @@ static INTERRUPT_GEN( chqflag_interrupt )
 
 static WRITE8_HANDLER( chqflag_bankswitch_w )
 {
-	chqflag_state *state = (chqflag_state *)space->machine->driver_data;
+	chqflag_state *state = space->machine->driver_data<chqflag_state>();
 	int bankaddress;
-	UINT8 *RAM = memory_region(space->machine, "maincpu");
+	UINT8 *RAM = space->machine->region("maincpu")->base();
 
 	/* bits 0-4 = ROM bank # (0x00-0x11) */
 	bankaddress = 0x10000 + (data & 0x1f) * 0x4000;
@@ -75,7 +75,7 @@ static WRITE8_HANDLER( chqflag_bankswitch_w )
 
 static WRITE8_HANDLER( chqflag_vreg_w )
 {
-	chqflag_state *state = (chqflag_state *)space->machine->driver_data;
+	chqflag_state *state = space->machine->driver_data<chqflag_state>();
 
 	/* bits 0 & 1 = coin counters */
 	coin_counter_w(space->machine, 1, data & 0x01);
@@ -120,13 +120,13 @@ static WRITE8_HANDLER( chqflag_vreg_w )
 
 static WRITE8_HANDLER( select_analog_ctrl_w )
 {
-	chqflag_state *state = (chqflag_state *)space->machine->driver_data;
+	chqflag_state *state = space->machine->driver_data<chqflag_state>();
 	state->analog_ctrl = data;
 }
 
 static READ8_HANDLER( analog_read_r )
 {
-	chqflag_state *state = (chqflag_state *)space->machine->driver_data;
+	chqflag_state *state = space->machine->driver_data<chqflag_state>();
 	switch (state->analog_ctrl & 0x03)
 	{
 		case 0x00: return (state->accel = input_port_read(space->machine, "IN3"));	/* accelerator */
@@ -140,7 +140,7 @@ static READ8_HANDLER( analog_read_r )
 
 static WRITE8_HANDLER( chqflag_sh_irqtrigger_w )
 {
-	chqflag_state *state = (chqflag_state *)space->machine->driver_data;
+	chqflag_state *state = space->machine->driver_data<chqflag_state>();
 	soundlatch2_w(space, 0, data);
 	cpu_set_input_line(state->audiocpu, 0, HOLD_LINE);
 }
@@ -176,7 +176,7 @@ ADDRESS_MAP_END
 
 static WRITE8_HANDLER( k007232_bankswitch_w )
 {
-	chqflag_state *state = (chqflag_state *)space->machine->driver_data;
+	chqflag_state *state = space->machine->driver_data<chqflag_state>();
 	int bank_A, bank_B;
 
 	/* banks # for the 007232 (chip 1) */
@@ -290,9 +290,9 @@ INPUT_PORTS_END
 
 
 
-static void chqflag_ym2151_irq_w( running_device *device, int data )
+static void chqflag_ym2151_irq_w( device_t *device, int data )
 {
-	chqflag_state *state = (chqflag_state *)device->machine->driver_data;
+	chqflag_state *state = device->machine->driver_data<chqflag_state>();
 	cpu_set_input_line(state->audiocpu, INPUT_LINE_NMI, data ? ASSERT_LINE : CLEAR_LINE);
 }
 
@@ -302,7 +302,7 @@ static const ym2151_interface ym2151_config =
 	chqflag_ym2151_irq_w
 };
 
-static void volume_callback0( running_device *device, int v )
+static void volume_callback0( device_t *device, int v )
 {
 	k007232_set_volume(device, 0, (v & 0x0f) * 0x11, 0);
 	k007232_set_volume(device, 1, 0, (v >> 4) * 0x11);
@@ -313,7 +313,7 @@ static WRITE8_DEVICE_HANDLER( k007232_extvolume_w )
 	k007232_set_volume(device, 1, (data & 0x0f) * 0x11/2, (data >> 4) * 0x11/2);
 }
 
-static void volume_callback1( running_device *device, int v )
+static void volume_callback1( device_t *device, int v )
 {
 	k007232_set_volume(device, 0, (v & 0x0f) * 0x11/2, (v >> 4) * 0x11/2);
 }
@@ -354,8 +354,8 @@ static const k051316_interface chqflag_k051316_intf_2 =
 
 static MACHINE_START( chqflag )
 {
-	chqflag_state *state = (chqflag_state *)machine->driver_data;
-	UINT8 *ROM = memory_region(machine, "maincpu");
+	chqflag_state *state = machine->driver_data<chqflag_state>();
+	UINT8 *ROM = machine->region("maincpu")->base();
 
 	memory_configure_bank(machine, "bank1", 0, 4, &ROM[0x10000], 0x2000);
 
@@ -376,7 +376,7 @@ static MACHINE_START( chqflag )
 
 static MACHINE_RESET( chqflag )
 {
-	chqflag_state *state = (chqflag_state *)machine->driver_data;
+	chqflag_state *state = machine->driver_data<chqflag_state>();
 
 	state->k051316_readroms = 0;
 	state->last_vreg = 0;
@@ -385,64 +385,61 @@ static MACHINE_RESET( chqflag )
 	state->wheel = 0;
 }
 
-static MACHINE_DRIVER_START( chqflag )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(chqflag_state)
+static MACHINE_CONFIG_START( chqflag, chqflag_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", KONAMI,XTAL_24MHz/8)	/* 052001 (verified on pcb) */
-	MDRV_CPU_PROGRAM_MAP(chqflag_map)
-	MDRV_CPU_VBLANK_INT_HACK(chqflag_interrupt,16)	/* ? */
+	MCFG_CPU_ADD("maincpu", KONAMI,XTAL_24MHz/8)	/* 052001 (verified on pcb) */
+	MCFG_CPU_PROGRAM_MAP(chqflag_map)
+	MCFG_CPU_VBLANK_INT_HACK(chqflag_interrupt,16)	/* ? */
 
-	MDRV_CPU_ADD("audiocpu", Z80, XTAL_3_579545MHz) /* verified on pcb */
-	MDRV_CPU_PROGRAM_MAP(chqflag_sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL_3_579545MHz) /* verified on pcb */
+	MCFG_CPU_PROGRAM_MAP(chqflag_sound_map)
 
-	MDRV_QUANTUM_TIME(HZ(600))
+	MCFG_QUANTUM_TIME(HZ(600))
 
-	MDRV_MACHINE_START(chqflag)
-	MDRV_MACHINE_RESET(chqflag)
+	MCFG_MACHINE_START(chqflag)
+	MCFG_MACHINE_RESET(chqflag)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(12*8, (64-14)*8-1, 2*8, 30*8-1 )
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(12*8, (64-14)*8-1, 2*8, 30*8-1 )
 
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_VIDEO_START(chqflag)
-	MDRV_VIDEO_UPDATE(chqflag)
+	MCFG_VIDEO_START(chqflag)
+	MCFG_VIDEO_UPDATE(chqflag)
 
-	MDRV_K051960_ADD("k051960", chqflag_k051960_intf)
-	MDRV_K051316_ADD("k051316_1", chqflag_k051316_intf_1)
-	MDRV_K051316_ADD("k051316_2", chqflag_k051316_intf_2)
-	MDRV_K051733_ADD("k051733")
+	MCFG_K051960_ADD("k051960", chqflag_k051960_intf)
+	MCFG_K051316_ADD("k051316_1", chqflag_k051316_intf_1)
+	MCFG_K051316_ADD("k051316_2", chqflag_k051316_intf_2)
+	MCFG_K051733_ADD("k051733")
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, XTAL_3_579545MHz) /* verified on pcb */
-	MDRV_SOUND_CONFIG(ym2151_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.80)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.80)
+	MCFG_SOUND_ADD("ymsnd", YM2151, XTAL_3_579545MHz) /* verified on pcb */
+	MCFG_SOUND_CONFIG(ym2151_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.80)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.80)
 
-	MDRV_SOUND_ADD("k007232_1", K007232, XTAL_3_579545MHz) /* verified on pcb */
-	MDRV_SOUND_CONFIG(k007232_interface_1)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.20)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.20)
-	MDRV_SOUND_ROUTE(1, "lspeaker", 0.20)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.20)
+	MCFG_SOUND_ADD("k007232_1", K007232, XTAL_3_579545MHz) /* verified on pcb */
+	MCFG_SOUND_CONFIG(k007232_interface_1)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.20)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.20)
+	MCFG_SOUND_ROUTE(1, "lspeaker", 0.20)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.20)
 
-	MDRV_SOUND_ADD("k007232_2", K007232, XTAL_3_579545MHz) /* verified on pcb */
-	MDRV_SOUND_CONFIG(k007232_interface_2)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.20)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.20)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("k007232_2", K007232, XTAL_3_579545MHz) /* verified on pcb */
+	MCFG_SOUND_CONFIG(k007232_interface_2)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.20)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.20)
+MACHINE_CONFIG_END
 
 ROM_START( chqflag )
 	ROM_REGION( 0x58000, "maincpu", 0 )	/* 052001 code */

@@ -295,7 +295,7 @@ enum wd1770_status
 
 static TIMER_CALLBACK( fdc_data_callback )
 {
-	UINT8* disk = (UINT8*)memory_region(machine, "user1");
+	UINT8* disk = (UINT8*)machine->region("user1")->base();
 	int more_data = 0;
 
 	/*
@@ -573,11 +573,11 @@ static INPUT_CHANGED( coin_inserted )
 	if (newval == 0)
 	{
 		UINT32 credit;
-		const address_space *space = cputag_get_address_space(field->port->machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+		address_space *space = cputag_get_address_space(field->port->machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 		/* Get the current credit value and add the new coin value */
-		credit = memory_read_dword(space, 0x8002c) + (UINT32)(FPTR)param;
-		memory_write_dword(space, 0x8002c, credit);
+		credit = space->read_dword(0x8002c) + (UINT32)(FPTR)param;
+		space->write_dword(0x8002c, credit);
 	}
 }
 
@@ -760,36 +760,36 @@ static MACHINE_RESET( guab )
 	memset(&fdc, 0, sizeof(fdc));
 }
 
-static MACHINE_DRIVER_START( guab )
+static MACHINE_CONFIG_START( guab, driver_device )
 	/* TODO: Verify clock */
-	MDRV_CPU_ADD("maincpu", M68000, 8000000)
-	MDRV_CPU_PROGRAM_MAP(guab_map)
+	MCFG_CPU_ADD("maincpu", M68000, 8000000)
+	MCFG_CPU_PROGRAM_MAP(guab_map)
 
-	MDRV_MACHINE_START(guab)
-	MDRV_MACHINE_RESET(guab)
+	MCFG_MACHINE_START(guab)
+	MCFG_MACHINE_RESET(guab)
 
 	/* TODO: Use real video timings */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0, 64*8-1, 0, 32*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0, 64*8-1, 0, 32*8-1)
 
-	MDRV_PALETTE_LENGTH(16)
+	MCFG_PALETTE_LENGTH(16)
 
-	MDRV_VIDEO_START(guab)
-	MDRV_VIDEO_UPDATE(guab)
+	MCFG_VIDEO_START(guab)
+	MCFG_VIDEO_UPDATE(guab)
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
 	/* TODO: Verify clock */
-	MDRV_SOUND_ADD("snsnd", SN76489, 2000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_SOUND_ADD("snsnd", SN76489, 2000000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
 	/* 6840 PTM */
-	MDRV_PTM6840_ADD("6840ptm", ptm_intf)
-MACHINE_DRIVER_END
+	MCFG_PTM6840_ADD("6840ptm", ptm_intf)
+MACHINE_CONFIG_END
 
 
 /*************************************

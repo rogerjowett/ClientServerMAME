@@ -73,7 +73,7 @@ static UINT8 ls259_buf[8] = {0,0,0,0,0,0,0,0};
 
 static WRITE8_DEVICE_HANDLER( bagman_ls259_w )
 {
-	const address_space *space = cputag_get_address_space(device->machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(device->machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 	bagman_pal16r6_w(space, offset,data); /*this is just a simulation*/
 
 	if (ls259_buf[offset] != (data&1) )
@@ -468,75 +468,75 @@ static const tms5110_interface bagman_tms5110_interface =
 	DEVCB_NULL										/* rom clock - Only used to drive the data lines */
 };
 
-static MACHINE_DRIVER_START( bagman )
+static MACHINE_CONFIG_START( bagman, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, BAGMAN_H0)
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_IO_MAP(main_portmap)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_assert)
+	MCFG_CPU_ADD("maincpu", Z80, BAGMAN_H0)
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_IO_MAP(main_portmap)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_assert)
 
-	MDRV_MACHINE_RESET(bagman)
+	MCFG_MACHINE_RESET(bagman)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_RAW_PARAMS(BAGMAN_HCLK, HTOTAL, HBEND, HBSTART, VTOTAL, VBEND, VBSTART)
-	MDRV_GFXDECODE(bagman)
-	MDRV_PALETTE_LENGTH(64)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_RAW_PARAMS(BAGMAN_HCLK, HTOTAL, HBEND, HBSTART, VTOTAL, VBEND, VBSTART)
+	MCFG_GFXDECODE(bagman)
+	MCFG_PALETTE_LENGTH(64)
 
-	MDRV_PALETTE_INIT(bagman)
-	MDRV_VIDEO_START(bagman)
-	MDRV_VIDEO_UPDATE(bagman)
+	MCFG_PALETTE_INIT(bagman)
+	MCFG_VIDEO_START(bagman)
+	MCFG_VIDEO_UPDATE(bagman)
 
-	MDRV_DEVICE_ADD("tmsprom", TMSPROM, 640000 / 2)  /* rom clock */
-	MDRV_DEVICE_CONFIG(prom_intf)
+	MCFG_DEVICE_ADD("tmsprom", TMSPROM, 640000 / 2)  /* rom clock */
+	MCFG_DEVICE_CONFIG(prom_intf)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("aysnd", AY8910, BAGMAN_H0 / 2)
-	MDRV_SOUND_CONFIG(ay8910_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
+	MCFG_SOUND_ADD("aysnd", AY8910, BAGMAN_H0 / 2)
+	MCFG_SOUND_CONFIG(ay8910_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
 
-	MDRV_SOUND_ADD("tms", TMS5110A, 640000)
-	MDRV_SOUND_CONFIG(bagman_tms5110_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("tms", TMS5110A, 640000)
+	MCFG_SOUND_CONFIG(bagman_tms5110_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( pickin )
+static MACHINE_CONFIG_START( pickin, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, BAGMAN_H0)
-	MDRV_CPU_PROGRAM_MAP(pickin_map)
-	MDRV_CPU_IO_MAP(main_portmap)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80, BAGMAN_H0)
+	MCFG_CPU_PROGRAM_MAP(pickin_map)
+	MCFG_CPU_IO_MAP(main_portmap)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_MACHINE_RESET(bagman)
+	MCFG_MACHINE_RESET(bagman)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_RAW_PARAMS(BAGMAN_HCLK, HTOTAL, HBEND, HBSTART, VTOTAL, VBEND, VBSTART)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_GFXDECODE(pickin)
-	MDRV_PALETTE_LENGTH(64)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_RAW_PARAMS(BAGMAN_HCLK, HTOTAL, HBEND, HBSTART, VTOTAL, VBEND, VBSTART)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_GFXDECODE(pickin)
+	MCFG_PALETTE_LENGTH(64)
 
-	MDRV_PALETTE_INIT(bagman)
-	MDRV_VIDEO_START(bagman)
-	MDRV_VIDEO_UPDATE(bagman)
+	MCFG_PALETTE_INIT(bagman)
+	MCFG_VIDEO_START(bagman)
+	MCFG_VIDEO_UPDATE(bagman)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("aysnd", AY8910, 1500000)
-	MDRV_SOUND_CONFIG(ay8910_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
+	MCFG_SOUND_ADD("aysnd", AY8910, 1500000)
+	MCFG_SOUND_CONFIG(ay8910_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
 
 	/* maybe */
-	MDRV_SOUND_ADD("ay2", AY8910, 1500000)
-	MDRV_SOUND_CONFIG(ay8910_interface_2)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ay2", AY8910, 1500000)
+	MCFG_SOUND_CONFIG(ay8910_interface_2)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
+MACHINE_CONFIG_END
 
 /*
 
@@ -556,46 +556,45 @@ z80
 */
 
 
-static MACHINE_DRIVER_START( botanic )
+static MACHINE_CONFIG_START( botanic, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, BAGMAN_H0)
-	MDRV_CPU_PROGRAM_MAP(pickin_map)
-	MDRV_CPU_IO_MAP(main_portmap)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80, BAGMAN_H0)
+	MCFG_CPU_PROGRAM_MAP(pickin_map)
+	MCFG_CPU_IO_MAP(main_portmap)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_MACHINE_RESET(bagman)
+	MCFG_MACHINE_RESET(bagman)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_RAW_PARAMS(BAGMAN_HCLK, HTOTAL, HBEND, HBSTART, VTOTAL, VBEND, VBSTART)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_RAW_PARAMS(BAGMAN_HCLK, HTOTAL, HBEND, HBSTART, VTOTAL, VBEND, VBSTART)
 
-	MDRV_GFXDECODE(bagman)
-	MDRV_PALETTE_LENGTH(64)
+	MCFG_GFXDECODE(bagman)
+	MCFG_PALETTE_LENGTH(64)
 
-	MDRV_PALETTE_INIT(bagman)
-	MDRV_VIDEO_START(bagman)
-	MDRV_VIDEO_UPDATE(bagman)
+	MCFG_PALETTE_INIT(bagman)
+	MCFG_VIDEO_START(bagman)
+	MCFG_VIDEO_UPDATE(bagman)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("aysnd", AY8910, 1500000)
-	MDRV_SOUND_CONFIG(ay8910_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
+	MCFG_SOUND_ADD("aysnd", AY8910, 1500000)
+	MCFG_SOUND_CONFIG(ay8910_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
 
-	MDRV_SOUND_ADD("ay2", AY8910, 1500000)
-	MDRV_SOUND_CONFIG(ay8910_interface_2)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ay2", AY8910, 1500000)
+	MCFG_SOUND_CONFIG(ay8910_interface_2)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( squaitsa )
-	MDRV_IMPORT_FROM( botanic )
-	MDRV_SOUND_MODIFY("aysnd")
-	MDRV_SOUND_CONFIG(ay8910_dial_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( squaitsa, botanic )
+	MCFG_SOUND_MODIFY("aysnd")
+	MCFG_SOUND_CONFIG(ay8910_dial_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************

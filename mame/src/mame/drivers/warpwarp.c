@@ -179,7 +179,7 @@ static WRITE8_HANDLER( geebee_out6_w )
 			/* n.c. */
 			break;
 		case 3:
-			geebee_sound_w(space,0,data);
+			geebee_sound_w(space->machine->device("geebee"),0,data);
 			break;
 	}
 }
@@ -226,17 +226,17 @@ static READ8_HANDLER( warpwarp_sw_r )
 }
 
 /* Read Dipswitches */
-static READ8_HANDLER( warpwarp_dsw1_r )
+static READ8_DEVICE_HANDLER( warpwarp_dsw1_r )
 {
-	return (input_port_read(space->machine, "DSW1") >> (offset & 7)) & 1;
+	return (input_port_read(device->machine, "DSW1") >> (offset & 7)) & 1;
 }
 
 /* Read mux Controller Inputs */
-static READ8_HANDLER( warpwarp_vol_r )
+static READ8_DEVICE_HANDLER( warpwarp_vol_r )
 {
 	int res;
 
-	res = input_port_read(space->machine, (flip_screen_get(space->machine) & 1) ? "VOLIN2" : "VOLIN1");
+	res = input_port_read(device->machine, (flip_screen_get(device->machine) & 1) ? "VOLIN2" : "VOLIN1");
 	if (handle_joystick)
 	{
 		if (res & 1) return 0x0f;
@@ -259,7 +259,7 @@ static WRITE8_HANDLER( warpwarp_out0_w )
 			warpwarp_ball_v = data;
 			break;
 		case 2:
-			warpwarp_sound_w(space,0,data);
+			warpwarp_sound_w(space->machine->device("warpwarp"),0,data);
 			break;
 		case 3:
 			watchdog_reset_w(space,0,data);
@@ -327,8 +327,8 @@ static ADDRESS_MAP_START( bombbee_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x4000, 0x47ff) AM_RAM_WRITE(warpwarp_videoram_w) AM_BASE(&warpwarp_videoram)
 	AM_RANGE(0x4800, 0x4fff) AM_ROM AM_REGION("gfx1", 0)
 	AM_RANGE(0x6000, 0x600f) AM_READWRITE(warpwarp_sw_r, warpwarp_out0_w)
-	AM_RANGE(0x6010, 0x601f) AM_READWRITE(warpwarp_vol_r, warpwarp_music1_w)
-	AM_RANGE(0x6020, 0x602f) AM_READWRITE(warpwarp_dsw1_r, warpwarp_music2_w)
+	AM_RANGE(0x6010, 0x601f) AM_DEVREADWRITE("warpwarp", warpwarp_vol_r, warpwarp_music1_w)
+	AM_RANGE(0x6020, 0x602f) AM_DEVREADWRITE("warpwarp", warpwarp_dsw1_r, warpwarp_music2_w)
 	AM_RANGE(0x6030, 0x603f) AM_WRITE(warpwarp_out3_w)
 ADDRESS_MAP_END
 
@@ -338,8 +338,8 @@ static ADDRESS_MAP_START( warpwarp_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x4000, 0x47ff) AM_RAM_WRITE(warpwarp_videoram_w) AM_BASE(&warpwarp_videoram)
 	AM_RANGE(0x4800, 0x4fff) AM_ROM AM_REGION("gfx1", 0)
 	AM_RANGE(0xc000, 0xc00f) AM_READWRITE(warpwarp_sw_r, warpwarp_out0_w)
-	AM_RANGE(0xc010, 0xc01f) AM_READWRITE(warpwarp_vol_r, warpwarp_music1_w)
-	AM_RANGE(0xc020, 0xc02f) AM_READWRITE(warpwarp_dsw1_r, warpwarp_music2_w)
+	AM_RANGE(0xc010, 0xc01f) AM_DEVREADWRITE("warpwarp", warpwarp_vol_r, warpwarp_music1_w)
+	AM_RANGE(0xc020, 0xc02f) AM_DEVREADWRITE("warpwarp", warpwarp_dsw1_r, warpwarp_music2_w)
 	AM_RANGE(0xc030, 0xc03f) AM_WRITE(warpwarp_out3_w)
 ADDRESS_MAP_END
 
@@ -722,79 +722,77 @@ GFXDECODE_END
 
 
 
-static MACHINE_DRIVER_START( geebee )
+static MACHINE_CONFIG_START( geebee, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", I8080, MASTER_CLOCK/9) /* verified on pcb */
-	MDRV_CPU_PROGRAM_MAP(geebee_map)
-	MDRV_CPU_IO_MAP(geebee_port_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", I8080, MASTER_CLOCK/9) /* verified on pcb */
+	MCFG_CPU_PROGRAM_MAP(geebee_map)
+	MCFG_CPU_IO_MAP(geebee_port_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_RAW_PARAMS(MASTER_CLOCK/3, 384, 0, 272, 264, 0, 224)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_RAW_PARAMS(MASTER_CLOCK/3, 384, 0, 272, 264, 0, 224)
 
-	MDRV_GFXDECODE(1k)
-	MDRV_PALETTE_LENGTH(4*2)
+	MCFG_GFXDECODE(1k)
+	MCFG_PALETTE_LENGTH(4*2)
 
-	MDRV_PALETTE_INIT(geebee)
-	MDRV_VIDEO_START(geebee)
-	MDRV_VIDEO_UPDATE(geebee)
+	MCFG_PALETTE_INIT(geebee)
+	MCFG_VIDEO_START(geebee)
+	MCFG_VIDEO_UPDATE(geebee)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("geebee", GEEBEE, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("geebee", GEEBEE, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( navarone )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM(geebee)
-
-	MDRV_GFXDECODE(2k)
-	MDRV_PALETTE_LENGTH(2*2+1)
-
-	MDRV_PALETTE_INIT(navarone)
-	MDRV_VIDEO_START(navarone)
-	MDRV_VIDEO_UPDATE(navarone)
-MACHINE_DRIVER_END
-
-static MACHINE_DRIVER_START( bombbee )
+static MACHINE_CONFIG_DERIVED( navarone, geebee )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", I8080, MASTER_CLOCK/9)		/* 18.432 MHz / 9 */
-	MDRV_CPU_PROGRAM_MAP(bombbee_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_assert)
+
+	MCFG_GFXDECODE(2k)
+	MCFG_PALETTE_LENGTH(2*2+1)
+
+	MCFG_PALETTE_INIT(navarone)
+	MCFG_VIDEO_START(navarone)
+	MCFG_VIDEO_UPDATE(navarone)
+MACHINE_CONFIG_END
+
+static MACHINE_CONFIG_START( bombbee, driver_device )
+
+	/* basic machine hardware */
+	MCFG_CPU_ADD("maincpu", I8080, MASTER_CLOCK/9)		/* 18.432 MHz / 9 */
+	MCFG_CPU_PROGRAM_MAP(bombbee_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_assert)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_RAW_PARAMS(MASTER_CLOCK/3, 384, 0, 272, 264, 0, 224)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_RAW_PARAMS(MASTER_CLOCK/3, 384, 0, 272, 264, 0, 224)
 
-	MDRV_GFXDECODE(color)
-	MDRV_PALETTE_LENGTH(2*256+1)
+	MCFG_GFXDECODE(color)
+	MCFG_PALETTE_LENGTH(2*256+1)
 
-	MDRV_PALETTE_INIT(warpwarp)
-	MDRV_VIDEO_START(warpwarp)
-	MDRV_VIDEO_UPDATE(warpwarp)
+	MCFG_PALETTE_INIT(warpwarp)
+	MCFG_VIDEO_START(warpwarp)
+	MCFG_VIDEO_UPDATE(warpwarp)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("warpwarp", WARPWARP, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("warpwarp", WARPWARP, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( warpwarp )
+static MACHINE_CONFIG_DERIVED( warpwarp, bombbee )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(bombbee)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(warpwarp_map)
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(warpwarp_map)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************

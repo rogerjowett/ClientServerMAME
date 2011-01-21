@@ -4,12 +4,11 @@
 
 *************************************************************************/
 
-class parodius_state
+class parodius_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, parodius_state(machine)); }
-
-	parodius_state(running_machine &machine) { }
+	parodius_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *    ram;
@@ -24,12 +23,12 @@ public:
 	//int        nmi_enabled;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *audiocpu;
-	running_device *k053260;
-	running_device *k052109;
-	running_device *k053245;
-	running_device *k053251;
+	device_t *maincpu;
+	device_t *audiocpu;
+	device_t *k053260;
+	device_t *k052109;
+	device_t *k053245;
+	device_t *k053251;
 };
 
 /*----------- defined in video/parodius.c -----------*/

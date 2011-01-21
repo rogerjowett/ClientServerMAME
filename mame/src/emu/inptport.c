@@ -1422,8 +1422,6 @@ int input_type_group(running_machine *machine, int type, int player)
 
 const input_seq *input_type_seq(running_machine *machine, int type, int player, input_seq_type seqtype)
 {
-	static const input_seq ip_none = SEQ_DEF_0;
-
 	assert((type >= 0) && (type < __ipt_max));
 	assert((player >= 0) && (player < MAX_PLAYERS));
 
@@ -1482,10 +1480,9 @@ int input_type_pressed(running_machine *machine, int type, int player)
             //Can't fast forward in netplay
             return 0;
         }
+        printf("WARNING (unsupported): CHECKING INPUT TYPE %d %d\n",type,player);
     }
-    printf("CHECKING INPUT TYPE %d %d...",type,player);
-	int retval = input_seq_pressed(machine, input_type_seq(machine, type, player, SEQ_TYPE_STANDARD));
-	printf("DONE\n");
+	int retval = input_seq_pressed_raw(machine, input_type_seq(machine, type, player, SEQ_TYPE_STANDARD));
 	return retval;
 }
 
@@ -1902,7 +1899,7 @@ static void init_port_types(running_machine *machine)
 	}
 
 	/* ask the OSD to customize the list */
-	osd_customize_input_type_list(&portdata->typestatelist->typedesc);
+	machine->osd().customize_input_type_list(&portdata->typestatelist->typedesc);
 
 	/* now iterate over the OSD-modified types */
 	for (curtype = portdata->typestatelist; curtype != NULL; curtype = curtype->next)
@@ -2472,12 +2469,12 @@ static void input_port_update_hook(running_machine *machine, const input_port_co
 }
 
 
-std::map< attotime, std::map<const input_seq*,char> > playerInput;
+std::map< attotime, std::map< pair<const input_field_config *,int> ,char> > playerInput;
 std::map< attotime, unsigned int > playerInputReceived;
 std::map<const input_field_config *,const input_field_config *> playerInputFieldMap[MAX_PLAYERS];
 extern attotime mostRecentReport;
 extern attotime mostRecentSentReport;
-attotime zeroInputMinTime;
+attotime zeroInputMinTime = {0,0};
 
 /*-------------------------------------------------
     frame_update - core logic for per-frame input
@@ -2522,7 +2519,7 @@ void deserializePlayerInputFromBuffer(running_machine *machine,int peerID,const 
 
 	if(playerInput.find(futureInputTime)==playerInput.end())
 	{
-	    playerInput[futureInputTime] = std::map<const input_seq*,char>();
+	    playerInput[futureInputTime] = std::map< pair<const input_field_config *,int> ,char>();
 	}
 	if(playerInputReceived.find(futureInputTime)==playerInputReceived.end())
 	{
@@ -2567,19 +2564,24 @@ void deserializePlayerInputFromBuffer(running_machine *machine,int peerID,const 
                         newfield=NULL;
                     }
                 }
-                if(newfield && input_field_seq(newfield,SEQ_TYPE_STANDARD)!=&ip_none)
+                if(newfield)
                 {
-                    //cout << "Des: " << newfield << ',' << input_field_seq(newfield,SEQ_TYPE_STANDARD) << endl;
-                    if(playerInput[futureInputTime].find(input_field_seq(newfield,SEQ_TYPE_STANDARD))!=playerInput[futureInputTime].end())
+                    //cout << "Des: " << field << " -> " << newfield << endl;
+                    if(playerInput[futureInputTime].find(pair<const input_field_config *,int>(newfield,SEQ_TYPE_STANDARD))!= playerInput[futureInputTime].end())
                     {
+                        cout << "Input collision\n";
                         //if(playerInput[futureInputTime][input_field_seq(newfield,SEQ_TYPE_STANDARD)] != buf[bufPos])
                             //printf("ERROR: INPUT COLLISION: %d (%d)\n",newfield->type,field->type);
+                        playerInput[futureInputTime][pair<const input_field_config *,int>(newfield,SEQ_TYPE_STANDARD)] |= buf[bufPos++];
                     }
-                    playerInput[futureInputTime][input_field_seq(newfield,SEQ_TYPE_STANDARD)] = buf[bufPos++];
+                    else
+                    {
+                        playerInput[futureInputTime][pair<const input_field_config *,int>(newfield,SEQ_TYPE_STANDARD)] = buf[bufPos++];
+                    }
                     if (field->state->analog != NULL)
                     {
-                        playerInput[futureInputTime][input_field_seq(newfield,SEQ_TYPE_INCREMENT)] = buf[bufPos++];
-                        playerInput[futureInputTime][input_field_seq(newfield,SEQ_TYPE_DECREMENT)] = buf[bufPos++];
+                        playerInput[futureInputTime][pair<const input_field_config *,int>(newfield,SEQ_TYPE_INCREMENT)] = buf[bufPos++];
+                        playerInput[futureInputTime][pair<const input_field_config *,int>(newfield,SEQ_TYPE_DECREMENT)] = buf[bufPos++];
                     }
                 }
                 else
@@ -2617,10 +2619,15 @@ static void frame_update(running_machine *machine)
 		    const input_field_config *field;
 		    for (field = port->fieldlist; field != NULL; field = field->next)
             {
+                //cout << "FIELD INFO: " << int(field->player) << " " << field->type << " " << field->category << endl;
                 if(field->player!=0)
                 {
                     //This mapping maps player 0 inputs to the other players
                     continue;
+                }
+                else if(field->type<=IPT_CATEGORY)
+                {
+                    //Don't map these psuedo-types
                 }
                 else
                 {
@@ -2640,6 +2647,11 @@ static void frame_update(running_machine *machine)
                         {
                             if(field==newField)
                                 continue;
+
+#ifdef MESS
+                            if(field->category%10 != newField->category%10)
+                                continue;
+#endif
 
                             int inputcount=1;
                             //Special cases,
@@ -2665,7 +2677,13 @@ static void frame_update(running_machine *machine)
                             //even though both are considered "player 1"
                             for(int a=0;a<inputcount;a++)
                             {
-                                if(int(newField->player)+a==0)
+                                int newPlayer = (int)newField->player;
+                                if(a)
+                                {
+                                    newPlayer = a;
+                                }
+
+                                if(newPlayer==0)
                                     continue;
 
                                 UINT32 tmpinputtype = field->type + a;
@@ -2673,17 +2691,18 @@ static void frame_update(running_machine *machine)
                                 {
                                     //The current field for player 0 is the newField for
                                     //player: newField->player
-                                    playerInputFieldMap[newField->player+a][field] = newField;
+                                    playerInputFieldMap[newPlayer][field] = newField;
                                     //if(field->name && newField->name)
                                     {
                                         //cout << field->name << " on player 0 maps to "
-                                            //<< newField->name << " on player " << int(newField->player)+a << "\n";
+                                            //<< newField->name << " on player " << newPlayer << "\n";
                                     }
                                     //else
                                     {
                                         cout << field->type << " on player 0 maps to "
-                                            << newField->type << " on player " << int(newField->player)+a << "\n";
+                                            << newField->type << " on player " << newPlayer << "\n";
                                     }
+                                    cout << field << " maps to " << newField << endl << endl;
                                 }
                             }
                         }
@@ -2714,11 +2733,11 @@ static void frame_update(running_machine *machine)
 	int delayFromPing=100; //Must be at least 50 because hasFutureInput needs a buffer since time isn't known fully
 	if(netClient)
 	{
-	    delayFromPing = max(delayFromPing,min(300,netClient->getLargestPing()*3/2));
+	    delayFromPing = max(delayFromPing,min(300,50+netClient->getLargestPing()));
 	}
 	if(netServer)
 	{
-	    delayFromPing = max(delayFromPing,min(300,netServer->getLargestPing()*3/2));
+	    delayFromPing = max(delayFromPing,min(300,50+netServer->getLargestPing()));
 	}
 	//if(options_get_int(mame_options(), OPTION_FIXED_LATENCY))
 	//delayFromPing = 200;
@@ -2737,13 +2756,13 @@ static void frame_update(running_machine *machine)
         processRawInput=true;
 	if(playerInput.find(futureInputTime)==playerInput.end())
 	{
-        playerInput[futureInputTime] = std::map<const input_seq*,char>();
+            playerInput[futureInputTime] = std::map< pair<const input_field_config *,int> ,char>();
 	}
 	if(playerInputReceived.find(futureInputTime)==playerInputReceived.end())
 	{
 	    playerInputReceived[futureInputTime] = 0;
 	}
-        playerInputReceived[futureInputTime] |= (1 << peerID);
+        //playerInputReceived[futureInputTime] |= (1 << peerID);
     }
     else
     {
@@ -2751,12 +2770,17 @@ static void frame_update(running_machine *machine)
         //return;
     }
 
+    if(!netClient && !netServer)
+    {
+        processRawInput=true;
+    }
+
 	render_target *mouse_target;
 	INT32 mouse_target_x;
 	INT32 mouse_target_y;
 	int mouse_button;
 
-profiler_mark_start(PROFILER_INPUT);
+g_profiler.start(PROFILER_INPUT);
 
 	/* record/playback information about the current frame */
 	playback_frame(machine, curtime);
@@ -2778,7 +2802,8 @@ profiler_mark_start(PROFILER_INPUT);
 	{
 		const char *tag = NULL;
 		input_port_value mask;
-		if (render_target_map_point_input(mouse_target, mouse_target_x, mouse_target_y, &tag, &mask, NULL, NULL))
+		float x, y;
+		if (mouse_target->map_point_input(mouse_target_x, mouse_target_y, tag, mask, x, y))
 			mouse_field = input_field_by_tag_and_mask(machine->m_portlist, tag, mask);
 	}
 
@@ -2811,6 +2836,7 @@ profiler_mark_start(PROFILER_INPUT);
     //cout << "Start Ser\n";
 	for (port = machine->m_portlist.first(); port != NULL; port = port->next())
 	{
+	    //cout << "port\n";
 		const input_field_config *field;
 		device_field_info *device_field;
 		input_port_value newvalue;
@@ -2822,6 +2848,7 @@ profiler_mark_start(PROFILER_INPUT);
 		/* now loop back and modify based on the inputs */
 		for (field = port->fieldlist; field != NULL; field = field->next)
 		{
+            //cout << "field\n";
 		    if((!netServer && !netClient) || (netServer && field->player==0) || (netClient && field->player==0))
 		    {
 		        const input_field_config *newfield = NULL;
@@ -2848,29 +2875,57 @@ profiler_mark_start(PROFILER_INPUT);
                         newfield=NULL;
                     }
 		        }
-		        if(processRawInput && newfield && input_field_seq(newfield,SEQ_TYPE_STANDARD)!=&ip_none)
+		        if(processRawInput && newfield)
 		        {
 		            //printf("CHECKING INPUT TYPE %d PLAYER %d...",newfield->type,newfield->player);
                     if(netClient && zeroInputMinTime>=curtime)
                     {
+                        //Just create a dummy report
+                        //Note that are aren't setting playerInput, this is because we need to use our own inputs as appropriate
                         //cout << "Ser: " << newfield << ',' << field << endl;
-                        sendBuf[sendBufLength++] = playerInput[futureInputTime][input_field_seq(newfield,SEQ_TYPE_STANDARD)] = 0;
+                        sendBuf[sendBufLength++] = 0;
                         if (newfield->state->analog != NULL)
                         {
-                            sendBuf[sendBufLength++] = playerInput[futureInputTime][input_field_seq(newfield,SEQ_TYPE_INCREMENT)] = 0;
-                            sendBuf[sendBufLength++] = playerInput[futureInputTime][input_field_seq(newfield,SEQ_TYPE_DECREMENT)] = 0;
+                            sendBuf[sendBufLength++] = 0;
+                            sendBuf[sendBufLength++] = 0;
+                        }
+                    }
+                    else if(input_field_seq(newfield,SEQ_TYPE_STANDARD)==&ip_none)
+                    {
+                        sendBuf[sendBufLength++] = 0;
+                        if (newfield->state->analog != NULL)
+                        {
+                            sendBuf[sendBufLength++] = 0;
+                            sendBuf[sendBufLength++] = 0;
                         }
                     }
                     else
                     {
                         //cout << "Ser: " << newfield << ',' << field << endl;
-                        sendBuf[sendBufLength++] = playerInput[futureInputTime][input_field_seq(newfield,SEQ_TYPE_STANDARD)] = (char)input_seq_pressed_raw(machine,input_field_seq(field,SEQ_TYPE_STANDARD));
+                    if(
+                       playerInput[futureInputTime].find(pair<const input_field_config *,int>(newfield,SEQ_TYPE_STANDARD)) !=
+                       playerInput[futureInputTime].end()
+                       )
+                    {
+                        cout << "Overwriting existing input!\n";
+                        sendBuf[sendBufLength++] = (char)input_seq_pressed_raw(machine,input_field_seq(field,SEQ_TYPE_STANDARD));
+                        playerInput[futureInputTime][pair<const input_field_config *,int>(newfield,SEQ_TYPE_STANDARD)] |= (char)input_seq_pressed_raw(machine,input_field_seq(field,SEQ_TYPE_STANDARD));
                         if (newfield->state->analog != NULL)
                         {
-                            sendBuf[sendBufLength++] = playerInput[futureInputTime][input_field_seq(newfield,SEQ_TYPE_INCREMENT)] = (char)input_seq_pressed_raw(machine,input_field_seq(field,SEQ_TYPE_INCREMENT));
-                            sendBuf[sendBufLength++] = playerInput[futureInputTime][input_field_seq(newfield,SEQ_TYPE_DECREMENT)] = (char)input_seq_pressed_raw(machine,input_field_seq(field,SEQ_TYPE_DECREMENT));
+                            sendBuf[sendBufLength++] = playerInput[futureInputTime][pair<const input_field_config *,int>(newfield,SEQ_TYPE_INCREMENT)] |= (char)input_seq_pressed_raw(machine,input_field_seq(field,SEQ_TYPE_INCREMENT));
+                            sendBuf[sendBufLength++] = playerInput[futureInputTime][pair<const input_field_config *,int>(newfield,SEQ_TYPE_DECREMENT)] |= (char)input_seq_pressed_raw(machine,input_field_seq(field,SEQ_TYPE_DECREMENT));
                         }
                     }
+                    else
+                    {
+                        sendBuf[sendBufLength++] = (char)input_seq_pressed_raw(machine,input_field_seq(field,SEQ_TYPE_STANDARD));
+                        if (newfield->state->analog != NULL)
+                        {
+                            sendBuf[sendBufLength++] = (char)input_seq_pressed_raw(machine,input_field_seq(field,SEQ_TYPE_INCREMENT));
+                            sendBuf[sendBufLength++] = (char)input_seq_pressed_raw(machine,input_field_seq(field,SEQ_TYPE_DECREMENT));
+                        }
+                    }
+		        }
                     //printf("DONE\n");
 		        }
                 else
@@ -2953,8 +3008,7 @@ profiler_mark_start(PROFILER_INPUT);
     }
     //cout << "Current time: " << curtime.seconds << '.' << curtime.attoseconds << endl;
 
-profiler_mark_end();
-    //printf("INPUT PORT END\n");
+g_profiler.stop();
 }
 
 
@@ -2980,13 +3034,13 @@ static void frame_update_digital_joysticks(running_machine *machine)
 				joystick->current = 0;
 
 				/* read all the associated ports */
-				if (joystick->field[JOYDIR_UP] != NULL && input_seq_pressed(machine, input_field_seq(joystick->field[JOYDIR_UP], SEQ_TYPE_STANDARD)))
+				if (joystick->field[JOYDIR_UP] != NULL && input_seq_pressed(machine, joystick->field[JOYDIR_UP], SEQ_TYPE_STANDARD))
 					joystick->current |= JOYDIR_UP_BIT;
-				if (joystick->field[JOYDIR_DOWN] != NULL && input_seq_pressed(machine, input_field_seq(joystick->field[JOYDIR_DOWN], SEQ_TYPE_STANDARD)))
+				if (joystick->field[JOYDIR_DOWN] != NULL && input_seq_pressed(machine, joystick->field[JOYDIR_DOWN], SEQ_TYPE_STANDARD))
 					joystick->current |= JOYDIR_DOWN_BIT;
-				if (joystick->field[JOYDIR_LEFT] != NULL && input_seq_pressed(machine, input_field_seq(joystick->field[JOYDIR_LEFT], SEQ_TYPE_STANDARD)))
+				if (joystick->field[JOYDIR_LEFT] != NULL && input_seq_pressed(machine, joystick->field[JOYDIR_LEFT], SEQ_TYPE_STANDARD))
 					joystick->current |= JOYDIR_LEFT_BIT;
-				if (joystick->field[JOYDIR_RIGHT] != NULL && input_seq_pressed(machine, input_field_seq(joystick->field[JOYDIR_RIGHT], SEQ_TYPE_STANDARD)))
+				if (joystick->field[JOYDIR_RIGHT] != NULL && input_seq_pressed(machine, joystick->field[JOYDIR_RIGHT], SEQ_TYPE_STANDARD))
 					joystick->current |= JOYDIR_RIGHT_BIT;
 
 				/* lock out opposing directions (left + right or up + down) */
@@ -3031,7 +3085,7 @@ static void frame_update_digital_joysticks(running_machine *machine)
 					if ((joystick->current4way & (JOYDIR_UP_BIT | JOYDIR_DOWN_BIT)) &&
 						(joystick->current4way & (JOYDIR_LEFT_BIT | JOYDIR_RIGHT_BIT)))
 					{
-						if (mame_rand(machine) & 1)
+						if (machine->rand() & 1)
 							joystick->current4way &= ~(JOYDIR_LEFT_BIT | JOYDIR_RIGHT_BIT);
 						else
 							joystick->current4way &= ~(JOYDIR_UP_BIT | JOYDIR_DOWN_BIT);
@@ -3117,7 +3171,7 @@ static void frame_update_analog_field(running_machine *machine, analog_field_sta
 
 	/* if the decrement code sequence is pressed, add the key delta to */
 	/* the accumulated delta; also note that the last input was a digital one */
-	if (input_seq_pressed(machine, input_field_seq(analog->field, SEQ_TYPE_DECREMENT)))
+	if (input_seq_pressed(machine, analog->field, SEQ_TYPE_DECREMENT))
 	{
 		keypressed = TRUE;
 		if (analog->delta != 0)
@@ -3129,7 +3183,7 @@ static void frame_update_analog_field(running_machine *machine, analog_field_sta
 	}
 
 	/* same for the increment code sequence */
-	if (input_seq_pressed(machine, input_field_seq(analog->field, SEQ_TYPE_INCREMENT)))
+	if (input_seq_pressed(machine, analog->field, SEQ_TYPE_INCREMENT))
 	{
 		keypressed = TRUE;
 		if (analog->delta)
@@ -3193,7 +3247,7 @@ static void frame_update_analog_field(running_machine *machine, analog_field_sta
 
 static int frame_get_digital_field_state(const input_field_config *field, int mouse_down)
 {
-	int curstate = mouse_down || input_seq_pressed(field->port->machine, input_field_seq(field, SEQ_TYPE_STANDARD));
+	int curstate = mouse_down || input_seq_pressed(field->port->machine, field, SEQ_TYPE_STANDARD);
 	int changed = FALSE;
 
 	/* if the state changed, look for switch down/switch up */
@@ -4828,7 +4882,7 @@ static time_t playback_init(running_machine *machine)
 
 	/* verify the header against the current game */
 	if (memcmp(machine->gamedrv->name, header + 0x14, strlen(machine->gamedrv->name) + 1) != 0)
-		fatalerror("Input file is for " GAMENOUN " '%s', not for current " GAMENOUN " '%s'\n", header + 0x14, machine->gamedrv->name);
+		mame_printf_info("Input file is for " GAMENOUN " '%s', not for current " GAMENOUN " '%s'\n", header + 0x14, machine->gamedrv->name);
 
 	/* enable compression */
 	mame_fcompress(portdata->playback_file, FCOMPRESS_MEDIUM);
@@ -5074,7 +5128,7 @@ static void record_frame(running_machine *machine, attotime curtime)
 		record_write_uint64(machine, curtime.attoseconds);
 
 		/* then the current speed */
-		record_write_uint32(machine, video_get_speed_percent(machine) * (double)(1 << 20));
+		record_write_uint32(machine, machine->video().speed_percent() * (double)(1 << 20));
 	}
 }
 

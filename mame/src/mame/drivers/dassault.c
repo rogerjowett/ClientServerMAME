@@ -170,7 +170,7 @@ static READ16_HANDLER( dassault_sub_control_r )
 
 static WRITE16_HANDLER( dassault_sound_w )
 {
-	dassault_state *state = (dassault_state *)space->machine->driver_data;
+	dassault_state *state = space->machine->driver_data<dassault_state>();
 	soundlatch_w(space, 0, data & 0xff);
 	cpu_set_input_line(state->audiocpu, 0, HOLD_LINE); /* IRQ1 */
 }
@@ -178,7 +178,7 @@ static WRITE16_HANDLER( dassault_sound_w )
 /* The CPU-CPU irq controller is overlaid onto the end of the shared memory */
 static READ16_HANDLER( dassault_irq_r )
 {
-	dassault_state *state = (dassault_state *)space->machine->driver_data;
+	dassault_state *state = space->machine->driver_data<dassault_state>();
 	switch (offset)
 	{
 	case 0: cpu_set_input_line(state->maincpu, 5, CLEAR_LINE); break;
@@ -189,7 +189,7 @@ static READ16_HANDLER( dassault_irq_r )
 
 static WRITE16_HANDLER( dassault_irq_w )
 {
-	dassault_state *state = (dassault_state *)space->machine->driver_data;
+	dassault_state *state = space->machine->driver_data<dassault_state>();
 	switch (offset)
 	{
 	case 0: cpu_set_input_line(state->maincpu, 5, ASSERT_LINE); break;
@@ -201,13 +201,13 @@ static WRITE16_HANDLER( dassault_irq_w )
 
 static WRITE16_HANDLER( shared_ram_w )
 {
-	dassault_state *state = (dassault_state *)space->machine->driver_data;
+	dassault_state *state = space->machine->driver_data<dassault_state>();
 	COMBINE_DATA(&state->shared_ram[offset]);
 }
 
 static READ16_HANDLER( shared_ram_r )
 {
-	dassault_state *state = (dassault_state *)space->machine->driver_data;
+	dassault_state *state = space->machine->driver_data<dassault_state>();
 	return state->shared_ram[offset];
 }
 
@@ -261,8 +261,8 @@ static ADDRESS_MAP_START( sound_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x000000, 0x00ffff) AM_ROM
 	AM_RANGE(0x100000, 0x100001) AM_DEVREADWRITE("ym1", ym2203_r, ym2203_w)
 	AM_RANGE(0x110000, 0x110001) AM_DEVREADWRITE("ym2", ym2151_r, ym2151_w)
-	AM_RANGE(0x120000, 0x120001) AM_DEVREADWRITE("oki1", okim6295_r, okim6295_w)
-	AM_RANGE(0x130000, 0x130001) AM_DEVREADWRITE("oki2", okim6295_r, okim6295_w)
+	AM_RANGE(0x120000, 0x120001) AM_DEVREADWRITE_MODERN("oki1", okim6295_device, read, write)
+	AM_RANGE(0x130000, 0x130001) AM_DEVREADWRITE_MODERN("oki2", okim6295_device, read, write)
 	AM_RANGE(0x140000, 0x140001) AM_READ(soundlatch_r)
 	AM_RANGE(0x1f0000, 0x1f1fff) AM_RAMBANK("bank8")
 	AM_RANGE(0x1fec00, 0x1fec01) AM_WRITE(h6280_timer_w)
@@ -511,15 +511,15 @@ GFXDECODE_END
 
 /**********************************************************************************/
 
-static void sound_irq(running_device *device, int state)
+static void sound_irq(device_t *device, int state)
 {
-	dassault_state *driver_state = (dassault_state *)device->machine->driver_data;
+	dassault_state *driver_state = device->machine->driver_data<dassault_state>();
 	cpu_set_input_line(driver_state->audiocpu, 1, state);
 }
 
 static WRITE8_DEVICE_HANDLER( sound_bankswitch_w )
 {
-	dassault_state *state = (dassault_state *)device->machine->driver_data;
+	dassault_state *state = device->machine->driver_data<dassault_state>();
 
 	/* the second OKIM6295 ROM is bank switched */
 	state->oki2->set_bank_base((data & 1) * 0x40000);
@@ -551,62 +551,59 @@ static const deco16ic_interface dassault_deco16ic_intf =
 	dassault_bank_callback
 };
 
-static MACHINE_DRIVER_START( dassault )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(dassault_state)
+static MACHINE_CONFIG_START( dassault, dassault_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 14000000) /* Accurate */
-	MDRV_CPU_PROGRAM_MAP(dassault_map)
-	MDRV_CPU_VBLANK_INT("screen", irq4_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, 14000000) /* Accurate */
+	MCFG_CPU_PROGRAM_MAP(dassault_map)
+	MCFG_CPU_VBLANK_INT("screen", irq4_line_hold)
 
-	MDRV_CPU_ADD("sub", M68000, 14000000) /* Accurate */
-	MDRV_CPU_PROGRAM_MAP(dassault_sub_map)
-	MDRV_CPU_VBLANK_INT("screen", irq5_line_hold)
+	MCFG_CPU_ADD("sub", M68000, 14000000) /* Accurate */
+	MCFG_CPU_PROGRAM_MAP(dassault_sub_map)
+	MCFG_CPU_VBLANK_INT("screen", irq5_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", H6280,32220000/8)	/* Accurate */
-	MDRV_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_ADD("audiocpu", H6280,32220000/8)	/* Accurate */
+	MCFG_CPU_PROGRAM_MAP(sound_map)
 
-	MDRV_QUANTUM_TIME(HZ(8400)) /* 140 CPU slices per frame */
+	MCFG_QUANTUM_TIME(HZ(8400)) /* 140 CPU slices per frame */
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_BUFFERS_SPRITERAM)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_BUFFERS_SPRITERAM)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(529))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(40*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(529))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(40*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
 
-	MDRV_GFXDECODE(dassault)
-	MDRV_PALETTE_LENGTH(4096)
+	MCFG_GFXDECODE(dassault)
+	MCFG_PALETTE_LENGTH(4096)
 
-	MDRV_VIDEO_UPDATE(dassault)
+	MCFG_VIDEO_UPDATE(dassault)
 
-	MDRV_DECO16IC_ADD("deco_custom", dassault_deco16ic_intf)
+	MCFG_DECO16IC_ADD("deco_custom", dassault_deco16ic_intf)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ym1", YM2203, 32220000/8)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.40)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.40)
+	MCFG_SOUND_ADD("ym1", YM2203, 32220000/8)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.40)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.40)
 
-	MDRV_SOUND_ADD("ym2", YM2151, 32220000/9)
-	MDRV_SOUND_CONFIG(ym2151_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.45)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.45)
+	MCFG_SOUND_ADD("ym2", YM2151, 32220000/9)
+	MCFG_SOUND_CONFIG(ym2151_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.45)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.45)
 
-	MDRV_OKIM6295_ADD("oki1", 1023924, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
+	MCFG_OKIM6295_ADD("oki1", 1023924, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
 
-	MDRV_OKIM6295_ADD("oki2", 2047848, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.25)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.25)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki2", 2047848, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.25)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.25)
+MACHINE_CONFIG_END
 
 /**********************************************************************************/
 
@@ -812,7 +809,7 @@ ROM_END
 
 static READ16_HANDLER( dassault_main_skip )
 {
-	dassault_state *state = (dassault_state *)space->machine->driver_data;
+	dassault_state *state = space->machine->driver_data<dassault_state>();
 	int ret = state->ram[0];
 
 	if (cpu_get_previouspc(space->cpu) == 0x1170 && ret & 0x8000)
@@ -823,7 +820,7 @@ static READ16_HANDLER( dassault_main_skip )
 
 static READ16_HANDLER( thndzone_main_skip )
 {
-	dassault_state *state = (dassault_state *)space->machine->driver_data;
+	dassault_state *state = space->machine->driver_data<dassault_state>();
 	int ret = state->ram[0];
 
 	if (cpu_get_pc(space->cpu) == 0x114c && ret & 0x8000)
@@ -834,8 +831,8 @@ static READ16_HANDLER( thndzone_main_skip )
 
 static DRIVER_INIT( dassault )
 {
-	const UINT8 *src = memory_region(machine, "gfx1");
-	UINT8 *dst = memory_region(machine, "gfx2");
+	const UINT8 *src = machine->region("gfx1")->base();
+	UINT8 *dst = machine->region("gfx2")->base();
 	UINT8 *tmp = auto_alloc_array(machine, UINT8, 0x80000);
 
 	/* Playfield 4 also has access to the char graphics, make things easier
@@ -854,8 +851,8 @@ static DRIVER_INIT( dassault )
 
 static DRIVER_INIT( thndzone )
 {
-	const UINT8 *src = memory_region(machine, "gfx1");
-	UINT8 *dst = memory_region(machine, "gfx2");
+	const UINT8 *src = machine->region("gfx1")->base();
+	UINT8 *dst = machine->region("gfx2")->base();
 	UINT8 *tmp = auto_alloc_array(machine, UINT8, 0x80000);
 
 	/* Playfield 4 also has access to the char graphics, make things easier

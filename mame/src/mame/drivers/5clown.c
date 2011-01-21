@@ -446,6 +446,7 @@
 #include "cpu/m6502/m6502.h"
 #include "video/mc6845.h"
 #include "machine/6821pia.h"
+#include "machine/nvram.h"
 #include "sound/ay8910.h"
 #include "sound/okim6295.h"
 
@@ -453,7 +454,7 @@ static UINT8 main_latch_d800;
 static UINT8 snd_latch_0800;
 static UINT8 snd_latch_0a02;
 static UINT8 ay8910_addr;
-static running_device *ay8910;
+static device_t *ay8910;
 
 
 /*************************
@@ -695,7 +696,7 @@ static WRITE8_HANDLER( snd_a02_w )
 *************************/
 
 static ADDRESS_MAP_START( fclown_map, ADDRESS_SPACE_PROGRAM, 8 )
-	AM_RANGE(0x0000, 0x07ff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0x0000, 0x07ff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0x0800, 0x0800) AM_DEVWRITE("crtc", mc6845_address_w)
 	AM_RANGE(0x0801, 0x0801) AM_DEVREADWRITE("crtc", mc6845_register_r, mc6845_register_w)
 	AM_RANGE(0x0844, 0x0847) AM_DEVREADWRITE("pia0", pia6821_r, pia6821_w)
@@ -773,8 +774,8 @@ static ADDRESS_MAP_START( fcaudio_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x07ff) AM_RAM
 	AM_RANGE(0x0800, 0x0800) AM_WRITE(snd_800_w)
 	AM_RANGE(0x0a02, 0x0a02) AM_WRITE(snd_a02_w)
-	AM_RANGE(0x0c04, 0x0c04) AM_DEVWRITE("oki6295", okim6295_w)
-	AM_RANGE(0x0c06, 0x0c06) AM_DEVREAD("oki6295", okim6295_r)
+	AM_RANGE(0x0c04, 0x0c04) AM_DEVWRITE_MODERN("oki6295", okim6295_device, write)
+	AM_RANGE(0x0c06, 0x0c06) AM_DEVREAD_MODERN("oki6295", okim6295_device, read)
 	AM_RANGE(0x0e06, 0x0e06) AM_READ(snd_e06_r)
 	AM_RANGE(0xe000, 0xffff) AM_ROM					/* ROM space */
 ADDRESS_MAP_END
@@ -1027,49 +1028,49 @@ static const ay8910_interface ay8910_config =
 *    Machine Drivers     *
 *************************/
 
-static MACHINE_DRIVER_START( fclown )
+static MACHINE_CONFIG_START( fclown, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6502, MASTER_CLOCK/8)	/* guess, seems ok */
-	MDRV_CPU_PROGRAM_MAP(fclown_map)
-	MDRV_CPU_VBLANK_INT("screen", nmi_line_pulse)
+	MCFG_CPU_ADD("maincpu", M6502, MASTER_CLOCK/8)	/* guess, seems ok */
+	MCFG_CPU_PROGRAM_MAP(fclown_map)
+	MCFG_CPU_VBLANK_INT("screen", nmi_line_pulse)
 
-	MDRV_CPU_ADD("audiocpu", M6502, MASTER_CLOCK/8)	/* guess, seems ok */
-	MDRV_CPU_PROGRAM_MAP(fcaudio_map)
+	MCFG_CPU_ADD("audiocpu", M6502, MASTER_CLOCK/8)	/* guess, seems ok */
+	MCFG_CPU_PROGRAM_MAP(fcaudio_map)
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
-	MDRV_PIA6821_ADD("pia0", fclown_pia0_intf)
-	MDRV_PIA6821_ADD("pia1", fclown_pia1_intf)
+	MCFG_PIA6821_ADD("pia0", fclown_pia0_intf)
+	MCFG_PIA6821_ADD("pia1", fclown_pia1_intf)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE((39+1)*8, (31+1)*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 0*8, 32*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE((39+1)*8, (31+1)*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 0*8, 32*8-1)
 
-	MDRV_GFXDECODE(fclown)
-	MDRV_PALETTE_LENGTH(256)
-	MDRV_PALETTE_INIT(fclown)
+	MCFG_GFXDECODE(fclown)
+	MCFG_PALETTE_LENGTH(256)
+	MCFG_PALETTE_INIT(fclown)
 
-	MDRV_VIDEO_START(fclown)
-	MDRV_VIDEO_UPDATE(fclown)
+	MCFG_VIDEO_START(fclown)
+	MCFG_VIDEO_UPDATE(fclown)
 
-	MDRV_MC6845_ADD("crtc", MC6845, MASTER_CLOCK/16, mc6845_intf) /* guess */
+	MCFG_MC6845_ADD("crtc", MC6845, MASTER_CLOCK/16, mc6845_intf) /* guess */
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ay8910", AY8910, MASTER_CLOCK/8)		/* guess, seems ok */
-	MDRV_SOUND_CONFIG(ay8910_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
+	MCFG_SOUND_ADD("ay8910", AY8910, MASTER_CLOCK/8)		/* guess, seems ok */
+	MCFG_SOUND_CONFIG(ay8910_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
 
-	MDRV_OKIM6295_ADD("oki6295", MASTER_CLOCK/12, OKIM6295_PIN7_LOW)	/* guess, seems ok; pin7 guessed, seems ok */
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.20)
+	MCFG_OKIM6295_ADD("oki6295", MASTER_CLOCK/12, OKIM6295_PIN7_LOW)	/* guess, seems ok; pin7 guessed, seems ok */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.20)
 
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
 
 /*************************
@@ -1179,7 +1180,7 @@ static DRIVER_INIT( fclown )
     /* Decrypting main program */
 
 	int x;
-	UINT8 *src = memory_region( machine, "maincpu" );
+	UINT8 *src = machine->region( "maincpu" )->base();
 
 	for (x = 0x0000; x < 0x10000; x++)
 	{
@@ -1189,8 +1190,8 @@ static DRIVER_INIT( fclown )
 
     /* Decrypting GFX by segments */
 
-	UINT8 *gfx1_src = memory_region( machine, "gfx1" );
-	UINT8 *gfx2_src = memory_region( machine, "gfx2" );
+	UINT8 *gfx1_src = machine->region( "gfx1" )->base();
+	UINT8 *gfx2_src = machine->region( "gfx2" )->base();
 
 	for (x = 0x2000; x < 0x3000; x++)
 	{
@@ -1210,7 +1211,7 @@ static DRIVER_INIT( fclown )
 
     /* Decrypting sound samples */
 
-	UINT8 *samples_src = memory_region( machine, "oki6295" );
+	UINT8 *samples_src = machine->region( "oki6295" )->base();
 
 	for (x = 0x0000; x < 0x10000; x++)
 	{

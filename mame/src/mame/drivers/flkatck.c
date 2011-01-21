@@ -22,7 +22,7 @@
 
 static INTERRUPT_GEN( flkatck_interrupt )
 {
-	flkatck_state *state = (flkatck_state *)device->machine->driver_data;
+	flkatck_state *state = device->machine->driver_data<flkatck_state>();
 
 	if (state->irq_enabled)
 		cpu_set_input_line(device, HD6309_IRQ_LINE, HOLD_LINE);
@@ -62,7 +62,7 @@ static READ8_HANDLER( flkatck_ls138_r )
 
 static WRITE8_HANDLER( flkatck_ls138_w )
 {
-	flkatck_state *state = (flkatck_state *)space->machine->driver_data;
+	flkatck_state *state = space->machine->driver_data<flkatck_state>();
 
 	switch ((offset & 0x1c) >> 2)
 	{
@@ -84,13 +84,13 @@ static WRITE8_HANDLER( flkatck_ls138_w )
 /* Protection - an external multiplyer connected to the sound CPU */
 static READ8_HANDLER( multiply_r )
 {
-	flkatck_state *state = (flkatck_state *)space->machine->driver_data;
+	flkatck_state *state = space->machine->driver_data<flkatck_state>();
 	return (state->multiply_reg[0] * state->multiply_reg[1]) & 0xff;
 }
 
 static WRITE8_HANDLER( multiply_w )
 {
-	flkatck_state *state = (flkatck_state *)space->machine->driver_data;
+	flkatck_state *state = space->machine->driver_data<flkatck_state>();
 	state->multiply_reg[offset] = data;
 }
 
@@ -183,7 +183,7 @@ static GFXDECODE_START( flkatck )
 	GFXDECODE_ENTRY( "gfx1", 0, gfxlayout, 0, 32 )
 GFXDECODE_END
 
-static void volume_callback0(running_device *device, int v)
+static void volume_callback0(device_t *device, int v)
 {
 	k007232_set_volume(device, 0, (v >> 4) * 0x11, 0);
 	k007232_set_volume(device, 1, 0, (v & 0x0f) * 0x11);
@@ -197,8 +197,8 @@ static const k007232_interface k007232_config =
 
 static MACHINE_START( flkatck )
 {
-	flkatck_state *state = (flkatck_state *)machine->driver_data;
-	UINT8 *ROM = memory_region(machine, "maincpu");
+	flkatck_state *state = machine->driver_data<flkatck_state>();
+	UINT8 *ROM = machine->region("maincpu")->base();
 
 	memory_configure_bank(machine, "bank1", 0, 3, &ROM[0x10000], 0x2000);
 
@@ -212,7 +212,7 @@ static MACHINE_START( flkatck )
 
 static MACHINE_RESET( flkatck )
 {
-	flkatck_state *state = (flkatck_state *)machine->driver_data;
+	flkatck_state *state = machine->driver_data<flkatck_state>();
 
 	k007232_set_bank(machine->device("konami"), 0, 1);
 
@@ -222,54 +222,51 @@ static MACHINE_RESET( flkatck )
 	state->flipscreen = 0;
 }
 
-static MACHINE_DRIVER_START( flkatck )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(flkatck_state)
+static MACHINE_CONFIG_START( flkatck, flkatck_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", HD6309,3000000*4) /* HD63C09EP, 24/8 MHz */
-	MDRV_CPU_PROGRAM_MAP(flkatck_map)
-	MDRV_CPU_VBLANK_INT("screen", flkatck_interrupt)
+	MCFG_CPU_ADD("maincpu", HD6309,3000000*4) /* HD63C09EP, 24/8 MHz */
+	MCFG_CPU_PROGRAM_MAP(flkatck_map)
+	MCFG_CPU_VBLANK_INT("screen", flkatck_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z80,3579545)	/* NEC D780C-1, 3.579545 MHz */
-	MDRV_CPU_PROGRAM_MAP(flkatck_sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80,3579545)	/* NEC D780C-1, 3.579545 MHz */
+	MCFG_CPU_PROGRAM_MAP(flkatck_sound_map)
 
-	MDRV_QUANTUM_TIME(HZ(600))
+	MCFG_QUANTUM_TIME(HZ(600))
 
-	MDRV_MACHINE_START(flkatck)
-	MDRV_MACHINE_RESET(flkatck)
+	MCFG_MACHINE_START(flkatck)
+	MCFG_MACHINE_RESET(flkatck)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(37*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 35*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(37*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 35*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(flkatck)
-	MDRV_PALETTE_LENGTH(512)
+	MCFG_GFXDECODE(flkatck)
+	MCFG_PALETTE_LENGTH(512)
 
-	MDRV_VIDEO_START(flkatck)
-	MDRV_VIDEO_UPDATE(flkatck)
+	MCFG_VIDEO_START(flkatck)
+	MCFG_VIDEO_UPDATE(flkatck)
 
-	MDRV_K007121_ADD("k007121")
+	MCFG_K007121_ADD("k007121")
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, 3579545)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM2151, 3579545)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
 
-	MDRV_SOUND_ADD("konami", K007232, 3579545)
-	MDRV_SOUND_CONFIG(k007232_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.50)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.50)
-	MDRV_SOUND_ROUTE(1, "lspeaker", 0.50)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("konami", K007232, 3579545)
+	MCFG_SOUND_CONFIG(k007232_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.50)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.50)
+	MCFG_SOUND_ROUTE(1, "lspeaker", 0.50)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.50)
+MACHINE_CONFIG_END
 
 
 

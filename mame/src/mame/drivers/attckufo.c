@@ -46,22 +46,21 @@ LOIPOIO-B
 #include "sound/mos6560.h"
 
 
-class attckufo_state
+class attckufo_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, attckufo_state(machine)); }
-
-	attckufo_state(running_machine &machine)
-		: maincpu(machine.device<cpu_device>("maincpu")),
-		  mos6560(machine.device("mos6560")) { }
+	attckufo_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config),
+		  maincpu(*this, "maincpu"),
+		  mos6560(*this, "mos6560") { }
 
 	/* memory pointers */
 	UINT8 *      mainram;
 	UINT8 *      tileram;
 
 	/* devices */
-	cpu_device *maincpu;
-	running_device *mos6560;
+	required_device<cpu_device> maincpu;
+	required_device<mos6560_device> mos6560;
 };
 
 
@@ -157,27 +156,27 @@ INPUT_PORTS_END
 
 static INTERRUPT_GEN( attckufo_raster_interrupt )
 {
-	attckufo_state *state = (attckufo_state *)device->machine->driver_data;
+	attckufo_state *state = device->machine->driver_data<attckufo_state>();
 	mos6560_raster_interrupt_gen(state->mos6560);
 }
 
 static VIDEO_UPDATE( attckufo )
 {
-	attckufo_state *state = (attckufo_state *)screen->machine->driver_data;
+	attckufo_state *state = screen->machine->driver_data<attckufo_state>();
 	mos6560_video_update(state->mos6560, bitmap, cliprect);
 	return 0;
 }
 
 static int attckufo_dma_read( running_machine *machine, int offset )
 {
-	attckufo_state *state = (attckufo_state *)machine->driver_data;
-	return memory_read_byte(state->maincpu->space(AS_PROGRAM), offset);
+	attckufo_state *state = machine->driver_data<attckufo_state>();
+	return state->maincpu->space(AS_PROGRAM)->read_byte(offset);
 }
 
 static int attckufo_dma_read_color( running_machine *machine, int offset )
 {
-	attckufo_state *state = (attckufo_state *)machine->driver_data;
-	return memory_read_byte(state->maincpu->space(AS_PROGRAM), offset + 0x400);
+	attckufo_state *state = machine->driver_data<attckufo_state>();
+	return state->maincpu->space(AS_PROGRAM)->read_byte(offset + 0x400);
 }
 
 static const mos6560_interface attckufo_6560_intf =
@@ -190,34 +189,31 @@ static const mos6560_interface attckufo_6560_intf =
 };
 
 
-static MACHINE_DRIVER_START( attckufo )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(attckufo_state)
+static MACHINE_CONFIG_START( attckufo, attckufo_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6502, 14318181/14)
-	MDRV_CPU_PROGRAM_MAP(cpu_map)
-	MDRV_CPU_PERIODIC_INT(attckufo_raster_interrupt, MOS656X_HRETRACERATE)
+	MCFG_CPU_ADD("maincpu", M6502, 14318181/14)
+	MCFG_CPU_PROGRAM_MAP(cpu_map)
+	MCFG_CPU_PERIODIC_INT(attckufo_raster_interrupt, MOS656X_HRETRACERATE)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(MOS6560_VRETRACERATE)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE((MOS6560_XSIZE + 7) & ~7, MOS6560_YSIZE)
-	MDRV_SCREEN_VISIBLE_AREA(0, 23*8 - 1, 0, 22*8 - 1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(MOS6560_VRETRACERATE)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE((MOS6560_XSIZE + 7) & ~7, MOS6560_YSIZE)
+	MCFG_SCREEN_VISIBLE_AREA(0, 23*8 - 1, 0, 22*8 - 1)
 
-	MDRV_PALETTE_LENGTH(ARRAY_LENGTH(attckufo_palette))
-	MDRV_PALETTE_INIT(attckufo)
+	MCFG_PALETTE_LENGTH(ARRAY_LENGTH(attckufo_palette))
+	MCFG_PALETTE_INIT(attckufo)
 
-	MDRV_VIDEO_UPDATE(attckufo)
+	MCFG_VIDEO_UPDATE(attckufo)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_MOS656X_ADD("mos6560", attckufo_6560_intf)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_MOS656X_ADD("mos6560", attckufo_6560_intf)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 ROM_START( attckufo )
 	ROM_REGION( 0x4000, "maincpu", 0 )

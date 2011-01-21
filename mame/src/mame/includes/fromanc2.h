@@ -1,10 +1,9 @@
 
-class fromanc2_state
+class fromanc2_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, fromanc2_state(machine)); }
-
-	fromanc2_state(running_machine &machine) { }
+	fromanc2_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT16   *paletteram[2];
@@ -22,11 +21,11 @@ public:
 	UINT8    datalatch_2h, datalatch_2l;
 
 	/* devices */
-	running_device *audiocpu;
-	running_device *subcpu;
-	running_device *eeprom;
-	running_device *left_screen;
-	running_device *right_screen;
+	device_t *audiocpu;
+	device_t *subcpu;
+	device_t *eeprom;
+	device_t *left_screen;
+	device_t *right_screen;
 };
 
 

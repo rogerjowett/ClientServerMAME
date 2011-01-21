@@ -17,7 +17,7 @@ static int width = 0;
 
 MACHINE_RESET( skydiver )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	/* reset all latches */
 	skydiver_start_lamp_1_w(space, 0, 0);
@@ -130,7 +130,7 @@ WRITE8_HANDLER( skydiver_lamp_d_w )
 
 WRITE8_HANDLER( skydiver_2000_201F_w )
 {
-	running_device *discrete = space->machine->device("discrete");
+	device_t *discrete = space->machine->device("discrete");
 	int bit = offset & 0x01;
 
 	watchdog_reset_w(space,0,0);

@@ -390,10 +390,13 @@ static void sp_dma(int direction)
             src = (UINT8*)&rdram[sp_dram_addr / 4];
             dst = (sp_mem_addr & 0x1000) ? (UINT8*)&rsp_imem[(sp_mem_addr & 0xfff) / 4] : (UINT8*)&rsp_dmem[(sp_mem_addr & 0xfff) / 4];
 
+			//printf("CPU %08x -> RSP %08x\n", sp_dram_addr, 0x04000000 | sp_mem_addr);
             for (i=0; i < sp_dma_length; i++)
             {
-                dst[BYTE4_XOR_BE(i)] = src[BYTE4_XOR_BE(i)];
+				//printf("%02x ", src[i]);
+				dst[i] = src[i];
             }
+            //printf("\n");
 
             sp_mem_addr += sp_dma_length;
             sp_dram_addr += sp_dma_length;
@@ -408,10 +411,13 @@ static void sp_dma(int direction)
             src = (sp_mem_addr & 0x1000) ? (UINT8*)&rsp_imem[(sp_mem_addr & 0xfff) / 4] : (UINT8*)&rsp_dmem[(sp_mem_addr & 0xfff) / 4];
             dst = (UINT8*)&rdram[sp_dram_addr / 4];
 
+			//printf("RSP %08x -> CPU %08x\n", 0x04000000 | sp_mem_addr, sp_dram_addr);
             for (i=0; i < sp_dma_length; i++)
             {
-                dst[BYTE4_XOR_BE(i)] = src[BYTE4_XOR_BE(i)];
+				//printf("%02x ", src[i]);
+                dst[i] = src[i];
             }
+            //printf("\n");
 
             sp_mem_addr += sp_dma_length;
             sp_dram_addr += sp_dma_length;
@@ -421,7 +427,7 @@ static void sp_dma(int direction)
 	}
 }
 
-static void sp_set_status(running_device *device, UINT32 status)
+static void sp_set_status(device_t *device, UINT32 status)
 {
 	if (status & 0x1)
 	{
@@ -727,8 +733,9 @@ void dp_full_sync(running_machine *machine)
 
 READ32_DEVICE_HANDLER( n64_dp_reg_r )
 {
-	_n64_state *state = (_n64_state *)device->machine->driver_data;
+	_n64_state *state = device->machine->driver_data<_n64_state>();
 
+	//printf("%08x\n", offset);
 	switch (offset)
 	{
 		case 0x00/4:		// DP_START_REG
@@ -753,8 +760,9 @@ READ32_DEVICE_HANDLER( n64_dp_reg_r )
 
 WRITE32_DEVICE_HANDLER( n64_dp_reg_w )
 {
-	_n64_state *state = (_n64_state *)device->machine->driver_data;
+	_n64_state *state = device->machine->driver_data<_n64_state>();
 
+	//printf("%08x: %08x\n", offset, data);
 	switch (offset)
 	{
 		case 0x00/4:		// DP_START_REG
@@ -764,9 +772,9 @@ WRITE32_DEVICE_HANDLER( n64_dp_reg_w )
 
 		case 0x04/4:		// DP_END_REG
 			state->m_rdp.SetEndReg(data);
-			profiler_mark_start(PROFILER_USER1);
+			g_profiler.start(PROFILER_USER1);
 			state->m_rdp.ProcessList();
-			profiler_mark_end();
+			g_profiler.stop();
 			break;
 
 		case 0x0c/4:		// DP_STATUS_REG
@@ -814,7 +822,7 @@ static UINT32 n64_vi_intr,  n64_vi_vburst;
 
 static void n64_vi_recalculate_resolution(running_machine *machine)
 {
-	_n64_state *state = (_n64_state *)machine->driver_data;
+	_n64_state *state = machine->driver_data<_n64_state>();
 
     int x_start = (n64_vi_hstart & 0x03ff0000) >> 16;
     int x_end = n64_vi_hstart & 0x000003ff;
@@ -913,7 +921,7 @@ READ32_HANDLER( n64_vi_reg_r )
 
 WRITE32_HANDLER( n64_vi_reg_w )
 {
-	_n64_state *state = (_n64_state *)space->machine->driver_data;
+	_n64_state *state = space->machine->driver_data<_n64_state>();
 
 	switch (offset)
 	{
@@ -1090,6 +1098,8 @@ static AUDIO_DMA *audio_fifo_get_top(void)
         return NULL;
     }
 }
+
+#define N64_ATTOTIME_NORMALIZE(a)   do { while ((a).attoseconds >= ATTOSECONDS_PER_SECOND) { (a).seconds++; (a).attoseconds -= ATTOSECONDS_PER_SECOND; } } while (0)
 
 static void start_audio_dma(running_machine *machine)
 {
@@ -1303,8 +1313,8 @@ WRITE32_HANDLER( n64_pi_reg_w )
 			{
 				for (i=0; i < dma_length; i++)
 				{
-					UINT8 b = memory_read_byte(space, pi_dram_addr);
-					memory_write_byte(space, pi_cart_addr & 0x1fffffff, b);
+					UINT8 b = space->read_byte(pi_dram_addr);
+					space->write_byte(pi_cart_addr & 0x1fffffff, b);
 					pi_cart_addr += 1;
 					pi_dram_addr += 1;
 				}
@@ -1331,13 +1341,13 @@ WRITE32_HANDLER( n64_pi_reg_w )
 			{
 				for (i=0; i < dma_length; i++)
 				{
-					/*UINT32 d = memory_read_dword(space, pi_cart_addr);
-                    memory_write_dword(space, pi_dram_addr, d);
+					/*UINT32 d = space->read_dword(pi_cart_addr);
+                    space->write_dword(pi_dram_addr, d);
                     pi_cart_addr += 4;
                     pi_dram_addr += 4;*/
 
-					UINT8 b = memory_read_byte(space, pi_cart_addr);
-					memory_write_byte(space, pi_dram_addr & 0x1fffffff, b);
+					UINT8 b = space->read_byte(pi_cart_addr);
+					space->write_byte(pi_dram_addr & 0x1fffffff, b);
 					pi_cart_addr += 1;
 					pi_dram_addr += 1;
 				}
@@ -1347,8 +1357,8 @@ WRITE32_HANDLER( n64_pi_reg_w )
 			if (pi_first_dma)
 			{
 				// TODO: CIC-6105 has different address...
-				memory_write_dword(space, 0x00000318, 0x400000);
-				memory_write_dword(space, 0x000003f0, 0x800000);
+				space->write_dword(0x00000318, 0x400000);
+				space->write_dword(0x000003f0, 0x800000);
 				pi_first_dma = 0;
 			}
 
@@ -1965,7 +1975,7 @@ static UINT32 cic_status = 0x00000000;
 READ32_HANDLER( n64_pif_ram_r )
 {
     /*mame_printf_debug( "pif_ram_r: %08X, %08X = %08X\n", offset << 2, mem_mask, ( ( pif_ram[offset*4+0] << 24 ) | ( pif_ram[offset*4+1] << 16 ) | ( pif_ram[offset*4+2] <<  8 ) | ( pif_ram[offset*4+3] <<  0 ) ) & mem_mask );*/
-    if(!space->debugger_access)
+    if(!space->debugger_access())
     {
     	if( offset == ( 0x24 / 4 ) )
     	{
@@ -2011,7 +2021,7 @@ MACHINE_START( n64 )
 	/* configure fast RAM regions for DRC */
 	mips3drc_add_fastram(machine->device("maincpu"), 0x00000000, 0x007fffff, FALSE, rdram);
 
-	rspdrc_set_options(machine->device("rsp"), 0);
+	rspdrc_set_options(machine->device("rsp"), RSPDRC_STRICT_VERIFY);
 	rspdrc_add_imem(machine->device("rsp"), rsp_imem);
 	rspdrc_add_dmem(machine->device("rsp"), rsp_dmem);
 	rspdrc_flush_drc_cache(machine->device("rsp"));
@@ -2022,8 +2032,8 @@ MACHINE_START( n64 )
 MACHINE_RESET( n64 )
 {
 	int i;
-	//UINT32 *pif_rom   = (UINT32*)memory_region(machine, "user1");
-	UINT32 *cart = (UINT32*)memory_region(machine, "user2");
+	//UINT32 *pif_rom   = (UINT32*)machine->region("user1")->base();
+	UINT32 *cart = (UINT32*)machine->region("user2")->base();
 	UINT64 boot_checksum;
 
 	mi_version = 0;

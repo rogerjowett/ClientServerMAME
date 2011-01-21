@@ -53,12 +53,11 @@ Dumped by Chackn
 #include "cpu/i8085/i8085.h"
 
 
-class m14_state
+class m14_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, m14_state(machine)); }
-
-	m14_state(running_machine &machine) { }
+	m14_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* video-related */
 	tilemap_t  *m14_tilemap;
@@ -69,7 +68,7 @@ public:
 	UINT8 hop_mux;
 
 	/* devices */
-	running_device *maincpu;
+	device_t *maincpu;
 };
 
 
@@ -99,7 +98,7 @@ static PALETTE_INIT( m14 )
 
 static TILE_GET_INFO( m14_get_tile_info )
 {
-	m14_state *state = (m14_state *)machine->driver_data;
+	m14_state *state = machine->driver_data<m14_state>();
 
 	int code = state->video_ram[tile_index];
 	int color = state->color_ram[tile_index] & 0x0f;
@@ -115,14 +114,14 @@ static TILE_GET_INFO( m14_get_tile_info )
 
 static VIDEO_START( m14 )
 {
-	m14_state *state = (m14_state *)machine->driver_data;
+	m14_state *state = machine->driver_data<m14_state>();
 
 	state->m14_tilemap = tilemap_create(machine, m14_get_tile_info, tilemap_scan_rows, 8, 8, 32, 32);
 }
 
 static VIDEO_UPDATE( m14 )
 {
-	m14_state *state = (m14_state *)screen->machine->driver_data;
+	m14_state *state = screen->machine->driver_data<m14_state>();
 
 	tilemap_draw(bitmap, cliprect, state->m14_tilemap, 0, 0);
 	return 0;
@@ -131,7 +130,7 @@ static VIDEO_UPDATE( m14 )
 
 static WRITE8_HANDLER( m14_vram_w )
 {
-	m14_state *state = (m14_state *)space->machine->driver_data;
+	m14_state *state = space->machine->driver_data<m14_state>();
 
 	state->video_ram[offset] = data;
 	tilemap_mark_tile_dirty(state->m14_tilemap, offset);
@@ -139,7 +138,7 @@ static WRITE8_HANDLER( m14_vram_w )
 
 static WRITE8_HANDLER( m14_cram_w )
 {
-	m14_state *state = (m14_state *)space->machine->driver_data;
+	m14_state *state = space->machine->driver_data<m14_state>();
 
 	state->color_ram[offset] = data;
 	tilemap_mark_tile_dirty(state->m14_tilemap, offset);
@@ -154,13 +153,13 @@ static WRITE8_HANDLER( m14_cram_w )
 static READ8_HANDLER( m14_rng_r )
 {
 	/* graphic artifacts happens if this doesn't return random values. */
-	return (mame_rand(space->machine) & 0x0f) | 0xf0; /* | (input_port_read(space->machine, "IN1") & 0x80)*/;
+	return (space->machine->rand() & 0x0f) | 0xf0; /* | (input_port_read(space->machine, "IN1") & 0x80)*/;
 }
 
 /* Here routes the hopper & the inputs */
 static READ8_HANDLER( input_buttons_r )
 {
-	m14_state *state = (m14_state *)space->machine->driver_data;
+	m14_state *state = space->machine->driver_data<m14_state>();
 
 	if (state->hop_mux)
 	{
@@ -184,7 +183,7 @@ static WRITE8_HANDLER( test_w )
 
 static WRITE8_HANDLER( hopper_w )
 {
-	m14_state *state = (m14_state *)space->machine->driver_data;
+	m14_state *state = space->machine->driver_data<m14_state>();
 
 	/* ---- x--- coin out */
 	/* ---- --x- hopper/input mux? */
@@ -222,7 +221,7 @@ ADDRESS_MAP_END
 
 static INPUT_CHANGED( left_coin_inserted )
 {
-	m14_state *state = (m14_state *)field->port->machine->driver_data;
+	m14_state *state = field->port->machine->driver_data<m14_state>();
 	/* left coin insertion causes a rst6.5 (vector 0x34) */
 	if (newval)
 		cpu_set_input_line(state->maincpu, I8085_RST65_LINE, HOLD_LINE);
@@ -230,7 +229,7 @@ static INPUT_CHANGED( left_coin_inserted )
 
 static INPUT_CHANGED( right_coin_inserted )
 {
-	m14_state *state = (m14_state *)field->port->machine->driver_data;
+	m14_state *state = field->port->machine->driver_data<m14_state>();
 	/* right coin insertion causes a rst5.5 (vector 0x2c) */
 	if (newval)
 		cpu_set_input_line(state->maincpu, I8085_RST55_LINE, HOLD_LINE);
@@ -314,7 +313,7 @@ static INTERRUPT_GEN( m14_irq )
 
 static MACHINE_START( m14 )
 {
-	m14_state *state = (m14_state *)machine->driver_data;
+	m14_state *state = machine->driver_data<m14_state>();
 
 	state->maincpu = machine->device("maincpu");
 
@@ -323,47 +322,44 @@ static MACHINE_START( m14 )
 
 static MACHINE_RESET( m14 )
 {
-	m14_state *state = (m14_state *)machine->driver_data;
+	m14_state *state = machine->driver_data<m14_state>();
 
 	state->hop_mux = 0;
 }
 
 
-static MACHINE_DRIVER_START( m14 )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(m14_state)
+static MACHINE_CONFIG_START( m14, m14_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu",I8085A,6000000/2) //guess: 6 Mhz internally divided by 2
-	MDRV_CPU_PROGRAM_MAP(m14_map)
-	MDRV_CPU_IO_MAP(m14_io_map)
-	MDRV_CPU_VBLANK_INT("screen",m14_irq)
+	MCFG_CPU_ADD("maincpu",I8085A,6000000/2) //guess: 6 Mhz internally divided by 2
+	MCFG_CPU_PROGRAM_MAP(m14_map)
+	MCFG_CPU_IO_MAP(m14_io_map)
+	MCFG_CPU_VBLANK_INT("screen",m14_irq)
 
-	MDRV_MACHINE_START(m14)
-	MDRV_MACHINE_RESET(m14)
+	MCFG_MACHINE_START(m14)
+	MCFG_MACHINE_RESET(m14)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) //not accurate
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 0*8, 28*8-1)
-	MDRV_GFXDECODE(m14)
-	MDRV_PALETTE_LENGTH(0x20)
-	MDRV_PALETTE_INIT(m14)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) //not accurate
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 0*8, 28*8-1)
+	MCFG_GFXDECODE(m14)
+	MCFG_PALETTE_LENGTH(0x20)
+	MCFG_PALETTE_INIT(m14)
 
-	MDRV_VIDEO_START(m14)
-	MDRV_VIDEO_UPDATE(m14)
+	MCFG_VIDEO_START(m14)
+	MCFG_VIDEO_UPDATE(m14)
 
 	/* sound hardware */
-//  MDRV_SPEAKER_STANDARD_MONO("mono")
+//  MCFG_SPEAKER_STANDARD_MONO("mono")
 
-//  MDRV_SOUND_ADD("discrete", DISCRETE, 0)
-//  MDRV_SOUND_CONFIG_DISCRETE(m14)
-//  MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+//  MCFG_SOUND_ADD("discrete", DISCRETE, 0)
+//  MCFG_SOUND_CONFIG_DISCRETE(m14)
+//  MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 /***************************************************************************
 

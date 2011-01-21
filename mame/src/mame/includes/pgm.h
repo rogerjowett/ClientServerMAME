@@ -1,10 +1,9 @@
 
-class pgm_state
+class pgm_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, pgm_state(machine)); }
-
-	pgm_state(running_machine &machine) { }
+	pgm_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 //  UINT16 *      mainram;  // currently this is also used by nvram handler
@@ -68,7 +67,7 @@ public:
 	/* devices */
 	cpu_device *soundcpu;
 	cpu_device *prot;
-	running_device *ics;
+	device_t *ics;
 };
 
 extern UINT16 *pgm_mainram;	// used by nvram handler, we cannot move it to driver data struct
@@ -95,6 +94,8 @@ void pgm_kovshp_decrypt(running_machine *machine);
 void pgm_killbldp_decrypt(running_machine *machine);
 void pgm_svg_decrypt(running_machine *machine);
 void pgm_dw2001_decrypt(running_machine *machine);
+void pgm_ket_decrypt(running_machine *machine);
+void pgm_espgal_decrypt(running_machine *machine);
 
 /*----------- defined in machine/pgmprot.c -----------*/
 

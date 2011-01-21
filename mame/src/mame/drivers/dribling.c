@@ -40,7 +40,7 @@
 
 static INTERRUPT_GEN( dribling_irq_gen )
 {
-	dribling_state *state = (dribling_state *)device->machine->driver_data;
+	dribling_state *state = device->machine->driver_data<dribling_state>();
 	if (state->di)
 		cpu_set_input_line(device, 0, ASSERT_LINE);
 }
@@ -55,7 +55,7 @@ static INTERRUPT_GEN( dribling_irq_gen )
 
 static READ8_DEVICE_HANDLER( dsr_r )
 {
-	dribling_state *state = (dribling_state *)device->machine->driver_data;
+	dribling_state *state = device->machine->driver_data<dribling_state>();
 
 	/* return DSR0-7 */
 	return (state->ds << state->sh) | (state->dr >> (8 - state->sh));
@@ -64,7 +64,7 @@ static READ8_DEVICE_HANDLER( dsr_r )
 
 static READ8_DEVICE_HANDLER( input_mux0_r )
 {
-	dribling_state *state = (dribling_state *)device->machine->driver_data;
+	dribling_state *state = device->machine->driver_data<dribling_state>();
 
 	/* low value in the given bit selects */
 	if (!(state->input_mux & 0x01))
@@ -86,7 +86,7 @@ static READ8_DEVICE_HANDLER( input_mux0_r )
 
 static WRITE8_DEVICE_HANDLER( misc_w )
 {
-	dribling_state *state = (dribling_state *)device->machine->driver_data;
+	dribling_state *state = device->machine->driver_data<dribling_state>();
 
 	/* bit 7 = di */
 	state->di = (data >> 7) & 1;
@@ -132,7 +132,7 @@ static WRITE8_DEVICE_HANDLER( pb_w )
 
 static WRITE8_DEVICE_HANDLER( shr_w )
 {
-	dribling_state *state = (dribling_state *)device->machine->driver_data;
+	dribling_state *state = device->machine->driver_data<dribling_state>();
 
 	/* bit 3 = watchdog */
 	if (data & 0x08)
@@ -152,7 +152,7 @@ static WRITE8_DEVICE_HANDLER( shr_w )
 
 static READ8_HANDLER( ioread )
 {
-	dribling_state *state = (dribling_state *)space->machine->driver_data;
+	dribling_state *state = space->machine->driver_data<dribling_state>();
 
 	if (offset & 0x08)
 		return ppi8255_r(state->ppi_0, offset & 3);
@@ -164,7 +164,7 @@ static READ8_HANDLER( ioread )
 
 static WRITE8_HANDLER( iowrite )
 {
-	dribling_state *state = (dribling_state *)space->machine->driver_data;
+	dribling_state *state = space->machine->driver_data<dribling_state>();
 
 	if (offset & 0x08)
 		ppi8255_w(state->ppi_0, offset & 3, data);
@@ -285,7 +285,7 @@ INPUT_PORTS_END
 
 static MACHINE_START( dribling )
 {
-	dribling_state *state = (dribling_state *)machine->driver_data;
+	dribling_state *state = machine->driver_data<dribling_state>();
 
 	state->maincpu = machine->device("maincpu");
 	state->ppi_0 = machine->device("ppi8255_0");
@@ -301,7 +301,7 @@ static MACHINE_START( dribling )
 
 static MACHINE_RESET( dribling )
 {
-	dribling_state *state = (dribling_state *)machine->driver_data;
+	dribling_state *state = machine->driver_data<dribling_state>();
 
 	state->abca = 0;
 	state->di = 0;
@@ -312,40 +312,37 @@ static MACHINE_RESET( dribling )
 }
 
 
-static MACHINE_DRIVER_START( dribling )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(dribling_state)
+static MACHINE_CONFIG_START( dribling, dribling_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, 5000000)
-	MDRV_CPU_PROGRAM_MAP(dribling_map)
-	MDRV_CPU_IO_MAP(io_map)
-	MDRV_CPU_VBLANK_INT("screen", dribling_irq_gen)
+	MCFG_CPU_ADD("maincpu", Z80, 5000000)
+	MCFG_CPU_PROGRAM_MAP(dribling_map)
+	MCFG_CPU_IO_MAP(io_map)
+	MCFG_CPU_VBLANK_INT("screen", dribling_irq_gen)
 
-	MDRV_PPI8255_ADD( "ppi8255_0", ppi8255_intf[0] )
-	MDRV_PPI8255_ADD( "ppi8255_1", ppi8255_intf[1] )
+	MCFG_PPI8255_ADD( "ppi8255_0", ppi8255_intf[0] )
+	MCFG_PPI8255_ADD( "ppi8255_1", ppi8255_intf[1] )
 
-	MDRV_MACHINE_START(dribling)
-	MDRV_MACHINE_RESET(dribling)
+	MCFG_MACHINE_START(dribling)
+	MCFG_MACHINE_RESET(dribling)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(256, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 255, 40, 255)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(256, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 255, 40, 255)
 
-	MDRV_PALETTE_LENGTH(256)
+	MCFG_PALETTE_LENGTH(256)
 
-	MDRV_PALETTE_INIT(dribling)
-	MDRV_VIDEO_UPDATE(dribling)
+	MCFG_PALETTE_INIT(dribling)
+	MCFG_VIDEO_UPDATE(dribling)
 
 	/* sound hardware */
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
 
 

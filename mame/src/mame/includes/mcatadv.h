@@ -1,10 +1,9 @@
 
-class mcatadv_state
+class mcatadv_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, mcatadv_state(machine)); }
-
-	mcatadv_state(running_machine &machine) { }
+	mcatadv_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT16 *     videoram1;
@@ -23,8 +22,8 @@ public:
 	int palette_bank1, palette_bank2;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *soundcpu;
+	device_t *maincpu;
+	device_t *soundcpu;
 };
 
 /*----------- defined in video/mcatadv.c -----------*/

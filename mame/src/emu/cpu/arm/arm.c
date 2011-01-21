@@ -236,7 +236,8 @@ typedef struct
 	UINT8 pendingFiq;
 	device_irq_callback irq_callback;
 	legacy_cpu_device *device;
-	const address_space *program;
+	address_space *program;
+	direct_read_data *direct;
 	endianness_t endian;
 } ARM_REGS;
 
@@ -252,7 +253,7 @@ static void arm_check_irq_state(ARM_REGS* cpustate);
 
 /***************************************************************************/
 
-INLINE ARM_REGS *get_safe_token(running_device *device)
+INLINE ARM_REGS *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
 	assert(device->type() == ARM || device->type() == ARM_BE);
@@ -263,18 +264,18 @@ INLINE void cpu_write32( ARM_REGS* cpustate, int addr, UINT32 data )
 {
 	/* Unaligned writes are treated as normal writes */
 	if ( cpustate->endian == ENDIANNESS_BIG )
-		memory_write_dword_32be(cpustate->program, addr&ADDRESS_MASK,data);
+		cpustate->program->write_dword(addr&ADDRESS_MASK,data);
 	else
-		memory_write_dword_32le(cpustate->program, addr&ADDRESS_MASK,data);
+		cpustate->program->write_dword(addr&ADDRESS_MASK,data);
 	if (ARM_DEBUG_CORE && addr&3) logerror("%08x: Unaligned write %08x\n",R15,addr);
 }
 
 INLINE void cpu_write8( ARM_REGS* cpustate, int addr, UINT8 data )
 {
 	if ( cpustate->endian == ENDIANNESS_BIG )
-		memory_write_byte_32be(cpustate->program,addr,data);
+		cpustate->program->write_byte(addr,data);
 	else
-		memory_write_byte_32le(cpustate->program,addr,data);
+		cpustate->program->write_byte(addr,data);
 }
 
 INLINE UINT32 cpu_read32( ARM_REGS* cpustate, int addr )
@@ -282,9 +283,9 @@ INLINE UINT32 cpu_read32( ARM_REGS* cpustate, int addr )
 	UINT32 result;
 
 	if ( cpustate->endian == ENDIANNESS_BIG )
-		result = memory_read_dword_32be(cpustate->program,addr&ADDRESS_MASK);
+		result = cpustate->program->read_dword(addr&ADDRESS_MASK);
 	else
-		result = memory_read_dword_32le(cpustate->program,addr&ADDRESS_MASK);
+		result = cpustate->program->read_dword(addr&ADDRESS_MASK);
 
 	/* Unaligned reads rotate the word, they never combine words */
 	if (addr&3) {
@@ -305,9 +306,9 @@ INLINE UINT32 cpu_read32( ARM_REGS* cpustate, int addr )
 INLINE UINT8 cpu_read8( ARM_REGS* cpustate, int addr )
 {
 	if ( cpustate->endian == ENDIANNESS_BIG )
-		return memory_read_byte_32be(cpustate->program, addr);
+		return cpustate->program->read_byte(addr);
 	else
-		return memory_read_byte_32le(cpustate->program, addr);
+		return cpustate->program->read_byte(addr);
 }
 
 INLINE UINT32 GetRegister( ARM_REGS* cpustate, int rIndex )
@@ -319,6 +320,17 @@ INLINE void SetRegister( ARM_REGS* cpustate, int rIndex, UINT32 value )
 {
 	cpustate->sArmRegister[sRegisterTable[MODE][rIndex]] = value;
 }
+
+INLINE UINT32 GetModeRegister( ARM_REGS* cpustate, int mode, int rIndex )
+{
+	return cpustate->sArmRegister[sRegisterTable[mode][rIndex]];
+}
+
+INLINE void SetModeRegister( ARM_REGS* cpustate, int mode, int rIndex, UINT32 value )
+{
+	cpustate->sArmRegister[sRegisterTable[mode][rIndex]] = value;
+}
+
 
 /***************************************************************************/
 
@@ -334,6 +346,7 @@ static CPU_RESET( arm )
 	cpustate->endian = save_endian;
 	cpustate->device = device;
 	cpustate->program = device->space(AS_PROGRAM);
+	cpustate->direct = &cpustate->program->direct();
 
 	/* start up in SVC mode with interrupts disabled. */
 	R15 = eARM_MODE_SVC|I_MASK|F_MASK;
@@ -356,7 +369,7 @@ static CPU_EXECUTE( arm )
 
 		/* load instruction */
 		pc = R15;
-		insn = memory_decrypted_read_dword( cpustate->program, pc & ADDRESS_MASK );
+		insn = cpustate->direct->read_decrypted_dword( pc & ADDRESS_MASK );
 
 		switch (insn >> INSN_COND_SHIFT)
 		{
@@ -591,11 +604,17 @@ static void HandleMemSingle( ARM_REGS* cpustate, UINT32 insn )
 		/* Pre-indexed addressing */
 		if (insn & INSN_SDT_U)
 		{
-			rnv = (GetRegister(cpustate, rn) + off);
+			if (rn != eR15)
+				rnv = (GetRegister(cpustate, rn) + off);
+			else
+				rnv = (R15 & ADDRESS_MASK) + off;
 		}
 		else
 		{
-			rnv = (GetRegister(cpustate, rn) - off);
+			if (rn != eR15)
+				rnv = (GetRegister(cpustate, rn) - off);
+			else
+				rnv = (R15 & ADDRESS_MASK) - off;
 		}
 
 		if (insn & INSN_SDT_W)
@@ -606,7 +625,7 @@ static void HandleMemSingle( ARM_REGS* cpustate, UINT32 insn )
 		}
 		else if (rn == eR15)
 		{
-			rnv = (rnv & ADDRESS_MASK) + 8;
+			rnv = rnv + 8;
 		}
 	}
 	else
@@ -1069,6 +1088,8 @@ static void HandleMemBlock( ARM_REGS* cpustate, UINT32 insn )
 		/* Loading */
 		if (insn & INSN_BDT_U)
 		{
+			int mode = MODE;
+
 			/* Incrementing */
 			if (!(insn & INSN_BDT_P)) rbp = rbp + (- 4);
 
@@ -1096,7 +1117,7 @@ static void HandleMemBlock( ARM_REGS* cpustate, UINT32 insn )
 					logerror("%08x:  Illegal LDRM writeback to r15\n",R15);
 
 				if ((insn&(1<<rb))==0)
-					SetRegister(cpustate,rb,GetRegister(cpustate, rb)+result*4);
+					SetModeRegister(cpustate, mode, rb, GetModeRegister(cpustate, mode, rb) + result * 4);
 				else if (ARM_DEBUG_CORE)
 					logerror("%08x:  Illegal LDRM writeback to base register (%d)\n",R15, rb);
 			}

@@ -52,7 +52,7 @@ static void draw_sprites( running_machine *machine, bitmap_t *bitmap, const rect
 
     **- End Sprite Format -*/
 
-	psikyo4_state *state = (psikyo4_state *)machine->driver_data;
+	psikyo4_state *state = machine->driver_data<psikyo4_state>();
 	const gfx_element *gfx = machine->gfx[0];
 	UINT32 *source = state->spriteram;
 	UINT16 *list = (UINT16 *)state->spriteram + 0x2c00/2 + 0x04/2; /* 0x2c00/0x2c02 what are these for, pointers? one for each screen */
@@ -129,8 +129,8 @@ static void draw_sprites( running_machine *machine, bitmap_t *bitmap, const rect
 
 VIDEO_UPDATE( psikyo4 )
 {
-	running_device *left_screen  = screen->machine->device("lscreen");
-	running_device *right_screen = screen->machine->device("rscreen");
+	device_t *left_screen  = screen->machine->device("lscreen");
+	device_t *right_screen = screen->machine->device("rscreen");
 
 	if (screen == left_screen)
 	{

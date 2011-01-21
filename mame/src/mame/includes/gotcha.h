@@ -4,12 +4,11 @@
 
 *************************************************************************/
 
-class gotcha_state
+class gotcha_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, gotcha_state(machine)); }
-
-	gotcha_state(running_machine &machine) { }
+	gotcha_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT16 *    fgvideoram;
@@ -24,7 +23,7 @@ public:
 	UINT16      scroll[4];
 
 	/* devices */
-	running_device *audiocpu;
+	device_t *audiocpu;
 };
 
 

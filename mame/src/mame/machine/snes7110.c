@@ -274,7 +274,7 @@ static void SPC7110Decomp_write(SPC7110Decomp *thisptr, UINT8 data)
 
 static UINT8 SPC7110Decomp_dataread(SPC7110Decomp *thisptr)
 {
-	UINT8 *ROM = memory_region(thisptr->machine, "cart");
+	UINT8 *ROM = thisptr->machine->region("cart")->base();
 	UINT32 size = thisptr->rom_size - 0x100000;
 	while(thisptr->decomp_offset >= size)
 	{
@@ -767,7 +767,7 @@ static UINT32 SPC7110Decomp_morton_4x8(SPC7110Decomp *thisptr, UINT32 data)
 }
 
 static void spc7110_mmio_write(running_machine *machine, UINT32 addr, UINT8 data);
-static UINT8 spc7110_mmio_read(const address_space *space, UINT32 addr);
+static UINT8 spc7110_mmio_read(address_space *space, UINT32 addr);
 static void spc7110_update_time(running_machine *machine, UINT8 offset);
 
 enum RTC_State
@@ -875,7 +875,7 @@ static _snes_spc7110_t snes_spc7110;
 
 static void spc7110_init(running_machine* machine)
 {
-	snes_state *state = (snes_state *)machine->driver_data;
+	snes_state *state = machine->driver_data<snes_state>();
 
 	snes_spc7110.r4801 = 0x00;
 	snes_spc7110.r4802 = 0x00;
@@ -1066,10 +1066,10 @@ static void spc7110_update_time(running_machine *machine, UINT8 offset)
 	}
 }
 
-static UINT8 spc7110_mmio_read(const address_space *space, UINT32 addr)
+static UINT8 spc7110_mmio_read(address_space *space, UINT32 addr)
 {
 	running_machine *machine = space->machine;
-	UINT8 *ROM = memory_region(machine, "cart");
+	UINT8 *ROM = machine->region("cart")->base();
 
 	addr &= 0xffff;
 
@@ -1255,7 +1255,7 @@ static UINT8 spc7110_mmio_read(const address_space *space, UINT32 addr)
 
 static void spc7110_mmio_write(running_machine *machine, UINT32 addr, UINT8 data)
 {
-	UINT8 *ROM = memory_region(machine, "cart");
+	UINT8 *ROM = machine->region("cart")->base();
 
 	addr &= 0xffff;
 
@@ -1639,9 +1639,9 @@ static void spc7110_mmio_write(running_machine *machine, UINT32 addr, UINT8 data
 	}
 }
 
-static UINT8 spc7110_bank7_read(const address_space *space, UINT32 offset)
+static UINT8 spc7110_bank7_read(address_space *space, UINT32 offset)
 {
-	UINT8 *ROM = memory_region(space->machine, "cart");
+	UINT8 *ROM = space->machine->region("cart")->base();
 	UINT32 addr = offset & 0x0fffff;
 
 	switch (offset & 0xf00000)

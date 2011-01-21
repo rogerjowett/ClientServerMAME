@@ -100,6 +100,8 @@ typedef struct _m68ki_cpu_core m68ki_cpu_core;
 #define RUN_MODE_NORMAL          0
 #define RUN_MODE_BERR_AERR_RESET 1
 
+/* MMU constants */
+#define MMU_ATC_ENTRIES	(22)	// 68851 has 64, 030 has 22
 
 /* ======================================================================== */
 /* ================================ MACROS ================================ */
@@ -535,17 +537,64 @@ union _fp_reg
 
 /* Redirect memory calls */
 
-typedef struct _m68k_memory_interface m68k_memory_interface;
-struct _m68k_memory_interface
+typedef proto_delegate_1param<UINT8, offs_t> m68k_read8_proto_delegate;
+typedef proto_delegate_1param<UINT16, offs_t> m68k_readimm16_proto_delegate;
+typedef proto_delegate_1param<UINT16, offs_t> m68k_read16_proto_delegate;
+typedef proto_delegate_1param<UINT32, offs_t> m68k_read32_proto_delegate;
+typedef proto_delegate_2param<void, offs_t, UINT8> m68k_write8_proto_delegate;
+typedef proto_delegate_2param<void, offs_t, UINT16> m68k_write16_proto_delegate;
+typedef proto_delegate_2param<void, offs_t, UINT32> m68k_write32_proto_delegate;
+
+typedef delegate_1param<UINT8, offs_t> m68k_read8_delegate;
+typedef delegate_1param<UINT16, offs_t> m68k_readimm16_delegate;
+typedef delegate_1param<UINT16, offs_t> m68k_read16_delegate;
+typedef delegate_1param<UINT32, offs_t> m68k_read32_delegate;
+typedef delegate_2param<void, offs_t, UINT8> m68k_write8_delegate;
+typedef delegate_2param<void, offs_t, UINT16> m68k_write16_delegate;
+typedef delegate_2param<void, offs_t, UINT32> m68k_write32_delegate;
+
+class m68k_memory_interface : public bindable_object
 {
+public:
+	void init8(address_space &space);
+	void init16(address_space &space);
+	void init32(address_space &space);
+	void init32mmu(address_space &space);
+	void init32hmmu(address_space &space);
+
 	offs_t	opcode_xor;						// Address Calculation
-	UINT16	(*readimm16)(const address_space *, offs_t);			// Immediate read 16 bit
-	UINT8	(*read8)(const address_space *, offs_t);				// Normal read 8 bit
-	UINT16	(*read16)(const address_space *, offs_t);				// Normal read 16 bit
-	UINT32	(*read32)(const address_space *, offs_t);				// Normal read 32 bit
-	void	(*write8)(const address_space *, offs_t, UINT8);		// Write 8 bit
-	void	(*write16)(const address_space *, offs_t, UINT16);		// Write 16 bit
-	void	(*write32)(const address_space *, offs_t, UINT32);		// Write 32 bit
+	m68k_readimm16_delegate readimm16;		// Immediate read 16 bit
+	m68k_read8_delegate read8;
+	m68k_read16_delegate read16;
+	m68k_read32_delegate read32;
+	m68k_write8_delegate write8;
+	m68k_write16_delegate write16;
+	m68k_write32_delegate write32;
+
+private:
+	UINT16 m68008_read_immediate_16(offs_t address);
+	UINT16 read_immediate_16(offs_t address);
+	UINT16 simple_read_immediate_16(offs_t address);
+
+	UINT8 read_byte_32_mmu(offs_t address);
+	void write_byte_32_mmu(offs_t address, UINT8 data);
+	UINT16 read_immediate_16_mmu(offs_t address);
+	UINT16 readword_d32_mmu(offs_t address);
+	void writeword_d32_mmu(offs_t address, UINT16 data);
+	UINT32 readlong_d32_mmu(offs_t address);
+	void writelong_d32_mmu(offs_t address, UINT32 data);
+
+	UINT8 read_byte_32_hmmu(offs_t address);
+	void write_byte_32_hmmu(offs_t address, UINT8 data);
+	UINT16 read_immediate_16_hmmu(offs_t address);
+	UINT16 readword_d32_hmmu(offs_t address);
+	void writeword_d32_hmmu(offs_t address, UINT16 data);
+	UINT32 readlong_d32_hmmu(offs_t address);
+	void writelong_d32_hmmu(offs_t address, UINT32 data);
+
+	address_space *m_space;
+	direct_read_data *m_direct;
+	m68ki_cpu_core *m_cpustate;
 };
 
 struct _m68ki_cpu_core
@@ -584,7 +633,10 @@ struct _m68ki_cpu_core
 	UINT32 instr_mode;   /* Stores whether we are in instruction mode or group 0/1 exception mode */
 	UINT32 run_mode;     /* Stores whether we are processing a reset, bus error, address error, or something else */
 	int    has_pmmu;     /* Indicates if a PMMU available (yes on 030, 040, no on EC030) */
+	int    has_hmmu;     /* Indicates if an Apple HMMU is available in place of the 68851 (020 only) */
 	int    pmmu_enabled; /* Indicates if the PMMU is enabled */
+	int    hmmu_enabled; /* Indicates if the HMMU is enabled */
+	int    has_fpu;      /* Indicates if a FPU is available (yes on 030, 040, may be on 020) */
 	int    fpu_just_reset; /* Indicates the FPU was just reset */
 
 	/* Clocks required for instructions / exceptions */
@@ -628,7 +680,7 @@ struct _m68ki_cpu_core
 	m68k_tas_func tas_instr_callback;             /* Called when a TAS instruction is encountered, allows / disallows writeback */
 
 	legacy_cpu_device *device;
-	const address_space *program;
+	address_space *program;
 	m68k_memory_interface memory;
 	offs_t encrypted_start;
 	offs_t encrypted_end;
@@ -645,6 +697,15 @@ struct _m68ki_cpu_core
 	UINT32 mmu_srp_aptr, mmu_srp_limit;
 	UINT32 mmu_tc;
 	UINT16 mmu_sr;
+	UINT32 mmu_atc_tag[MMU_ATC_ENTRIES], mmu_atc_data[MMU_ATC_ENTRIES];
+	UINT32 mmu_atc_rr;
+	UINT32 mmu_tt0, mmu_tt1;
+
+	UINT16 mmu_tmp_sr;      /* temporary hack: status code for ptest and to handle write protection */
+	UINT16 mmu_tmp_fc;      /* temporary hack: function code for the mmu (moves) */
+	UINT16 mmu_tmp_rw;      /* temporary hack: read/write (1/0) for the mmu */
+	UINT32 mmu_tmp_buserror_address;   /* temporary hack: (first) bus error address */
+	UINT16 mmu_tmp_buserror_occurred;  /* temporary hack: flag that bus error has occurred from mmu */
 };
 
 
@@ -753,8 +814,8 @@ INLINE void m68ki_stack_frame_0000(m68ki_cpu_core *m68k, UINT32 pc, UINT32 sr, U
 INLINE void m68ki_stack_frame_0001(m68ki_cpu_core *m68k, UINT32 pc, UINT32 sr, UINT32 vector);
 INLINE void m68ki_stack_frame_0010(m68ki_cpu_core *m68k, UINT32 sr, UINT32 vector);
 INLINE void m68ki_stack_frame_1000(m68ki_cpu_core *m68k, UINT32 pc, UINT32 sr, UINT32 vector);
-INLINE void m68ki_stack_frame_1010(m68ki_cpu_core *m68k, UINT32 sr, UINT32 vector, UINT32 pc);
-INLINE void m68ki_stack_frame_1011(m68ki_cpu_core *m68k, UINT32 sr, UINT32 vector, UINT32 pc);
+INLINE void m68ki_stack_frame_1010(m68ki_cpu_core *m68k, UINT32 sr, UINT32 vector, UINT32 pc, UINT32 fault_address);
+INLINE void m68ki_stack_frame_1011(m68ki_cpu_core *m68k, UINT32 sr, UINT32 vector, UINT32 pc, UINT32 fault_address);
 
 INLINE void m68ki_exception_trap(m68ki_cpu_core *m68k, UINT32 vector);
 INLINE void m68ki_exception_trapN(m68ki_cpu_core *m68k, UINT32 vector);
@@ -779,23 +840,23 @@ char* m68ki_disassemble_quick(unsigned int pc, unsigned int cpu_type);
 
 INLINE unsigned int m68k_read_immediate_32(m68ki_cpu_core *m68k, unsigned int address)
 {
-	return ((*m68k->memory.readimm16)(m68k->program, address) << 16) | (*m68k->memory.readimm16)(m68k->program, address + 2);
+	return (m68k->memory.readimm16(address) << 16) | m68k->memory.readimm16(address + 2);
 }
 
 INLINE unsigned int m68k_read_pcrelative_8(m68ki_cpu_core *m68k, unsigned int address)
 {
 	if (address >= m68k->encrypted_start && address < m68k->encrypted_end)
-		return (((*m68k->memory.readimm16)(m68k->program, address&~1)>>(8*(1-(address & 1))))&0xff);
+		return ((m68k->memory.readimm16(address&~1)>>(8*(1-(address & 1))))&0xff);
 
-	return (*m68k->memory.read8)(m68k->program, address);
+	return m68k->memory.read8(address);
 }
 
 INLINE unsigned int m68k_read_pcrelative_16(m68ki_cpu_core *m68k, unsigned int address)
 {
 	if (address >= m68k->encrypted_start && address < m68k->encrypted_end)
-		return (*m68k->memory.readimm16)(m68k->program, address);
+		return m68k->memory.readimm16(address);
 
-	return (*m68k->memory.read16)(m68k->program, address);
+	return m68k->memory.read16(address);
 }
 
 INLINE unsigned int m68k_read_pcrelative_32(m68ki_cpu_core *m68k, unsigned int address)
@@ -803,7 +864,7 @@ INLINE unsigned int m68k_read_pcrelative_32(m68ki_cpu_core *m68k, unsigned int a
 	if (address >= m68k->encrypted_start && address < m68k->encrypted_end)
 		return m68k_read_immediate_32(m68k, address);
 
-	return (*m68k->memory.read32)(m68k->program, address);
+	return m68k->memory.read32(address);
 }
 
 
@@ -814,8 +875,8 @@ INLINE unsigned int m68k_read_pcrelative_32(m68ki_cpu_core *m68k, unsigned int a
  */
 INLINE void m68kx_write_memory_32_pd(m68ki_cpu_core *m68k, unsigned int address, unsigned int value)
 {
-	(m68k->memory.write16)(m68k->program, address+2, value>>16);
-	(m68k->memory.write16)(m68k->program, address, value&0xffff);
+	m68k->memory.write16(address+2, value>>16);
+	m68k->memory.write16(address, value&0xffff);
 }
 
 
@@ -828,17 +889,26 @@ INLINE UINT32 m68ki_read_imm_16(m68ki_cpu_core *m68k)
 {
 	UINT32 result;
 
+	m68k->mmu_tmp_fc = m68k->s_flag | FUNCTION_CODE_USER_PROGRAM;
+	m68k->mmu_tmp_rw = 1;
+
 	m68ki_check_address_error(m68k, REG_PC, MODE_READ, m68k->s_flag | FUNCTION_CODE_USER_PROGRAM); /* auto-disable (see m68kcpu.h) */
 
 	if(REG_PC != m68k->pref_addr)
 	{
-		m68k->pref_addr = REG_PC;
-		m68k->pref_data = (*m68k->memory.readimm16)(m68k->program, m68k->pref_addr);
+		m68k->pref_data = m68k->memory.readimm16(REG_PC);
+		m68k->pref_addr = m68k->mmu_tmp_buserror_occurred ? ~0 : REG_PC;
 	}
 	result = MASK_OUT_ABOVE_16(m68k->pref_data);
 	REG_PC += 2;
-	m68k->pref_addr = REG_PC;
-	m68k->pref_data = (*m68k->memory.readimm16)(m68k->program, m68k->pref_addr);
+	if (!m68k->mmu_tmp_buserror_occurred) {
+		// prefetch only if no bus error occurred in opcode fetch
+		m68k->pref_data = m68k->memory.readimm16(REG_PC);
+		m68k->pref_addr = m68k->mmu_tmp_buserror_occurred ? ~0 : REG_PC;
+		// ignore bus error on prefetch
+		m68k->mmu_tmp_buserror_occurred = 0;
+	}
+
 	return result;
 }
 
@@ -846,22 +916,25 @@ INLINE UINT32 m68ki_read_imm_32(m68ki_cpu_core *m68k)
 {
 	UINT32 temp_val;
 
+	m68k->mmu_tmp_fc = m68k->s_flag | FUNCTION_CODE_USER_PROGRAM;
+	m68k->mmu_tmp_rw = 1;
+
 	m68ki_check_address_error(m68k, REG_PC, MODE_READ, m68k->s_flag | FUNCTION_CODE_USER_PROGRAM); /* auto-disable (see m68kcpu.h) */
 
 	if(REG_PC != m68k->pref_addr)
 	{
 		m68k->pref_addr = REG_PC;
-		m68k->pref_data = (*m68k->memory.readimm16)(m68k->program, m68k->pref_addr);
+		m68k->pref_data = m68k->memory.readimm16(m68k->pref_addr);
 	}
 	temp_val = MASK_OUT_ABOVE_16(m68k->pref_data);
 	REG_PC += 2;
 	m68k->pref_addr = REG_PC;
-	m68k->pref_data = (*m68k->memory.readimm16)(m68k->program, m68k->pref_addr);
+	m68k->pref_data = m68k->memory.readimm16(m68k->pref_addr);
 
 	temp_val = MASK_OUT_ABOVE_32((temp_val << 16) | MASK_OUT_ABOVE_16(m68k->pref_data));
 	REG_PC += 2;
-	m68k->pref_addr = REG_PC;
-	m68k->pref_data = (*m68k->memory.readimm16)(m68k->program, m68k->pref_addr);
+	m68k->pref_data = m68k->memory.readimm16(REG_PC);
+	m68k->pref_addr = m68k->mmu_tmp_buserror_occurred ? ~0 : REG_PC;
 
 	return temp_val;
 }
@@ -878,7 +951,9 @@ INLINE UINT32 m68ki_read_imm_32(m68ki_cpu_core *m68k)
  */
 INLINE UINT32 m68ki_read_8_fc(m68ki_cpu_core *m68k, UINT32 address, UINT32 fc)
 {
-	return (*m68k->memory.read8)(m68k->program, address);
+	m68k->mmu_tmp_fc = fc;
+	m68k->mmu_tmp_rw = 1;
+	return m68k->memory.read8(address);
 }
 INLINE UINT32 m68ki_read_16_fc(m68ki_cpu_core *m68k, UINT32 address, UINT32 fc)
 {
@@ -886,7 +961,9 @@ INLINE UINT32 m68ki_read_16_fc(m68ki_cpu_core *m68k, UINT32 address, UINT32 fc)
 	{
 		m68ki_check_address_error(m68k, address, MODE_READ, fc);
 	}
-	return (*m68k->memory.read16)(m68k->program, address);
+	m68k->mmu_tmp_fc = fc;
+	m68k->mmu_tmp_rw = 1;
+	return m68k->memory.read16(address);
 }
 INLINE UINT32 m68ki_read_32_fc(m68ki_cpu_core *m68k, UINT32 address, UINT32 fc)
 {
@@ -894,12 +971,16 @@ INLINE UINT32 m68ki_read_32_fc(m68ki_cpu_core *m68k, UINT32 address, UINT32 fc)
 	{
 		m68ki_check_address_error(m68k, address, MODE_READ, fc);
 	}
-	return (*m68k->memory.read32)(m68k->program, address);
+	m68k->mmu_tmp_fc = fc;
+	m68k->mmu_tmp_rw = 1;
+	return m68k->memory.read32(address);
 }
 
 INLINE void m68ki_write_8_fc(m68ki_cpu_core *m68k, UINT32 address, UINT32 fc, UINT32 value)
 {
-	(*m68k->memory.write8)(m68k->program, address, value);
+	m68k->mmu_tmp_fc = fc;
+	m68k->mmu_tmp_rw = 0;
+	m68k->memory.write8(address, value);
 }
 INLINE void m68ki_write_16_fc(m68ki_cpu_core *m68k, UINT32 address, UINT32 fc, UINT32 value)
 {
@@ -907,7 +988,9 @@ INLINE void m68ki_write_16_fc(m68ki_cpu_core *m68k, UINT32 address, UINT32 fc, U
 	{
 		m68ki_check_address_error(m68k, address, MODE_WRITE, fc);
 	}
-	(*m68k->memory.write16)(m68k->program, address, value);
+	m68k->mmu_tmp_fc = fc;
+	m68k->mmu_tmp_rw = 0;
+	m68k->memory.write16(address, value);
 }
 INLINE void m68ki_write_32_fc(m68ki_cpu_core *m68k, UINT32 address, UINT32 fc, UINT32 value)
 {
@@ -915,7 +998,9 @@ INLINE void m68ki_write_32_fc(m68ki_cpu_core *m68k, UINT32 address, UINT32 fc, U
 	{
 		m68ki_check_address_error(m68k, address, MODE_WRITE, fc);
 	}
-	(*m68k->memory.write32)(m68k->program, address, value);
+	m68k->mmu_tmp_fc = fc;
+	m68k->mmu_tmp_rw = 0;
+	m68k->memory.write32(address, value);
 }
 
 /* Special call to simulate undocumented 68k behavior when move.l with a
@@ -929,8 +1014,10 @@ INLINE void m68ki_write_32_pd_fc(m68ki_cpu_core *m68k, UINT32 address, UINT32 fc
 	{
 		m68ki_check_address_error(m68k, address, MODE_WRITE, fc);
 	}
-	(*m68k->memory.write16)(m68k->program, address+2, value>>16);
-	(*m68k->memory.write16)(m68k->program, address, value&0xffff);
+	m68k->mmu_tmp_fc = fc;
+	m68k->mmu_tmp_rw = 0;
+	m68k->memory.write16(address+2, value>>16);
+	m68k->memory.write16(address, value&0xffff);
 }
 
 
@@ -1429,7 +1516,7 @@ void m68ki_stack_frame_1000(m68ki_cpu_core *m68k, UINT32 pc, UINT32 sr, UINT32 v
  * if the error happens at an instruction boundary.
  * PC stacked is address of next instruction.
  */
-void m68ki_stack_frame_1010(m68ki_cpu_core *m68k, UINT32 sr, UINT32 vector, UINT32 pc)
+void m68ki_stack_frame_1010(m68ki_cpu_core *m68k, UINT32 sr, UINT32 vector, UINT32 pc, UINT32 fault_address)
 {
 	/* INTERNAL REGISTER */
 	m68ki_push_16(m68k, 0);
@@ -1447,7 +1534,7 @@ void m68ki_stack_frame_1010(m68ki_cpu_core *m68k, UINT32 sr, UINT32 vector, UINT
 	m68ki_push_16(m68k, 0);
 
 	/* DATA CYCLE FAULT ADDRESS (2 words) */
-	m68ki_push_32(m68k, 0);
+	m68ki_push_32(m68k, fault_address);
 
 	/* INSTRUCTION PIPE STAGE B */
 	m68ki_push_16(m68k, 0);
@@ -1476,7 +1563,7 @@ void m68ki_stack_frame_1010(m68ki_cpu_core *m68k, UINT32 sr, UINT32 vector, UINT
  * if the error happens during instruction execution.
  * PC stacked is address of instruction in progress.
  */
-void m68ki_stack_frame_1011(m68ki_cpu_core *m68k, UINT32 sr, UINT32 vector, UINT32 pc)
+void m68ki_stack_frame_1011(m68ki_cpu_core *m68k, UINT32 sr, UINT32 vector, UINT32 pc, UINT32 fault_address)
 {
 	/* INTERNAL REGISTERS (18 words) */
 	m68ki_push_32(m68k, 0);
@@ -1503,7 +1590,7 @@ void m68ki_stack_frame_1011(m68ki_cpu_core *m68k, UINT32 sr, UINT32 vector, UINT
 	m68ki_push_32(m68k, 0);
 
 	/* STAGE B ADDRESS (2 words) */
-	m68ki_push_32(m68k, 0);
+	m68ki_push_32(m68k, fault_address);
 
 	/* INTERNAL REGISTER (4 words) */
 	m68ki_push_32(m68k, 0);
@@ -1682,7 +1769,7 @@ INLINE void m68ki_exception_address_error(m68ki_cpu_core *m68k)
      */
 	if(m68k->run_mode == RUN_MODE_BERR_AERR_RESET)
 	{
-		(*m68k->memory.read8)(m68k->program, 0x00ffff01);
+		m68k->memory.read8(0x00ffff01);
 		m68k->stopped = STOP_LEVEL_HALT;
 		return;
 	}

@@ -222,7 +222,7 @@ GFXDECODE_END
 
 static MACHINE_START( dday )
 {
-	dday_state *state = (dday_state *)machine->driver_data;
+	dday_state *state = machine->driver_data<dday_state>();
 
 	state->ay1 = machine->device("ay1");
 
@@ -234,7 +234,7 @@ static MACHINE_START( dday )
 
 static MACHINE_RESET( dday )
 {
-	dday_state *state = (dday_state *)machine->driver_data;
+	dday_state *state = machine->driver_data<dday_state>();
 
 	state->control = 0;
 	state->sl_enable = 0;
@@ -242,43 +242,40 @@ static MACHINE_RESET( dday )
 }
 
 
-static MACHINE_DRIVER_START( dday )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(dday_state)
+static MACHINE_CONFIG_START( dday, dday_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, 2000000)     /* 2 MHz ? */
-	MDRV_CPU_PROGRAM_MAP(dday_map)
+	MCFG_CPU_ADD("maincpu", Z80, 2000000)     /* 2 MHz ? */
+	MCFG_CPU_PROGRAM_MAP(dday_map)
 
-	MDRV_MACHINE_START(dday)
-	MDRV_MACHINE_RESET(dday)
+	MCFG_MACHINE_START(dday)
+	MCFG_MACHINE_RESET(dday)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 0*8, 28*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 0*8, 28*8-1)
 
-	MDRV_GFXDECODE(dday)
-	MDRV_PALETTE_LENGTH(256)
-	MDRV_PALETTE_INIT(dday)
+	MCFG_GFXDECODE(dday)
+	MCFG_PALETTE_LENGTH(256)
+	MCFG_PALETTE_INIT(dday)
 
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS)
-	MDRV_VIDEO_START(dday)
-	MDRV_VIDEO_UPDATE(dday)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS)
+	MCFG_VIDEO_START(dday)
+	MCFG_VIDEO_UPDATE(dday)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ay1", AY8910, 1000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+	MCFG_SOUND_ADD("ay1", AY8910, 1000000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
-	MDRV_SOUND_ADD("ay2", AY8910, 1000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ay2", AY8910, 1000000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+MACHINE_CONFIG_END
 
 
 

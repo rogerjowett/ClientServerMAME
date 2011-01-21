@@ -4,12 +4,11 @@
 
 *************************************************************************/
 
-class kingofb_state
+class kingofb_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, kingofb_state(machine)); }
-
-	kingofb_state(running_machine &machine) { }
+	kingofb_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *    videoram;
@@ -28,9 +27,9 @@ public:
 	int        nmi_enable;
 
 	/* devices */
-	running_device *video_cpu;
-	running_device *sprite_cpu;
-	running_device *audio_cpu;
+	device_t *video_cpu;
+	device_t *sprite_cpu;
+	device_t *audio_cpu;
 };
 
 

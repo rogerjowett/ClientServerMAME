@@ -161,10 +161,7 @@ public:
         return &constBlocks[i];
     }
 
-    void destroyConstBlock(int i)
-    {
-      constBlocks.erase(constBlocks.begin()+i);
-    }
+    void destroyConstBlock(int i);
 
 	MemoryBlock getMemoryBlock(int i)
 	{
@@ -175,19 +172,7 @@ public:
 
 	string getStatisticsString();
 
-    vector<int> getPeerIDs()
-    {
-        vector<int> retval;
-        for(
-            std::map<RakNet::SystemAddress,int>::iterator it = peerIDs.begin();
-            it != peerIDs.end();
-            it++
-            )
-        {
-            retval.push_back(it->second);
-        }
-        return retval;
-    }
+    vector<int> getPeerIDs();
 
     //Note, this doesn't include yourself
     int getNumOtherPeers()
@@ -198,6 +183,8 @@ public:
     int getOtherPeerID(int a);
 
     string popInputBuffer(int clientIndex);
+
+    string popSelfInputBuffer();
 
     inline int getSelfPeerID()
     {

@@ -231,7 +231,18 @@ Note: This hardware appears to have been designed as a test-bed for a new RLE ba
       H1 (CPU)    1994    837-10389  315-5800 315-5801 315-5802
       H1 (Video)  1994    837-9621   315-5803 315-5864
 
+
+   NOTE:  While the hardware and title screen might list 1994 as a copyright, MAME uses 1995 due to the
+   abudance of evidence in trade journals and even it's own service manuals showing the year as 1995.
+
+   References:
+   Arcade game magazine called 'Gamest' show released on 04.28.1995
+   VGL (Ultimate Video Game List published by AMP group) - year is printed as '94(4.95)'
+   Sega Arcade History (published by Enterbrain) is '1995/4'.
+
+
 ******************************************************************************************************/
+
 
 #include "emu.h"
 #include "debugger.h"
@@ -351,7 +362,7 @@ static WRITE32_HANDLER(sysh1_unk_w)
 #if 0
 static READ32_HANDLER(sysh1_ioga_r)
 {
-	//return mame_rand(space->machine);//h1_ioga[offset];
+	//return space->machine->rand();//h1_ioga[offset];
 	return h1_ioga[offset];
 }
 
@@ -450,7 +461,7 @@ static WRITE32_HANDLER( sysh1_txt_blit_w )
 					size = (attr_buff[6] / 4)+1;
 					for(txt_index = 0;txt_index < size; txt_index++)
 					{
-						memory_write_dword(space,(dst_addr),txt_buff[txt_index]);
+						space->write_dword((dst_addr),txt_buff[txt_index]);
 						dst_addr+=4;
 					}
 				}
@@ -459,7 +470,7 @@ static WRITE32_HANDLER( sysh1_txt_blit_w )
 			{
 				static UINT32 clear_vram;
 				for(clear_vram=0x3f40000;clear_vram < 0x3f4ffff;clear_vram+=4)
-					memory_write_dword(space,(clear_vram),0x00000000);
+					space->write_dword((clear_vram),0x00000000);
 			}
 			//else
 			//  printf("CMD = %04x PARAM = %04x DATA = %08x\n",cmd,param,data);
@@ -485,7 +496,7 @@ static WRITE32_HANDLER( sysh1_pal_w )
 
 
 /* FIXME: this seems to do a hell lot of stuff, it's not ST-V SCU but still somewhat complex :/ */
-static void sysh1_dma_transfer( const address_space *space, UINT16 dma_index )
+static void sysh1_dma_transfer( address_space *space, UINT16 dma_index )
 {
 	static UINT32 src,dst,size,type,s_i;
 	static UINT8 end_dma_mark;
@@ -542,7 +553,7 @@ static void sysh1_dma_transfer( const address_space *space, UINT16 dma_index )
 		{
 			for(s_i=0;s_i<size;s_i+=4)
 			{
-				memory_write_dword(space,dst,memory_read_dword(space,src));
+				space->write_dword(dst,space->read_dword(src));
 				dst+=4;
 				src+=4;
 			}
@@ -576,7 +587,7 @@ static WRITE32_HANDLER( sysh1_char_w )
 	COMBINE_DATA(&h1_charram[offset]);
 
 	{
-		UINT8 *gfx = memory_region(space->machine, "ram_gfx");
+		UINT8 *gfx = space->machine->region("ram_gfx")->base();
 
 		gfx[offset*4+0] = (h1_charram[offset] & 0xff000000) >> 24;
 		gfx[offset*4+1] = (h1_charram[offset] & 0x00ff0000) >> 16;
@@ -975,7 +986,7 @@ static INPUT_PORTS_START( coolridr )
 	PORT_BIT( 0xff00ff00, IP_ACTIVE_LOW, IPT_UNUSED )
 
 	PORT_START("IN6")
-	PORT_DIPNAME( 0x00000001, 0x00000001, "IN5-0" )
+	PORT_DIPNAME( 0x00000001, 0x00000001, "IN6-0" )
 	PORT_DIPSETTING(    0x00000001, DEF_STR( Off ) )
 	PORT_DIPSETTING(    0x00000000, DEF_STR( On ) )
 	PORT_DIPNAME( 0x00000002, 0x00000002, DEF_STR( Unknown ) )
@@ -999,7 +1010,7 @@ static INPUT_PORTS_START( coolridr )
 	PORT_DIPNAME( 0x00000080, 0x00000080, DEF_STR( Unknown ) )
 	PORT_DIPSETTING(    0x00000080, DEF_STR( Off ) )
 	PORT_DIPSETTING(    0x00000000, DEF_STR( On ) )
-	PORT_DIPNAME( 0x00010000, 0x00010000, "IN5-1" )
+	PORT_DIPNAME( 0x00010000, 0x00010000, "IN6-1" )
 	PORT_DIPSETTING(    0x00010000, DEF_STR( Off ) )
 	PORT_DIPSETTING(    0x00000000, DEF_STR( On ) )
 	PORT_DIPNAME( 0x00020000, 0x00020000, DEF_STR( Unknown ) )
@@ -1056,33 +1067,33 @@ static MACHINE_RESET ( coolridr )
 	cputag_set_input_line(machine, "soundcpu", INPUT_LINE_HALT, ASSERT_LINE);
 }
 
-static MACHINE_DRIVER_START( coolridr )
-	MDRV_CPU_ADD("maincpu", SH2, 28000000)	// 28 mhz
-	MDRV_CPU_PROGRAM_MAP(system_h1_map)
-	MDRV_CPU_VBLANK_INT("screen",system_h1)
+static MACHINE_CONFIG_START( coolridr, driver_device )
+	MCFG_CPU_ADD("maincpu", SH2, 28000000)	// 28 mhz
+	MCFG_CPU_PROGRAM_MAP(system_h1_map)
+	MCFG_CPU_VBLANK_INT("screen",system_h1)
 
-	MDRV_CPU_ADD("soundcpu", M68000, 16000000)	// 16 mhz
-	MDRV_CPU_PROGRAM_MAP(system_h1_sound_map)
+	MCFG_CPU_ADD("soundcpu", M68000, 16000000)	// 16 mhz
+	MCFG_CPU_PROGRAM_MAP(system_h1_sound_map)
 
-	MDRV_CPU_ADD("sub", SH1, 16000000)	// SH7032 HD6417032F20!! 16 mhz
-	MDRV_CPU_PROGRAM_MAP(coolridr_submap)
-	MDRV_CPU_VBLANK_INT_HACK(system_h1_sub, 3)
+	MCFG_CPU_ADD("sub", SH1, 16000000)	// SH7032 HD6417032F20!! 16 mhz
+	MCFG_CPU_PROGRAM_MAP(coolridr_submap)
+	MCFG_CPU_VBLANK_INT_HACK(system_h1_sub, 3)
 
-	MDRV_GFXDECODE(coolridr)
+	MCFG_GFXDECODE(coolridr)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(128*8, 64*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 128*8-1, 0*8, 64*8-1) //TODO: these are just two different screens
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(128*8, 64*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 128*8-1, 0*8, 64*8-1) //TODO: these are just two different screens
 
-	MDRV_PALETTE_LENGTH(0x10000)
-	MDRV_MACHINE_RESET(coolridr)
+	MCFG_PALETTE_LENGTH(0x10000)
+	MCFG_MACHINE_RESET(coolridr)
 
-	MDRV_VIDEO_START(coolridr)
-	MDRV_VIDEO_UPDATE(coolridr)
-MACHINE_DRIVER_END
+	MCFG_VIDEO_START(coolridr)
+	MCFG_VIDEO_UPDATE(coolridr)
+MACHINE_CONFIG_END
 
 ROM_START( coolridr )
 	ROM_REGION( 0x200000, "maincpu", 0 ) /* SH2 code */

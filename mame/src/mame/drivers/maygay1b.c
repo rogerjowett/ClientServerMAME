@@ -21,6 +21,7 @@
 #include "sound/ay8910.h"
 #include "sound/2413intf.h"
 #include "sound/okim6376.h"
+#include "machine/nvram.h"
 
 #define VERBOSE 1
 #define LOG(x)	do { if (VERBOSE) logerror x; } while (0)
@@ -30,7 +31,7 @@
 
 static struct
 {
-	running_device *duart68681;
+	device_t *duart68681;
 } maygaym1_devices;
 
 static UINT8  lamppos;
@@ -461,7 +462,7 @@ static MACHINE_RESET( m1 )
 
 ///////////////////////////////////////////////////////////////////////////
 
-static void duart_irq_handler(running_device *device, UINT8 state)
+static void duart_irq_handler(device_t *device, UINT8 state)
 {
 	cputag_set_input_line(device->machine, "maincpu", M6809_IRQ_LINE, state?ASSERT_LINE:CLEAR_LINE);
 	LOG(("6809 irq%d \n",state));
@@ -598,7 +599,7 @@ static INPUT_PORTS_START( m1 )
 	PORT_BIT(0x80, IP_ACTIVE_HIGH, IPT_INTERLOCK) PORT_NAME("Cashbox Door")  PORT_CODE(KEYCODE_Q) PORT_TOGGLE
 
 	PORT_START("STROBE4")
-	PORT_BIT(0x01, IP_ACTIVE_HIGH, IPT_BUTTON1) PORT_NAME("Hi")
+	PORT_BIT(0x01, IP_ACTIVE_HIGH, IPT_BUTTON1) PORT_NAME("Hi2")
 	PORT_BIT(0x02, IP_ACTIVE_HIGH, IPT_SERVICE) PORT_NAME("Refill Key") PORT_CODE(KEYCODE_R) PORT_TOGGLE
 	PORT_BIT(0x04, IP_ACTIVE_HIGH, IPT_SPECIAL)//50p Tube
 	PORT_BIT(0x08, IP_ACTIVE_HIGH, IPT_SPECIAL)//100p Tube rear
@@ -697,7 +698,7 @@ static WRITE8_HANDLER( reel56_w )
 	awp_draw_reel(5);
 }
 
-static UINT8 m1_duart_r (running_device *device)
+static UINT8 m1_duart_r (device_t *device)
 {
 	return (optic_pattern);
 }
@@ -746,7 +747,7 @@ static WRITE8_HANDLER( m1_latch_w )
 
 
 static ADDRESS_MAP_START( m1_memmap, ADDRESS_SPACE_PROGRAM, 8 )
-	AM_RANGE(0x0000, 0x1fff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0x0000, 0x1fff) AM_RAM AM_SHARE("nvram")
 
 	AM_RANGE(0x2000, 0x2000) AM_WRITE(reel12_w)
 	AM_RANGE(0x2010, 0x2010) AM_WRITE(reel34_w)
@@ -791,30 +792,30 @@ static const duart68681_config maygaym1_duart68681_config =
 
 // machine driver for maygay m1 board /////////////////////////////////
 
-static MACHINE_DRIVER_START( m1 )
+static MACHINE_CONFIG_START( m1, driver_device )
 
-	MDRV_MACHINE_START(m1)
-	MDRV_MACHINE_RESET(m1)
-	MDRV_CPU_ADD("maincpu", M6809, M1_MASTER_CLOCK/2)
-	MDRV_CPU_PROGRAM_MAP(m1_memmap)
+	MCFG_MACHINE_START(m1)
+	MCFG_MACHINE_RESET(m1)
+	MCFG_CPU_ADD("maincpu", M6809, M1_MASTER_CLOCK/2)
+	MCFG_CPU_PROGRAM_MAP(m1_memmap)
 
-	MDRV_DUART68681_ADD("duart68681", M1_DUART_CLOCK, maygaym1_duart68681_config)
-	MDRV_PIA6821_ADD("pia", m1_pia_intf)
+	MCFG_DUART68681_ADD("duart68681", M1_DUART_CLOCK, maygaym1_duart68681_config)
+	MCFG_PIA6821_ADD("pia", m1_pia_intf)
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("aysnd",AY8913, M1_MASTER_CLOCK)
-	MDRV_SOUND_CONFIG(ay8910_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("aysnd",AY8913, M1_MASTER_CLOCK)
+	MCFG_SOUND_CONFIG(ay8910_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-	MDRV_SOUND_ADD("ymsnd", YM2413, M1_MASTER_CLOCK/4)
+	MCFG_SOUND_ADD("ymsnd", YM2413, M1_MASTER_CLOCK/4)
 
-	MDRV_SOUND_ADD("msm6376", OKIM6376, M1_MASTER_CLOCK/4) //?
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SOUND_ADD("msm6376", OKIM6376, M1_MASTER_CLOCK/4) //?
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
-	MDRV_DEFAULT_LAYOUT(layout_awpvid16)
-MACHINE_DRIVER_END
+	MCFG_DEFAULT_LAYOUT(layout_awpvid16)
+MACHINE_CONFIG_END
 
 ROM_START( m_sptlgt )
 	ROM_REGION( 0x10000, "maincpu", ROMREGION_ERASE00  )

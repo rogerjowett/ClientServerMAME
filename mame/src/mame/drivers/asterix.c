@@ -33,14 +33,14 @@ static const eeprom_interface eeprom_intf =
 #if 0
 static READ16_HANDLER( control2_r )
 {
-	asterix_state *state = (asterix_state *)space->machine->driver_data;
+	asterix_state *state = space->machine->driver_data<asterix_state>();
 	return state->cur_control2;
 }
 #endif
 
 static WRITE16_HANDLER( control2_w )
 {
-	asterix_state *state = (asterix_state *)space->machine->driver_data;
+	asterix_state *state = space->machine->driver_data<asterix_state>();
 
 	if (ACCESSING_BITS_0_7)
 	{
@@ -57,7 +57,7 @@ static WRITE16_HANDLER( control2_w )
 
 static INTERRUPT_GEN( asterix_interrupt )
 {
-	asterix_state *state = (asterix_state *)device->machine->driver_data;
+	asterix_state *state = device->machine->driver_data<asterix_state>();
 
 	// global interrupt masking
 	if (!k056832_is_irq_enabled(state->k056832, 0))
@@ -73,13 +73,13 @@ static READ8_DEVICE_HANDLER( asterix_sound_r )
 
 static TIMER_CALLBACK( nmi_callback )
 {
-	asterix_state *state = (asterix_state *)machine->driver_data;
+	asterix_state *state = machine->driver_data<asterix_state>();
 	cpu_set_input_line(state->audiocpu, INPUT_LINE_NMI, ASSERT_LINE);
 }
 
 static WRITE8_HANDLER( sound_arm_nmi_w )
 {
-	asterix_state *state = (asterix_state *)space->machine->driver_data;
+	asterix_state *state = space->machine->driver_data<asterix_state>();
 
 	cpu_set_input_line(state->audiocpu, INPUT_LINE_NMI, CLEAR_LINE);
 	timer_set(space->machine, ATTOTIME_IN_USEC(5), NULL, 0, nmi_callback);
@@ -87,7 +87,7 @@ static WRITE8_HANDLER( sound_arm_nmi_w )
 
 static WRITE16_HANDLER( sound_irq_w )
 {
-	asterix_state *state = (asterix_state *)space->machine->driver_data;
+	asterix_state *state = space->machine->driver_data<asterix_state>();
 	cpu_set_input_line(state->audiocpu, 0, HOLD_LINE);
 }
 
@@ -97,7 +97,7 @@ static WRITE16_HANDLER( sound_irq_w )
 #if 0
 static WRITE16_HANDLER( protection_w )
 {
-	asterix_state *state = (asterix_state *)space->machine->driver_data;
+	asterix_state *state = space->machine->driver_data<asterix_state>();
 	COMBINE_DATA(state->prot + offset);
 
 	if (offset == 1)
@@ -107,8 +107,8 @@ static WRITE16_HANDLER( protection_w )
 		{
 		case 0x64:
 			{
-			UINT32 param1 = (memory_read_word(space, cmd & 0xffffff) << 16) | memory_read_word(space, (cmd & 0xffffff) + 2);
-			UINT32 param2 = (memory_read_word(space, (cmd & 0xffffff) + 4) << 16) | memory_read_word(space, (cmd & 0xffffff) + 6);
+			UINT32 param1 = (space->read_word(cmd & 0xffffff) << 16) | space->read_word((cmd & 0xffffff) + 2);
+			UINT32 param2 = (space->read_word((cmd & 0xffffff) + 4) << 16) | space->read_word((cmd & 0xffffff) + 6);
 
 			switch (param1 >> 24)
 			{
@@ -119,7 +119,7 @@ static WRITE16_HANDLER( protection_w )
 					param2 &= 0xffffff;
 					while(size >= 0)
 					{
-						memory_write_word(space, param2, memory_read_word(space, param1));
+						space->write_word(param2, space->read_word(param1));
 						param1 += 2;
 						param2 += 2;
 						size--;
@@ -147,10 +147,10 @@ static WRITE16_HANDLER( protection_w )
 		{
 		case 0x64:
 		{
-			UINT32 param1 = (memory_read_word(space, cmd & 0xffffff) << 16)
-				| memory_read_word(space, (cmd & 0xffffff) + 2);
-			UINT32 param2 = (memory_read_word(space, (cmd & 0xffffff) + 4) << 16)
-				| memory_read_word(space, (cmd & 0xffffff) + 6);
+			UINT32 param1 = (space->read_word(cmd & 0xffffff) << 16)
+				| space->read_word((cmd & 0xffffff) + 2);
+			UINT32 param2 = (space->read_word((cmd & 0xffffff) + 4) << 16)
+				| space->read_word((cmd & 0xffffff) + 6);
 
 			switch (param1 >> 24)
 			{
@@ -161,7 +161,7 @@ static WRITE16_HANDLER( protection_w )
 				param2 &= 0xffffff;
 				while(size >= 0)
 				{
-					memory_write_word(space, param2, memory_read_word(space, param1));
+					space->write_word(param2, space->read_word(param1));
 					param1 += 2;
 					param2 += 2;
 					size--;
@@ -251,7 +251,7 @@ static const k05324x_interface asterix_k05324x_intf =
 
 static MACHINE_START( asterix )
 {
-	asterix_state *state = (asterix_state *)machine->driver_data;
+	asterix_state *state = machine->driver_data<asterix_state>();
 
 	state->maincpu = machine->device("maincpu");
 	state->audiocpu = machine->device("audiocpu");
@@ -273,7 +273,7 @@ static MACHINE_START( asterix )
 
 static MACHINE_RESET( asterix )
 {
-	asterix_state *state = (asterix_state *)machine->driver_data;
+	asterix_state *state = machine->driver_data<asterix_state>();
 	int i;
 
 	state->cur_control2 = 0;
@@ -294,52 +294,49 @@ static MACHINE_RESET( asterix )
 	}
 }
 
-static MACHINE_DRIVER_START( asterix )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(asterix_state)
+static MACHINE_CONFIG_START( asterix, asterix_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 12000000)
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_VBLANK_INT("screen", asterix_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, 12000000)
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_VBLANK_INT("screen", asterix_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 8000000)
-	MDRV_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 8000000)
+	MCFG_CPU_PROGRAM_MAP(sound_map)
 
-	MDRV_MACHINE_START(asterix)
-	MDRV_MACHINE_RESET(asterix)
+	MCFG_MACHINE_START(asterix)
+	MCFG_MACHINE_RESET(asterix)
 
-	MDRV_EEPROM_ADD("eeprom", eeprom_intf)
+	MCFG_EEPROM_ADD("eeprom", eeprom_intf)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(14*8, (64-14)*8-1, 2*8, 30*8-1 )
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(14*8, (64-14)*8-1, 2*8, 30*8-1 )
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_UPDATE(asterix)
+	MCFG_VIDEO_UPDATE(asterix)
 
-	MDRV_K056832_ADD("k056832", asterix_k056832_intf)
-	MDRV_K053244_ADD("k053244", asterix_k05324x_intf)
-	MDRV_K053251_ADD("k053251")
+	MCFG_K056832_ADD("k056832", asterix_k056832_intf)
+	MCFG_K053244_ADD("k053244", asterix_k05324x_intf)
+	MCFG_K053251_ADD("k053251")
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, 4000000)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM2151, 4000000)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
 
-	MDRV_SOUND_ADD("k053260", K053260, 4000000)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.75)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.75)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("k053260", K053260, 4000000)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.75)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.75)
+MACHINE_CONFIG_END
 
 
 ROM_START( asterix )
@@ -471,8 +468,8 @@ ROM_END
 static DRIVER_INIT( asterix )
 {
 #if 0
-	*(UINT16 *)(memory_region(machine, "maincpu") + 0x07f34) = 0x602a;
-	*(UINT16 *)(memory_region(machine, "maincpu") + 0x00008) = 0x0400;
+	*(UINT16 *)(machine->region("maincpu")->base() + 0x07f34) = 0x602a;
+	*(UINT16 *)(machine->region("maincpu")->base() + 0x00008) = 0x0400;
 #endif
 }
 

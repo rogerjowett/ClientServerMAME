@@ -56,7 +56,7 @@ struct _generic_machine_private
     are enabled for the given CPU
 -------------------------------------------------*/
 
-INLINE int interrupt_enabled(running_device *device)
+INLINE int interrupt_enabled(device_t *device)
 {
 	generic_machine_private *state = device->machine->generic_machine_data;
 	for (int index = 0; index < ARRAY_LENGTH(state->interrupt_device); index++)
@@ -103,10 +103,6 @@ void generic_machine_init(running_machine *machine)
 	state_save_register_item_array(machine, "coin", NULL, 0, state->coin_count);
 	state_save_register_item_array(machine, "coin", NULL, 0, state->coinlockedout);
 	state_save_register_item_array(machine, "coin", NULL, 0, state->lastcoin);
-
-	/* reset NVRAM size and pointers */
-	machine->generic.nvram.v = NULL;
-	machine->generic.nvram_size = 0;
 
 	/* reset memory card info */
 	state->memcard_inserted = -1;
@@ -401,68 +397,6 @@ void nvram_save(running_machine *machine)
 }
 
 
-/*-------------------------------------------------
-    NVRAM_HANDLER( generic_0fill ) - generic NVRAM
-    with a 0 fill
--------------------------------------------------*/
-
-NVRAM_HANDLER( generic_0fill )
-{
-	const region_info *region = machine->region("nvram");
-	if (read_or_write)
-		mame_fwrite(file, machine->generic.nvram.v, machine->generic.nvram_size);
-	else if (file != NULL)
-		mame_fread(file, machine->generic.nvram.v, machine->generic.nvram_size);
-	else if (region != NULL && region->bytes() == machine->generic.nvram_size)
-		memcpy(machine->generic.nvram.v, region->base(), machine->generic.nvram_size);
-	else
-		memset(machine->generic.nvram.v, 0, machine->generic.nvram_size);
-}
-
-
-/*-------------------------------------------------
-    NVRAM_HANDLER( generic_1fill ) - generic NVRAM
-    with a 1 fill
--------------------------------------------------*/
-
-NVRAM_HANDLER( generic_1fill )
-{
-	const region_info *region = machine->region("nvram");
-	if (read_or_write)
-		mame_fwrite(file, machine->generic.nvram.v, machine->generic.nvram_size);
-	else if (file != NULL)
-		mame_fread(file, machine->generic.nvram.v, machine->generic.nvram_size);
-	else if (region != NULL && region->bytes() == machine->generic.nvram_size)
-		memcpy(machine->generic.nvram.v, region->base(), machine->generic.nvram_size);
-	else
-		memset(machine->generic.nvram.v, 0xff, machine->generic.nvram_size);
-}
-
-
-/*-------------------------------------------------
-    NVRAM_HANDLER( generic_randfill ) - generic NVRAM
-    with a random fill
--------------------------------------------------*/
-
-NVRAM_HANDLER( generic_randfill )
-{
-	const region_info *region = machine->region("nvram");
-	if (read_or_write)
-		mame_fwrite(file, machine->generic.nvram.v, machine->generic.nvram_size);
-	else if (file != NULL)
-		mame_fread(file, machine->generic.nvram.v, machine->generic.nvram_size);
-	else if (region != NULL && region->bytes() == machine->generic.nvram_size)
-		memcpy(machine->generic.nvram.v, region->base(), machine->generic.nvram_size);
-	else
-	{
-		UINT8 *nvram = (UINT8 *)machine->generic.nvram.v;
-		int i;
-		for (i = 0; i < machine->generic.nvram_size; i++)
-			nvram[i] = mame_rand(machine);
-	}
-}
-
-
 
 /***************************************************************************
     MEMORY CARD MANAGEMENT
@@ -668,7 +602,7 @@ static TIMER_CALLBACK( clear_all_lines )
 
 static TIMER_CALLBACK( irq_pulse_clear )
 {
-	running_device *device = (running_device *)ptr;
+	device_t *device = (device_t *)ptr;
 	int irqline = param;
 	cpu_set_input_line(device, irqline, CLEAR_LINE);
 }
@@ -680,7 +614,7 @@ static TIMER_CALLBACK( irq_pulse_clear )
     later
 -------------------------------------------------*/
 
-void generic_pulse_irq_line(running_device *device, int irqline)
+void generic_pulse_irq_line(device_t *device, int irqline)
 {
 	assert(irqline != INPUT_LINE_NMI && irqline != INPUT_LINE_RESET);
 	cpu_set_input_line(device, irqline, ASSERT_LINE);
@@ -697,7 +631,7 @@ void generic_pulse_irq_line(running_device *device, int irqline)
     1 cycle later, specifying a vector
 -------------------------------------------------*/
 
-void generic_pulse_irq_line_and_vector(running_device *device, int irqline, int vector)
+void generic_pulse_irq_line_and_vector(device_t *device, int irqline, int vector)
 {
 	assert(irqline != INPUT_LINE_NMI && irqline != INPUT_LINE_RESET);
 	cpu_set_input_line_and_vector(device, irqline, ASSERT_LINE, vector);
@@ -713,7 +647,7 @@ void generic_pulse_irq_line_and_vector(running_device *device, int irqline, int 
     disable value for global interrupts
 -------------------------------------------------*/
 
-void cpu_interrupt_enable(running_device *device, int enabled)
+void cpu_interrupt_enable(device_t *device, int enabled)
 {
 	cpu_device *cpudevice = downcast<cpu_device *>(device);
 
@@ -816,7 +750,7 @@ INTERRUPT_GEN( irq7_line_assert )	{ if (interrupt_enabled(device)) cpu_set_input
 -------------------------------------------------*/
 
 WRITE8_HANDLER( watchdog_reset_w ) { watchdog_reset(space->machine); }
-READ8_HANDLER( watchdog_reset_r ) { watchdog_reset(space->machine); return space->unmap; }
+READ8_HANDLER( watchdog_reset_r ) { watchdog_reset(space->machine); return space->unmap(); }
 
 
 /*-------------------------------------------------
@@ -824,7 +758,7 @@ READ8_HANDLER( watchdog_reset_r ) { watchdog_reset(space->machine); return space
 -------------------------------------------------*/
 
 WRITE16_HANDLER( watchdog_reset16_w ) {	watchdog_reset(space->machine); }
-READ16_HANDLER( watchdog_reset16_r ) { watchdog_reset(space->machine); return space->unmap; }
+READ16_HANDLER( watchdog_reset16_r ) { watchdog_reset(space->machine); return space->unmap(); }
 
 
 /*-------------------------------------------------
@@ -832,7 +766,7 @@ READ16_HANDLER( watchdog_reset16_r ) { watchdog_reset(space->machine); return sp
 -------------------------------------------------*/
 
 WRITE32_HANDLER( watchdog_reset32_w ) {	watchdog_reset(space->machine); }
-READ32_HANDLER( watchdog_reset32_r ) { watchdog_reset(space->machine); return space->unmap; }
+READ32_HANDLER( watchdog_reset32_r ) { watchdog_reset(space->machine); return space->unmap(); }
 
 
 

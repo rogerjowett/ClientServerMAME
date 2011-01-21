@@ -117,12 +117,11 @@ Notes:
 #include "sound/3812intf.h"
 
 
-class bigfghtr_state
+class bigfghtr_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, bigfghtr_state(machine)); }
-
-	bigfghtr_state(running_machine &machine) { }
+	bigfghtr_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* video-related */
 	UINT16 *      text_videoram;
@@ -140,12 +139,14 @@ public:
 
 	/* misc */
 	int           read_latch;
+	UINT8		  mcu_input_snippet;
+	UINT8		  mcu_jsr_snippet;
 };
 
 
 static TILE_GET_INFO( get_fg_tile_info )
 {
-	bigfghtr_state *state = (bigfghtr_state *)machine->driver_data;
+	bigfghtr_state *state = machine->driver_data<bigfghtr_state>();
 	int data = state->fg_videoram[tile_index];
 	SET_TILE_INFO(
 			1,
@@ -157,7 +158,7 @@ static TILE_GET_INFO( get_fg_tile_info )
 
 static TILE_GET_INFO( get_bg_tile_info )
 {
-	bigfghtr_state *state = (bigfghtr_state *)machine->driver_data;
+	bigfghtr_state *state = machine->driver_data<bigfghtr_state>();
 	int data = state->bg_videoram[tile_index];
 	SET_TILE_INFO(
 			2,
@@ -168,7 +169,7 @@ static TILE_GET_INFO( get_bg_tile_info )
 
 static TILE_GET_INFO( get_tx_tile_info )
 {
-	bigfghtr_state *state = (bigfghtr_state *)machine->driver_data;
+	bigfghtr_state *state = machine->driver_data<bigfghtr_state>();
 	int tile_number = state->text_videoram[tile_index] & 0xff;
 	int attributes;
 
@@ -183,7 +184,7 @@ static TILE_GET_INFO( get_tx_tile_info )
 
 static VIDEO_START( bigfghtr )
 {
-	bigfghtr_state *state = (bigfghtr_state *)machine->driver_data;
+	bigfghtr_state *state = machine->driver_data<bigfghtr_state>();
 
 	state->bg_tilemap = tilemap_create(machine, get_bg_tile_info, tilemap_scan_cols, 16, 16, 64, 32);
 	state->fg_tilemap = tilemap_create(machine, get_fg_tile_info, tilemap_scan_cols, 16, 16, 64, 32);
@@ -195,7 +196,7 @@ static VIDEO_START( bigfghtr )
 
 static WRITE16_HANDLER(text_videoram_w )
 {
-	bigfghtr_state *state = (bigfghtr_state *)space->machine->driver_data;
+	bigfghtr_state *state = space->machine->driver_data<bigfghtr_state>();
 
 	COMBINE_DATA(&state->text_videoram[offset]);
 	tilemap_mark_tile_dirty(state->tx_tilemap, offset & 0x7ff);
@@ -203,7 +204,7 @@ static WRITE16_HANDLER(text_videoram_w )
 
 static WRITE16_HANDLER( fg_videoram_w )
 {
-	bigfghtr_state *state = (bigfghtr_state *)space->machine->driver_data;
+	bigfghtr_state *state = space->machine->driver_data<bigfghtr_state>();
 
 	COMBINE_DATA(&state->fg_videoram[offset]);
 	tilemap_mark_tile_dirty(state->fg_tilemap, offset);
@@ -211,7 +212,7 @@ static WRITE16_HANDLER( fg_videoram_w )
 
 static WRITE16_HANDLER( bg_videoram_w )
 {
-	bigfghtr_state *state = (bigfghtr_state *)space->machine->driver_data;
+	bigfghtr_state *state = space->machine->driver_data<bigfghtr_state>();
 
 	COMBINE_DATA(&state->bg_videoram[offset]);
 	tilemap_mark_tile_dirty(state->bg_tilemap, offset);
@@ -219,19 +220,19 @@ static WRITE16_HANDLER( bg_videoram_w )
 
 static WRITE16_HANDLER( fg_scrollx_w )
 {
-	bigfghtr_state *state = (bigfghtr_state *)space->machine->driver_data;
+	bigfghtr_state *state = space->machine->driver_data<bigfghtr_state>();
 	COMBINE_DATA(&state->fg_scrollx);
 }
 
 static WRITE16_HANDLER( fg_scrolly_w )
 {
-	bigfghtr_state *state = (bigfghtr_state *)space->machine->driver_data;
+	bigfghtr_state *state = space->machine->driver_data<bigfghtr_state>();
 	COMBINE_DATA(&state->fg_scrolly);
 }
 
 static WRITE16_HANDLER( bg_scrollx_w )
 {
-	bigfghtr_state *state = (bigfghtr_state *)space->machine->driver_data;
+	bigfghtr_state *state = space->machine->driver_data<bigfghtr_state>();
 
 	COMBINE_DATA(&state->scroll_x);
 	tilemap_set_scrollx(state->bg_tilemap, 0, state->scroll_x);
@@ -239,7 +240,7 @@ static WRITE16_HANDLER( bg_scrollx_w )
 
 static WRITE16_HANDLER( bg_scrolly_w )
 {
-	bigfghtr_state *state = (bigfghtr_state *)space->machine->driver_data;
+	bigfghtr_state *state = space->machine->driver_data<bigfghtr_state>();
 
 	COMBINE_DATA(&state->scroll_y);
 	tilemap_set_scrolly(state->bg_tilemap, 0, state->scroll_y);
@@ -272,7 +273,7 @@ static void draw_sprites( running_machine *machine, bitmap_t *bitmap, const rect
 
 static VIDEO_UPDATE( bigfghtr )
 {
-	bigfghtr_state *state = (bigfghtr_state *)screen->machine->driver_data;
+	bigfghtr_state *state = screen->machine->driver_data<bigfghtr_state>();
 	int sprite_enable = state->vreg & 0x200;
 
 	tilemap_set_enable(state->bg_tilemap, state->vreg & 0x800);
@@ -307,7 +308,7 @@ static VIDEO_UPDATE( bigfghtr )
 
 static VIDEO_EOF( bigfghtr )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 	buffer_spriteram16_w(space, 0, 0, 0xffff);
 }
 
@@ -320,52 +321,171 @@ static WRITE16_HANDLER( sound_command_w )
 
 static WRITE16_HANDLER( io_w )
 {
-	bigfghtr_state *state = (bigfghtr_state *)space->machine->driver_data;
+	bigfghtr_state *state = space->machine->driver_data<bigfghtr_state>();
 
 	COMBINE_DATA(&state->vreg);
 	flip_screen_set(space->machine, state->vreg & 0x1000);
 }
 
+
+static WRITE16_HANDLER( sharedram_w )
+{
+	bigfghtr_state *state = space->machine->driver_data<bigfghtr_state>();
+	COMBINE_DATA(&state->sharedram[offset]);
+
+	switch(offset)
+	{
+		case 0x40/2:
+			state->mcu_input_snippet = (data == 0x100);
+			state->mcu_jsr_snippet = (data == 0x300);
+			break;
+	}
+}
+
+static READ16_HANDLER(sharedram_r)
+{
+	bigfghtr_state *state = space->machine->driver_data<bigfghtr_state>();
+
+	if(state->mcu_input_snippet)
+	{
+		switch(offset+0x600/2)
+		{
+			case 0x640/2:
+				if(state->read_latch)
+				{
+					state->read_latch = 0;
+					return space->machine->rand(); // TODO
+				}
+				break;
+
+			case 0x642/2:
+				return (input_port_read(space->machine, "DSW0") & 0xffff) ^ 0xffff;
+
+			case 0x644/2:
+				return (input_port_read(space->machine, "DSW1") & 0xffff) ^ 0xffff;
+
+			case 0x646/2:
+				return (input_port_read(space->machine, "P1") & 0xffff) ^ 0xffff;
+
+			case 0x648/2:
+				return (input_port_read(space->machine, "P2") & 0xffff) ^ 0xffff;
+		}
+	}
+
+	if(state->mcu_jsr_snippet)
+	{
+		switch(offset+0x600/2)
+		{
+			case 0x640/2:
+				if(state->read_latch)
+				{
+					state->read_latch = 0;
+					return space->machine->rand(); // TODO
+				}
+				break;
+			case 0x642/2:
+				return (input_port_read(space->machine, "DSW0") & 0xffff) ^ 0xffff;
+
+			case 0x644/2:
+				return (input_port_read(space->machine, "DSW1") & 0xffff) ^ 0xffff;
+
+			case 0x646/2:
+				return (input_port_read(space->machine, "P1") & 0xffff) ^ 0xffff;
+
+			case 0x648/2:
+				return (input_port_read(space->machine, "P2") & 0xffff) ^ 0xffff;
+
+			/*
+            protection controls where the program code should jump to.
+
+            example snippet:
+            00DB2A: 41FA FE86                  lea     (-$17a,PC), A0; ($d9b2) ;base program vector
+            00DB2E: 4DF9 0008 0E2A             lea     $80e2a.l, A6 ;base RAM vector, used by the i8751 to send the value, this value is added to the above A0
+            00DB34: 3039 0008 0E62             move.w  $80e62.l, D0 ;number of snippets to execute
+            00DB3A: 6100 00F0                  bsr     $dc2c
+            */
+
+			/* bp daee, A0 = 0xdd02, A6 = 0x808ca, D0 = 0x80902 */
+			//case 0x902/2:
+			//  return 0x0001;
+			//case (0x90a+0x24)/2:
+			//  return 0x0001;
+			//case (0x902+8)/2:
+			//  return 0x0004; // 0xf86a
+
+			/* bp db02, A0 = 0xdc2e, A6 = 0x80912, D0 = 0x8094a */
+			//case 0x94a/2:
+			//  return 1;
+			//case (0x94a+8)/2:
+			//  return 0x00dc; // 0xd62e
+
+			/* bp db16, A0 = 0xda86, A6 = 0x80c22, D0 = 0x80c5a */
+			//case 0xc5a/2:
+			//  return 1;
+			//case (0xc5a+8)/2:
+			//  return 0x0288; // 0x345f4
+
+			/* bp db2a, A0 = 0xd9b2, A6 = 0x80e2a, D0 = 0x80e62 */
+
+			/* bp db3e, A0 = 0xd8da, A6 = 0x81132, D0 = 0x8116a */
+
+			/* bp db52, A0 = 0xd806, A6 = 0x8133a, D0 = 0x81372 */
+
+			/* bp db66, A0 = 0xd7aa, A6 = 0x81742, D0 = 0x8177a */
+
+			/* bp db7a, A0 = 0xd746, A6 = 0x81b4a, D0 = 0x81b82 */
+
+			/* bp db8e, A0 = 0xd672, A6 = 0x81f52, D0 = 0x81f8a */
+
+			/* bp dba4, A0 = 0xd5ae, A6 = 0x8205a, D0 = 0x82092 */
+
+			/* bp dbba, A0 = 0xd5be, A6 = 0x82862, D0 = 0x8289a */
+
+			/* bp dbd0, A0 = 0xd512, A6 = 0x8296a, D0 = 0x829a2 */
+
+			/* bp dbe6, A0 = 0xd466, A6 = 0x82d72, D0 = 0x82daa */
+
+			/* bp dbfc, A0 = 0xd43e, A6 = 0x8357a, D0 = 0x835b2 */
+
+			/* following is separated from the others, dunno why ... */
+			/* bp dc14, A0 = 0xd3aa, A6 = 0x835a2, D0 = 0x835b2 */
+
+
+			/*case 0x
+            case 0x94a/2:
+                return 0x0002*4;
+            case (0x90a+2*0x40)/2:
+            case (0x90a+3*0x40)/2:
+                return 0x0003*4;
+            case (0x90a+4*0x40)/2:
+                return 0x000c*4; // 0x13d74
+            case (0x90a+5*0x40)/2:
+                return 0x000d*4; // 0x130f6
+            case (0x90a+6*0x40)/2:
+                return 0x000e*4; // 0x1817e
+            case (0x90a+7*0x40)/2:
+                return 0x0010*4; // 0x15924
+            //case (0x90a+0x25)/2:
+            //  return 2;*/
+		}
+	}
+
+	return state->sharedram[offset];
+}
+
 static READ16_HANDLER( latch_r )
 {
-	bigfghtr_state *state = (bigfghtr_state *)space->machine->driver_data;
+	bigfghtr_state *state = space->machine->driver_data<bigfghtr_state>();
 
 	state->read_latch = 1;
 	return 0;
 }
 
-
-static WRITE16_HANDLER( sharedram_w )
-{
-	bigfghtr_state *state = (bigfghtr_state *)space->machine->driver_data;
-	COMBINE_DATA(&state->sharedram[offset]);
-}
-
-static READ16_HANDLER(sharedram_r)
-{
-	bigfghtr_state *state = (bigfghtr_state *)space->machine->driver_data;
-	switch(offset)
-	{
-	case 0x40/2:
-		if(state->read_latch)
-		{
-			state->read_latch = 0;
-			return mame_rand(space->machine);
-		}
-		break;
-
-	case 0x46/2:
-		return (input_port_read(space->machine, "P1") & 0xffff) ^ 0xffff;
-
-	}
-	return state->sharedram[offset];
-}
-
 static ADDRESS_MAP_START( mainmem, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x000000, 0x07ffff) AM_ROM
 	AM_RANGE(0x080000, 0x0805ff) AM_RAM AM_BASE_SIZE_GENERIC(spriteram)
-	AM_RANGE(0x080600, 0x080fff) AM_READWRITE(sharedram_r, sharedram_w) AM_BASE_MEMBER(bigfghtr_state, sharedram)
-	AM_RANGE(0x081000, 0x085fff) AM_RAM //??
+	AM_RANGE(0x080600, 0x083fff) AM_READWRITE(sharedram_r, sharedram_w) AM_BASE_MEMBER(bigfghtr_state, sharedram)
+	AM_RANGE(0x084000, 0x085fff) AM_RAM //??
 	AM_RANGE(0x086000, 0x086fff) AM_RAM_WRITE(bg_videoram_w) AM_BASE_MEMBER(bigfghtr_state, bg_videoram)
 	AM_RANGE(0x087000, 0x087fff) AM_RAM_WRITE(fg_videoram_w) AM_BASE_MEMBER(bigfghtr_state, fg_videoram)
 	AM_RANGE(0x088000, 0x089fff) AM_RAM_WRITE(text_videoram_w) AM_BASE_MEMBER(bigfghtr_state, text_videoram)
@@ -435,7 +555,7 @@ static INPUT_PORTS_START( bigfghtr )
 	PORT_BIT( 0x0040, IP_ACTIVE_LOW, IPT_BUTTON3 ) PORT_PLAYER(2)
 	PORT_BIT( 0x0080, IP_ACTIVE_LOW, IPT_UNKNOWN )
 	PORT_BIT( 0x0100, IP_ACTIVE_LOW, IPT_SERVICE1 )
-	PORT_SERVICE( 0x0200, IP_ACTIVE_LOW )
+	PORT_SERVICE_NO_TOGGLE( 0x0200, IP_ACTIVE_LOW )
 	PORT_BIT( 0x0400, IP_ACTIVE_LOW, IPT_TILT )
 	PORT_BIT( 0xf800, IP_ACTIVE_LOW, IPT_UNKNOWN )
 
@@ -535,7 +655,7 @@ GFXDECODE_END
 
 static MACHINE_START( bigfghtr )
 {
-	bigfghtr_state *state = (bigfghtr_state *)machine->driver_data;
+	bigfghtr_state *state = machine->driver_data<bigfghtr_state>();
 
 	state_save_register_global(machine, state->fg_scrollx);
 	state_save_register_global(machine, state->fg_scrolly);
@@ -547,7 +667,7 @@ static MACHINE_START( bigfghtr )
 
 static MACHINE_RESET( bigfghtr )
 {
-	bigfghtr_state *state = (bigfghtr_state *)machine->driver_data;
+	bigfghtr_state *state = machine->driver_data<bigfghtr_state>();
 
 	state->fg_scrollx = 0;
 	state->fg_scrolly = 0;
@@ -558,50 +678,49 @@ static MACHINE_RESET( bigfghtr )
 }
 
 
-static MACHINE_DRIVER_START( bigfghtr )
-	MDRV_DRIVER_DATA(bigfghtr_state)
+static MACHINE_CONFIG_START( bigfghtr, bigfghtr_state )
 
-	MDRV_CPU_ADD("maincpu", M68000, 8000000) /* 8 MHz?? */
-	MDRV_CPU_PROGRAM_MAP(mainmem)
+	MCFG_CPU_ADD("maincpu", M68000, 8000000) /* 8 MHz?? */
+	MCFG_CPU_PROGRAM_MAP(mainmem)
 
-	MDRV_CPU_VBLANK_INT("screen", irq1_line_hold)
+	MCFG_CPU_VBLANK_INT("screen", irq1_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 3072000)	/* 3.072 MHz???? */
-	MDRV_CPU_PROGRAM_MAP(soundmem)
-	MDRV_CPU_IO_MAP(soundport)
-	MDRV_CPU_VBLANK_INT_HACK(irq0_line_hold,128)
+	MCFG_CPU_ADD("audiocpu", Z80, 3072000)	/* 3.072 MHz???? */
+	MCFG_CPU_PROGRAM_MAP(soundmem)
+	MCFG_CPU_IO_MAP(soundport)
+	MCFG_CPU_VBLANK_INT_HACK(irq0_line_hold,128)
 
-	MDRV_MACHINE_START(bigfghtr)
-	MDRV_MACHINE_RESET(bigfghtr	)
+	MCFG_MACHINE_START(bigfghtr)
+	MCFG_MACHINE_RESET(bigfghtr	)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_BUFFERS_SPRITERAM)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_BUFFERS_SPRITERAM)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(57)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(12*8, (64-12)*8-1, 1*8, 31*8-1 )
-	MDRV_GFXDECODE(bigfghtr)
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(57)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(12*8, (64-12)*8-1, 1*8, 31*8-1 )
+	MCFG_GFXDECODE(bigfghtr)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_EOF(bigfghtr)
-	MDRV_VIDEO_START(bigfghtr)
-	MDRV_VIDEO_UPDATE(bigfghtr)
+	MCFG_VIDEO_EOF(bigfghtr)
+	MCFG_VIDEO_START(bigfghtr)
+	MCFG_VIDEO_UPDATE(bigfghtr)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM3812, 4000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_SOUND_ADD("ymsnd", YM3812, 4000000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MDRV_SOUND_ADD("dac1", DAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SOUND_ADD("dac1", DAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-	MDRV_SOUND_ADD("dac2", DAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("dac2", DAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 ROM_START( skyrobo )
@@ -668,25 +787,5 @@ ROM_START( bigfghtr )
 	ROM_LOAD( "tf.13h", 0x0000, 0x0100, CRC(81244757) SHA1(6324f63e571f0f7a0bb9eb97f9994809db79493f) ) /* Prom is a N82S129AN type */
 ROM_END
 
-
-static DRIVER_INIT( skyrobo )
-{
-	//RAM TESTS
-	UINT16 *RAM = (UINT16 *)memory_region(machine, "maincpu");
-	RAM[0x2e822 / 2] = 0x4ef9;
-	RAM[0x2e824 / 2] = 0x0002;
-	RAM[0x2e826 / 2] = 0xe9ae;
-}
-
-
-static DRIVER_INIT( bigfghtr )
-{
-	//RAM TESTS
-	UINT16 *RAM = (UINT16 *)memory_region(machine, "maincpu");
-	RAM[0x2e8cc / 2] = 0x4ef9;
-	RAM[0x2e8ce / 2] = 0x0002;
-	RAM[0x2e8d0 / 2] = 0xea58;
-}
-
-GAME( 1989, skyrobo,        0, bigfghtr, bigfghtr, skyrobo,  ROT0, "Nichibutsu", "Sky Robo", GAME_NOT_WORKING | GAME_UNEMULATED_PROTECTION | GAME_SUPPORTS_SAVE )
-GAME( 1989, bigfghtr, skyrobo, bigfghtr, bigfghtr, bigfghtr, ROT0, "Nichibutsu", "Tatakae! Big Fighter", GAME_NOT_WORKING | GAME_UNEMULATED_PROTECTION | GAME_SUPPORTS_SAVE )
+GAME( 1989, skyrobo,        0, bigfghtr, bigfghtr, 0,  ROT0, "Nichibutsu", "Sky Robo", GAME_NOT_WORKING | GAME_UNEMULATED_PROTECTION | GAME_SUPPORTS_SAVE )
+GAME( 1989, bigfghtr, skyrobo, bigfghtr, bigfghtr, 0,  ROT0, "Nichibutsu", "Tatakae! Big Fighter (Japan)", GAME_NOT_WORKING | GAME_UNEMULATED_PROTECTION | GAME_SUPPORTS_SAVE )

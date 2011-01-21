@@ -67,7 +67,8 @@ WRITE16_HANDLER( midwunit_cmos_w )
 {
 	if (cmos_write_enable)
 	{
-		COMBINE_DATA(space->machine->generic.nvram.u16+offset);
+		midwxunit_state *state = space->machine->driver_data<midwxunit_state>();
+		COMBINE_DATA(state->m_nvram+offset);
 		cmos_write_enable = 0;
 	}
 	else
@@ -80,13 +81,15 @@ WRITE16_HANDLER( midwunit_cmos_w )
 
 WRITE16_HANDLER( midxunit_cmos_w )
 {
-	COMBINE_DATA(space->machine->generic.nvram.u16+offset);
+	midwxunit_state *state = space->machine->driver_data<midwxunit_state>();
+	COMBINE_DATA(state->m_nvram+offset);
 }
 
 
 READ16_HANDLER( midwunit_cmos_r )
 {
-	return space->machine->generic.nvram.u16[offset];
+	midwxunit_state *state = space->machine->driver_data<midwxunit_state>();
+	return state->m_nvram[offset];
 }
 
 
@@ -391,8 +394,8 @@ static void init_wunit_generic(running_machine *machine)
 	register_state_saving(machine);
 
 	/* load the graphics ROMs -- quadruples */
-	midyunit_gfx_rom = base = memory_region(machine, "gfx1");
-	len = memory_region_length(machine, "gfx1");
+	midyunit_gfx_rom = base = machine->region("gfx1")->base();
+	len = machine->region("gfx1")->bytes();
 	for (i = 0; i < len / 0x400000; i++)
 	{
 		memcpy(midwunit_decode_memory, base, 0x400000);
@@ -597,8 +600,8 @@ DRIVER_INIT( revx )
 	register_state_saving(machine);
 
 	/* load the graphics ROMs -- quadruples */
-	midyunit_gfx_rom = base = memory_region(machine, "gfx1");
-	len = memory_region_length(machine, "gfx1");
+	midyunit_gfx_rom = base = machine->region("gfx1")->base();
+	len = machine->region("gfx1")->bytes();
 	for (i = 0; i < len / 0x200000; i++)
 	{
 		memcpy(midwunit_decode_memory, base, 0x200000);

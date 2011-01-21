@@ -20,7 +20,7 @@
 
 WRITE8_HANDLER( crgolf_videoram_w )
 {
-	crgolf_state *state = (crgolf_state *)space->machine->driver_data;
+	crgolf_state *state = space->machine->driver_data<crgolf_state>();
 
 	if (*state->screen_select & 1)
 		state->videoram_b[offset] = data;
@@ -31,7 +31,7 @@ WRITE8_HANDLER( crgolf_videoram_w )
 
 READ8_HANDLER( crgolf_videoram_r )
 {
-	crgolf_state *state = (crgolf_state *)space->machine->driver_data;
+	crgolf_state *state = space->machine->driver_data<crgolf_state>();
 	UINT8 ret;
 
 	if (*state->screen_select & 1)
@@ -53,7 +53,7 @@ READ8_HANDLER( crgolf_videoram_r )
 static void get_pens( running_machine *machine, pen_t *pens )
 {
 	offs_t offs;
-	const UINT8 *prom = memory_region(machine, "proms");
+	const UINT8 *prom = machine->region("proms")->base();
 
 	for (offs = 0; offs < NUM_PENS; offs++)
 	{
@@ -92,7 +92,7 @@ static void get_pens( running_machine *machine, pen_t *pens )
 
 static VIDEO_START( crgolf )
 {
-	crgolf_state *state = (crgolf_state *)machine->driver_data;
+	crgolf_state *state = machine->driver_data<crgolf_state>();
 
 	/* allocate memory for the two bitmaps */
 	state->videoram_a = auto_alloc_array(machine, UINT8, VIDEORAM_SIZE);
@@ -113,7 +113,7 @@ static VIDEO_START( crgolf )
 
 static VIDEO_UPDATE( crgolf )
 {
-	crgolf_state *state = (crgolf_state *)screen->machine->driver_data;
+	crgolf_state *state = screen->machine->driver_data<crgolf_state>();
 	int flip = *state->screen_flip & 1;
 
 	offs_t offs;
@@ -192,15 +192,15 @@ static VIDEO_UPDATE( crgolf )
  *
  *************************************/
 
-MACHINE_DRIVER_START( crgolf_video )
+MACHINE_CONFIG_FRAGMENT( crgolf_video )
 
-	MDRV_VIDEO_START(crgolf)
-	MDRV_VIDEO_UPDATE(crgolf)
+	MCFG_VIDEO_START(crgolf)
+	MCFG_VIDEO_UPDATE(crgolf)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(256, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 255, 8, 247)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-MACHINE_DRIVER_END
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(256, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 255, 8, 247)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+MACHINE_CONFIG_END

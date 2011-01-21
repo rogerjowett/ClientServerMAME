@@ -65,12 +65,11 @@ SOFT  PSG & VOICE  BY M.C & S.H
 #include "video/resnet.h"
 #include "sound/ay8910.h"
 
-class meijinsn_state
+class meijinsn_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, meijinsn_state(machine)); }
-
-	meijinsn_state(running_machine &machine) { }
+	meijinsn_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT16 *   shared_ram;
@@ -96,7 +95,7 @@ static WRITE16_HANDLER( sound_w )
 
 static READ16_HANDLER( alpha_mcu_r )
 {
-	meijinsn_state *state = (meijinsn_state *)space->machine->driver_data;
+	meijinsn_state *state = space->machine->driver_data<meijinsn_state>();
 	static const UINT8 coinage1[2][2] = {{1,1}, {1,2}};
 	static const UINT8 coinage2[2][2] = {{1,5}, {2,1}};
 
@@ -280,7 +279,7 @@ static PALETTE_INIT( meijinsn )
 
 static VIDEO_UPDATE(meijinsn)
 {
-	meijinsn_state *state = (meijinsn_state *)screen->machine->driver_data;
+	meijinsn_state *state = screen->machine->driver_data<meijinsn_state>();
 	int offs;
 
 	for (offs = 0; offs < 0x4000; offs++)
@@ -321,7 +320,7 @@ static const ay8910_interface ay8910_config =
 
 static MACHINE_START( meijinsn )
 {
-	meijinsn_state *state = (meijinsn_state *)machine->driver_data;
+	meijinsn_state *state = machine->driver_data<meijinsn_state>();
 
 	state_save_register_global(machine, state->deposits1);
 	state_save_register_global(machine, state->deposits2);
@@ -330,7 +329,7 @@ static MACHINE_START( meijinsn )
 
 static MACHINE_RESET( meijinsn )
 {
-	meijinsn_state *state = (meijinsn_state *)machine->driver_data;
+	meijinsn_state *state = machine->driver_data<meijinsn_state>();
 
 	state->deposits1 = 0;
 	state->deposits2 = 0;
@@ -338,46 +337,43 @@ static MACHINE_RESET( meijinsn )
 }
 
 
-static MACHINE_DRIVER_START( meijinsn )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(meijinsn_state)
+static MACHINE_CONFIG_START( meijinsn, meijinsn_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 9000000 )
-	MDRV_CPU_PROGRAM_MAP(meijinsn_map)
-	MDRV_CPU_VBLANK_INT_HACK(meijinsn_interrupt,2)
+	MCFG_CPU_ADD("maincpu", M68000, 9000000 )
+	MCFG_CPU_PROGRAM_MAP(meijinsn_map)
+	MCFG_CPU_VBLANK_INT_HACK(meijinsn_interrupt,2)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 4000000)
-	MDRV_CPU_PROGRAM_MAP(meijinsn_sound_map)
-	MDRV_CPU_IO_MAP(meijinsn_sound_io_map)
-	MDRV_CPU_VBLANK_INT_HACK(irq0_line_hold, 160)
+	MCFG_CPU_ADD("audiocpu", Z80, 4000000)
+	MCFG_CPU_PROGRAM_MAP(meijinsn_sound_map)
+	MCFG_CPU_IO_MAP(meijinsn_sound_io_map)
+	MCFG_CPU_VBLANK_INT_HACK(irq0_line_hold, 160)
 
-	MDRV_MACHINE_START(meijinsn)
-	MDRV_MACHINE_RESET(meijinsn)
+	MCFG_MACHINE_START(meijinsn)
+	MCFG_MACHINE_RESET(meijinsn)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(12, 243, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(12, 243, 2*8, 30*8-1)
 
-	MDRV_PALETTE_LENGTH(32)
-	MDRV_PALETTE_INIT(meijinsn)
+	MCFG_PALETTE_LENGTH(32)
+	MCFG_PALETTE_INIT(meijinsn)
 
-	MDRV_VIDEO_START(meijinsn)
-	MDRV_VIDEO_UPDATE(meijinsn)
+	MCFG_VIDEO_START(meijinsn)
+	MCFG_VIDEO_UPDATE(meijinsn)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("aysnd", AY8910, 2000000)
-	MDRV_SOUND_CONFIG(ay8910_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.75)
+	MCFG_SOUND_ADD("aysnd", AY8910, 2000000)
+	MCFG_SOUND_CONFIG(ay8910_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.75)
 
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
 
 ROM_START( meijinsn )

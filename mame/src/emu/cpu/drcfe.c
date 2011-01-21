@@ -55,7 +55,7 @@ struct _drcfe_state
 
 	/* CPU parameters */
 	cpu_device *		cpudevice;					/* CPU device object */
-	const address_space *program;					/* program address space for this CPU */
+	address_space *program;					/* program address space for this CPU */
 	offs_t				pageshift;					/* shift to convert address to a page index */
 
 	/* opcode descriptor arrays */
@@ -120,7 +120,7 @@ INLINE void desc_free(drcfe_state *drcfe, opcode_desc *desc)
     drcfe_init - initializate the drcfe state
 -------------------------------------------------*/
 
-drcfe_state *drcfe_init(running_device *cpu, const drcfe_config *config, void *param)
+drcfe_state *drcfe_init(device_t *cpu, const drcfe_config *config, void *param)
 {
 	drcfe_state *drcfe;
 

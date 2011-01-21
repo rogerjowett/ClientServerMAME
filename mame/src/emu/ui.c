@@ -241,9 +241,6 @@ int ui_init(running_machine *machine)
 	/* make sure we clean up after ourselves */
 	machine->add_notifier(MACHINE_NOTIFY_EXIT, ui_exit);
 
-	/* allocate the font and messagebox string */
-	ui_font = render_font_alloc("ui.bdf");
-
 	/* initialize the other UI bits */
 	ui_menu_init(machine);
 	ui_gfx_init(machine);
@@ -265,8 +262,7 @@ int ui_init(running_machine *machine)
 static void ui_exit(running_machine &machine)
 {
 	/* free the font */
-	if (ui_font != NULL)
-		render_font_free(ui_font);
+	machine.render().font_free(ui_font);
 	ui_font = NULL;
 }
 
@@ -336,11 +332,11 @@ int ui_display_startup_screens(running_machine *machine, int first_time, int sho
 
 		/* loop while we have a handler */
 		while (ui_handler_callback != handler_ingame && !machine->scheduled_event_pending() && !ui_menu_is_force_game_select())
-			video_frame_update(machine, FALSE);
+			machine->video().frame_update();
 
 		/* clear the handler and force an update */
 		ui_set_handler(handler_ingame, 0);
-		video_frame_update(machine, FALSE);
+		machine->video().frame_update();
 	}
 
 	/* if we're the empty driver, force the menus on */
@@ -369,7 +365,7 @@ void ui_set_startup_text(running_machine *machine, const char *text, int force)
 	if (force || (curtime - lastupdatetime) > osd_ticks_per_second() / 4)
 	{
 		lastupdatetime = curtime;
-		video_frame_update(machine, FALSE);
+		machine->video().frame_update();
 	}
 }
 
@@ -392,11 +388,12 @@ extern int initialSyncPercentComplete;
 extern attotime oldInputTime;
 extern bool waitingForClientCatchup;
 extern attotime mostRecentReport;
+extern attotime zeroInputMinTime;
 
 void ui_update_and_render(running_machine *machine, render_container *container)
 {
 	/* always start clean */
-	render_container_empty(container);
+	container->empty();
 
 	/* if we're paused, dim the whole screen */
 	if (machine->phase() >= MACHINE_PHASE_RESET && (single_step || machine->paused()))
@@ -407,11 +404,12 @@ void ui_update_and_render(running_machine *machine, render_container *container)
 		if (alpha > 255)
 			alpha = 255;
 		if (alpha >= 0)
-			render_container_add_rect(container, 0.0f, 0.0f, 1.0f, 1.0f, MAKE_ARGB(alpha,0x00,0x00,0x00), PRIMFLAG_BLENDMODE(BLENDMODE_ALPHA));
+			container->add_rect(0.0f, 0.0f, 1.0f, 1.0f, MAKE_ARGB(alpha,0x00,0x00,0x00), PRIMFLAG_BLENDMODE(BLENDMODE_ALPHA));
 	}
 
 	/* render any cheat stuff at the bottom */
-	cheat_render_text(machine, container);
+	if (machine->phase() >= MACHINE_PHASE_RESET)
+		machine->cheat().render_text(*container);
 
 	/* call the current UI handler */
 	assert(ui_handler_callback != NULL);
@@ -423,9 +421,13 @@ void ui_update_and_render(running_machine *machine, render_container *container)
 	else
 		popup_text_end = 0;
 
-	if(waitingForClientCatchup)
+	attotime curtime = timer_get_time(machine);
+	if(waitingForClientCatchup || curtime<zeroInputMinTime)
 	{
         attotime globalCurtime = mostRecentReport;
+        if(mostRecentReport<zeroInputMinTime)
+            globalCurtime = zeroInputMinTime;
+
 	    int percentDone = 100;
 	    if(globalCurtime.seconds>0)
 	    {
@@ -483,13 +485,13 @@ void ui_update_and_render(running_machine *machine, render_container *container)
 	}
 	}
 
-	time_t curTime = time(NULL);
+	time_t curRealTime = time(NULL);
 	for(
 	    list<ChatLog>::iterator it = chatLogs.begin();
 	    it != chatLogs.end();
 	    )
 	  {
-	    if(it->timeReceived+5<curTime)
+	    if(it->timeReceived+5<curRealTime)
 	      {
 		list<ChatLog>::iterator it2 = it;
 		it++;
@@ -589,8 +591,11 @@ void ui_update_and_render(running_machine *machine, render_container *container)
     ui_get_font - return the UI font
 -------------------------------------------------*/
 
-render_font *ui_get_font(void)
+render_font *ui_get_font(running_machine &machine)
 {
+	/* allocate the font and messagebox string */
+	if (ui_font == NULL)
+		ui_font = machine.render().font_alloc(options_get_string(machine.options(), OPTION_UI_FONT));
 	return ui_font;
 }
 
@@ -600,16 +605,13 @@ render_font *ui_get_font(void)
     of a line
 -------------------------------------------------*/
 
-float ui_get_line_height(void)
+float ui_get_line_height(running_machine &machine)
 {
-	INT32 raw_font_pixel_height = render_font_get_pixel_height(ui_font);
-	INT32 target_pixel_width, target_pixel_height;
+	INT32 raw_font_pixel_height = ui_get_font(machine)->pixel_height();
+	render_target &ui_target = machine.render().ui_target();
+	INT32 target_pixel_height = ui_target.height();
 	float one_to_one_line_height;
-	float target_aspect;
 	float scale_factor;
-
-	/* get info about the UI target */
-	render_target_get_bounds(render_get_ui_target(), &target_pixel_width, &target_pixel_height, &target_aspect);
 
 	/* compute the font pixel height at the nominal size */
 	one_to_one_line_height = (float)raw_font_pixel_height / (float)target_pixel_height;
@@ -648,9 +650,9 @@ float ui_get_line_height(void)
     single character
 -------------------------------------------------*/
 
-float ui_get_char_width(unicode_char ch)
+float ui_get_char_width(running_machine &machine, unicode_char ch)
 {
-	return render_font_get_char_width(ui_font, ui_get_line_height(), render_get_ui_aspect(), ch);
+	return ui_get_font(machine)->char_width(ui_get_line_height(machine), machine.render().ui_aspect(), ch);
 }
 
 
@@ -659,9 +661,9 @@ float ui_get_char_width(unicode_char ch)
     character string
 -------------------------------------------------*/
 
-float ui_get_string_width(const char *s)
+float ui_get_string_width(running_machine &machine, const char *s)
 {
-	return render_font_get_utf8string_width(ui_font, ui_get_line_height(), render_get_ui_aspect(), s);
+	return ui_get_font(machine)->utf8string_width(ui_get_line_height(machine), machine.render().ui_aspect(), s);
 }
 
 
@@ -673,11 +675,11 @@ float ui_get_string_width(const char *s)
 
 void ui_draw_outlined_box(render_container *container, float x0, float y0, float x1, float y1, rgb_t backcolor)
 {
-	render_container_add_rect(container, x0, y0, x1, y1, backcolor, PRIMFLAG_BLENDMODE(BLENDMODE_ALPHA));
-	render_container_add_line(container, x0, y0, x1, y0, UI_LINE_WIDTH, UI_BORDER_COLOR, PRIMFLAG_BLENDMODE(BLENDMODE_ALPHA));
-	render_container_add_line(container, x1, y0, x1, y1, UI_LINE_WIDTH, UI_BORDER_COLOR, PRIMFLAG_BLENDMODE(BLENDMODE_ALPHA));
-	render_container_add_line(container, x1, y1, x0, y1, UI_LINE_WIDTH, UI_BORDER_COLOR, PRIMFLAG_BLENDMODE(BLENDMODE_ALPHA));
-	render_container_add_line(container, x0, y1, x0, y0, UI_LINE_WIDTH, UI_BORDER_COLOR, PRIMFLAG_BLENDMODE(BLENDMODE_ALPHA));
+	container->add_rect(x0, y0, x1, y1, backcolor, PRIMFLAG_BLENDMODE(BLENDMODE_ALPHA));
+	container->add_line(x0, y0, x1, y0, UI_LINE_WIDTH, UI_BORDER_COLOR, PRIMFLAG_BLENDMODE(BLENDMODE_ALPHA));
+	container->add_line(x1, y0, x1, y1, UI_LINE_WIDTH, UI_BORDER_COLOR, PRIMFLAG_BLENDMODE(BLENDMODE_ALPHA));
+	container->add_line(x1, y1, x0, y1, UI_LINE_WIDTH, UI_BORDER_COLOR, PRIMFLAG_BLENDMODE(BLENDMODE_ALPHA));
+	container->add_line(x0, y1, x0, y0, UI_LINE_WIDTH, UI_BORDER_COLOR, PRIMFLAG_BLENDMODE(BLENDMODE_ALPHA));
 }
 
 
@@ -699,7 +701,8 @@ void ui_draw_text(render_container *container, const char *buf, float x, float y
 
 void ui_draw_text_full(render_container *container, const char *origs, float x, float y, float origwrapwidth, int justify, int wrap, int draw, rgb_t fgcolor, rgb_t bgcolor, float *totalwidth, float *totalheight)
 {
-	float lineheight = ui_get_line_height();
+	running_machine &machine = container->manager().machine();
+	float lineheight = ui_get_line_height(machine);
 	const char *ends = origs + strlen(origs);
 	float wrapwidth = origwrapwidth;
 	const char *s = origs;
@@ -754,7 +757,7 @@ void ui_draw_text_full(render_container *container, const char *origs, float x, 
 				break;
 
 			/* get the width of this character */
-			chwidth = ui_get_char_width(schar);
+			chwidth = ui_get_char_width(machine, schar);
 
 			/* if we hit a space, remember the location and width *without* the space */
 			if (schar == ' ')
@@ -798,7 +801,7 @@ void ui_draw_text_full(render_container *container, const char *origs, float x, 
 					if (scharcount == -1)
 						break;
 
-					curwidth -= ui_get_char_width(schar);
+					curwidth -= ui_get_char_width(machine, schar);
 				}
 			}
 
@@ -806,7 +809,7 @@ void ui_draw_text_full(render_container *container, const char *origs, float x, 
 			else if (wrap == WRAP_TRUNCATE)
 			{
 				/* add in the width of the ... */
-				curwidth += 3.0f * ui_get_char_width('.');
+				curwidth += 3.0f * ui_get_char_width(machine, '.');
 
 				/* while we are above the wrap width, back up one character */
 				while (curwidth > wrapwidth && s > linestart)
@@ -817,7 +820,7 @@ void ui_draw_text_full(render_container *container, const char *origs, float x, 
 					if (scharcount == -1)
 						break;
 
-					curwidth -= ui_get_char_width(schar);
+					curwidth -= ui_get_char_width(machine, schar);
 				}
 			}
 		}
@@ -834,7 +837,7 @@ void ui_draw_text_full(render_container *container, const char *origs, float x, 
 
 		/* if opaque, add a black box */
 		if (draw == DRAW_OPAQUE)
-			render_container_add_rect(container, curx, cury, curx + curwidth, cury + lineheight, bgcolor, PRIMFLAG_BLENDMODE(BLENDMODE_ALPHA));
+			container->add_rect(curx, cury, curx + curwidth, cury + lineheight, bgcolor, PRIMFLAG_BLENDMODE(BLENDMODE_ALPHA));
 
 		/* loop from the line start and add the characters */
 		while (linestart < s)
@@ -847,8 +850,8 @@ void ui_draw_text_full(render_container *container, const char *origs, float x, 
 
 			if (draw != DRAW_NONE)
 			{
-				render_container_add_char(container, curx, cury, lineheight, render_get_ui_aspect(), fgcolor, ui_font, linechar);
-				curx += ui_get_char_width(linechar);
+				container->add_char(curx, cury, lineheight, machine.render().ui_aspect(), fgcolor, *ui_get_font(machine), linechar);
+				curx += ui_get_char_width(machine, linechar);
 			}
 			linestart += linecharcount;
 		}
@@ -856,12 +859,12 @@ void ui_draw_text_full(render_container *container, const char *origs, float x, 
 		/* append ellipses if needed */
 		if (wrap == WRAP_TRUNCATE && *s != 0 && draw != DRAW_NONE)
 		{
-			render_container_add_char(container, curx, cury, lineheight, render_get_ui_aspect(), fgcolor, ui_font, '.');
-			curx += ui_get_char_width('.');
-			render_container_add_char(container, curx, cury, lineheight, render_get_ui_aspect(), fgcolor, ui_font, '.');
-			curx += ui_get_char_width('.');
-			render_container_add_char(container, curx, cury, lineheight, render_get_ui_aspect(), fgcolor, ui_font, '.');
-			curx += ui_get_char_width('.');
+			container->add_char(curx, cury, lineheight, machine.render().ui_aspect(), fgcolor, *ui_get_font(machine), '.');
+			curx += ui_get_char_width(machine, '.');
+			container->add_char(curx, cury, lineheight, machine.render().ui_aspect(), fgcolor, *ui_get_font(machine), '.');
+			curx += ui_get_char_width(machine, '.');
+			container->add_char(curx, cury, lineheight, machine.render().ui_aspect(), fgcolor, *ui_get_font(machine), '.');
+			curx += ui_get_char_width(machine, '.');
 		}
 
 		/* if we're not word-wrapping, we're done */
@@ -903,15 +906,16 @@ void ui_draw_text_full(render_container *container, const char *origs, float x, 
 
 void ui_draw_text_box(render_container *container, const char *text, int justify, float xpos, float ypos, rgb_t backcolor)
 {
-	float target_width, target_height;
-	float target_x, target_y;
+	float line_height = ui_get_line_height(container->manager().machine());
+	float max_width = 2.0f * ((xpos <= 0.5f) ? xpos : 1.0f - xpos) - 2.0f * UI_BOX_LR_BORDER;
+	float target_width = max_width;
+	float target_height = line_height;
+	float target_x = 0, target_y = 0;
+	float last_target_height = 0;
 
-	/* compute the multi-line target width/height */
-	ui_draw_text_full(container, text, 0, 0, 1.0f - 2.0f * UI_BOX_LR_BORDER,
-				justify, WRAP_WORD, DRAW_NONE, ARGB_WHITE, ARGB_BLACK, &target_width, &target_height);
-	if (target_height > 1.0f - 2.0f * UI_BOX_TB_BORDER)
-		target_height = floor((1.0f - 2.0f * UI_BOX_TB_BORDER) / ui_get_line_height()) * ui_get_line_height();
-
+	// limit this iteration to a finite number of passes
+	for (int pass = 0; pass < 5; pass++)
+	{
 	/* determine the target location */
 	target_x = xpos - 0.5f * target_width;
 	target_y = ypos - 0.5f * target_height;
@@ -926,12 +930,24 @@ void ui_draw_text_box(render_container *container, const char *text, int justify
 	if (target_y + target_height + UI_BOX_TB_BORDER > 1.0f)
 		target_y = 1.0f - UI_BOX_TB_BORDER - target_height;
 
+		/* compute the multi-line target width/height */
+		ui_draw_text_full(container, text, target_x, target_y, target_width + 0.00001f,
+					justify, WRAP_WORD, DRAW_NONE, UI_TEXT_COLOR, UI_TEXT_BG_COLOR, &target_width, &target_height);
+		if (target_height > 1.0f - 2.0f * UI_BOX_TB_BORDER)
+			target_height = floor((1.0f - 2.0f * UI_BOX_TB_BORDER) / line_height) * line_height;
+
+		/* if we match our last value, we're done */
+		if (target_height == last_target_height)
+			break;
+		last_target_height = target_height;
+	}
+
 	/* add a box around that */
 	ui_draw_outlined_box(container, target_x - UI_BOX_LR_BORDER,
 					 target_y - UI_BOX_TB_BORDER,
 					 target_x + target_width + UI_BOX_LR_BORDER,
 					 target_y + target_height + UI_BOX_TB_BORDER, backcolor);
-	ui_draw_text_full(container, text, target_x, target_y, target_width,
+	ui_draw_text_full(container, text, target_x, target_y, target_width + 0.00001f,
 				justify, WRAP_WORD, DRAW_NORMAL, UI_TEXT_COLOR, UI_TEXT_BG_COLOR, NULL, NULL);
 }
 
@@ -1000,16 +1016,8 @@ int ui_get_show_fps(void)
 
 void ui_set_show_profiler(int show)
 {
-	if (show)
-	{
-		show_profiler = TRUE;
-		profiler_start();
-	}
-	else
-	{
-		show_profiler = FALSE;
-		profiler_stop();
-	}
+	show_profiler = show;
+	g_profiler.enable(show);
 }
 
 
@@ -1175,7 +1183,7 @@ static astring &warnings_string(running_machine *machine, astring &string)
 
 astring &game_info_astring(running_machine *machine, astring &string)
 {
-	int scrcount = screen_count(*machine->config);
+	int scrcount = machine->m_devicelist.count(SCREEN);
 	int found_sound = FALSE;
 
 	/* print description, manufacturer, and CPU: */
@@ -1252,7 +1260,7 @@ astring &game_info_astring(running_machine *machine, astring &string)
 		string.cat("None\n");
 	else
 	{
-		for (screen_device *screen = screen_first(*machine); screen != NULL; screen = screen_next(screen))
+		for (screen_device *screen = machine->first_screen(); screen != NULL; screen = screen->next_screen())
 		{
 			if (scrcount > 1)
 			{
@@ -1470,7 +1478,8 @@ static UINT32 handler_ingame(running_machine *machine, render_container *contain
 	/* first draw the FPS counter */
 	if (showfps || osd_ticks() < showfps_end)
 	{
-		ui_draw_text_full(container, video_get_speed_text(machine), 0.0f, 0.0f, 1.0f,
+		astring tempstring;
+		ui_draw_text_full(container, machine->video().speed_text(tempstring), 0.0f, 0.0f, 1.0f,
 					JUSTIFY_RIGHT, WRAP_WORD, DRAW_OPAQUE, ARGB_WHITE, ARGB_BLACK, NULL, NULL);
 	}
 	else
@@ -1480,7 +1489,7 @@ static UINT32 handler_ingame(running_machine *machine, render_container *contain
 	if (show_profiler)
 	{
 		astring profilertext;
-		profiler_get_text(machine, profilertext);
+		g_profiler.text(*machine, profilertext);
 		ui_draw_text_full(container, profilertext, 0.0f, 0.0f, 1.0f, JUSTIFY_LEFT, WRAP_WORD, DRAW_OPAQUE, ARGB_WHITE, ARGB_BLACK, NULL, NULL);
 	}
 
@@ -1595,7 +1604,7 @@ static UINT32 handler_ingame(running_machine *machine, render_container *contain
 
 	/* handle a save snapshot request */
 	if (ui_input_pressed(machine, IPT_UI_SNAPSHOT))
-		video_save_active_screen_snapshots(machine);
+		machine->video().save_active_screen_snapshots();
 
 	/* toggle pause */
 	if (ui_input_pressed(machine, IPT_UI_PAUSE))
@@ -1614,19 +1623,19 @@ static UINT32 handler_ingame(running_machine *machine, render_container *contain
 
 	/* handle a toggle cheats request */
 	if (ui_input_pressed(machine, IPT_UI_TOGGLE_CHEAT))
-		cheat_set_global_enable(machine, !cheat_get_global_enable(machine));
+		machine->cheat().set_enable(!machine->cheat().enabled());
 
 	/* toggle movie recording */
 	if (ui_input_pressed(machine, IPT_UI_RECORD_MOVIE))
 	{
-		if (!video_mng_is_movie_active(machine))
+		if (!machine->video().is_recording())
 		{
-			video_mng_begin_recording(machine, NULL);
+			machine->video().begin_recording(NULL, video_manager::MF_MNG);
 			popmessage("REC START");
 		}
 		else
 		{
-			video_mng_end_recording(machine);
+			machine->video().end_recording();
 			popmessage("REC STOP");
 		}
 	}
@@ -1643,10 +1652,10 @@ static UINT32 handler_ingame(running_machine *machine, render_container *contain
 	if (ui_input_pressed(machine, IPT_UI_FRAMESKIP_INC))
 	{
 		/* get the current value and increment it */
-		int newframeskip = video_get_frameskip() + 1;
+		int newframeskip = machine->video().frameskip() + 1;
 		if (newframeskip > MAX_FRAMESKIP)
 			newframeskip = -1;
-		video_set_frameskip(newframeskip);
+		machine->video().set_frameskip(newframeskip);
 
 		/* display the FPS counter for 2 seconds */
 		ui_show_fps_temp(2.0);
@@ -1656,10 +1665,10 @@ static UINT32 handler_ingame(running_machine *machine, render_container *contain
 	if (ui_input_pressed(machine, IPT_UI_FRAMESKIP_DEC))
 	{
 		/* get the current value and decrement it */
-		int newframeskip = video_get_frameskip() - 1;
+		int newframeskip = machine->video().frameskip() - 1;
 		if (newframeskip < -1)
 			newframeskip = MAX_FRAMESKIP;
-		video_set_frameskip(newframeskip);
+		machine->video().set_frameskip(newframeskip);
 
 		/* display the FPS counter for 2 seconds */
 		ui_show_fps_temp(2.0);
@@ -1667,16 +1676,16 @@ static UINT32 handler_ingame(running_machine *machine, render_container *contain
 
 	/* toggle throttle? */
 	if (ui_input_pressed(machine, IPT_UI_THROTTLE))
-		video_set_throttle(!video_get_throttle());
+		machine->video().set_throttled(!machine->video().throttled());
 
 	/* check for fast forward */
 	if (input_type_pressed(machine, IPT_UI_FAST_FORWARD, 0))
 	{
-		video_set_fastforward(TRUE);
+		machine->video().set_fastforward(true);
 		ui_show_fps_temp(0.5);
 	}
 	else
-		video_set_fastforward(FALSE);
+		machine->video().set_fastforward(false);
 
 	}
 
@@ -1707,24 +1716,28 @@ static UINT32 handler_ingame(running_machine *machine, render_container *contain
 							printf("SENDING CHAT %s\n",&chatString[0]);
 							if(netClient)
 							{
+							    /*
 								{
 									char buf[4096];
 									sprintf(buf,"%s: %s",netClient->getPeerNameFromID(netClient->getSelfPeerID()).c_str(),&chatString[0]);
 									astring chatAString = astring(buf);
 									chatLogs.push_back(ChatLog(0,time(NULL),chatAString));
 								}
+								*/
 								//the '1' indicates that the string is a chat message
 								chatString.insert(chatString.begin(),1);
 								netClient->sendInputs(string(&chatString[0],chatString.size()));
 							}
 							if(netServer)
 							{
+							    /*
 								{
 									char buf[4096];
 									sprintf(buf,"%s: %s",netServer->getPeerNameFromID(netServer->getSelfPeerID()).c_str(),&chatString[0]);
 									astring chatAString = astring(buf);
-									chatLogs.push_back(ChatLog(0,time(NULL),chatAString));
+									chatLogs.push_back(ChatLog(netServer->getSelfPeerID(),time(NULL),chatAString));
 								}
+								*/
 								//the '1' indicates that the string is a chat message
 								chatString.insert(chatString.begin(),1);
 								netServer->sendInputs(string(&chatString[0],chatString.size()));
@@ -1915,7 +1928,7 @@ static slider_state *slider_init(running_machine *machine)
 	}
 
 	/* add screen parameters */
-	for (screen_device *screen = screen_first(*machine); screen != NULL; screen = screen_next(screen))
+	for (screen_device *screen = machine->first_screen(); screen != NULL; screen = screen->next_screen())
 	{
 		int defxscale = floor(screen->config().xscale() * 1000.0f + 0.5f);
 		int defyscale = floor(screen->config().yscale() * 1000.0f + 0.5f);
@@ -1984,7 +1997,7 @@ static slider_state *slider_init(running_machine *machine)
 		}
 	}
 
-	for (screen_device *screen = screen_first(*machine); screen != NULL; screen = screen_next(screen))
+	for (screen_device *screen = machine->first_screen(); screen != NULL; screen = screen->next_screen())
 		if (screen->screen_type() == SCREEN_TYPE_VECTOR)
 		{
 			/* add flicker control */
@@ -2115,18 +2128,17 @@ static INT32 slider_refresh(running_machine *machine, void *arg, astring *string
 static INT32 slider_brightness(running_machine *machine, void *arg, astring *string, INT32 newval)
 {
 	screen_device *screen = reinterpret_cast<screen_device *>(arg);
-	render_container *container = render_container_get_screen(screen);
-	render_container_user_settings settings;
+	render_container::user_settings settings;
 
-	render_container_get_user_settings(container, &settings);
+	screen->container().get_user_settings(settings);
 	if (newval != SLIDER_NOCHANGE)
 	{
-		settings.brightness = (float)newval * 0.001f;
-		render_container_set_user_settings(container, &settings);
+		settings.m_brightness = (float)newval * 0.001f;
+		screen->container().set_user_settings(settings);
 	}
 	if (string != NULL)
-		string->printf("%.3f", settings.brightness);
-	return floor(settings.brightness * 1000.0f + 0.5f);
+		string->printf("%.3f", settings.m_brightness);
+	return floor(settings.m_brightness * 1000.0f + 0.5f);
 }
 
 
@@ -2138,18 +2150,17 @@ static INT32 slider_brightness(running_machine *machine, void *arg, astring *str
 static INT32 slider_contrast(running_machine *machine, void *arg, astring *string, INT32 newval)
 {
 	screen_device *screen = reinterpret_cast<screen_device *>(arg);
-	render_container *container = render_container_get_screen(screen);
-	render_container_user_settings settings;
+	render_container::user_settings settings;
 
-	render_container_get_user_settings(container, &settings);
+	screen->container().get_user_settings(settings);
 	if (newval != SLIDER_NOCHANGE)
 	{
-		settings.contrast = (float)newval * 0.001f;
-		render_container_set_user_settings(container, &settings);
+		settings.m_contrast = (float)newval * 0.001f;
+		screen->container().set_user_settings(settings);
 	}
 	if (string != NULL)
-		string->printf("%.3f", settings.contrast);
-	return floor(settings.contrast * 1000.0f + 0.5f);
+		string->printf("%.3f", settings.m_contrast);
+	return floor(settings.m_contrast * 1000.0f + 0.5f);
 }
 
 
@@ -2160,18 +2171,17 @@ static INT32 slider_contrast(running_machine *machine, void *arg, astring *strin
 static INT32 slider_gamma(running_machine *machine, void *arg, astring *string, INT32 newval)
 {
 	screen_device *screen = reinterpret_cast<screen_device *>(arg);
-	render_container *container = render_container_get_screen(screen);
-	render_container_user_settings settings;
+	render_container::user_settings settings;
 
-	render_container_get_user_settings(container, &settings);
+	screen->container().get_user_settings(settings);
 	if (newval != SLIDER_NOCHANGE)
 	{
-		settings.gamma = (float)newval * 0.001f;
-		render_container_set_user_settings(container, &settings);
+		settings.m_gamma = (float)newval * 0.001f;
+		screen->container().set_user_settings(settings);
 	}
 	if (string != NULL)
-		string->printf("%.3f", settings.gamma);
-	return floor(settings.gamma * 1000.0f + 0.5f);
+		string->printf("%.3f", settings.m_gamma);
+	return floor(settings.m_gamma * 1000.0f + 0.5f);
 }
 
 
@@ -2183,18 +2193,17 @@ static INT32 slider_gamma(running_machine *machine, void *arg, astring *string, 
 static INT32 slider_xscale(running_machine *machine, void *arg, astring *string, INT32 newval)
 {
 	screen_device *screen = reinterpret_cast<screen_device *>(arg);
-	render_container *container = render_container_get_screen(screen);
-	render_container_user_settings settings;
+	render_container::user_settings settings;
 
-	render_container_get_user_settings(container, &settings);
+	screen->container().get_user_settings(settings);
 	if (newval != SLIDER_NOCHANGE)
 	{
-		settings.xscale = (float)newval * 0.001f;
-		render_container_set_user_settings(container, &settings);
+		settings.m_xscale = (float)newval * 0.001f;
+		screen->container().set_user_settings(settings);
 	}
 	if (string != NULL)
-		string->printf("%.3f", settings.xscale);
-	return floor(settings.xscale * 1000.0f + 0.5f);
+		string->printf("%.3f", settings.m_xscale);
+	return floor(settings.m_xscale * 1000.0f + 0.5f);
 }
 
 
@@ -2206,18 +2215,17 @@ static INT32 slider_xscale(running_machine *machine, void *arg, astring *string,
 static INT32 slider_yscale(running_machine *machine, void *arg, astring *string, INT32 newval)
 {
 	screen_device *screen = reinterpret_cast<screen_device *>(arg);
-	render_container *container = render_container_get_screen(screen);
-	render_container_user_settings settings;
+	render_container::user_settings settings;
 
-	render_container_get_user_settings(container, &settings);
+	screen->container().get_user_settings(settings);
 	if (newval != SLIDER_NOCHANGE)
 	{
-		settings.yscale = (float)newval * 0.001f;
-		render_container_set_user_settings(container, &settings);
+		settings.m_yscale = (float)newval * 0.001f;
+		screen->container().set_user_settings(settings);
 	}
 	if (string != NULL)
-		string->printf("%.3f", settings.yscale);
-	return floor(settings.yscale * 1000.0f + 0.5f);
+		string->printf("%.3f", settings.m_yscale);
+	return floor(settings.m_yscale * 1000.0f + 0.5f);
 }
 
 
@@ -2229,18 +2237,17 @@ static INT32 slider_yscale(running_machine *machine, void *arg, astring *string,
 static INT32 slider_xoffset(running_machine *machine, void *arg, astring *string, INT32 newval)
 {
 	screen_device *screen = reinterpret_cast<screen_device *>(arg);
-	render_container *container = render_container_get_screen(screen);
-	render_container_user_settings settings;
+	render_container::user_settings settings;
 
-	render_container_get_user_settings(container, &settings);
+	screen->container().get_user_settings(settings);
 	if (newval != SLIDER_NOCHANGE)
 	{
-		settings.xoffset = (float)newval * 0.001f;
-		render_container_set_user_settings(container, &settings);
+		settings.m_xoffset = (float)newval * 0.001f;
+		screen->container().set_user_settings(settings);
 	}
 	if (string != NULL)
-		string->printf("%.3f", settings.xoffset);
-	return floor(settings.xoffset * 1000.0f + 0.5f);
+		string->printf("%.3f", settings.m_xoffset);
+	return floor(settings.m_xoffset * 1000.0f + 0.5f);
 }
 
 
@@ -2252,18 +2259,17 @@ static INT32 slider_xoffset(running_machine *machine, void *arg, astring *string
 static INT32 slider_yoffset(running_machine *machine, void *arg, astring *string, INT32 newval)
 {
 	screen_device *screen = reinterpret_cast<screen_device *>(arg);
-	render_container *container = render_container_get_screen(screen);
-	render_container_user_settings settings;
+	render_container::user_settings settings;
 
-	render_container_get_user_settings(container, &settings);
+	screen->container().get_user_settings(settings);
 	if (newval != SLIDER_NOCHANGE)
 	{
-		settings.yoffset = (float)newval * 0.001f;
-		render_container_set_user_settings(container, &settings);
+		settings.m_yoffset = (float)newval * 0.001f;
+		screen->container().set_user_settings(settings);
 	}
 	if (string != NULL)
-		string->printf("%.3f", settings.yoffset);
-	return floor(settings.yoffset * 1000.0f + 0.5f);
+		string->printf("%.3f", settings.m_yoffset);
+	return floor(settings.m_yoffset * 1000.0f + 0.5f);
 }
 
 
@@ -2392,7 +2398,7 @@ static INT32 slider_beam(running_machine *machine, void *arg, astring *string, I
 
 static char *slider_get_screen_desc(screen_device &screen)
 {
-	int scrcount = screen_count(*screen.machine->config);
+	int scrcount = screen.machine->m_devicelist.count(SCREEN);
 	static char descbuf[256];
 
 	if (scrcount > 1)

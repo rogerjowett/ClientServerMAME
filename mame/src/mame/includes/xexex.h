@@ -4,12 +4,11 @@
 
 *************************************************************************/
 
-class xexex_state
+class xexex_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, xexex_state(machine)); }
-
-	xexex_state(running_machine &machine) { }
+	xexex_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT16 *    workram;
@@ -29,19 +28,19 @@ public:
 	int        frame;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *audiocpu;
-	running_device *k054539;
-	running_device *filter1l;
-	running_device *filter1r;
-	running_device *filter2l;
-	running_device *filter2r;
-	running_device *k056832;
-	running_device *k053246;
-	running_device *k053250;
-	running_device *k053251;
-	running_device *k053252;
-	running_device *k054338;
+	device_t *maincpu;
+	device_t *audiocpu;
+	device_t *k054539;
+	device_t *filter1l;
+	device_t *filter1r;
+	device_t *filter2l;
+	device_t *filter2r;
+	device_t *k056832;
+	device_t *k053246;
+	device_t *k053250;
+	device_t *k053251;
+	device_t *k053252;
+	device_t *k054338;
 };
 
 

@@ -386,11 +386,11 @@ static WRITE8_HANDLER( tempest_coin_w )
 
 static ADDRESS_MAP_START( main_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x07ff) AM_RAM
-	AM_RANGE(0x0800, 0x080f) AM_WRITEONLY AM_BASE(&tempest_colorram)
+	AM_RANGE(0x0800, 0x080f) AM_WRITEONLY AM_BASE(&avgdvg_colorram)
 	AM_RANGE(0x0c00, 0x0c00) AM_READ_PORT("IN0")
 	AM_RANGE(0x0d00, 0x0d00) AM_READ_PORT("DSW1")
 	AM_RANGE(0x0e00, 0x0e00) AM_READ_PORT("DSW2")
-	AM_RANGE(0x2000, 0x2fff) AM_RAM AM_BASE(&vectorram) AM_SIZE(&vectorram_size) AM_REGION("maincpu", 0x2000)
+	AM_RANGE(0x2000, 0x2fff) AM_RAM AM_BASE(&avgdvg_vectorram) AM_SIZE(&avgdvg_vectorram_size) AM_REGION("maincpu", 0x2000)
 	AM_RANGE(0x3000, 0x3fff) AM_ROM
 	AM_RANGE(0x4000, 0x4000) AM_WRITE(tempest_coin_w)
 	AM_RANGE(0x4800, 0x4800) AM_WRITE(avgdvg_go_w)
@@ -570,41 +570,41 @@ static const pokey_interface pokey_interface_2 =
  *
  *************************************/
 
-static MACHINE_DRIVER_START( tempest )
+static MACHINE_CONFIG_START( tempest, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6502, MASTER_CLOCK / 8)
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_PERIODIC_INT(irq0_line_assert, (double)MASTER_CLOCK / 4096 / 12)
-	MDRV_WATCHDOG_TIME_INIT(HZ(CLOCK_3KHZ / 256))
+	MCFG_CPU_ADD("maincpu", M6502, MASTER_CLOCK / 8)
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_PERIODIC_INT(irq0_line_assert, (double)MASTER_CLOCK / 4096 / 12)
+	MCFG_WATCHDOG_TIME_INIT(HZ(CLOCK_3KHZ / 256))
 
-	MDRV_ATARIVGEAROM_ADD("earom")
+	MCFG_ATARIVGEAROM_ADD("earom")
 
-	MDRV_MACHINE_START(tempest)
+	MCFG_MACHINE_START(tempest)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", VECTOR)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_SIZE(400, 300)
-	MDRV_SCREEN_VISIBLE_AREA(0, 580, 0, 570)
+	MCFG_SCREEN_ADD("screen", VECTOR)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_SIZE(400, 300)
+	MCFG_SCREEN_VISIBLE_AREA(0, 580, 0, 570)
 
-	MDRV_VIDEO_START(avg_tempest)
-	MDRV_VIDEO_UPDATE(vector)
+	MCFG_VIDEO_START(avg_tempest)
+	MCFG_VIDEO_UPDATE(vector)
 
 	/* Drivers */
-	MDRV_MATHBOX_ADD("mathbox")
+	MCFG_MATHBOX_ADD("mathbox")
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("pokey1", POKEY, MASTER_CLOCK / 8)
-	MDRV_SOUND_CONFIG(pokey_interface_1)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SOUND_ADD("pokey1", POKEY, MASTER_CLOCK / 8)
+	MCFG_SOUND_CONFIG(pokey_interface_1)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-	MDRV_SOUND_ADD("pokey2", POKEY, MASTER_CLOCK / 8)
-	MDRV_SOUND_CONFIG(pokey_interface_2)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("pokey2", POKEY, MASTER_CLOCK / 8)
+	MCFG_SOUND_CONFIG(pokey_interface_2)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 

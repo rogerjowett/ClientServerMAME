@@ -251,8 +251,8 @@ void vertigo_vproc_reset(running_machine *machine)
 	int i;
 	UINT64 *mcode;
 
-	vertigo_vectorrom = (UINT16 *)memory_region(machine, "user1");
-	mcode = (UINT64 *)memory_region(machine, "proms");
+	vertigo_vectorrom = (UINT16 *)machine->region("user1")->base();
+	mcode = (UINT64 *)machine->region("proms")->base();
 
 	/* Decode microcode */
 	for (i = 0; i < MC_LENGTH; i++)
@@ -482,7 +482,7 @@ void vertigo_vproc(int cycles, int irq4)
 
 	if (irq4) vector_clear_list();
 
-	profiler_mark_start(PROFILER_USER1);
+	g_profiler.start(PROFILER_USER1);
 
 	while (cycles--)
 	{
@@ -658,5 +658,5 @@ void vertigo_vproc(int cycles, int irq4)
 		}
 	}
 
-	profiler_mark_end();
+	g_profiler.stop();
 }

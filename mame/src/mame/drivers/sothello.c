@@ -59,7 +59,7 @@ static int msm_data = 0;
 
 static WRITE8_HANDLER(bank_w)
 {
-    UINT8 *RAM = memory_region(space->machine, "maincpu");
+    UINT8 *RAM = space->machine->region("maincpu")->base();
     int bank=0;
     switch(data^0xff)
     {
@@ -73,12 +73,12 @@ static WRITE8_HANDLER(bank_w)
 
 static TIMER_CALLBACK( subcpu_suspend )
 {
-    cputag_suspend(machine, "sub", SUSPEND_REASON_HALT, 1);
+    machine->device<cpu_device>("sub")->suspend(SUSPEND_REASON_HALT, 1);
 }
 
 static TIMER_CALLBACK( subcpu_resume )
 {
-    cputag_resume(machine, "sub", SUSPEND_REASON_HALT);
+    machine->device<cpu_device>("sub")->resume(SUSPEND_REASON_HALT);
     cputag_set_input_line(machine, "sub", INPUT_LINE_NMI, PULSE_LINE);
 }
 
@@ -185,7 +185,7 @@ ADDRESS_MAP_END
 
 /* sub 6809 */
 
-static void unlock_shared_ram(const address_space *space)
+static void unlock_shared_ram(address_space *space)
 {
     if(!space->machine->device<cpu_device>("sub")->suspended(SUSPEND_REASON_HALT))
     {
@@ -290,7 +290,7 @@ static INPUT_PORTS_START( sothello )
 
 INPUT_PORTS_END
 
-static void irqhandler(running_device *device, int irq)
+static void irqhandler(device_t *device, int irq)
 {
     cputag_set_input_line(device->machine, "sub", 0, irq ? ASSERT_LINE : CLEAR_LINE);
 }
@@ -305,7 +305,7 @@ static INTERRUPT_GEN( sothello_interrupt )
     v9938_interrupt(device->machine, 0);
 }
 
-static void adpcm_int(running_device *device)
+static void adpcm_int(device_t *device)
 {
     /* only 4 bits are used */
     msm5205_data_w( device, msm_data & 0x0f );
@@ -344,53 +344,53 @@ static const ym2203_interface ym2203_config =
     irqhandler
 };
 
-static MACHINE_DRIVER_START( sothello )
+static MACHINE_CONFIG_START( sothello, driver_device )
 
     /* basic machine hardware */
 
-    MDRV_CPU_ADD("maincpu",Z80, MAINCPU_CLOCK)
-    MDRV_CPU_PROGRAM_MAP(maincpu_mem_map)
-    MDRV_CPU_IO_MAP(maincpu_io_map)
-    MDRV_CPU_VBLANK_INT_HACK(sothello_interrupt,262)
+    MCFG_CPU_ADD("maincpu",Z80, MAINCPU_CLOCK)
+    MCFG_CPU_PROGRAM_MAP(maincpu_mem_map)
+    MCFG_CPU_IO_MAP(maincpu_io_map)
+    MCFG_CPU_VBLANK_INT_HACK(sothello_interrupt,262)
 
-    MDRV_CPU_ADD("soundcpu",Z80, SOUNDCPU_CLOCK)
-    MDRV_CPU_PROGRAM_MAP(soundcpu_mem_map)
-    MDRV_CPU_IO_MAP(soundcpu_io_map)
+    MCFG_CPU_ADD("soundcpu",Z80, SOUNDCPU_CLOCK)
+    MCFG_CPU_PROGRAM_MAP(soundcpu_mem_map)
+    MCFG_CPU_IO_MAP(soundcpu_io_map)
 
-    MDRV_CPU_ADD("sub",M6809, SUBCPU_CLOCK)
-    MDRV_CPU_PROGRAM_MAP(subcpu_mem_map)
+    MCFG_CPU_ADD("sub",M6809, SUBCPU_CLOCK)
+    MCFG_CPU_PROGRAM_MAP(subcpu_mem_map)
 
-    MDRV_QUANTUM_TIME(HZ(600))
+    MCFG_QUANTUM_TIME(HZ(600))
 
-    MDRV_MACHINE_RESET(sothello)
+    MCFG_MACHINE_RESET(sothello)
 
-    MDRV_SCREEN_ADD("screen", RASTER)
-    MDRV_SCREEN_REFRESH_RATE(60)
-    MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-    MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-    MDRV_SCREEN_SIZE(512 + 32, (212 + 28) * 2)
-    MDRV_SCREEN_VISIBLE_AREA(0, 512 + 32 - 1, 0, (212 + 28) * 2 - 1)
-    MDRV_PALETTE_LENGTH(512)
-    MDRV_PALETTE_INIT( v9938 )
-    MDRV_VIDEO_START(sothello)
-    MDRV_VIDEO_UPDATE(generic_bitmapped)
+    MCFG_SCREEN_ADD("screen", RASTER)
+    MCFG_SCREEN_REFRESH_RATE(60)
+    MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+    MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+    MCFG_SCREEN_SIZE(512 + 32, (212 + 28) * 2)
+    MCFG_SCREEN_VISIBLE_AREA(0, 512 + 32 - 1, 0, (212 + 28) * 2 - 1)
+    MCFG_PALETTE_LENGTH(512)
+    MCFG_PALETTE_INIT( v9938 )
+    MCFG_VIDEO_START(sothello)
+    MCFG_VIDEO_UPDATE(generic_bitmapped)
 
     /* sound hardware */
-    MDRV_SPEAKER_STANDARD_MONO("mono")
-    MDRV_SOUND_ADD("ymsnd", YM2203, YM_CLOCK)
-    MDRV_SOUND_CONFIG(ym2203_config)
-    MDRV_SOUND_ROUTE(0, "mono", 0.25)
-    MDRV_SOUND_ROUTE(1, "mono", 0.25)
-    MDRV_SOUND_ROUTE(2, "mono", 0.25)
-    MDRV_SOUND_ROUTE(3, "mono", 0.50)
+    MCFG_SPEAKER_STANDARD_MONO("mono")
+    MCFG_SOUND_ADD("ymsnd", YM2203, YM_CLOCK)
+    MCFG_SOUND_CONFIG(ym2203_config)
+    MCFG_SOUND_ROUTE(0, "mono", 0.25)
+    MCFG_SOUND_ROUTE(1, "mono", 0.25)
+    MCFG_SOUND_ROUTE(2, "mono", 0.25)
+    MCFG_SOUND_ROUTE(3, "mono", 0.50)
 
-    MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
+    MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
 
-    MDRV_SOUND_ADD("msm",MSM5205, MSM_CLOCK)
-    MDRV_SOUND_CONFIG(msm_interface)
-    MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+    MCFG_SOUND_ADD("msm",MSM5205, MSM_CLOCK)
+    MCFG_SOUND_CONFIG(msm_interface)
+    MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
 /***************************************************************************
 

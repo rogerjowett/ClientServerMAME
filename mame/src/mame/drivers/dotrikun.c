@@ -24,12 +24,11 @@ SOUND : (none)
 #include "cpu/z80/z80.h"
 
 
-class dotrikun_state
+class dotrikun_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, dotrikun_state(machine)); }
-
-	dotrikun_state(running_machine &machine) { }
+	dotrikun_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *        videoram;
@@ -48,7 +47,7 @@ public:
 
 static WRITE8_HANDLER( dotrikun_color_w )
 {
-	dotrikun_state *state = (dotrikun_state *)space->machine->driver_data;
+	dotrikun_state *state = space->machine->driver_data<dotrikun_state>();
 	space->machine->primary_screen->update_partial(space->machine->primary_screen->vpos());
 	state->color = data;
 }
@@ -56,7 +55,7 @@ static WRITE8_HANDLER( dotrikun_color_w )
 
 static VIDEO_UPDATE( dotrikun )
 {
-	dotrikun_state *state = (dotrikun_state *)screen->machine->driver_data;
+	dotrikun_state *state = screen->machine->driver_data<dotrikun_state>();
 	int offs;
 
 	pen_t back_pen = MAKE_RGB(pal1bit(state->color >> 3), pal1bit(state->color >> 4), pal1bit(state->color >> 5));
@@ -133,44 +132,41 @@ INPUT_PORTS_END
 
 static MACHINE_START( dotrikun )
 {
-	dotrikun_state *state = (dotrikun_state *)machine->driver_data;
+	dotrikun_state *state = machine->driver_data<dotrikun_state>();
 	state_save_register_global(machine, state->color);
 }
 
 static MACHINE_RESET( dotrikun )
 {
-	dotrikun_state *state = (dotrikun_state *)machine->driver_data;
+	dotrikun_state *state = machine->driver_data<dotrikun_state>();
 
 	state->color = 0;
 }
 
 
-static MACHINE_DRIVER_START( dotrikun )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(dotrikun_state)
+static MACHINE_CONFIG_START( dotrikun, dotrikun_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, 4000000)		 /* 4 MHz */
-	MDRV_CPU_PROGRAM_MAP(dotrikun_map)
-	MDRV_CPU_IO_MAP(io_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80, 4000000)		 /* 4 MHz */
+	MCFG_CPU_PROGRAM_MAP(dotrikun_map)
+	MCFG_CPU_IO_MAP(io_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_MACHINE_START(dotrikun)
-	MDRV_MACHINE_RESET(dotrikun)
+	MCFG_MACHINE_START(dotrikun)
+	MCFG_MACHINE_RESET(dotrikun)
 
 	/* video hardware */
-	MDRV_VIDEO_UPDATE(dotrikun)
+	MCFG_VIDEO_UPDATE(dotrikun)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(256, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 256-1, 0, 192-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(256, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 256-1, 0, 192-1)
 
 	/* sound hardware */
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
 
 /***************************************************************************

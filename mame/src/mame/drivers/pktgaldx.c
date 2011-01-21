@@ -81,10 +81,10 @@ static ADDRESS_MAP_START( pktgaldx_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x120000, 0x1207ff) AM_RAM AM_BASE_SIZE_MEMBER(pktgaldx_state, spriteram, spriteram_size)
 	AM_RANGE(0x130000, 0x130fff) AM_RAM_DEVWRITE("deco_custom", deco16ic_nonbuffered_palette_w) AM_BASE_GENERIC(paletteram)
 
-	AM_RANGE(0x140000, 0x14000f) AM_DEVWRITE8("oki1", okim6295_w, 0x00ff)
-	AM_RANGE(0x140006, 0x140007) AM_DEVREAD8("oki1", okim6295_r, 0x00ff)
-	AM_RANGE(0x150000, 0x15000f) AM_DEVWRITE8("oki2", okim6295_w, 0x00ff)
-	AM_RANGE(0x150006, 0x150007) AM_DEVREAD8("oki2", okim6295_r, 0x00ff)
+	AM_RANGE(0x140000, 0x14000f) AM_DEVWRITE8_MODERN("oki1", okim6295_device, write, 0x00ff)
+	AM_RANGE(0x140006, 0x140007) AM_DEVREAD8_MODERN("oki1", okim6295_device, read, 0x00ff)
+	AM_RANGE(0x150000, 0x15000f) AM_DEVWRITE8_MODERN("oki2", okim6295_device, write, 0x00ff)
+	AM_RANGE(0x150006, 0x150007) AM_DEVREAD8_MODERN("oki2", okim6295_device, read, 0x00ff)
 
 	AM_RANGE(0x161800, 0x16180f) AM_DEVWRITE("deco_custom", deco16ic_pf12_control_w)
 	AM_RANGE(0x164800, 0x164801) AM_DEVWRITE("oki2", pktgaldx_oki_bank_w)
@@ -127,10 +127,10 @@ static ADDRESS_MAP_START( pktgaldb_map, ADDRESS_SPACE_PROGRAM, 16 )
 
 	AM_RANGE(0x130000, 0x130fff) AM_RAM // palette on original?
 
-	AM_RANGE(0x140000, 0x14000f) AM_DEVWRITE8("oki1", okim6295_w, 0x00ff)
-	AM_RANGE(0x140006, 0x140007) AM_DEVREAD8("oki1", okim6295_r, 0x00ff)
-	AM_RANGE(0x150000, 0x15000f) AM_DEVWRITE8("oki2", okim6295_w, 0x00ff)
-	AM_RANGE(0x150006, 0x150007) AM_DEVREAD8("oki2", okim6295_r, 0x00ff)
+	AM_RANGE(0x140000, 0x14000f) AM_DEVWRITE8_MODERN("oki1", okim6295_device, write, 0x00ff)
+	AM_RANGE(0x140006, 0x140007) AM_DEVREAD8_MODERN("oki1", okim6295_device, read, 0x00ff)
+	AM_RANGE(0x150000, 0x15000f) AM_DEVWRITE8_MODERN("oki2", okim6295_device, write, 0x00ff)
+	AM_RANGE(0x150006, 0x150007) AM_DEVREAD8_MODERN("oki2", okim6295_device, read, 0x00ff)
 
 //  AM_RANGE(0x160000, 0x167fff) AM_RAM
 	AM_RANGE(0x164800, 0x164801) AM_DEVWRITE("oki2", pktgaldx_oki_bank_w)
@@ -312,88 +312,82 @@ static const deco16ic_interface pktgaldx_deco16ic_intf =
 
 static MACHINE_START( pktgaldx )
 {
-	pktgaldx_state *state = (pktgaldx_state *)machine->driver_data;
+	pktgaldx_state *state = machine->driver_data<pktgaldx_state>();
 
 	state->maincpu = machine->device("maincpu");
 	state->deco16ic = machine->device("deco_custom");
 }
 
-static MACHINE_DRIVER_START( pktgaldx )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(pktgaldx_state)
+static MACHINE_CONFIG_START( pktgaldx, pktgaldx_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 14000000)
-	MDRV_CPU_PROGRAM_MAP(pktgaldx_map)
-	MDRV_CPU_VBLANK_INT("screen", irq6_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, 14000000)
+	MCFG_CPU_PROGRAM_MAP(pktgaldx_map)
+	MCFG_CPU_VBLANK_INT("screen", irq6_line_hold)
 
-	MDRV_MACHINE_START(pktgaldx)
+	MCFG_MACHINE_START(pktgaldx)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(58)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(40*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(58)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(40*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
 
-	MDRV_PALETTE_LENGTH(4096)
-	MDRV_GFXDECODE(pktgaldx)
+	MCFG_PALETTE_LENGTH(4096)
+	MCFG_GFXDECODE(pktgaldx)
 
-	MDRV_VIDEO_UPDATE(pktgaldx)
+	MCFG_VIDEO_UPDATE(pktgaldx)
 
-	MDRV_DECO16IC_ADD("deco_custom", pktgaldx_deco16ic_intf)
+	MCFG_DECO16IC_ADD("deco_custom", pktgaldx_deco16ic_intf)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_OKIM6295_ADD("oki1", 32220000/32, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.75)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.75)
+	MCFG_OKIM6295_ADD("oki1", 32220000/32, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.75)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.75)
 
-	MDRV_OKIM6295_ADD("oki2", 32220000/16, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.60)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.60)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki2", 32220000/16, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.60)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.60)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( pktgaldb )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(pktgaldx_state)
+static MACHINE_CONFIG_START( pktgaldb, pktgaldx_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 16000000)
-	MDRV_CPU_PROGRAM_MAP(pktgaldb_map)
-	MDRV_CPU_VBLANK_INT("screen", irq6_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, 16000000)
+	MCFG_CPU_PROGRAM_MAP(pktgaldb_map)
+	MCFG_CPU_VBLANK_INT("screen", irq6_line_hold)
 
-	MDRV_MACHINE_START(pktgaldx)
+	MCFG_MACHINE_START(pktgaldx)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(58)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(40*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(58)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(40*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
 
-	MDRV_PALETTE_LENGTH(4096)
-	MDRV_GFXDECODE(bootleg)
+	MCFG_PALETTE_LENGTH(4096)
+	MCFG_GFXDECODE(bootleg)
 
-	MDRV_VIDEO_UPDATE(pktgaldb)
+	MCFG_VIDEO_UPDATE(pktgaldb)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_OKIM6295_ADD("oki1", 32220000/32, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.75)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.75)
+	MCFG_OKIM6295_ADD("oki1", 32220000/32, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.75)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.75)
 
-	MDRV_OKIM6295_ADD("oki2", 32220000/16, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.60)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.60)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki2", 32220000/16, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.60)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.60)
+MACHINE_CONFIG_END
 
 
 ROM_START( pktgaldx )

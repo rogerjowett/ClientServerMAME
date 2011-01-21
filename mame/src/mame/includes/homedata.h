@@ -1,10 +1,9 @@
 
-class homedata_state
+class homedata_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, homedata_state(machine)); }
-
-	homedata_state(running_machine &machine) { }
+	homedata_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *  vreg;
@@ -31,11 +30,11 @@ public:
 	int      to_cpu, from_cpu;
 
 	/* device */
-	running_device *maincpu;
-	running_device *audiocpu;
-	running_device *dac;
-	running_device *ym;
-	running_device *sn;
+	device_t *maincpu;
+	device_t *audiocpu;
+	device_t *dac;
+	device_t *ym;
+	device_t *sn;
 };
 
 

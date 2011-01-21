@@ -19,10 +19,10 @@ struct _st0016_state
 	UINT8 regs[0x100];
 };
 
-INLINE st0016_state *get_safe_token(running_device *device)
+INLINE st0016_state *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
-	assert(device->type() == SOUND_ST0016);
+	assert(device->type() == ST0016);
 	return (st0016_state *)downcast<legacy_device_base *>(device)->token();
 }
 

@@ -165,6 +165,26 @@
         NMI = latch on sound command
     ========================================================================
 
+
+Game Identification (information sourced from internal Atari Vax emails)
+
+All System I games are required to initialize a byte in the configuration area
+(at 01006E specifically) to a certain value.  The utility system on the main
+board interrogates this byte to determine if a new game cart has been installed
+and clears the EEROM accordingly.
+
+Here is the list, which includes confirmed (*) and unconfirmed values:
+
+Diagnostic Cartridge:           255
+Peter Packrat:                  000*
+Marble Madness:                 001*
+Indiana Jones - Temple of Doom: 002*
+Road Runner:                    003*
+Relief Pitcher (unreleased):    004
+Off-Road (unreleased):          004
+RoadBlasters (aka Future Vette):005*
+
+
 ****************************************************************************/
 
 
@@ -188,17 +208,17 @@
 
 static void update_interrupts(running_machine *machine)
 {
-	atarisy1_state *state = (atarisy1_state *)machine->driver_data;
+	atarisy1_state *state = machine->driver_data<atarisy1_state>();
 	cputag_set_input_line(machine, "maincpu", 2, state->joystick_int && state->joystick_int_enable ? ASSERT_LINE : CLEAR_LINE);
-	cputag_set_input_line(machine, "maincpu", 3, state->atarigen.scanline_int_state ? ASSERT_LINE : CLEAR_LINE);
-	cputag_set_input_line(machine, "maincpu", 4, state->atarigen.video_int_state ? ASSERT_LINE : CLEAR_LINE);
-	cputag_set_input_line(machine, "maincpu", 6, state->atarigen.sound_int_state ? ASSERT_LINE : CLEAR_LINE);
+	cputag_set_input_line(machine, "maincpu", 3, state->scanline_int_state ? ASSERT_LINE : CLEAR_LINE);
+	cputag_set_input_line(machine, "maincpu", 4, state->video_int_state ? ASSERT_LINE : CLEAR_LINE);
+	cputag_set_input_line(machine, "maincpu", 6, state->sound_int_state ? ASSERT_LINE : CLEAR_LINE);
 }
 
 
 static MACHINE_START( atarisy1 )
 {
-	atarisy1_state *state = (atarisy1_state *)machine->driver_data;
+	atarisy1_state *state = machine->driver_data<atarisy1_state>();
 	atarigen_init(machine);
 
 	state_save_register_global(machine, state->joystick_int);
@@ -209,12 +229,12 @@ static MACHINE_START( atarisy1 )
 
 static MACHINE_RESET( atarisy1 )
 {
-	atarisy1_state *state = (atarisy1_state *)machine->driver_data;
+	atarisy1_state *state = machine->driver_data<atarisy1_state>();
 
 	/* initialize the system */
-	atarigen_eeprom_reset(&state->atarigen);
-	atarigen_slapstic_reset(&state->atarigen);
-	atarigen_interrupt_reset(&state->atarigen, update_interrupts);
+	atarigen_eeprom_reset(state);
+	atarigen_slapstic_reset(state);
+	atarigen_interrupt_reset(state, update_interrupts);
 	atarigen_sound_io_reset(machine->device("audiocpu"));
 
 	/* reset the joystick parameters */
@@ -233,7 +253,7 @@ static MACHINE_RESET( atarisy1 )
 
 static TIMER_DEVICE_CALLBACK( delayed_joystick_int )
 {
-	atarisy1_state *state = (atarisy1_state *)timer.machine->driver_data;
+	atarisy1_state *state = timer.machine->driver_data<atarisy1_state>();
 	state->joystick_value = param;
 	state->joystick_int = 1;
 	atarigen_update_interrupts(timer.machine);
@@ -242,7 +262,7 @@ static TIMER_DEVICE_CALLBACK( delayed_joystick_int )
 
 static READ16_HANDLER( joystick_r )
 {
-	atarisy1_state *state = (atarisy1_state *)space->machine->driver_data;
+	atarisy1_state *state = space->machine->driver_data<atarisy1_state>();
 	int newval = 0xff;
 	static const char *const portnames[] = { "IN0", "IN1" };
 
@@ -273,7 +293,7 @@ static READ16_HANDLER( joystick_r )
 static WRITE16_HANDLER( joystick_w )
 {
 	/* the A4 bit enables/disables joystick IRQs */
-	atarisy1_state *state = (atarisy1_state *)space->machine->driver_data;
+	atarisy1_state *state = space->machine->driver_data<atarisy1_state>();
 	state->joystick_int_enable = ((offset >> 3) & 1) ^ 1;
 }
 
@@ -287,7 +307,7 @@ static WRITE16_HANDLER( joystick_w )
 
 static READ16_HANDLER( trakball_r )
 {
-	atarisy1_state *state = (atarisy1_state *)space->machine->driver_data;
+	atarisy1_state *state = space->machine->driver_data<atarisy1_state>();
 	int result = 0xff;
 
 	/* Marble Madness trackball type -- rotated 45 degrees! */
@@ -337,9 +357,9 @@ static READ16_HANDLER( trakball_r )
 
 static READ16_HANDLER( port4_r )
 {
-	atarisy1_state *state = (atarisy1_state *)space->machine->driver_data;
+	atarisy1_state *state = space->machine->driver_data<atarisy1_state>();
 	int temp = input_port_read(space->machine, "F60000");
-	if (state->atarigen.cpu_to_sound_ready) temp ^= 0x0080;
+	if (state->cpu_to_sound_ready) temp ^= 0x0080;
 	return temp;
 }
 
@@ -353,11 +373,11 @@ static READ16_HANDLER( port4_r )
 
 static READ8_HANDLER( switch_6502_r )
 {
-	atarisy1_state *state = (atarisy1_state *)space->machine->driver_data;
+	atarisy1_state *state = space->machine->driver_data<atarisy1_state>();
 	int temp = input_port_read(space->machine, "1820");
 
-	if (state->atarigen.cpu_to_sound_ready) temp ^= 0x08;
-	if (state->atarigen.sound_to_cpu_ready) temp ^= 0x10;
+	if (state->cpu_to_sound_ready) temp ^= 0x08;
+	if (state->sound_to_cpu_ready) temp ^= 0x10;
 	if (!(input_port_read(space->machine, "F60000") & 0x0040)) temp ^= 0x80;
 
 	return temp;
@@ -453,19 +473,19 @@ static ADDRESS_MAP_START( main_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x080000, 0x087fff) AM_ROM	/* slapstic maps here */
 	AM_RANGE(0x2e0000, 0x2e0001) AM_READ(atarisy1_int3state_r)
 	AM_RANGE(0x400000, 0x401fff) AM_RAM
-	AM_RANGE(0x800000, 0x800001) AM_WRITE(atarisy1_xscroll_w) AM_BASE_MEMBER(atarisy1_state, atarigen.xscroll)
-	AM_RANGE(0x820000, 0x820001) AM_WRITE(atarisy1_yscroll_w) AM_BASE_MEMBER(atarisy1_state, atarigen.yscroll)
+	AM_RANGE(0x800000, 0x800001) AM_WRITE(atarisy1_xscroll_w) AM_BASE_MEMBER(atarisy1_state, xscroll)
+	AM_RANGE(0x820000, 0x820001) AM_WRITE(atarisy1_yscroll_w) AM_BASE_MEMBER(atarisy1_state, yscroll)
 	AM_RANGE(0x840000, 0x840001) AM_WRITE(atarisy1_priority_w)
 	AM_RANGE(0x860000, 0x860001) AM_WRITE(atarisy1_bankselect_w) AM_BASE_MEMBER(atarisy1_state, bankselect)
 	AM_RANGE(0x880000, 0x880001) AM_WRITE(watchdog_reset16_w)
 	AM_RANGE(0x8a0000, 0x8a0001) AM_WRITE(atarigen_video_int_ack_w)
 	AM_RANGE(0x8c0000, 0x8c0001) AM_WRITE(atarigen_eeprom_enable_w)
 	AM_RANGE(0x900000, 0x9fffff) AM_RAM
-	AM_RANGE(0xa00000, 0xa01fff) AM_RAM_WRITE(atarigen_playfield_w) AM_BASE_MEMBER(atarisy1_state, atarigen.playfield)
+	AM_RANGE(0xa00000, 0xa01fff) AM_RAM_WRITE(atarigen_playfield_w) AM_BASE_MEMBER(atarisy1_state, playfield)
 	AM_RANGE(0xa02000, 0xa02fff) AM_RAM_WRITE(atarisy1_spriteram_w) AM_BASE(&atarimo_0_spriteram)
-	AM_RANGE(0xa03000, 0xa03fff) AM_RAM_WRITE(atarigen_alpha_w) AM_BASE_MEMBER(atarisy1_state, atarigen.alpha)
+	AM_RANGE(0xa03000, 0xa03fff) AM_RAM_WRITE(atarigen_alpha_w) AM_BASE_MEMBER(atarisy1_state, alpha)
 	AM_RANGE(0xb00000, 0xb007ff) AM_RAM_WRITE(paletteram16_IIIIRRRRGGGGBBBB_word_w) AM_BASE_GENERIC(paletteram)
-	AM_RANGE(0xf00000, 0xf00fff) AM_READWRITE(atarigen_eeprom_r, atarigen_eeprom_w) AM_BASE_SIZE_MEMBER(atarisy1_state, atarigen.eeprom, atarigen.eeprom_size)
+	AM_RANGE(0xf00000, 0xf00fff) AM_READWRITE(atarigen_eeprom_r, atarigen_eeprom_w) AM_SHARE("eeprom")
 	AM_RANGE(0xf20000, 0xf20007) AM_READ(trakball_r)
 	AM_RANGE(0xf40000, 0xf4001f) AM_READWRITE(joystick_r, joystick_w)
 	AM_RANGE(0xf60000, 0xf60003) AM_READ(port4_r)
@@ -484,7 +504,7 @@ ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( sound_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x0fff) AM_RAM
-	AM_RANGE(0x1000, 0x100f) AM_DEVREADWRITE("via6522_0", via_r, via_w)
+	AM_RANGE(0x1000, 0x100f) AM_DEVREADWRITE_MODERN("via6522_0", via6522_device, read, write)
 	AM_RANGE(0x1800, 0x1801) AM_DEVREADWRITE("ymsnd", ym2151_r, ym2151_w)
 	AM_RANGE(0x1810, 0x1810) AM_READWRITE(atarigen_6502_sound_r, atarigen_6502_sound_w)
 	AM_RANGE(0x1820, 0x1820) AM_READ(switch_6502_r)
@@ -740,59 +760,58 @@ static const ym2151_interface ym2151_config =
  *
  *************************************/
 
-static MACHINE_DRIVER_START( atarisy1 )
-	MDRV_DRIVER_DATA(atarisy1_state)
+static MACHINE_CONFIG_START( atarisy1, atarisy1_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68010, ATARI_CLOCK_14MHz/2)
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_VBLANK_INT("screen", atarigen_video_int_gen)
+	MCFG_CPU_ADD("maincpu", M68010, ATARI_CLOCK_14MHz/2)
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_VBLANK_INT("screen", atarigen_video_int_gen)
 
-	MDRV_CPU_ADD("audiocpu", M6502, ATARI_CLOCK_14MHz/8)
-	MDRV_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_ADD("audiocpu", M6502, ATARI_CLOCK_14MHz/8)
+	MCFG_CPU_PROGRAM_MAP(sound_map)
 
-	MDRV_MACHINE_START(atarisy1)
-	MDRV_MACHINE_RESET(atarisy1)
-	MDRV_NVRAM_HANDLER(atarigen)
+	MCFG_MACHINE_START(atarisy1)
+	MCFG_MACHINE_RESET(atarisy1)
+	MCFG_NVRAM_ADD_1FILL("eeprom")
 
-	MDRV_TIMER_ADD("joystick_timer", delayed_joystick_int)
-	MDRV_TIMER_ADD("scan_timer", atarisy1_int3_callback)
-	MDRV_TIMER_ADD("int3off_timer", atarisy1_int3off_callback)
-	MDRV_TIMER_ADD("yreset_timer", atarisy1_reset_yscroll_callback)
+	MCFG_TIMER_ADD("joystick_timer", delayed_joystick_int)
+	MCFG_TIMER_ADD("scan_timer", atarisy1_int3_callback)
+	MCFG_TIMER_ADD("int3off_timer", atarisy1_int3off_callback)
+	MCFG_TIMER_ADD("yreset_timer", atarisy1_reset_yscroll_callback)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
-	MDRV_GFXDECODE(atarisy1)
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
+	MCFG_GFXDECODE(atarisy1)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	/* note: these parameters are from published specs, not derived */
 	/* video timing comes from an 82S163 (H) and an 82S129 (V) */
-	MDRV_SCREEN_RAW_PARAMS(ATARI_CLOCK_14MHz/2, 456, 0, 336, 262, 0, 240)
+	MCFG_SCREEN_RAW_PARAMS(ATARI_CLOCK_14MHz/2, 456, 0, 336, 262, 0, 240)
 
-	MDRV_VIDEO_START(atarisy1)
-	MDRV_VIDEO_UPDATE(atarisy1)
+	MCFG_VIDEO_START(atarisy1)
+	MCFG_VIDEO_UPDATE(atarisy1)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, ATARI_CLOCK_14MHz/4)
-	MDRV_SOUND_CONFIG(ym2151_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.80)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.80)
+	MCFG_SOUND_ADD("ymsnd", YM2151, ATARI_CLOCK_14MHz/4)
+	MCFG_SOUND_CONFIG(ym2151_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.80)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.80)
 
-	MDRV_SOUND_ADD("pokey", POKEY, ATARI_CLOCK_14MHz/8)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.40)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.40)
+	MCFG_SOUND_ADD("pokey", POKEY, ATARI_CLOCK_14MHz/8)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.40)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.40)
 
-	MDRV_SOUND_ADD("tms", TMS5220C, ATARI_CLOCK_14MHz/2/11)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("tms", TMS5220C, ATARI_CLOCK_14MHz/2/11)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
 
 	/* via */
-	MDRV_VIA6522_ADD("via6522_0", 0, via_interface)
-MACHINE_DRIVER_END
+	MCFG_VIA6522_ADD("via6522_0", 0, via_interface)
+MACHINE_CONFIG_END
 
 
 
@@ -2325,7 +2344,7 @@ ROM_END
 
 static DRIVER_INIT( marble )
 {
-	atarisy1_state *state = (atarisy1_state *)machine->driver_data;
+	atarisy1_state *state = machine->driver_data<atarisy1_state>();
 
 	atarigen_slapstic_init(machine->device("maincpu"), 0x080000, 0, 103);
 
@@ -2336,7 +2355,7 @@ static DRIVER_INIT( marble )
 
 static DRIVER_INIT( peterpak )
 {
-	atarisy1_state *state = (atarisy1_state *)machine->driver_data;
+	atarisy1_state *state = machine->driver_data<atarisy1_state>();
 
 	atarigen_slapstic_init(machine->device("maincpu"), 0x080000, 0, 107);
 
@@ -2347,7 +2366,7 @@ static DRIVER_INIT( peterpak )
 
 static DRIVER_INIT( indytemp )
 {
-	atarisy1_state *state = (atarisy1_state *)machine->driver_data;
+	atarisy1_state *state = machine->driver_data<atarisy1_state>();
 
 	atarigen_slapstic_init(machine->device("maincpu"), 0x080000, 0, 105);
 
@@ -2358,7 +2377,7 @@ static DRIVER_INIT( indytemp )
 
 static DRIVER_INIT( roadrunn )
 {
-	atarisy1_state *state = (atarisy1_state *)machine->driver_data;
+	atarisy1_state *state = machine->driver_data<atarisy1_state>();
 
 	atarigen_slapstic_init(machine->device("maincpu"), 0x080000, 0, 108);
 
@@ -2369,7 +2388,7 @@ static DRIVER_INIT( roadrunn )
 
 static DRIVER_INIT( roadb109 )
 {
-	atarisy1_state *state = (atarisy1_state *)machine->driver_data;
+	atarisy1_state *state = machine->driver_data<atarisy1_state>();
 
 	atarigen_slapstic_init(machine->device("maincpu"), 0x080000, 0, 109);
 
@@ -2380,7 +2399,7 @@ static DRIVER_INIT( roadb109 )
 
 static DRIVER_INIT( roadb110 )
 {
-	atarisy1_state *state = (atarisy1_state *)machine->driver_data;
+	atarisy1_state *state = machine->driver_data<atarisy1_state>();
 
 	atarigen_slapstic_init(machine->device("maincpu"), 0x080000, 0, 110);
 

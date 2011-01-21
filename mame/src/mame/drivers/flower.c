@@ -132,8 +132,8 @@ static ADDRESS_MAP_START( flower_sound_cpu, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x4000, 0x4000) AM_WRITE(sn_irq_enable_w) AM_BASE(&sn_irq_enable)
 	AM_RANGE(0x4001, 0x4001) AM_WRITEONLY AM_BASE(&sn_nmi_enable)
 	AM_RANGE(0x6000, 0x6000) AM_READ(soundlatch_r)
-	AM_RANGE(0x8000, 0x803f) AM_WRITE(flower_sound1_w) AM_BASE(&flower_soundregs1)
-	AM_RANGE(0xa000, 0xa03f) AM_WRITE(flower_sound2_w) AM_BASE(&flower_soundregs2)
+	AM_RANGE(0x8000, 0x803f) AM_DEVWRITE("flower", flower_sound1_w)
+	AM_RANGE(0xa000, 0xa03f) AM_DEVWRITE("flower", flower_sound2_w)
 	AM_RANGE(0xc000, 0xc7ff) AM_RAM
 ADDRESS_MAP_END
 
@@ -238,45 +238,45 @@ static INTERRUPT_GEN( flower_cpu0_interrupt )
 	cpu_set_input_line(device, 0, ASSERT_LINE);
 }
 
-static MACHINE_DRIVER_START( flower )
+static MACHINE_CONFIG_START( flower, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80,8000000)
-	MDRV_CPU_PROGRAM_MAP(flower_cpu1_2)
-//  MDRV_CPU_VBLANK_INT_HACK(flower_cpu0_interrupt,10)
-	MDRV_CPU_VBLANK_INT("screen", flower_cpu0_interrupt) //nmis stuff up the writes to shared ram
+	MCFG_CPU_ADD("maincpu", Z80,8000000)
+	MCFG_CPU_PROGRAM_MAP(flower_cpu1_2)
+//  MCFG_CPU_VBLANK_INT_HACK(flower_cpu0_interrupt,10)
+	MCFG_CPU_VBLANK_INT("screen", flower_cpu0_interrupt) //nmis stuff up the writes to shared ram
 
-	MDRV_CPU_ADD("sub", Z80,8000000)
-	MDRV_CPU_PROGRAM_MAP(flower_cpu1_2)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
-//  MDRV_CPU_VBLANK_INT("screen", nmi_line_pulse)
+	MCFG_CPU_ADD("sub", Z80,8000000)
+	MCFG_CPU_PROGRAM_MAP(flower_cpu1_2)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
+//  MCFG_CPU_VBLANK_INT("screen", nmi_line_pulse)
 
-	MDRV_CPU_ADD("audiocpu", Z80,8000000)
-	MDRV_CPU_PROGRAM_MAP(flower_sound_cpu)
-	MDRV_CPU_PERIODIC_INT(sn_irq, 90)	/* periodic interrupt, don't know about the frequency */
+	MCFG_CPU_ADD("audiocpu", Z80,8000000)
+	MCFG_CPU_PROGRAM_MAP(flower_sound_cpu)
+	MCFG_CPU_PERIODIC_INT(sn_irq, 90)	/* periodic interrupt, don't know about the frequency */
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(34*8, 33*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 34*8-1, 0*8, 28*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(34*8, 33*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 34*8-1, 0*8, 28*8-1)
 
-	MDRV_GFXDECODE(flower)
+	MCFG_GFXDECODE(flower)
 
-	MDRV_PALETTE_INIT(flower)
-	MDRV_PALETTE_LENGTH(256)
+	MCFG_PALETTE_INIT(flower)
+	MCFG_PALETTE_LENGTH(256)
 
-	MDRV_VIDEO_START(flower)
-	MDRV_VIDEO_UPDATE(flower)
+	MCFG_VIDEO_START(flower)
+	MCFG_VIDEO_UPDATE(flower)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("flower", FLOWER, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("flower", FLOWER, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 ROM_START( flower ) /* Komax version */

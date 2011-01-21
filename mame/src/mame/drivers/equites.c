@@ -372,6 +372,7 @@ D                                                                               
 #include "sound/msm5232.h"
 #include "sound/dac.h"
 #include "sound/samples.h"
+#include "machine/nvram.h"
 #include "includes/equites.h"
 
 #define HVOLTAGE_DEBUG	0
@@ -392,13 +393,13 @@ D                                                                               
 
 static TIMER_CALLBACK( equites_nmi_callback )
 {
-	equites_state *state = (equites_state *)machine->driver_data;
+	equites_state *state = machine->driver_data<equites_state>();
 	cpu_set_input_line(state->audio_cpu, INPUT_LINE_NMI, ASSERT_LINE);
 }
 
 static TIMER_CALLBACK( equites_frq_adjuster_callback )
 {
-	equites_state *state = (equites_state *)machine->driver_data;
+	equites_state *state = machine->driver_data<equites_state>();
 	UINT8 frq = input_port_read(machine, FRQ_ADJUSTER_TAG);
 
 	msm5232_set_clock(state->msm, MSM5232_MIN_CLOCK + frq * (MSM5232_MAX_CLOCK - MSM5232_MIN_CLOCK) / 100);
@@ -412,7 +413,7 @@ static TIMER_CALLBACK( equites_frq_adjuster_callback )
 
 static SOUND_START(equites)
 {
-	equites_state *state = (equites_state *)machine->driver_data;
+	equites_state *state = machine->driver_data<equites_state>();
 	state->nmi_timer = timer_alloc(machine, equites_nmi_callback, NULL);
 
 	state->adjuster_timer = timer_alloc(machine, equites_frq_adjuster_callback, NULL);
@@ -421,7 +422,7 @@ static SOUND_START(equites)
 
 static WRITE8_HANDLER(equites_c0f8_w)
 {
-	equites_state *state = (equites_state *)space->machine->driver_data;
+	equites_state *state = space->machine->driver_data<equites_state>();
 
 	switch (offset)
 	{
@@ -470,7 +471,7 @@ static WRITE8_HANDLER(equites_c0f8_w)
 
 static WRITE8_DEVICE_HANDLER( equites_8910porta_w )
 {
-	equites_state *state = (equites_state *)device->machine->driver_data;
+	equites_state *state = device->machine->driver_data<equites_state>();
 
 	// bongo 1
 	sample_set_volume(device, 0, ((data & 0x30) >> 4) * 0.33);
@@ -491,7 +492,7 @@ popmessage("HH %d(%d) CYM %d(%d)", state->hihat, BIT(state->ay_port_b, 6), state
 
 static WRITE8_DEVICE_HANDLER( equites_8910portb_w )
 {
-	equites_state *state = (equites_state *)device->machine->driver_data;
+	equites_state *state = device->machine->driver_data<equites_state>();
 #if POPDRUMKIT
 if (data & ~state->ay_port_b & 0x08) state->cymbal++;
 if (data & ~state->ay_port_b & 0x04) state->hihat++;
@@ -527,14 +528,14 @@ popmessage("HH %d(%d) CYM %d(%d)",state->hihat,BIT(state->ay_port_b,6),state->cy
 
 static WRITE8_HANDLER(equites_cymbal_ctrl_w)
 {
-	equites_state *state = (equites_state *)space->machine->driver_data;
+	equites_state *state = space->machine->driver_data<equites_state>();
 	state->eq_cymbal_ctrl++;
 }
 
 
 static void equites_update_dac( running_machine *machine )
 {
-	equites_state *state = (equites_state *)machine->driver_data;
+	equites_state *state = machine->driver_data<equites_state>();
 
 	// there is only one latch, which is used to drive two DAC channels.
 	// When the channel is enabled in the 4066, it goes to a series of
@@ -551,19 +552,19 @@ static void equites_update_dac( running_machine *machine )
 
 static WRITE8_HANDLER( equites_dac_latch_w )
 {
-	equites_state *state = (equites_state *)space->machine->driver_data;
+	equites_state *state = space->machine->driver_data<equites_state>();
 	state->dac_latch = data << 2;
 	equites_update_dac(space->machine);
 }
 
 static WRITE8_HANDLER( equites_8155_portb_w )
 {
-	equites_state *state = (equites_state *)space->machine->driver_data;
+	equites_state *state = space->machine->driver_data<equites_state>();
 	state->eq8155_port_b = data;
 	equites_update_dac(space->machine);
 }
 
-static void equites_msm5232_gate( running_device *device, int state )
+static void equites_msm5232_gate( device_t *device, int state )
 {
 }
 
@@ -584,7 +585,7 @@ static INTERRUPT_GEN( equites_interrupt )
 
 static WRITE8_HANDLER(equites_8155_w)
 {
-	equites_state *state = (equites_state *)space->machine->driver_data;
+	equites_state *state = space->machine->driver_data<equites_state>();
 
 	// FIXME proper 8155 emulation must be implemented
 	switch( offset )
@@ -638,19 +639,19 @@ static READ16_HANDLER(hvoltage_debug_r)
 
 static CUSTOM_INPUT( gekisou_unknown_status )
 {
-	equites_state *state = (equites_state *)field->port->machine->driver_data;
+	equites_state *state = field->port->machine->driver_data<equites_state>();
 	return state->unknown_bit;
 }
 
 static WRITE16_HANDLER( gekisou_unknown_0_w )
 {
-	equites_state *state = (equites_state *)space->machine->driver_data;
+	equites_state *state = space->machine->driver_data<equites_state>();
 	state->unknown_bit = 0;
 }
 
 static WRITE16_HANDLER( gekisou_unknown_1_w )
 {
-	equites_state *state = (equites_state *)space->machine->driver_data;
+	equites_state *state = space->machine->driver_data<equites_state>();
 	state->unknown_bit = 1;
 }
 
@@ -660,7 +661,7 @@ static WRITE16_HANDLER( gekisou_unknown_1_w )
 
 static READ16_HANDLER(equites_spriteram_kludge_r)
 {
-	equites_state *state = (equites_state *)space->machine->driver_data;
+	equites_state *state = space->machine->driver_data<equites_state>();
 	if (state->spriteram[0] == 0x5555)
 		return 0;
 	else
@@ -669,26 +670,26 @@ static READ16_HANDLER(equites_spriteram_kludge_r)
 
 static READ16_HANDLER(mcu_r)
 {
-	equites_state *state = (equites_state *)space->machine->driver_data;
+	equites_state *state = space->machine->driver_data<equites_state>();
 	return 0xff00 | state->mcu_ram[offset];
 }
 
 static WRITE16_HANDLER(mcu_w)
 {
-	equites_state *state = (equites_state *)space->machine->driver_data;
+	equites_state *state = space->machine->driver_data<equites_state>();
 	if (ACCESSING_BITS_0_7)
 		state->mcu_ram[offset] = data & 0xff;
 }
 
 static WRITE16_HANDLER( mcu_halt_assert_w )
 {
-	equites_state *state = (equites_state *)space->machine->driver_data;
+	equites_state *state = space->machine->driver_data<equites_state>();
 	cpu_set_input_line(state->mcu, INPUT_LINE_HALT, ASSERT_LINE);
 }
 
 static WRITE16_HANDLER( mcu_halt_clear_w )
 {
-	equites_state *state = (equites_state *)space->machine->driver_data;
+	equites_state *state = space->machine->driver_data<equites_state>();
 	cpu_set_input_line(state->mcu, INPUT_LINE_HALT, CLEAR_LINE);
 }
 
@@ -696,7 +697,7 @@ static WRITE16_HANDLER( mcu_halt_clear_w )
 
 static ADDRESS_MAP_START( equites_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x000000, 0x00ffff) AM_ROM	// ROM area is written several times (dev system?)
-	AM_RANGE(0x040000, 0x040fff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)	// nvram is for gekisou only
+	AM_RANGE(0x040000, 0x040fff) AM_RAM AM_SHARE("nvram")	// nvram is for gekisou only
 	AM_RANGE(0x080000, 0x080fff) AM_READWRITE(equites_fg_videoram_r, equites_fg_videoram_w)	// 8-bit
 	AM_RANGE(0x0c0000, 0x0c01ff) AM_RAM_WRITE(equites_bg_videoram_w) AM_BASE_MEMBER(equites_state, bg_videoram)
 	AM_RANGE(0x0c0200, 0x0c0fff) AM_RAM
@@ -1139,51 +1140,51 @@ static const samples_interface alphamc07_samples_interface =
 #define MSM5232_BASE_VOLUME 1.0
 
 // the sound board is the same in all games
-static MACHINE_DRIVER_START( common_sound )
+static MACHINE_CONFIG_FRAGMENT( common_sound )
 
-	MDRV_CPU_ADD("audiocpu", I8085A, XTAL_6_144MHz)	/* verified on pcb */
-	MDRV_CPU_PROGRAM_MAP(sound_map)
-	MDRV_CPU_IO_MAP(sound_portmap)
+	MCFG_CPU_ADD("audiocpu", I8085A, XTAL_6_144MHz)	/* verified on pcb */
+	MCFG_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_IO_MAP(sound_portmap)
 
-	MDRV_SOUND_START(equites)
+	MCFG_SOUND_START(equites)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("msm", MSM5232, MSM5232_MAX_CLOCK)	// will be adjusted at runtime through PORT_ADJUSTER
-	MDRV_SOUND_CONFIG(equites_5232intf)
-	MDRV_SOUND_ROUTE(0, "mono", MSM5232_BASE_VOLUME/2.2)	// pin 28  2'-1 : 22k resistor
-	MDRV_SOUND_ROUTE(1, "mono", MSM5232_BASE_VOLUME/1.5)	// pin 29  4'-1 : 15k resistor
-	MDRV_SOUND_ROUTE(2, "mono", MSM5232_BASE_VOLUME)		// pin 30  8'-1 : 10k resistor
-	MDRV_SOUND_ROUTE(3, "mono", MSM5232_BASE_VOLUME)		// pin 31 16'-1 : 10k resistor
-	MDRV_SOUND_ROUTE(4, "mono", MSM5232_BASE_VOLUME/2.2)	// pin 36  2'-2 : 22k resistor
-	MDRV_SOUND_ROUTE(5, "mono", MSM5232_BASE_VOLUME/1.5)	// pin 35  4'-2 : 15k resistor
-	MDRV_SOUND_ROUTE(6, "mono", MSM5232_BASE_VOLUME)		// pin 34  8'-2 : 10k resistor
-	MDRV_SOUND_ROUTE(7, "mono", MSM5232_BASE_VOLUME)		// pin 33 16'-2 : 10k resistor
-	MDRV_SOUND_ROUTE(8, "mono", 1.0)		// pin 1 SOLO  8' (this actually feeds an analog section)
-	MDRV_SOUND_ROUTE(9, "mono", 1.0)		// pin 2 SOLO 16' (this actually feeds an analog section)
-	MDRV_SOUND_ROUTE(10,"mono", 0.12)		// pin 22 Noise Output (this actually feeds an analog section)
+	MCFG_SOUND_ADD("msm", MSM5232, MSM5232_MAX_CLOCK)	// will be adjusted at runtime through PORT_ADJUSTER
+	MCFG_SOUND_CONFIG(equites_5232intf)
+	MCFG_SOUND_ROUTE(0, "mono", MSM5232_BASE_VOLUME/2.2)	// pin 28  2'-1 : 22k resistor
+	MCFG_SOUND_ROUTE(1, "mono", MSM5232_BASE_VOLUME/1.5)	// pin 29  4'-1 : 15k resistor
+	MCFG_SOUND_ROUTE(2, "mono", MSM5232_BASE_VOLUME)		// pin 30  8'-1 : 10k resistor
+	MCFG_SOUND_ROUTE(3, "mono", MSM5232_BASE_VOLUME)		// pin 31 16'-1 : 10k resistor
+	MCFG_SOUND_ROUTE(4, "mono", MSM5232_BASE_VOLUME/2.2)	// pin 36  2'-2 : 22k resistor
+	MCFG_SOUND_ROUTE(5, "mono", MSM5232_BASE_VOLUME/1.5)	// pin 35  4'-2 : 15k resistor
+	MCFG_SOUND_ROUTE(6, "mono", MSM5232_BASE_VOLUME)		// pin 34  8'-2 : 10k resistor
+	MCFG_SOUND_ROUTE(7, "mono", MSM5232_BASE_VOLUME)		// pin 33 16'-2 : 10k resistor
+	MCFG_SOUND_ROUTE(8, "mono", 1.0)		// pin 1 SOLO  8' (this actually feeds an analog section)
+	MCFG_SOUND_ROUTE(9, "mono", 1.0)		// pin 2 SOLO 16' (this actually feeds an analog section)
+	MCFG_SOUND_ROUTE(10,"mono", 0.12)		// pin 22 Noise Output (this actually feeds an analog section)
 
-	MDRV_SOUND_ADD("aysnd", AY8910, XTAL_6_144MHz/4) /* verified on pcb */
-	MDRV_SOUND_CONFIG(equites_8910intf)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
+	MCFG_SOUND_ADD("aysnd", AY8910, XTAL_6_144MHz/4) /* verified on pcb */
+	MCFG_SOUND_CONFIG(equites_8910intf)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.15)
 
-	MDRV_SOUND_ADD("dac1", DAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_SOUND_ADD("dac1", DAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MDRV_SOUND_ADD("dac2", DAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_SOUND_ADD("dac2", DAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MDRV_SOUND_ADD("samples", SAMPLES, 0)
-	MDRV_SOUND_CONFIG(alphamc07_samples_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("samples", SAMPLES, 0)
+	MCFG_SOUND_CONFIG(alphamc07_samples_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
+MACHINE_CONFIG_END
 
 /******************************************************************************/
 
 static MACHINE_START( equites )
 {
-	equites_state *state = (equites_state *)machine->driver_data;
+	equites_state *state = machine->driver_data<equites_state>();
 
 	state->mcu = machine->device("mcu");
 	state->audio_cpu = machine->device("audiocpu");
@@ -1215,7 +1216,7 @@ static MACHINE_START( equites )
 
 static MACHINE_RESET( equites )
 {
-	equites_state *state = (equites_state *)machine->driver_data;
+	equites_state *state = machine->driver_data<equites_state>();
 
 	flip_screen_set(machine, 0);
 
@@ -1241,79 +1242,72 @@ static MACHINE_RESET( equites )
 }
 
 
-static MACHINE_DRIVER_START( equites )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(equites_state)
+static MACHINE_CONFIG_START( equites, equites_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, XTAL_12MHz/4) /* 68000P8 running at 3mhz! verified on pcb */
-	MDRV_CPU_PROGRAM_MAP(equites_map)
-	MDRV_CPU_VBLANK_INT_HACK(equites_interrupt, 2)
+	MCFG_CPU_ADD("maincpu", M68000, XTAL_12MHz/4) /* 68000P8 running at 3mhz! verified on pcb */
+	MCFG_CPU_PROGRAM_MAP(equites_map)
+	MCFG_CPU_VBLANK_INT_HACK(equites_interrupt, 2)
 
-	MDRV_IMPORT_FROM(common_sound)
+	MCFG_FRAGMENT_ADD(common_sound)
 
-	MDRV_CPU_ADD("mcu", ALPHA8301, 4000000/8)
-	MDRV_CPU_PROGRAM_MAP(mcu_map)
+	MCFG_CPU_ADD("mcu", ALPHA8301, 4000000/8)
+	MCFG_CPU_PROGRAM_MAP(mcu_map)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 3*8, 29*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 3*8, 29*8-1)
 
-	MDRV_GFXDECODE(equites)
-	MDRV_PALETTE_LENGTH(0x180)
-	MDRV_PALETTE_INIT(equites)
-	MDRV_VIDEO_START(equites)
-	MDRV_VIDEO_UPDATE(equites)
+	MCFG_GFXDECODE(equites)
+	MCFG_PALETTE_LENGTH(0x180)
+	MCFG_PALETTE_INIT(equites)
+	MCFG_VIDEO_START(equites)
+	MCFG_VIDEO_UPDATE(equites)
 
-	MDRV_MACHINE_START(equites)
-	MDRV_MACHINE_RESET(equites)
-MACHINE_DRIVER_END
+	MCFG_MACHINE_START(equites)
+	MCFG_MACHINE_RESET(equites)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( gekisou )
-	MDRV_IMPORT_FROM(equites)
+static MACHINE_CONFIG_DERIVED( gekisou, equites )
 
 	// gekisou has battery-backed RAM to store settings
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( splndrbt )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(equites_state)
+static MACHINE_CONFIG_START( splndrbt, equites_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, XTAL_24MHz/4) /* 68000P8 running at 6mhz, verified on pcb */
-	MDRV_CPU_PROGRAM_MAP(splndrbt_map)
-	MDRV_CPU_VBLANK_INT_HACK(equites_interrupt, 2)
+	MCFG_CPU_ADD("maincpu", M68000, XTAL_24MHz/4) /* 68000P8 running at 6mhz, verified on pcb */
+	MCFG_CPU_PROGRAM_MAP(splndrbt_map)
+	MCFG_CPU_VBLANK_INT_HACK(equites_interrupt, 2)
 
-	MDRV_IMPORT_FROM(common_sound)
+	MCFG_FRAGMENT_ADD(common_sound)
 
-	MDRV_CPU_ADD("mcu", ALPHA8301, 4000000/8)
-	MDRV_CPU_PROGRAM_MAP(mcu_map)
+	MCFG_CPU_ADD("mcu", ALPHA8301, 4000000/8)
+	MCFG_CPU_PROGRAM_MAP(mcu_map)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 4*8, 28*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 4*8, 28*8-1)
 
-	MDRV_GFXDECODE(splndrbt)
-	MDRV_PALETTE_LENGTH(0x280)
-	MDRV_PALETTE_INIT(splndrbt)
-	MDRV_VIDEO_START(splndrbt)
-	MDRV_VIDEO_UPDATE(splndrbt)
+	MCFG_GFXDECODE(splndrbt)
+	MCFG_PALETTE_LENGTH(0x280)
+	MCFG_PALETTE_INIT(splndrbt)
+	MCFG_VIDEO_START(splndrbt)
+	MCFG_VIDEO_UPDATE(splndrbt)
 
-	MDRV_MACHINE_START(equites)
-	MDRV_MACHINE_RESET(equites)
-MACHINE_DRIVER_END
+	MCFG_MACHINE_START(equites)
+	MCFG_MACHINE_RESET(equites)
+MACHINE_CONFIG_END
 
 
 /******************************************************************************/
@@ -1859,7 +1853,7 @@ ROM_END
 
 static void unpack_block( running_machine *machine, const char *region, int offset, int size )
 {
-	UINT8 *rom = memory_region(machine, region);
+	UINT8 *rom = machine->region(region)->base();
 	int i;
 
 	for (i = 0; i < size; ++i)

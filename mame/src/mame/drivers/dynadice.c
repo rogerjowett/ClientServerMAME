@@ -35,14 +35,14 @@ dy_6.bin (near Z80)
 #include "cpu/z80/z80.h"
 #include "cpu/i8085/i8085.h"
 #include "sound/ay8910.h"
+#include "machine/nvram.h"
 
 
-class dynadice_state
+class dynadice_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, dynadice_state(machine)); }
-
-	dynadice_state(running_machine &machine) { }
+	dynadice_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *  videoram;
@@ -59,7 +59,7 @@ public:
 
 static WRITE8_HANDLER( dynadice_videoram_w )
 {
-	dynadice_state *state = (dynadice_state *)space->machine->driver_data;
+	dynadice_state *state = space->machine->driver_data<dynadice_state>();
 	state->videoram[offset] = data;
 	tilemap_mark_tile_dirty(state->bg_tilemap, offset);
 	tilemap_mark_all_tiles_dirty(state->top_tilemap);
@@ -67,13 +67,13 @@ static WRITE8_HANDLER( dynadice_videoram_w )
 
 static WRITE8_HANDLER( sound_data_w )
 {
-	dynadice_state *state = (dynadice_state *)space->machine->driver_data;
+	dynadice_state *state = space->machine->driver_data<dynadice_state>();
 	state->ay_data = data;
 }
 
 static WRITE8_DEVICE_HANDLER( sound_control_w )
 {
-	dynadice_state *state = (dynadice_state *)device->machine->driver_data;
+	dynadice_state *state = device->machine->driver_data<dynadice_state>();
 /*
     AY 3-8910 :
 
@@ -94,7 +94,7 @@ static WRITE8_DEVICE_HANDLER( sound_control_w )
 static ADDRESS_MAP_START( dynadice_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x1fff) AM_ROM
 	AM_RANGE(0x2000, 0x23ff) AM_RAM_WRITE(dynadice_videoram_w) AM_BASE_MEMBER(dynadice_state, videoram)
-	AM_RANGE(0x4000, 0x40ff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0x4000, 0x40ff) AM_RAM AM_SHARE("nvram")
 ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( dynadice_io_map, ADDRESS_SPACE_IO, 8 )
@@ -190,14 +190,14 @@ GFXDECODE_END
 
 static TILE_GET_INFO( get_tile_info )
 {
-	dynadice_state *state = (dynadice_state *)machine->driver_data;
+	dynadice_state *state = machine->driver_data<dynadice_state>();
 	int code = state->videoram[tile_index];
 	SET_TILE_INFO(1, code, 0, 0);
 }
 
 static VIDEO_START( dynadice )
 {
-	dynadice_state *state = (dynadice_state *)machine->driver_data;
+	dynadice_state *state = machine->driver_data<dynadice_state>();
 
 	/* pacman - style videoram layout */
 	state->bg_tilemap = tilemap_create(machine, get_tile_info, tilemap_scan_rows, 8, 8, 32, 32);
@@ -207,7 +207,7 @@ static VIDEO_START( dynadice )
 
 static VIDEO_UPDATE( dynadice )
 {
-	dynadice_state *state = (dynadice_state *)screen->machine->driver_data;
+	dynadice_state *state = screen->machine->driver_data<dynadice_state>();
 	rectangle myclip = *cliprect;
 	myclip.max_x = 15;
 	tilemap_draw(bitmap, cliprect, state->bg_tilemap, 0, 0);
@@ -224,55 +224,52 @@ static PALETTE_INIT( dynadice )
 
 static MACHINE_START( dynadice )
 {
-	dynadice_state *state = (dynadice_state *)machine->driver_data;
+	dynadice_state *state = machine->driver_data<dynadice_state>();
 	state_save_register_global(machine, state->ay_data);
 }
 
 static MACHINE_RESET( dynadice )
 {
-	dynadice_state *state = (dynadice_state *)machine->driver_data;
+	dynadice_state *state = machine->driver_data<dynadice_state>();
 	state->ay_data = 0;
 }
 
-static MACHINE_DRIVER_START( dynadice )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(dynadice_state)
+static MACHINE_CONFIG_START( dynadice, dynadice_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", I8080,18432000/8)
-	MDRV_CPU_PROGRAM_MAP(dynadice_map)
-	MDRV_CPU_IO_MAP(dynadice_io_map)
+	MCFG_CPU_ADD("maincpu", I8080,18432000/8)
+	MCFG_CPU_PROGRAM_MAP(dynadice_map)
+	MCFG_CPU_IO_MAP(dynadice_io_map)
 
-	MDRV_CPU_ADD("audiocpu", Z80,18432000/6)
-	MDRV_CPU_PROGRAM_MAP(dynadice_sound_map)
-	MDRV_CPU_IO_MAP(dynadice_sound_io_map)
+	MCFG_CPU_ADD("audiocpu", Z80,18432000/6)
+	MCFG_CPU_PROGRAM_MAP(dynadice_sound_map)
+	MCFG_CPU_IO_MAP(dynadice_sound_io_map)
 
-	MDRV_MACHINE_START(dynadice)
-	MDRV_MACHINE_RESET(dynadice)
+	MCFG_MACHINE_START(dynadice)
+	MCFG_MACHINE_RESET(dynadice)
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(256+16, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 34*8-1, 3*8, 28*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(256+16, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 34*8-1, 3*8, 28*8-1)
 
-	MDRV_GFXDECODE(dynadice)
-	MDRV_PALETTE_LENGTH(8)
-	MDRV_PALETTE_INIT(dynadice)
+	MCFG_GFXDECODE(dynadice)
+	MCFG_PALETTE_LENGTH(8)
+	MCFG_PALETTE_INIT(dynadice)
 
-	MDRV_VIDEO_START(dynadice)
-	MDRV_VIDEO_UPDATE(dynadice)
+	MCFG_VIDEO_START(dynadice)
+	MCFG_VIDEO_UPDATE(dynadice)
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("aysnd", AY8910, 2000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("aysnd", AY8910, 2000000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 ROM_START( dynadice )
 	ROM_REGION( 0x10000, "maincpu", 0 )
@@ -296,10 +293,10 @@ ROM_END
 static DRIVER_INIT( dynadice )
 {
 	int i, j;
-	UINT8 *usr1 = memory_region(machine, "user1");
-	UINT8 *cpu2 = memory_region(machine, "audiocpu");
-	UINT8 *gfx1 = memory_region(machine, "gfx1");
-	UINT8 *gfx2 = memory_region(machine, "gfx2");
+	UINT8 *usr1 = machine->region("user1")->base();
+	UINT8 *cpu2 = machine->region("audiocpu")->base();
+	UINT8 *gfx1 = machine->region("gfx1")->base();
+	UINT8 *gfx2 = machine->region("gfx2")->base();
 
 	cpu2[0x0b] = 0x23;	/* bug in game code  Dec HL -> Inc HL*/
 

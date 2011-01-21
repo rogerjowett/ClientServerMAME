@@ -2,12 +2,11 @@
 #define FIRST_VISIBLE_LINE 0
 #define LAST_VISIBLE_LINE 223
 
-class hyprduel_state
+class hyprduel_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, hyprduel_state(machine)); }
-
-	hyprduel_state(running_machine &machine) { }
+	hyprduel_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT16 *  videoregs;
@@ -44,8 +43,8 @@ public:
 	int       int_num;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *subcpu;
+	device_t *maincpu;
+	device_t *subcpu;
 };
 
 

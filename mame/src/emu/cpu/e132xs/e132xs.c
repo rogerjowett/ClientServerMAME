@@ -320,8 +320,9 @@ struct _hyperstone_state
 
 	device_irq_callback irq_callback;
 	legacy_cpu_device *device;
-	const address_space *program;
-	const address_space *io;
+	address_space *program;
+	direct_read_data *direct;
+	address_space *io;
 	UINT32 opcodexor;
 
 	INT32 instruction_length;
@@ -413,7 +414,7 @@ static ADDRESS_MAP_START( e132_16k_iram_map, ADDRESS_SPACE_PROGRAM, 32 )
 ADDRESS_MAP_END
 
 
-INLINE hyperstone_state *get_safe_token(running_device *device)
+INLINE hyperstone_state *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
 	assert(device->type() == E116T ||
@@ -1543,6 +1544,7 @@ static void hyperstone_init(legacy_cpu_device *device, device_irq_callback irqca
 	cpustate->irq_callback = irqcallback;
 	cpustate->device = device;
 	cpustate->program = device->space(AS_PROGRAM);
+	cpustate->direct = &cpustate->program->direct();
 	cpustate->io = device->space(AS_IO);
 	cpustate->timer = timer_alloc(device->machine, e132xs_timer_callback, (void *)device);
 	cpustate->clock_scale_mask = scale_mask;
@@ -1650,6 +1652,7 @@ static CPU_RESET( hyperstone )
 	cpustate->opcodexor = save_opcodexor;
 	cpustate->device = device;
 	cpustate->program = device->space(AS_PROGRAM);
+	cpustate->direct = &cpustate->program->direct();
 	cpustate->io = device->space(AS_IO);
 	cpustate->timer = save_timer;
 

@@ -156,9 +156,9 @@ some kind of zoom table?
 ***************************************************************************/
 
 /* Handler called by the YM2610 emulator when the internal timers cause an IRQ */
-static void irqhandler( running_device *device, int irq )
+static void irqhandler( device_t *device, int irq )
 {
-	taitoh_state *state = (taitoh_state *)device->machine->driver_data;
+	taitoh_state *state = device->machine->driver_data<taitoh_state>();
 	cpu_set_input_line(state->audiocpu, 0, irq ? ASSERT_LINE : CLEAR_LINE);
 }
 
@@ -183,7 +183,7 @@ static READ8_HANDLER( syvalion_input_bypass_r )
 {
 	/* Bypass TC0220IOC controller for analog input */
 
-	taitoh_state *state = (taitoh_state *)space->machine->driver_data;
+	taitoh_state *state = space->machine->driver_data<taitoh_state>();
 	UINT8	port = tc0220ioc_port_r(state->tc0220ioc, 0);	/* read port number */
 
 	switch( port )
@@ -231,13 +231,13 @@ static READ8_HANDLER( syvalion_input_bypass_r )
 
 static void reset_sound_region(running_machine *machine)
 {
-	taitoh_state *state = (taitoh_state *)machine->driver_data;
+	taitoh_state *state = machine->driver_data<taitoh_state>();
 	memory_set_bank(machine, "bank1", state->banknum);
 }
 
 static WRITE8_HANDLER( sound_bankswitch_w )
 {
-	taitoh_state *state = (taitoh_state *)space->machine->driver_data;
+	taitoh_state *state = space->machine->driver_data<taitoh_state>();
 	state->banknum = data & 3;
 	reset_sound_region(space->machine);
 }
@@ -518,14 +518,14 @@ static STATE_POSTLOAD( taitoh_postload )
 
 static MACHINE_RESET( taitoh )
 {
-	taitoh_state *state = (taitoh_state *)machine->driver_data;
+	taitoh_state *state = machine->driver_data<taitoh_state>();
 	state->banknum = 0;
 }
 
 static MACHINE_START( taitoh )
 {
-	taitoh_state *state = (taitoh_state *)machine->driver_data;
-	UINT8 *ROM = memory_region(machine, "audiocpu");
+	taitoh_state *state = machine->driver_data<taitoh_state>();
+	UINT8 *ROM = machine->region("audiocpu")->base();
 
 	memory_configure_bank(machine, "bank1", 0, 4, &ROM[0xc000], 0x4000);
 
@@ -563,148 +563,139 @@ static const tc0140syt_interface taitoh_tc0140syt_intf =
 	"maincpu", "audiocpu"
 };
 
-static MACHINE_DRIVER_START( syvalion )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(taitoh_state)
+static MACHINE_CONFIG_START( syvalion, taitoh_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000,24000000 / 2)		/* 12 MHz */
-	MDRV_CPU_PROGRAM_MAP(syvalion_map)
-	MDRV_CPU_VBLANK_INT("screen", irq2_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000,24000000 / 2)		/* 12 MHz */
+	MCFG_CPU_PROGRAM_MAP(syvalion_map)
+	MCFG_CPU_VBLANK_INT("screen", irq2_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80,8000000 / 2)		/* 4 MHz ??? */
-	MDRV_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80,8000000 / 2)		/* 4 MHz ??? */
+	MCFG_CPU_PROGRAM_MAP(sound_map)
 
-	MDRV_MACHINE_START(taitoh)
-	MDRV_MACHINE_RESET(taitoh)
+	MCFG_MACHINE_START(taitoh)
+	MCFG_MACHINE_RESET(taitoh)
 
-	MDRV_QUANTUM_TIME(HZ(600))
+	MCFG_QUANTUM_TIME(HZ(600))
 
-	MDRV_TC0220IOC_ADD("tc0220ioc", taitoh_io_intf)
+	MCFG_TC0220IOC_ADD("tc0220ioc", taitoh_io_intf)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*16, 64*16)
-	MDRV_SCREEN_VISIBLE_AREA(0*16, 32*16-1, 3*16, 28*16-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*16, 64*16)
+	MCFG_SCREEN_VISIBLE_AREA(0*16, 32*16-1, 3*16, 28*16-1)
 
-	MDRV_GFXDECODE(syvalion)
-	MDRV_PALETTE_LENGTH(33*16)
+	MCFG_GFXDECODE(syvalion)
+	MCFG_PALETTE_LENGTH(33*16)
 
-	MDRV_VIDEO_UPDATE(syvalion)
+	MCFG_VIDEO_UPDATE(syvalion)
 
-	MDRV_TC0080VCO_ADD("tc0080vco", syvalion_tc0080vco_intf)
+	MCFG_TC0080VCO_ADD("tc0080vco", syvalion_tc0080vco_intf)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM2610, 8000000)
-	MDRV_SOUND_CONFIG(ym2610_config)
-	MDRV_SOUND_ROUTE(0, "mono", 0.25)
-	MDRV_SOUND_ROUTE(1, "mono", 1.0)
-	MDRV_SOUND_ROUTE(2, "mono", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM2610, 8000000)
+	MCFG_SOUND_CONFIG(ym2610_config)
+	MCFG_SOUND_ROUTE(0, "mono", 0.25)
+	MCFG_SOUND_ROUTE(1, "mono", 1.0)
+	MCFG_SOUND_ROUTE(2, "mono", 1.0)
 
-	MDRV_TC0140SYT_ADD("tc0140syt", taitoh_tc0140syt_intf)
-MACHINE_DRIVER_END
+	MCFG_TC0140SYT_ADD("tc0140syt", taitoh_tc0140syt_intf)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( recordbr )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(taitoh_state)
+static MACHINE_CONFIG_START( recordbr, taitoh_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000,24000000 / 2)		/* 12 MHz */
-	MDRV_CPU_PROGRAM_MAP(recordbr_map)
-	MDRV_CPU_VBLANK_INT("screen", irq2_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000,24000000 / 2)		/* 12 MHz */
+	MCFG_CPU_PROGRAM_MAP(recordbr_map)
+	MCFG_CPU_VBLANK_INT("screen", irq2_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80,8000000 / 2)		/* 4 MHz ??? */
-	MDRV_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80,8000000 / 2)		/* 4 MHz ??? */
+	MCFG_CPU_PROGRAM_MAP(sound_map)
 
-	MDRV_MACHINE_START(taitoh)
-	MDRV_MACHINE_RESET(taitoh)
+	MCFG_MACHINE_START(taitoh)
+	MCFG_MACHINE_RESET(taitoh)
 
-	MDRV_QUANTUM_TIME(HZ(600))
+	MCFG_QUANTUM_TIME(HZ(600))
 
-	MDRV_TC0220IOC_ADD("tc0220ioc", taitoh_io_intf)
+	MCFG_TC0220IOC_ADD("tc0220ioc", taitoh_io_intf)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*16, 64*16)
-	MDRV_SCREEN_VISIBLE_AREA(1*16, 21*16-1, 2*16, 17*16-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*16, 64*16)
+	MCFG_SCREEN_VISIBLE_AREA(1*16, 21*16-1, 2*16, 17*16-1)
 
-	MDRV_GFXDECODE(recordbr)
-	MDRV_PALETTE_LENGTH(32*16)
+	MCFG_GFXDECODE(recordbr)
+	MCFG_PALETTE_LENGTH(32*16)
 
-	MDRV_VIDEO_UPDATE(recordbr)
+	MCFG_VIDEO_UPDATE(recordbr)
 
-	MDRV_TC0080VCO_ADD("tc0080vco", recordbr_tc0080vco_intf)
+	MCFG_TC0080VCO_ADD("tc0080vco", recordbr_tc0080vco_intf)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM2610, 8000000)
-	MDRV_SOUND_CONFIG(ym2610_config)
-	MDRV_SOUND_ROUTE(0, "mono", 0.25)
-	MDRV_SOUND_ROUTE(1, "mono", 1.0)
-	MDRV_SOUND_ROUTE(2, "mono", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM2610, 8000000)
+	MCFG_SOUND_CONFIG(ym2610_config)
+	MCFG_SOUND_ROUTE(0, "mono", 0.25)
+	MCFG_SOUND_ROUTE(1, "mono", 1.0)
+	MCFG_SOUND_ROUTE(2, "mono", 1.0)
 
-	MDRV_TC0140SYT_ADD("tc0140syt", taitoh_tc0140syt_intf)
-MACHINE_DRIVER_END
+	MCFG_TC0140SYT_ADD("tc0140syt", taitoh_tc0140syt_intf)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( dleague )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(taitoh_state)
+static MACHINE_CONFIG_START( dleague, taitoh_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000,24000000 / 2)		/* 12 MHz */
-	MDRV_CPU_PROGRAM_MAP(dleague_map)
-	MDRV_CPU_VBLANK_INT("screen", irq1_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000,24000000 / 2)		/* 12 MHz */
+	MCFG_CPU_PROGRAM_MAP(dleague_map)
+	MCFG_CPU_VBLANK_INT("screen", irq1_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80,8000000 / 2)		/* 4 MHz ??? */
-	MDRV_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80,8000000 / 2)		/* 4 MHz ??? */
+	MCFG_CPU_PROGRAM_MAP(sound_map)
 
-	MDRV_MACHINE_START(taitoh)
-	MDRV_MACHINE_RESET(taitoh)
+	MCFG_MACHINE_START(taitoh)
+	MCFG_MACHINE_RESET(taitoh)
 
-	MDRV_QUANTUM_TIME(HZ(600))
+	MCFG_QUANTUM_TIME(HZ(600))
 
-	MDRV_TC0220IOC_ADD("tc0220ioc", taitoh_io_intf)
+	MCFG_TC0220IOC_ADD("tc0220ioc", taitoh_io_intf)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*16, 64*16)
-	MDRV_SCREEN_VISIBLE_AREA(1*16, 21*16-1, 2*16, 17*16-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*16, 64*16)
+	MCFG_SCREEN_VISIBLE_AREA(1*16, 21*16-1, 2*16, 17*16-1)
 
-	MDRV_GFXDECODE(dleague)
-	MDRV_PALETTE_LENGTH(33*16)
+	MCFG_GFXDECODE(dleague)
+	MCFG_PALETTE_LENGTH(33*16)
 
-	MDRV_VIDEO_UPDATE(dleague)
+	MCFG_VIDEO_UPDATE(dleague)
 
-	MDRV_TC0080VCO_ADD("tc0080vco", recordbr_tc0080vco_intf)
+	MCFG_TC0080VCO_ADD("tc0080vco", recordbr_tc0080vco_intf)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM2610, 8000000)
-	MDRV_SOUND_CONFIG(ym2610_config)
-	MDRV_SOUND_ROUTE(0, "mono", 0.25)
-	MDRV_SOUND_ROUTE(1, "mono", 1.0)
-	MDRV_SOUND_ROUTE(2, "mono", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM2610, 8000000)
+	MCFG_SOUND_CONFIG(ym2610_config)
+	MCFG_SOUND_ROUTE(0, "mono", 0.25)
+	MCFG_SOUND_ROUTE(1, "mono", 1.0)
+	MCFG_SOUND_ROUTE(2, "mono", 1.0)
 
-	MDRV_TC0140SYT_ADD("tc0140syt", taitoh_tc0140syt_intf)
-MACHINE_DRIVER_END
+	MCFG_TC0140SYT_ADD("tc0140syt", taitoh_tc0140syt_intf)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************

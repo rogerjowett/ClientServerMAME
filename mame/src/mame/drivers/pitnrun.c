@@ -94,7 +94,7 @@ static WRITE8_HANDLER(pitnrun_vflip_w)
 static ADDRESS_MAP_START( pitnrun_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x7fff) AM_ROM
 	AM_RANGE(0x8000, 0x87ff) AM_RAM
-	AM_RANGE(0x8800, 0x8fff) AM_RAM_WRITE(pitnrun_videoram_w) AM_BASE_GENERIC(videoram) AM_SIZE_GENERIC(videoram)
+	AM_RANGE(0x8800, 0x8fff) AM_RAM_WRITE(pitnrun_videoram_w) AM_BASE_MEMBER(pitnrun_state, videoram)
 	AM_RANGE(0x9000, 0x9fff) AM_RAM_WRITE(pitnrun_videoram2_w) AM_BASE(&pitnrun_videoram2)
 	AM_RANGE(0xa000, 0xa0ff) AM_RAM AM_BASE_SIZE_GENERIC(spriteram)
 	AM_RANGE(0xa800, 0xa800) AM_READ_PORT("SYSTEM")
@@ -228,48 +228,48 @@ static GFXDECODE_START( pitnrun )
 	GFXDECODE_ENTRY( "gfx1", 0, spritelayout,  0, 4 )
 GFXDECODE_END
 
-static MACHINE_DRIVER_START( pitnrun )
-	MDRV_CPU_ADD("maincpu", Z80,XTAL_18_432MHz/6)		 /* verified on pcb */
-	MDRV_CPU_PROGRAM_MAP(pitnrun_map)
-	MDRV_CPU_VBLANK_INT("screen", pitnrun_nmi_source)
+static MACHINE_CONFIG_START( pitnrun, pitnrun_state )
+	MCFG_CPU_ADD("maincpu", Z80,XTAL_18_432MHz/6)		 /* verified on pcb */
+	MCFG_CPU_PROGRAM_MAP(pitnrun_map)
+	MCFG_CPU_VBLANK_INT("screen", pitnrun_nmi_source)
 
-	MDRV_CPU_ADD("audiocpu", Z80, XTAL_5MHz/2)		 /* verified on pcb */
-	MDRV_CPU_PROGRAM_MAP(pitnrun_sound_map)
-	MDRV_CPU_IO_MAP(pitnrun_sound_io_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL_5MHz/2)		 /* verified on pcb */
+	MCFG_CPU_PROGRAM_MAP(pitnrun_sound_map)
+	MCFG_CPU_IO_MAP(pitnrun_sound_io_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("mcu", M68705,XTAL_18_432MHz/6)		 /* verified on pcb */
-	MDRV_CPU_PROGRAM_MAP(pitnrun_mcu_map)
+	MCFG_CPU_ADD("mcu", M68705,XTAL_18_432MHz/6)		 /* verified on pcb */
+	MCFG_CPU_PROGRAM_MAP(pitnrun_mcu_map)
 
-	MDRV_MACHINE_RESET(pitnrun)
+	MCFG_MACHINE_RESET(pitnrun)
 
-	MDRV_QUANTUM_TIME(HZ(6000))
+	MCFG_QUANTUM_TIME(HZ(6000))
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(256, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(256, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(pitnrun)
-	MDRV_PALETTE_LENGTH(32*3)
-	MDRV_PALETTE_INIT(pitnrun)
-	MDRV_VIDEO_START(pitnrun)
-	MDRV_VIDEO_UPDATE(pitnrun)
+	MCFG_GFXDECODE(pitnrun)
+	MCFG_PALETTE_LENGTH(32*3)
+	MCFG_PALETTE_INIT(pitnrun)
+	MCFG_VIDEO_START(pitnrun)
+	MCFG_VIDEO_UPDATE(pitnrun)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ay1", AY8910, XTAL_18_432MHz/12)		 /* verified on pcb */
-	MDRV_SOUND_CONFIG(ay8910_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_SOUND_ADD("ay1", AY8910, XTAL_18_432MHz/12)		 /* verified on pcb */
+	MCFG_SOUND_CONFIG(ay8910_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MDRV_SOUND_ADD("ay2", AY8910, XTAL_18_432MHz/12)		 /* verified on pcb */
-	MDRV_SOUND_CONFIG(ay8910_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ay2", AY8910, XTAL_18_432MHz/12)		 /* verified on pcb */
+	MCFG_SOUND_CONFIG(ay8910_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 
 ROM_START( pitnrun )

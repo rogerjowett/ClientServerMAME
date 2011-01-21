@@ -172,14 +172,14 @@ static char giant_string_buffer[65536] = { 0 };
 //  running_machine - constructor
 //-------------------------------------------------
 
-running_machine::running_machine(const game_driver &driver, const machine_config &_config, core_options &options, bool exit_to_game_select)
+running_machine::running_machine(const machine_config &_config, osd_interface &osd, core_options &options, bool exit_to_game_select)
     : m_regionlist(m_respool),
     m_devicelist(m_respool),
     config(&_config),
     m_config(_config),
     firstcpu(NULL),
-    gamedrv(&driver),
-    m_game(driver),
+	  gamedrv(&_config.gamedrv()),
+	  m_game(_config.gamedrv()),
     primary_screen(NULL),
     palette(NULL),
     pens(NULL),
@@ -202,17 +202,15 @@ running_machine::running_machine(const game_driver &driver, const machine_config
     input_data(NULL),
     input_port_data(NULL),
     ui_input_data(NULL),
-    cheat_data(NULL),
     debugcpu_data(NULL),
     generic_machine_data(NULL),
     generic_video_data(NULL),
     generic_audio_data(NULL),
-    m_debug_view(NULL),
-    driver_data(NULL),
     m_logerror_list(NULL),
     m_scheduler(*this),
     m_options(options),
-    m_basename(driver.name),
+	  m_osd(osd),
+	  m_basename(_config.gamedrv().name),
     m_current_phase(MACHINE_PHASE_PREINIT),
     m_paused(false),
     m_hard_reset_pending(false),
@@ -224,22 +222,30 @@ running_machine::running_machine(const game_driver &driver, const machine_config
     m_saveload_schedule(SLS_NONE),
     m_saveload_schedule_time(attotime_zero),
     m_saveload_searchpath(NULL),
-    m_rand_seed(0x9d14abd7)
+	  m_rand_seed(0x9d14abd7),
+	  m_driver_device(NULL),
+	  m_cheat(NULL),
+	  m_render(NULL),
+	  m_video(NULL),
+	  m_debug_view(NULL)
 {
     memset(gfx, 0, sizeof(gfx));
     memset(&generic, 0, sizeof(generic));
     memset(m_notifier_list, 0, sizeof(m_notifier_list));
     memset(&m_base_time, 0, sizeof(m_base_time));
 
+	// find the driver device config and tell it which game
+	device_config *config = m_config.m_devicelist.find("root");
+	if (config == NULL)
+		throw emu_fatalerror("Machine configuration missing driver_device");
+
     // attach this machine to all the devices in the configuration
     m_devicelist.import_config_list(m_config.m_devicelist, *this);
-
-    // allocate the driver data (after devices)
-    if (m_config.m_driver_data_alloc != NULL)
-        driver_data = (*m_config.m_driver_data_alloc)(*this);
+	m_driver_device = device<driver_device>("root");
+	assert(m_driver_device != NULL);
 
     // find devices
-    primary_screen = screen_first(*this);
+	primary_screen = downcast<screen_device *>(m_devicelist.first(SCREEN));
     for (device_t *device = m_devicelist.first(); device != NULL; device = device->next())
         if (dynamic_cast<cpu_device *>(device) != NULL)
         {
@@ -259,7 +265,7 @@ running_machine::running_machine(const game_driver &driver, const machine_config
 
 running_machine::~running_machine()
 {
-    /* clear flag for added devices */
+	// clear flag for added devices
     options_set_bool(&m_options, OPTION_ADDED_DEVICE_OPTIONS, FALSE, OPTION_PRIORITY_CMDLINE);
 }
 
@@ -277,7 +283,7 @@ const char *running_machine::describe_context()
     {
         cpu_device *cpu = downcast<cpu_device *>(&executing->device());
         if (cpu != NULL)
-            m_context.printf("'%s' (%s)", cpu->tag(), core_i64_hex_format(cpu->pc(), cpu->space(AS_PROGRAM)->logaddrchars));
+			m_context.printf("'%s' (%s)", cpu->tag(), core_i64_hex_format(cpu->pc(), cpu->space(AS_PROGRAM)->logaddrchars()));
         else
             m_context.printf("'%s'", cpu->tag());
     }
@@ -302,10 +308,8 @@ void running_machine::start()
     state_init(this);
     state_save_allow_registration(this, true);
     palette_init(this);
-    render_init(this);
-    ui_init(this);
+	m_render = auto_alloc(this, render_manager(*this));
     generic_machine_init(this);
-    generic_video_init(this);
     generic_sound_init(this);
 
     // initialize the timers and allocate a soft_reset timer
@@ -314,7 +318,11 @@ void running_machine::start()
     m_soft_reset_timer = timer_alloc(this, static_soft_reset, NULL);
 
     // init the osd layer
-    osd_init(this);
+	m_osd.init(*this);
+
+	// create the video manager
+	m_video = auto_alloc(this, video_manager(*this));
+	ui_init(this);
 
     // initialize the base time (needed for doing record/playback)
     time(&m_base_time);
@@ -341,6 +349,9 @@ void running_machine::start()
     memory_init(this);
     watchdog_init(this);
 
+	// must happen after memory_init because this relies on generic.spriteram
+	generic_video_init(this);
+
     // allocate the gfx elements prior to device initialization
     gfx_init(this);
 
@@ -349,22 +360,6 @@ void running_machine::start()
 
     // initialize image devices
     image_init(this);
-
-    // start up the devices
-    m_devicelist.start_all();
-
-    // call the game driver's init function
-    // this is where decryption is done and memory maps are altered
-    // so this location in the init order is important
-    ui_set_startup_text(this, "Initializing...", true);
-    if (m_game.driver_init != NULL)
-        (*m_game.driver_init)(this);
-
-    // finish image devices init process
-    image_postdevice_init(this);
-
-    // start the video and audio hardware
-    video_init(this);
     tilemap_init(this);
     crosshair_init(this);
 
@@ -374,13 +369,13 @@ void running_machine::start()
     if ((debug_flags & DEBUG_FLAG_ENABLED) != 0)
         debugger_init(this);
 
-    // call the driver's _START callbacks
-    if (m_config.m_machine_start != NULL)
-        (*m_config.m_machine_start)(this);
-    if (m_config.m_sound_start != NULL)
-        (*m_config.m_sound_start)(this);
-    if (m_config.m_video_start != NULL)
-        (*m_config.m_video_start)(this);
+	// call the game driver's init function
+	// this is where decryption is done and memory maps are altered
+	// so this location in the init order is important
+	ui_set_startup_text(this, "Initializing...", true);
+
+	// start up the devices
+	m_devicelist.start_all();
 
     // if we're coming in with a savegame request, process it now
     const char *savegame = options_get_string(&m_options, OPTION_STATE);
@@ -392,8 +387,7 @@ void running_machine::start()
         schedule_load("auto");
 
     // set up the cheat engine
-    if (options_get_bool(&m_options, OPTION_CHEAT))
-        cheat_init(this);
+	m_cheat = auto_alloc(this, cheat_manager(*this));
 
     // disallow save state registrations starting here
     state_save_allow_registration(this, false);
@@ -410,8 +404,8 @@ extern void doPostLoad(running_machine *machine);
 extern void doPreSave(running_machine *machine);
 extern std::map< attotime, std::map<const input_seq*,char> > playerInput;
 extern std::map< attotime, unsigned int > playerInputReceived;
-attotime mostRecentReport;
-attotime mostRecentSentReport;
+attotime mostRecentReport = {0,0};
+attotime mostRecentSentReport = {0,0};
 extern list< ChatLog > chatLogs;
 extern void deserializePlayerInputFromBuffer(running_machine *machine,int peerID,const char *buf,int len);
 attotime globalCurtime = {0,0};
@@ -453,6 +447,9 @@ bool hasFutureInputToProcess(attotime curtime)
 
     for(int a=0; a<(int)peerIDs.size(); a++)
     {
+        if(curtime.seconds<1)
+        {
+			//JJG: TODO: If the person hits an input within the first second, they can cause a desync.
         if(netServer && peerIDs[a]==netServer->getSelfPeerID())
         {
             //Don't worry about not having your own inputs
@@ -463,14 +460,24 @@ bool hasFutureInputToProcess(attotime curtime)
             //Don't worry about not having your own inputs
             continue;
         }
+        }
+
+        if(playerInputReceived.size()<=2)
+        {
+            if(printDebug)
+                cout << "Peer " << peerIDs[a] << " has not enough inputs!\n";
+            osd_sleep(0);
+            return false;
+        }
 
         std::map< attotime, unsigned int >::reverse_iterator it = playerInputReceived.rbegin();
+        it++;
         while(true)
         {
             if(it==playerInputReceived.rend())
             {
                 if(printDebug)
-                    cout << "Peer " << peerIDs[a] << " has no inputs!\n";
+                    cout << "Peer " << peerIDs[a] << " has no valid inputs!\n";
                 //if there are no packets, we are still waiting for this guy to send something
                 osd_sleep(0);
                 return false;
@@ -482,7 +489,7 @@ bool hasFutureInputToProcess(attotime curtime)
                     cout << "Peer " << peerIDs[a] << " has only old input at time: " << it->first.seconds << '.' << it->first.attoseconds << "!\n";
                 }
                 oldInputTime = it->first;
-                osd_sleep(0);
+                osd_sleep(1);
                 //These packets are too old, we need something newer
                 return false;
                 /*
@@ -512,8 +519,12 @@ bool hasFutureInputToProcess(attotime curtime)
 
     //Every peer is OK, we are good to go!
     waitingForClientCatchup=false;
+    if(printDebug)
+        cout << "Everyone has inputs!\n";
     return true;
 }
+
+extern char CORE_SEARCH_PATH[4096];
 
 int running_machine::run(bool firstrun)
 {
@@ -522,6 +533,8 @@ int running_machine::run(bool firstrun)
     _controlfp(_PC_24, _MCW_PC);
     _controlfp(_RC_NEAR, _MCW_RC) ;
 #endif
+
+    strcpy(CORE_SEARCH_PATH,options_get_string(mame_options(), "rompath"));
 
     int error = MAMERR_NONE;
 
@@ -679,10 +692,10 @@ int running_machine::run(bool firstrun)
             }
             if(netServer->getSecondsBetweenSync())
             {
-                doPreSave(this);
+                //doPreSave(this);
                 netServer->sync();
                 cout << "RAND/TIME AT INITIAL SYNC: " << m_rand_seed << ' ' << m_base_time << endl;
-                doPostLoad(this);
+                //doPostLoad(this);
             }
         }
 
@@ -719,7 +732,8 @@ int running_machine::run(bool firstrun)
         m_hard_reset_pending = false;
         while ((!m_hard_reset_pending && !m_exit_pending) || m_saveload_schedule != SLS_NONE)
         {
-            profiler_mark_start(PROFILER_EXTRA);
+            //printf("IN MAIN LOOP\n");
+			g_profiler.start(PROFILER_EXTRA);
 
 	        globalCurtime = timer_get_time(this);
 
@@ -729,7 +743,7 @@ int running_machine::run(bool firstrun)
 
             // otherwise, just pump video updates through
             else
-                video_frame_update(this, false);
+				m_video->frame_update();
 
 
             attotime timeNow = timer_get_time(this);
@@ -790,23 +804,56 @@ int running_machine::run(bool firstrun)
                     {
                         netServer->update();
 
-                        while(hasFutureInputToProcess(timeNow)==false)
+                        while(hasFutureInputToProcess(timer_get_time(this))==false)
                         {
                             if(waitingForClientCatchup)
-                                video_frame_update(this, false);
+                                m_video->frame_update();
 
                             netServer->update();
 
+                            {
+                                string buffer = netServer->popSelfInputBuffer();
+                                if(buffer.length()>0)
+                                {
+                                    if(buffer[0]==0)
+                                    {
+                                        //printf("GOT INPUT\n");
+                                        deserializePlayerInputFromBuffer(this,netServer->getSelfPeerID(),buffer.c_str()+1,int(buffer.length())-1);
+                                    }
+                                    else if(buffer[0]==1)
+                                    {
+                                        char buf[4096];
+                                        sprintf(buf,"%s: %s",netServer->getPeerNameFromID(netServer->getSelfPeerID()).c_str(),&buffer[1]);
+                                        astring chatAString = astring(buf);
+                                        //Figure out the index of who spoke and send that
+                                        chatLogs.push_back(ChatLog(netServer->getSelfPeerID(),time(NULL),chatAString));
+
+                                        string chatString = string(&buffer[1]);
+                                        //Here the # indicates that player # spoke
+                                        chatString.insert(chatString.begin(),char(netServer->getSelfPeerID()));
+                                        //the '1' indicates that the string is a chat message
+                                        chatString.insert(chatString.begin(),1);
+                                    }
+                                    else
+                                    {
+                                        printf("UNKNOWN INPUT BUFFER PACKET!!!\n");
+                                    }
+                                }
+                                else
+                                {
+                                    //break;
+                                }
+                            }
                             for(int a=0; a<netServer->getNumOtherPeers(); a++)
                             {
-                                while(true)
+                                //while(true)
                                 {
                                     string buffer = netServer->popInputBuffer(a);
                                     if(buffer.length()>0)
                                     {
                                         if(buffer[0]==0)
                                         {
-                                            //printf("GOT INPUT FROM CLIENT\n");
+                                            //printf("GOT INPUT\n");
                                             deserializePlayerInputFromBuffer(this,netServer->getOtherPeerID(a),buffer.c_str()+1,int(buffer.length())-1);
                                         }
                                         else if(buffer[0]==1)
@@ -815,11 +862,11 @@ int running_machine::run(bool firstrun)
                                             sprintf(buf,"%s: %s",netServer->getPeerNameFromID(netServer->getOtherPeerID(a)).c_str(),&buffer[1]);
                                             astring chatAString = astring(buf);
                                             //Figure out the index of who spoke and send that
-                                            chatLogs.push_back(ChatLog(a+1,time(NULL),chatAString));
+                                            chatLogs.push_back(ChatLog(netServer->getOtherPeerID(a),time(NULL),chatAString));
 
                                             string chatString = string(&buffer[1]);
                                             //Here the # indicates that player # spoke
-                                            chatString.insert(chatString.begin(),char(a+1));
+                                            chatString.insert(chatString.begin(),char(netServer->getOtherPeerID(a)));
                                             //the '1' indicates that the string is a chat message
                                             chatString.insert(chatString.begin(),1);
                                         }
@@ -830,7 +877,7 @@ int running_machine::run(bool firstrun)
                                     }
                                     else
                                     {
-                                        break;
+                                        //break;
                                     }
                                 }
                             }
@@ -839,10 +886,11 @@ int running_machine::run(bool firstrun)
                     }
                     if(netClient)
                     {
-                        while(hasFutureInputToProcess(timeNow)==false)
+                        //printf("IN CLIENT LOOP\n");
+                        while(hasFutureInputToProcess(timer_get_time(this))==false)
                         {
                             if(waitingForClientCatchup)
-                                video_frame_update(this, false);
+                                m_video->frame_update();
 
                             //cout << "UPDATING NETCLIENT\n";
                             pair<bool,bool> survivedAndGotSync;
@@ -862,9 +910,34 @@ int running_machine::run(bool firstrun)
                                 cout << "GOT SYNC FROM SERVER\n";
                                 cout << "RAND/TIME AT SYNC: " << m_rand_seed << ' ' << m_base_time << endl;
                             }
+                            {
+                                string buffer = netClient->popSelfInputBuffer();
+                                if(buffer.length()>0)
+                                {
+                                    if(buffer[0]==0)
+                                    {
+                                        //printf("GOT INPUT FROM CLIENT\n");
+                                        deserializePlayerInputFromBuffer(this,netClient->getSelfPeerID(),buffer.c_str()+1,int(buffer.length())-1);
+                                    }
+                                    else if(buffer[0]==1)
+                                    {
+                                        char buf[4096];
+                                        sprintf(buf,"%s: %s",netClient->getPeerNameFromID(netClient->getSelfPeerID()).c_str(),&buffer[1]);
+                                        astring chatAString = astring(buf);
+                                        //Figure out the index of who spoke and send that
+                                        chatLogs.push_back(ChatLog(netClient->getSelfPeerID(),time(NULL),chatAString));
+
+                                        string chatString = string(&buffer[1]);
+                                        //Here the # indicates that player # spoke
+                                        chatString.insert(chatString.begin(),char(netClient->getSelfPeerID()));
+                                        //the '1' indicates that the string is a chat message
+                                        chatString.insert(chatString.begin(),1);
+                                    }
+                                }
+                            }
                             for(int a=0; a<netClient->getNumOtherPeers(); a++)
                             {
-                                while(true)
+                                //while(true)
                                 {
                                     string buffer = netClient->popInputBuffer(a);
                                     if(buffer.length()>0)
@@ -880,18 +953,18 @@ int running_machine::run(bool firstrun)
                                             sprintf(buf,"%s: %s",netClient->getPeerNameFromID(netClient->getOtherPeerID(a)).c_str(),&buffer[1]);
                                             astring chatAString = astring(buf);
                                             //Figure out the index of who spoke and send that
-                                            chatLogs.push_back(ChatLog(a+1,time(NULL),chatAString));
+                                            chatLogs.push_back(ChatLog(netClient->getOtherPeerID(a),time(NULL),chatAString));
 
                                             string chatString = string(&buffer[1]);
                                             //Here the # indicates that player # spoke
-                                            chatString.insert(chatString.begin(),char(a+1));
+                                            chatString.insert(chatString.begin(),char(netClient->getOtherPeerID(a)));
                                             //the '1' indicates that the string is a chat message
                                             chatString.insert(chatString.begin(),1);
                                         }
                                     }
                                     else
                                     {
-                                        break;
+                                        //break;
                                     }
                                 }
                             }
@@ -914,7 +987,7 @@ int running_machine::run(bool firstrun)
                     handle_saveload();
             }
 
-            profiler_mark_end();
+			g_profiler.stop();
         }
 
         deleteGlobalClient();
@@ -968,7 +1041,7 @@ void running_machine::schedule_exit()
     if (m_exit_to_game_select && options_get_string(&m_options, OPTION_GAMENAME)[0] != 0)
     {
         options_set_string(&m_options, OPTION_GAMENAME, "", OPTION_PRIORITY_CMDLINE);
-        ui_menu_force_game_select(this, render_container_get_ui());
+		ui_menu_force_game_select(this, &render().ui_container());
     }
 
     // otherwise, exit for real
@@ -979,7 +1052,7 @@ void running_machine::schedule_exit()
     m_scheduler.eat_all_cycles();
 
     // if we're autosaving on exit, schedule a save as well
-    if (options_get_bool(&m_options, OPTION_AUTOSAVE) && (m_game.flags & GAME_SUPPORTS_SAVE))
+	if (options_get_bool(&m_options, OPTION_AUTOSAVE) && (m_game.flags & GAME_SUPPORTS_SAVE) && attotime_compare(timer_get_time(this), attotime_zero) > 0)
         schedule_save("auto");
 }
 
@@ -1095,6 +1168,12 @@ void running_machine::schedule_load(const char *filename)
 
 void running_machine::pause()
 {
+    if(netClient || netServer)
+    {
+        //Can't pause during netplay
+        return;
+    }
+
     // ignore if nothing has changed
     if (m_paused)
         return;
@@ -1125,15 +1204,15 @@ void running_machine::resume()
 //  region_alloc - allocates memory for a region
 //-------------------------------------------------
 
-region_info *running_machine::region_alloc(const char *name, UINT32 length, UINT32 flags)
+memory_region *running_machine::region_alloc(const char *name, UINT32 length, UINT32 flags)
 {
     // make sure we don't have a region of the same name; also find the end of the list
-    region_info *info = m_regionlist.find(name);
+    memory_region *info = m_regionlist.find(name);
     if (info != NULL)
         fatalerror("region_alloc called with duplicate region name \"%s\"\n", name);
 
     // allocate the region
-    return m_regionlist.append(name, auto_alloc(this, region_info(*this, name, length, flags)));
+	return m_regionlist.append(name, auto_alloc(this, memory_region(*this, name, length, flags)));
 }
 
 
@@ -1215,7 +1294,7 @@ void CLIB_DECL running_machine::vlogerror(const char *format, va_list args)
     // process only if there is a target
     if (m_logerror_list != NULL)
     {
-        profiler_mark_start(PROFILER_LOGERROR);
+		g_profiler.start(PROFILER_LOGERROR);
 
         // dump to the buffer
         vsnprintf(giant_string_buffer, ARRAY_LENGTH(giant_string_buffer), format, args);
@@ -1224,7 +1303,7 @@ void CLIB_DECL running_machine::vlogerror(const char *format, va_list args)
         for (logerror_callback_item *cb = m_logerror_list; cb != NULL; cb = cb->m_next)
             (*cb->m_func)(*this, giant_string_buffer);
 
-        profiler_mark_end();
+		g_profiler.stop();
     }
 }
 
@@ -1291,7 +1370,7 @@ void running_machine::handle_saveload()
     file_error filerr = FILERR_NONE;
 
     // if no name, bail
-    if (m_saveload_pending_file.len() == 0)
+	if (!m_saveload_pending_file)
         goto cancel;
 
     // if there are anonymous timers, we can't save just yet, and we can't load yet either
@@ -1369,10 +1448,7 @@ cancel:
 //  of the system
 //-------------------------------------------------
 
-TIMER_CALLBACK( running_machine::static_soft_reset )
-{
-    machine->soft_reset();
-}
+TIMER_CALLBACK( running_machine::static_soft_reset ) { machine->soft_reset(); }
 
 void running_machine::soft_reset()
 {
@@ -1383,14 +1459,6 @@ void running_machine::soft_reset()
 
     // call all registered reset callbacks
     call_notifiers(MACHINE_NOTIFY_RESET);
-
-    // run the driver's reset callbacks
-    if (m_config.m_machine_reset != NULL)
-        (*m_config.m_machine_reset)(this);
-    if (m_config.m_sound_reset != NULL)
-        (*m_config.m_sound_reset)(this);
-    if (m_config.m_video_reset != NULL)
-        (*m_config.m_video_reset)(this);
 
     // now we're running
     m_current_phase = MACHINE_PHASE_RUNNING;
@@ -1418,10 +1486,10 @@ void running_machine::logfile_callback(running_machine &machine, const char *buf
 ***************************************************************************/
 
 //-------------------------------------------------
-//  region_info - constructor
+//  memory_region - constructor
 //-------------------------------------------------
 
-region_info::region_info(running_machine &machine, const char *name, UINT32 length, UINT32 flags)
+memory_region::memory_region(running_machine &machine, const char *name, UINT32 length, UINT32 flags)
     : m_machine(machine),
     m_next(NULL),
     m_name(name),
@@ -1433,10 +1501,10 @@ region_info::region_info(running_machine &machine, const char *name, UINT32 leng
 
 
 //-------------------------------------------------
-//  ~region_info - destructor
+//  ~memory_region - destructor
 //-------------------------------------------------
 
-region_info::~region_info()
+memory_region::~memory_region()
 {
     auto_free(&m_machine, m_base.v);
 }
@@ -1466,6 +1534,270 @@ running_machine::logerror_callback_item::logerror_callback_item(logerror_callbac
     : m_next(NULL),
     m_func(func)
 {
+}
+
+
+
+//**************************************************************************
+//  DRIVER DEVICE
+//**************************************************************************
+
+//-------------------------------------------------
+//  driver_device_config_base - constructor
+//-------------------------------------------------
+
+driver_device_config_base::driver_device_config_base(const machine_config &mconfig, device_type type, const char *tag, const device_config *owner)
+	: device_config(mconfig, type, "Driver Device", tag, owner, 0),
+	  m_game(NULL),
+	  m_palette_init(NULL),
+	  m_video_update(NULL)
+{
+	memset(m_callbacks, 0, sizeof(m_callbacks));
+}
+
+
+//-------------------------------------------------
+//  static_set_game - set the game in the device
+//  configuration
+//-------------------------------------------------
+
+void driver_device_config_base::static_set_game(device_config *device, const game_driver *game)
+{
+	downcast<driver_device_config_base *>(device)->m_game = game;
+}
+
+
+//-------------------------------------------------
+//  static_set_machine_start - set the legacy
+//  machine start callback in the device
+//  configuration
+//-------------------------------------------------
+
+void driver_device_config_base::static_set_callback(device_config *device, callback_type type, legacy_callback_func callback)
+{
+	downcast<driver_device_config_base *>(device)->m_callbacks[type] = callback;
+}
+
+
+//-------------------------------------------------
+//  static_set_palette_init - set the legacy
+//  palette init callback in the device
+//  configuration
+//-------------------------------------------------
+
+void driver_device_config_base::static_set_palette_init(device_config *device, palette_init_func callback)
+{
+	downcast<driver_device_config_base *>(device)->m_palette_init = callback;
+}
+
+
+//-------------------------------------------------
+//  static_set_video_update - set the legacy
+//  video update callback in the device
+//  configuration
+//-------------------------------------------------
+
+void driver_device_config_base::static_set_video_update(device_config *device, video_update_func callback)
+{
+	downcast<driver_device_config_base *>(device)->m_video_update = callback;
+}
+
+
+//-------------------------------------------------
+//  rom_region - return a pointer to the ROM
+//  regions specified for the current game
+//-------------------------------------------------
+
+const rom_entry *driver_device_config_base::rom_region() const
+{
+	return m_game->rom;
+}
+
+
+
+//**************************************************************************
+//  DRIVER DEVICE
+//**************************************************************************
+
+//-------------------------------------------------
+//  driver_device - constructor
+//-------------------------------------------------
+
+driver_device::driver_device(running_machine &machine, const driver_device_config_base &config)
+	: device_t(machine, config),
+	  m_config(config)
+{
+}
+
+
+//-------------------------------------------------
+//  driver_device - destructor
+//-------------------------------------------------
+
+driver_device::~driver_device()
+{
+}
+
+
+//-------------------------------------------------
+//  driver_start - default implementation which
+//  does nothing
+//-------------------------------------------------
+
+void driver_device::driver_start()
+{
+}
+
+
+//-------------------------------------------------
+//  machine_start - default implementation which
+//  calls to the legacy machine_start function
+//-------------------------------------------------
+
+void driver_device::machine_start()
+{
+	if (m_config.m_callbacks[driver_device_config_base::CB_MACHINE_START] != NULL)
+		(*m_config.m_callbacks[driver_device_config_base::CB_MACHINE_START])(&m_machine);
+}
+
+
+//-------------------------------------------------
+//  sound_start - default implementation which
+//  calls to the legacy sound_start function
+//-------------------------------------------------
+
+void driver_device::sound_start()
+{
+	if (m_config.m_callbacks[driver_device_config_base::CB_SOUND_START] != NULL)
+		(*m_config.m_callbacks[driver_device_config_base::CB_SOUND_START])(&m_machine);
+}
+
+
+//-------------------------------------------------
+//  video_start - default implementation which
+//  calls to the legacy video_start function
+//-------------------------------------------------
+
+void driver_device::video_start()
+{
+	if (m_config.m_callbacks[driver_device_config_base::CB_VIDEO_START] != NULL)
+		(*m_config.m_callbacks[driver_device_config_base::CB_VIDEO_START])(&m_machine);
+}
+
+
+//-------------------------------------------------
+//  driver_reset - default implementation which
+//  does nothing
+//-------------------------------------------------
+
+void driver_device::driver_reset()
+{
+}
+
+
+//-------------------------------------------------
+//  machine_reset - default implementation which
+//  calls to the legacy machine_reset function
+//-------------------------------------------------
+
+void driver_device::machine_reset()
+{
+	if (m_config.m_callbacks[driver_device_config_base::CB_MACHINE_RESET] != NULL)
+		(*m_config.m_callbacks[driver_device_config_base::CB_MACHINE_RESET])(&m_machine);
+}
+
+
+//-------------------------------------------------
+//  sound_reset - default implementation which
+//  calls to the legacy sound_reset function
+//-------------------------------------------------
+
+void driver_device::sound_reset()
+{
+	if (m_config.m_callbacks[driver_device_config_base::CB_SOUND_RESET] != NULL)
+		(*m_config.m_callbacks[driver_device_config_base::CB_SOUND_RESET])(&m_machine);
+}
+
+
+//-------------------------------------------------
+//  video_reset - default implementation which
+//  calls to the legacy video_reset function
+//-------------------------------------------------
+
+void driver_device::video_reset()
+{
+	if (m_config.m_callbacks[driver_device_config_base::CB_VIDEO_RESET] != NULL)
+		(*m_config.m_callbacks[driver_device_config_base::CB_VIDEO_RESET])(&m_machine);
+}
+
+
+//-------------------------------------------------
+//  video_update - default implementation which
+//  calls to the legacy video_update function
+//-------------------------------------------------
+
+bool driver_device::video_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect)
+{
+	if (m_config.m_video_update != NULL)
+		return (*m_config.m_video_update)(&screen, &bitmap, &cliprect);
+	return 0;
+}
+
+
+//-------------------------------------------------
+//  video_eof - default implementation which
+//  calls to the legacy video_eof function
+//-------------------------------------------------
+
+void driver_device::video_eof()
+{
+	if (m_config.m_callbacks[driver_device_config_base::CB_VIDEO_EOF] != NULL)
+		(*m_config.m_callbacks[driver_device_config_base::CB_VIDEO_EOF])(&m_machine);
+}
+
+
+//-------------------------------------------------
+//  device_start - device override which calls
+//  the various helpers
+//-------------------------------------------------
+
+void driver_device::device_start()
+{
+	// reschedule ourselves to be last
+	if (next() != NULL)
+		throw device_missing_dependencies();
+
+	// call the game-specific init
+	if (m_config.m_game->driver_init != NULL)
+		(*m_config.m_game->driver_init)(&m_machine);
+
+	// finish image devices init process
+	image_postdevice_init(&m_machine);
+
+	// call palette_init if present
+	if (m_config.m_palette_init != NULL)
+		(*m_config.m_palette_init)(&m_machine, machine->region("proms")->base());
+
+	// start the various pieces
+	driver_start();
+	machine_start();
+	sound_start();
+	video_start();
+}
+
+
+//-------------------------------------------------
+//  device_reset - device override which calls
+//  the various helpers
+//-------------------------------------------------
+
+void driver_device::device_reset()
+{
+	// reset each piece
+	driver_reset();
+	machine_reset();
+	sound_reset();
+	video_reset();
 }
 
 

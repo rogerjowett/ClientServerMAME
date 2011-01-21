@@ -5,12 +5,11 @@
 *************************************************************************/
 
 
-class malzak_state
+class malzak_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, malzak_state(machine)); }
-
-	malzak_state(running_machine &machine) { }
+	malzak_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* misc */
 //  int playfield_x[256];
@@ -21,9 +20,9 @@ public:
 	int collision_counter;
 
 	/* devices */
-	running_device *s2636_0;
-	running_device *s2636_1;
-	running_device *saa5050;
+	device_t *s2636_0;
+	device_t *s2636_1;
+	device_t *saa5050;
 };
 
 

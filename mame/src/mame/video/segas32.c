@@ -433,7 +433,7 @@ INLINE UINT16 common_paletteram_r(int which, offs_t offset)
 }
 
 
-static void common_paletteram_w(const address_space *space, int which, offs_t offset, UINT16 data, UINT16 mem_mask)
+static void common_paletteram_w(address_space *space, int which, offs_t offset, UINT16 data, UINT16 mem_mask)
 {
 	UINT16 value;
 	int convert;
@@ -1702,8 +1702,8 @@ static int draw_one_sprite(running_machine *machine, UINT16 *data, int xoffs, in
 	};
 
 	bitmap_t *bitmap = layer_data[(!is_multi32 || !(data[3] & 0x0800)) ? MIXER_LAYER_SPRITES_2 : MIXER_LAYER_MULTISPR_2].bitmap;
-	UINT8 numbanks = memory_region_length(machine, "gfx2") / 0x400000;
-	const UINT32 *spritebase = (const UINT32 *)memory_region(machine, "gfx2");
+	UINT8 numbanks = machine->region("gfx2")->bytes() / 0x400000;
+	const UINT32 *spritebase = (const UINT32 *)machine->region("gfx2")->base();
 
 	int indirect = data[0] & 0x2000;
 	int indlocal = data[0] & 0x1000;
@@ -1900,7 +1900,7 @@ static void sprite_render_list(running_machine *machine)
 	int spritenum = 0;
 	UINT16 *sprite;
 
-	profiler_mark_start(PROFILER_USER2);
+	g_profiler.start(PROFILER_USER2);
 
 	logerror("----\n");
 
@@ -1971,7 +1971,7 @@ static void sprite_render_list(running_machine *machine)
 		}
 	}
 
-	profiler_mark_end();
+	g_profiler.stop();
 }
 
 
@@ -2460,9 +2460,9 @@ VIDEO_UPDATE( system32 )
 	}
 
 	/* update the tilemaps */
-	profiler_mark_start(PROFILER_USER1);
+	g_profiler.start(PROFILER_USER1);
 	enablemask = update_tilemaps(*screen, cliprect);
-	profiler_mark_end();
+	g_profiler.stop();
 
 	/* debugging */
 #if QWERTY_LAYER_ENABLE
@@ -2475,9 +2475,9 @@ VIDEO_UPDATE( system32 )
 #endif
 
 	/* do the mixing */
-	profiler_mark_start(PROFILER_USER3);
+	g_profiler.start(PROFILER_USER3);
 	mix_all_layers(0, 0, bitmap, cliprect, enablemask);
-	profiler_mark_end();
+	g_profiler.stop();
 
 	if (LOG_SPRITES && input_code_pressed(screen->machine, KEYCODE_L))
 	{
@@ -2624,7 +2624,7 @@ VIDEO_UPDATE( multi32 )
 {
 	UINT8 enablemask;
 
-	running_device *left_screen  = screen->machine->device("lscreen");
+	device_t *left_screen  = screen->machine->device("lscreen");
 
 	/* update the visible area */
 	if (system32_videoram[0x1ff00/2] & 0x8000)
@@ -2640,9 +2640,9 @@ VIDEO_UPDATE( multi32 )
 	}
 
 	/* update the tilemaps */
-	profiler_mark_start(PROFILER_USER1);
+	g_profiler.start(PROFILER_USER1);
 	enablemask = update_tilemaps(*screen, cliprect);
-	profiler_mark_end();
+	g_profiler.stop();
 
 	/* debugging */
 #if QWERTY_LAYER_ENABLE
@@ -2655,9 +2655,9 @@ VIDEO_UPDATE( multi32 )
 #endif
 
 	/* do the mixing */
-	profiler_mark_start(PROFILER_USER3);
+	g_profiler.start(PROFILER_USER3);
 	mix_all_layers(((screen == left_screen) ? 0 : 1), 0, bitmap, cliprect, enablemask);
-	profiler_mark_end();
+	g_profiler.stop();
 
 if (PRINTF_MIXER_DATA)
 {

@@ -15,12 +15,11 @@
 #define VTOTAL                 280
 
 
-class lockon_state
+class lockon_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, lockon_state(machine)); }
-
-	lockon_state(running_machine &machine) { }
+	lockon_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT16	*char_ram;
@@ -64,16 +63,16 @@ public:
 	UINT32      main_inten;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *audiocpu;
-	running_device *ground;
-	running_device *object;
-	running_device *f2203_1l;
-	running_device *f2203_2l;
-	running_device *f2203_3l;
-	running_device *f2203_1r;
-	running_device *f2203_2r;
-	running_device *f2203_3r;
+	device_t *maincpu;
+	device_t *audiocpu;
+	device_t *ground;
+	device_t *object;
+	device_t *f2203_1l;
+	device_t *f2203_2l;
+	device_t *f2203_3l;
+	device_t *f2203_1r;
+	device_t *f2203_2r;
+	device_t *f2203_3r;
 };
 
 

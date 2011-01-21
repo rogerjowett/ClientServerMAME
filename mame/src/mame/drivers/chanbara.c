@@ -51,12 +51,11 @@ ToDo:
 #include "sound/2203intf.h"
 
 
-class chanbara_state
+class chanbara_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, chanbara_state(machine)); }
-
-	chanbara_state(running_machine &machine) { }
+	chanbara_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *  videoram;
@@ -70,7 +69,7 @@ public:
 	UINT8    scroll, scrollhi;
 
 	/* devices */
-	running_device *maincpu;
+	device_t *maincpu;
 };
 
 
@@ -90,7 +89,7 @@ static PALETTE_INIT( chanbara )
 
 static WRITE8_HANDLER( chanbara_videoram_w )
 {
-	chanbara_state *state = (chanbara_state *)space->machine->driver_data;
+	chanbara_state *state = space->machine->driver_data<chanbara_state>();
 
 	state->videoram[offset] = data;
 	tilemap_mark_tile_dirty(state->bg_tilemap, offset);
@@ -98,7 +97,7 @@ static WRITE8_HANDLER( chanbara_videoram_w )
 
 static WRITE8_HANDLER( chanbara_colorram_w )
 {
-	chanbara_state *state = (chanbara_state *)space->machine->driver_data;
+	chanbara_state *state = space->machine->driver_data<chanbara_state>();
 
 	state->colorram[offset] = data;
 	tilemap_mark_tile_dirty(state->bg_tilemap, offset);
@@ -106,7 +105,7 @@ static WRITE8_HANDLER( chanbara_colorram_w )
 
 static WRITE8_HANDLER( chanbara_videoram2_w )
 {
-	chanbara_state *state = (chanbara_state *)space->machine->driver_data;
+	chanbara_state *state = space->machine->driver_data<chanbara_state>();
 
 	state->videoram2[offset] = data;
 	tilemap_mark_tile_dirty(state->bg2_tilemap, offset);
@@ -114,7 +113,7 @@ static WRITE8_HANDLER( chanbara_videoram2_w )
 
 static WRITE8_HANDLER( chanbara_colorram2_w )
 {
-	chanbara_state *state = (chanbara_state *)space->machine->driver_data;
+	chanbara_state *state = space->machine->driver_data<chanbara_state>();
 
 	state->colorram2[offset] = data;
 	tilemap_mark_tile_dirty(state->bg2_tilemap, offset);
@@ -123,7 +122,7 @@ static WRITE8_HANDLER( chanbara_colorram2_w )
 
 static TILE_GET_INFO( get_bg_tile_info )
 {
-	chanbara_state *state = (chanbara_state *)machine->driver_data;
+	chanbara_state *state = machine->driver_data<chanbara_state>();
 	int code = state->videoram[tile_index] + ((state->colorram[tile_index] & 1) << 8);
 	int color = (state->colorram[tile_index] >> 1) & 0x1f;
 
@@ -132,7 +131,7 @@ static TILE_GET_INFO( get_bg_tile_info )
 
 static TILE_GET_INFO( get_bg2_tile_info )
 {
-	chanbara_state *state = (chanbara_state *)machine->driver_data;
+	chanbara_state *state = machine->driver_data<chanbara_state>();
 	int code = state->videoram2[tile_index];
 	int color = (state->colorram2[tile_index] >> 1) & 0x1f;
 
@@ -141,7 +140,7 @@ static TILE_GET_INFO( get_bg2_tile_info )
 
 static VIDEO_START(chanbara )
 {
-	chanbara_state *state = (chanbara_state *)machine->driver_data;
+	chanbara_state *state = machine->driver_data<chanbara_state>();
 	state->bg_tilemap = tilemap_create(machine, get_bg_tile_info, tilemap_scan_rows,8, 8, 32, 32);
 	state->bg2_tilemap = tilemap_create(machine, get_bg2_tile_info, tilemap_scan_rows,16, 16, 16, 32);
 	tilemap_set_transparent_pen(state->bg_tilemap, 0);
@@ -149,7 +148,7 @@ static VIDEO_START(chanbara )
 
 static void draw_sprites( running_machine *machine, bitmap_t *bitmap, const rectangle *cliprect )
 {
-	chanbara_state *state = (chanbara_state *)machine->driver_data;
+	chanbara_state *state = machine->driver_data<chanbara_state>();
 	int offs;
 
 	for (offs = 0; offs < 0x80; offs += 4)
@@ -193,7 +192,7 @@ static void draw_sprites( running_machine *machine, bitmap_t *bitmap, const rect
 
 static VIDEO_UPDATE( chanbara )
 {
-	chanbara_state *state = (chanbara_state *)screen->machine->driver_data;
+	chanbara_state *state = screen->machine->driver_data<chanbara_state>();
 
 	tilemap_set_scrolly(state->bg2_tilemap, 0, state->scroll | (state->scrollhi << 8));
 	tilemap_draw(bitmap, cliprect, state->bg2_tilemap, 0, 0);
@@ -326,7 +325,7 @@ GFXDECODE_END
 
 static WRITE8_DEVICE_HANDLER( chanbara_ay_out_0_w )
 {
-	chanbara_state *state = (chanbara_state *)device->machine->driver_data;
+	chanbara_state *state = device->machine->driver_data<chanbara_state>();
 	//printf("chanbara_ay_out_0_w %02x\n",data);
 
 	state->scroll = data;
@@ -334,7 +333,7 @@ static WRITE8_DEVICE_HANDLER( chanbara_ay_out_0_w )
 
 static WRITE8_DEVICE_HANDLER( chanbara_ay_out_1_w )
 {
-	chanbara_state *state = (chanbara_state *)device->machine->driver_data;
+	chanbara_state *state = device->machine->driver_data<chanbara_state>();
 	//printf("chanbara_ay_out_1_w %02x\n",data);
 
 	state->scrollhi = data & 0x03;
@@ -344,9 +343,9 @@ static WRITE8_DEVICE_HANDLER( chanbara_ay_out_1_w )
 	//if (data & 0xf8)    printf("chanbara_ay_out_1_w unused bits set %02x\n", data & 0xf8);
 }
 
-static void sound_irq( running_device *device, int linestate )
+static void sound_irq( device_t *device, int linestate )
 {
-	chanbara_state *state = (chanbara_state *)device->machine->driver_data;
+	chanbara_state *state = device->machine->driver_data<chanbara_state>();
 	cpu_set_input_line(state->maincpu, 0, linestate);
 }
 
@@ -367,7 +366,7 @@ static const ym2203_interface ym2203_config =
 
 static MACHINE_START( chanbara )
 {
-	chanbara_state *state = (chanbara_state *)machine->driver_data;
+	chanbara_state *state = machine->driver_data<chanbara_state>();
 
 	state->maincpu = machine->device("maincpu");
 
@@ -377,44 +376,41 @@ static MACHINE_START( chanbara )
 
 static MACHINE_RESET( chanbara )
 {
-	chanbara_state *state = (chanbara_state *)machine->driver_data;
+	chanbara_state *state = machine->driver_data<chanbara_state>();
 
 	state->scroll = 0;
 	state->scrollhi = 0;
 }
 
-static MACHINE_DRIVER_START( chanbara )
+static MACHINE_CONFIG_START( chanbara, chanbara_state )
 
-	/* driver data */
-	MDRV_DRIVER_DATA(chanbara_state)
+	MCFG_CPU_ADD("maincpu", M6809, 12000000/8)
+	MCFG_CPU_PROGRAM_MAP(memmap)
 
-	MDRV_CPU_ADD("maincpu", M6809, 12000000/8)
-	MDRV_CPU_PROGRAM_MAP(memmap)
-
-	MDRV_MACHINE_START(chanbara)
-	MDRV_MACHINE_RESET(chanbara)
+	MCFG_MACHINE_START(chanbara)
+	MCFG_MACHINE_RESET(chanbara)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(57.4122)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(57.4122)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(chanbara)
-	MDRV_PALETTE_LENGTH(256)
-	MDRV_PALETTE_INIT(chanbara)
+	MCFG_GFXDECODE(chanbara)
+	MCFG_PALETTE_LENGTH(256)
+	MCFG_PALETTE_INIT(chanbara)
 
-	MDRV_VIDEO_START(chanbara)
-	MDRV_VIDEO_UPDATE(chanbara)
+	MCFG_VIDEO_START(chanbara)
+	MCFG_VIDEO_UPDATE(chanbara)
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM2203, 12000000/8)
-	MDRV_SOUND_CONFIG(ym2203_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2203, 12000000/8)
+	MCFG_SOUND_CONFIG(ym2203_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 ROM_START( chanbara )
@@ -457,9 +453,9 @@ ROM_END
 
 static DRIVER_INIT(chanbara )
 {
-	UINT8	*src = memory_region(machine, "gfx4");
-	UINT8	*dst = memory_region(machine, "gfx3") + 0x4000;
-	UINT8	*bg = memory_region(machine, "user1");
+	UINT8	*src = machine->region("gfx4")->base();
+	UINT8	*dst = machine->region("gfx3")->base() + 0x4000;
+	UINT8	*bg = machine->region("user1")->base();
 
 	int i;
 	for (i = 0; i < 0x1000; i++)

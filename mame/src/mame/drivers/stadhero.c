@@ -12,18 +12,7 @@
 #include "sound/2203intf.h"
 #include "sound/3812intf.h"
 #include "sound/okim6295.h"
-
-/* Video emulation definitions */
-VIDEO_START( stadhero );
-VIDEO_UPDATE( stadhero );
-
-extern UINT16 *stadhero_pf1_data;
-extern UINT16 *stadhero_pf2_control_0;
-extern UINT16 *stadhero_pf2_control_1;
-
-WRITE16_HANDLER( stadhero_pf1_data_w );
-READ16_HANDLER( stadhero_pf2_data_r );
-WRITE16_HANDLER( stadhero_pf2_data_w );
+#include "includes/stadhero.h"
 
 /******************************************************************************/
 
@@ -83,7 +72,7 @@ static ADDRESS_MAP_START( audio_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0800, 0x0801) AM_DEVWRITE("ym1", ym2203_w)
 	AM_RANGE(0x1000, 0x1001) AM_DEVWRITE("ym2", ym3812_w)
 	AM_RANGE(0x3000, 0x3000) AM_READ(soundlatch_r)
-	AM_RANGE(0x3800, 0x3800) AM_DEVREADWRITE("oki", okim6295_r, okim6295_w)
+	AM_RANGE(0x3800, 0x3800) AM_DEVREADWRITE_MODERN("oki", okim6295_device, read, write)
 	AM_RANGE(0x8000, 0xffff) AM_ROM
 ADDRESS_MAP_END
 
@@ -207,7 +196,7 @@ GFXDECODE_END
 
 /******************************************************************************/
 
-static void irqhandler(running_device *device, int linestate)
+static void irqhandler(device_t *device, int linestate)
 {
 	cputag_set_input_line(device->machine, "audiocpu", 0, linestate);
 }
@@ -219,46 +208,46 @@ static const ym3812_interface ym3812_config =
 
 /******************************************************************************/
 
-static MACHINE_DRIVER_START( stadhero )
+static MACHINE_CONFIG_START( stadhero, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 10000000)
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_VBLANK_INT("screen", irq5_line_hold)/* VBL */
+	MCFG_CPU_ADD("maincpu", M68000, 10000000)
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_VBLANK_INT("screen", irq5_line_hold)/* VBL */
 
-	MDRV_CPU_ADD("audiocpu", M6502, 1500000)
-	MDRV_CPU_PROGRAM_MAP(audio_map)
+	MCFG_CPU_ADD("audiocpu", M6502, 1500000)
+	MCFG_CPU_PROGRAM_MAP(audio_map)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(58)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(529))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 1*8, 31*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(58)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(529))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 1*8, 31*8-1)
 
-	MDRV_GFXDECODE(stadhero)
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_GFXDECODE(stadhero)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_VIDEO_START(stadhero)
-	MDRV_VIDEO_UPDATE(stadhero)
+	MCFG_VIDEO_START(stadhero)
+	MCFG_VIDEO_UPDATE(stadhero)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ym1", YM2203, 1500000)
-	MDRV_SOUND_ROUTE(0, "mono", 0.95)
-	MDRV_SOUND_ROUTE(1, "mono", 0.95)
-	MDRV_SOUND_ROUTE(2, "mono", 0.95)
-	MDRV_SOUND_ROUTE(3, "mono", 0.40)
+	MCFG_SOUND_ADD("ym1", YM2203, 1500000)
+	MCFG_SOUND_ROUTE(0, "mono", 0.95)
+	MCFG_SOUND_ROUTE(1, "mono", 0.95)
+	MCFG_SOUND_ROUTE(2, "mono", 0.95)
+	MCFG_SOUND_ROUTE(3, "mono", 0.40)
 
-	MDRV_SOUND_ADD("ym2", YM3812, 3000000)
-	MDRV_SOUND_CONFIG(ym3812_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
+	MCFG_SOUND_ADD("ym2", YM3812, 3000000)
+	MCFG_SOUND_CONFIG(ym3812_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
 
-	MDRV_OKIM6295_ADD("oki", 1023924, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 1023924, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
+MACHINE_CONFIG_END
 
 /******************************************************************************/
 

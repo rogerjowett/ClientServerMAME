@@ -135,17 +135,17 @@ struct _sn76496_state
 };
 
 
-INLINE sn76496_state *get_safe_token(running_device *device)
+INLINE sn76496_state *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
-	assert(device->type() == SOUND_SN76496 ||
-		   device->type() == SOUND_SN76489 ||
-		   device->type() == SOUND_SN76489A ||
-		   device->type() == SOUND_SN76494 ||
-		   device->type() == SOUND_SN94624 ||
-		   device->type() == SOUND_NCR7496 ||
-		   device->type() == SOUND_GAMEGEAR ||
-		   device->type() == SOUND_SMSIII);
+	assert(device->type() == SN76496 ||
+		   device->type() == SN76489 ||
+		   device->type() == SN76489A ||
+		   device->type() == SN76494 ||
+		   device->type() == SN94624 ||
+		   device->type() == NCR7496 ||
+		   device->type() == GAMEGEAR ||
+		   device->type() == SMSIII);
 	return (sn76496_state *)downcast<legacy_device_base *>(device)->token();
 }
 
@@ -342,7 +342,7 @@ static void SN76496_set_gain(sn76496_state *R,int gain)
 
 
 
-static int SN76496_init(running_device *device, sn76496_state *R, int stereo)
+static int SN76496_init(device_t *device, sn76496_state *R, int stereo)
 {
 	int sample_rate = device->clock()/2;
 	int i;
@@ -380,7 +380,7 @@ static int SN76496_init(running_device *device, sn76496_state *R, int stereo)
 }
 
 
-static void generic_start(running_device *device, int feedbackmask, int noisetap1, int noisetap2, int negate, int stereo, int clockdivider)
+static void generic_start(device_t *device, int feedbackmask, int noisetap1, int noisetap2, int negate, int stereo, int clockdivider)
 {
 	sn76496_state *chip = get_safe_token(device);
 

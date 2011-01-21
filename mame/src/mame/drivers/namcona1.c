@@ -410,7 +410,7 @@ static READ16_HANDLER( custom_key_r )
 	old_count = count;
 	do
 	{
-		count = mame_rand(space->machine);
+		count = space->machine->rand();
 	} while( old_count == count );
 
 	switch( namcona1_gametype )
@@ -482,7 +482,7 @@ static READ16_HANDLER( custom_key_r )
 	default:
 		return 0;
 	}
-	return mame_rand(space->machine)&0xffff;
+	return space->machine->rand()&0xffff;
 } /* custom_key_r */
 
 static WRITE16_HANDLER( custom_key_w )
@@ -499,7 +499,7 @@ static READ16_HANDLER( namcona1_vreg_r )
 static int transfer_dword( running_machine *machine, UINT32 dest, UINT32 source )
 {
 	UINT16 data;
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	if( source>=0x400000 && source<0xc00000 )
 	{
@@ -751,7 +751,7 @@ static ADDRESS_MAP_START( namcona1_main_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0xefff00, 0xefffff) AM_READWRITE(namcona1_vreg_r, namcona1_vreg_w) AM_BASE(&namcona1_vreg)
 	AM_RANGE(0xf00000, 0xf01fff) AM_READWRITE(namcona1_paletteram_r, namcona1_paletteram_w) AM_BASE_GENERIC(paletteram)
 	AM_RANGE(0xf40000, 0xf7ffff) AM_READWRITE(namcona1_gfxram_r, namcona1_gfxram_w)
-	AM_RANGE(0xff0000, 0xffbfff) AM_READWRITE(namcona1_videoram_r,    namcona1_videoram_w) AM_BASE_GENERIC(videoram)
+	AM_RANGE(0xff0000, 0xffbfff) AM_READWRITE(namcona1_videoram_r,    namcona1_videoram_w) AM_BASE_MEMBER(namcona1_state, videoram)
 	AM_RANGE(0xffd000, 0xffdfff) AM_RAM /* unknown */
 	AM_RANGE(0xffe000, 0xffefff) AM_RAM	AM_BASE(&namcona1_scroll)		/* scroll registers */
 	AM_RANGE(0xfff000, 0xffffff) AM_RAM	AM_BASE_GENERIC(spriteram)			/* spriteram */
@@ -773,7 +773,7 @@ static ADDRESS_MAP_START( namcona2_main_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0xefff00, 0xefffff) AM_READWRITE(namcona1_vreg_r, namcona1_vreg_w) AM_BASE(&namcona1_vreg)
 	AM_RANGE(0xf00000, 0xf01fff) AM_READWRITE(namcona1_paletteram_r, namcona1_paletteram_w) AM_BASE_GENERIC(paletteram)
 	AM_RANGE(0xf40000, 0xf7ffff) AM_READWRITE(namcona1_gfxram_r, namcona1_gfxram_w)
-	AM_RANGE(0xff0000, 0xffbfff) AM_READWRITE(namcona1_videoram_r,    namcona1_videoram_w) AM_BASE_GENERIC(videoram)
+	AM_RANGE(0xff0000, 0xffbfff) AM_READWRITE(namcona1_videoram_r,    namcona1_videoram_w) AM_BASE_MEMBER(namcona1_state, videoram)
 	AM_RANGE(0xffd000, 0xffdfff) AM_RAM /* unknown */
 	AM_RANGE(0xffe000, 0xffefff) AM_RAM	AM_BASE(&namcona1_scroll)		/* scroll registers */
 	AM_RANGE(0xfff000, 0xffffff) AM_RAM	AM_BASE_GENERIC(spriteram)			/* spriteram */
@@ -1004,72 +1004,70 @@ static const c140_interface C140_interface_typeA =
 };
 
 /* cropped at sides */
-static MACHINE_DRIVER_START( namcona1 )
+static MACHINE_CONFIG_START( namcona1, namcona1_state )
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 50113000/4)
-	MDRV_CPU_PROGRAM_MAP(namcona1_main_map)
-	MDRV_CPU_VBLANK_INT_HACK(namcona1_interrupt,5)
+	MCFG_CPU_ADD("maincpu", M68000, 50113000/4)
+	MCFG_CPU_PROGRAM_MAP(namcona1_main_map)
+	MCFG_CPU_VBLANK_INT_HACK(namcona1_interrupt,5)
 
-	MDRV_CPU_ADD("mcu", M37702, 50113000/4)
-	MDRV_CPU_PROGRAM_MAP(namcona1_mcu_map)
-	MDRV_CPU_IO_MAP( namcona1_mcu_io_map)
-	MDRV_CPU_VBLANK_INT_HACK(mcu_interrupt, 2)
+	MCFG_CPU_ADD("mcu", M37702, 50113000/4)
+	MCFG_CPU_PROGRAM_MAP(namcona1_mcu_map)
+	MCFG_CPU_IO_MAP( namcona1_mcu_io_map)
+	MCFG_CPU_VBLANK_INT_HACK(mcu_interrupt, 2)
 
-	MDRV_NVRAM_HANDLER(namcosna1)
-	MDRV_MACHINE_START(namcona1)
-	MDRV_MACHINE_RESET(namcona1_mcu)
-	MDRV_QUANTUM_TIME(HZ(2400))
+	MCFG_NVRAM_HANDLER(namcosna1)
+	MCFG_MACHINE_START(namcona1)
+	MCFG_MACHINE_RESET(namcona1_mcu)
+	MCFG_QUANTUM_TIME(HZ(2400))
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(38*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(8, 38*8-1-8, 4*8, 32*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(38*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(8, 38*8-1-8, 4*8, 32*8-1)
 
-	MDRV_PALETTE_LENGTH(0x2000)
+	MCFG_PALETTE_LENGTH(0x2000)
 
-	MDRV_VIDEO_START(namcona1)
-	MDRV_VIDEO_UPDATE(namcona1)
+	MCFG_VIDEO_START(namcona1)
+	MCFG_VIDEO_UPDATE(namcona1)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("c140", C140, 44100)
-	MDRV_SOUND_CONFIG(C140_interface_typeA)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 1.00)
-	MDRV_SOUND_ROUTE(1, "lspeaker", 1.00)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("c140", C140, 44100)
+	MCFG_SOUND_CONFIG(C140_interface_typeA)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 1.00)
+	MCFG_SOUND_ROUTE(1, "lspeaker", 1.00)
+MACHINE_CONFIG_END
 
 
 /* full-width */
-static MACHINE_DRIVER_START( namcona1w )
+static MACHINE_CONFIG_DERIVED( namcona1w, namcona1 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(namcona1)
 
 	/* video hardware */
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_VISIBLE_AREA(0, 38*8-1-0, 4*8, 32*8-1)
-MACHINE_DRIVER_END
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_VISIBLE_AREA(0, 38*8-1-0, 4*8, 32*8-1)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( namcona2 )
+static MACHINE_CONFIG_DERIVED( namcona2, namcona1 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(namcona1)
 
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(namcona2_main_map)
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(namcona2_main_map)
+MACHINE_CONFIG_END
 
 
 static void init_namcona1( running_machine *machine, int gametype )
 {
-	UINT16 *pMem = (UINT16 *)memory_region( machine, "maincpu" );
+	UINT16 *pMem = (UINT16 *)machine->region( "maincpu" )->base();
 
 	namcona1_gametype = gametype;
 	mpBank0 = &pMem[0x80000/2];

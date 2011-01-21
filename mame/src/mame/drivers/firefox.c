@@ -57,7 +57,7 @@ fffe=reset e7cc
 /* FXXXXX for first field
    AXXXXX for second field */
 
-static running_device *laserdisc;
+static device_t *laserdisc;
 static int m_n_disc_lock;
 static int m_n_disc_data;
 static int m_n_disc_read_data;
@@ -125,8 +125,8 @@ static WRITE8_HANDLER( firefox_disc_data_w )
 static unsigned char *tileram;
 static unsigned char *tile_palette;
 static unsigned char *sprite_palette;
-static running_device *nvram_1c;
-static running_device *nvram_1d;
+static x2212_device *nvram_1c;
+static x2212_device *nvram_1d;
 static tilemap_t *bgtiles;
 
 static int control_num;
@@ -304,7 +304,7 @@ static READ8_DEVICE_HANDLER( riot_porta_r )
 
 static WRITE8_DEVICE_HANDLER( riot_porta_w )
 {
-	running_device *tms = device->machine->device("tms");
+	device_t *tms = device->machine->device("tms");
 
 	/* handle 5220 read */
 	tms5220_rsq_w(tms, (data>>1) & 1);
@@ -351,25 +351,25 @@ static WRITE8_HANDLER( adc_select_w )
 
 static WRITE8_HANDLER( nvram_w )
 {
-	x2212_write( nvram_1c, offset, data >> 4 );
-	x2212_write( nvram_1d, offset, data & 0xf );
+	nvram_1c->write(*space, offset, data >> 4);
+	nvram_1d->write(*space, offset, data & 0xf);
 }
 
 static READ8_HANDLER( nvram_r )
 {
-	return ( x2212_read( nvram_1c, offset ) << 4 ) | x2212_read( nvram_1d, offset );
+	return (nvram_1c->read(*space, offset) << 4) | (nvram_1d->read(*space, offset) & 0x0f);
 }
 
 static WRITE8_HANDLER( novram_recall_w )
 {
-	x2212_array_recall( nvram_1c, ( data >> 7 ) & 1 );
-	x2212_array_recall( nvram_1d, ( data >> 7 ) & 1 );
+	nvram_1c->recall(data & 0x80);
+	nvram_1d->recall(data & 0x80);
 }
 
 static WRITE8_HANDLER( novram_store_w )
 {
-	x2212_store( nvram_1c, ( data >> 7 ) & 1 );
-	x2212_store( nvram_1d, ( data >> 7 ) & 1 );
+	nvram_1c->store(data & 0x80);
+	nvram_1d->store(data & 0x80);
 }
 
 
@@ -420,7 +420,7 @@ static WRITE8_HANDLER( firefox_coin_counter_w )
 
 
 
-static void firq_gen(running_device *device, int state)
+static void firq_gen(device_t *device, int state)
 {
 	if (state)
 	    cputag_set_input_line( device->machine, "maincpu", M6809_FIRQ_LINE, ASSERT_LINE );
@@ -429,9 +429,9 @@ static void firq_gen(running_device *device, int state)
 
 static MACHINE_START( firefox )
 {
-	memory_configure_bank(machine, "bank1", 0, 32, memory_region(machine, "maincpu") + 0x10000, 0x1000);
-	nvram_1c = machine->device("nvram_1c");
-	nvram_1d = machine->device("nvram_1d");
+	memory_configure_bank(machine, "bank1", 0, 32, machine->region("maincpu")->base() + 0x10000, 0x1000);
+	nvram_1c = machine->device<x2212_device>("nvram_1c");
+	nvram_1d = machine->device<x2212_device>("nvram_1d");
 
 	laserdisc = machine->device("laserdisc");
 	vp931_set_data_ready_callback(laserdisc, firq_gen);
@@ -641,65 +641,65 @@ static const riot6532_interface riot_intf =
 };
 
 
-static MACHINE_DRIVER_START( firefox )
+static MACHINE_CONFIG_START( firefox, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6809E, MASTER_XTAL/2)
-	MDRV_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_ADD("maincpu", M6809E, MASTER_XTAL/2)
+	MCFG_CPU_PROGRAM_MAP(main_map)
 	/* interrupts count starting at end of VBLANK, which is 44, so add 44 */
-	MDRV_TIMER_ADD_SCANLINE("32v", video_timer_callback, "screen", 96+44, 128)
+	MCFG_TIMER_ADD_SCANLINE("32v", video_timer_callback, "screen", 96+44, 128)
 
-	MDRV_CPU_ADD("audiocpu", M6502, MASTER_XTAL/8)
-	MDRV_CPU_PROGRAM_MAP(audio_map)
+	MCFG_CPU_ADD("audiocpu", M6502, MASTER_XTAL/8)
+	MCFG_CPU_PROGRAM_MAP(audio_map)
 
-	MDRV_QUANTUM_TIME(HZ(60000))
+	MCFG_QUANTUM_TIME(HZ(60000))
 
-	MDRV_MACHINE_START(firefox)
-	MDRV_WATCHDOG_TIME_INIT(HZ((double)MASTER_XTAL/8/16/16/16/16))
+	MCFG_MACHINE_START(firefox)
+	MCFG_WATCHDOG_TIME_INIT(HZ((double)MASTER_XTAL/8/16/16/16/16))
 
 	/* video hardware */
-	MDRV_LASERDISC_SCREEN_ADD_NTSC("screen", BITMAP_FORMAT_RGB32)
+	MCFG_LASERDISC_SCREEN_ADD_NTSC("screen", BITMAP_FORMAT_RGB32)
 
-	MDRV_GFXDECODE(firefox)
-	MDRV_PALETTE_LENGTH(512)
+	MCFG_GFXDECODE(firefox)
+	MCFG_PALETTE_LENGTH(512)
 
-	MDRV_VIDEO_START(firefox)
+	MCFG_VIDEO_START(firefox)
 
-	MDRV_LASERDISC_ADD("laserdisc", PHILLIPS_22VP931, "screen", "ldsound")
-	MDRV_LASERDISC_OVERLAY(firefox, 64*8, 525, BITMAP_FORMAT_RGB32)
-	MDRV_LASERDISC_OVERLAY_CLIP(7*8, 53*8-1, 44, 480+44)
+	MCFG_LASERDISC_ADD("laserdisc", PHILLIPS_22VP931, "screen", "ldsound")
+	MCFG_LASERDISC_OVERLAY(firefox, 64*8, 525, BITMAP_FORMAT_RGB32)
+	MCFG_LASERDISC_OVERLAY_CLIP(7*8, 53*8-1, 44, 480+44)
 
-	MDRV_X2212_ADD("nvram_1c")
-	MDRV_X2212_ADD("nvram_1d")
-	MDRV_RIOT6532_ADD("riot", MASTER_XTAL/8, riot_intf)
+	MCFG_X2212_ADD_AUTOSAVE("nvram_1c")
+	MCFG_X2212_ADD_AUTOSAVE("nvram_1d")
+	MCFG_RIOT6532_ADD("riot", MASTER_XTAL/8, riot_intf)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("pokey1", POKEY, MASTER_XTAL/8)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.30)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.30)
+	MCFG_SOUND_ADD("pokey1", POKEY, MASTER_XTAL/8)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.30)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.30)
 
-	MDRV_SOUND_ADD("pokey2", POKEY, MASTER_XTAL/8)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.30)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.30)
+	MCFG_SOUND_ADD("pokey2", POKEY, MASTER_XTAL/8)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.30)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.30)
 
-	MDRV_SOUND_ADD("pokey3", POKEY, MASTER_XTAL/8)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.30)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.30)
+	MCFG_SOUND_ADD("pokey3", POKEY, MASTER_XTAL/8)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.30)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.30)
 
-	MDRV_SOUND_ADD("pokey4", POKEY, MASTER_XTAL/8)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.30)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.30)
+	MCFG_SOUND_ADD("pokey4", POKEY, MASTER_XTAL/8)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.30)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.30)
 
-	MDRV_SOUND_ADD("tms", TMS5220, MASTER_XTAL/2/11)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.75)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.75)
+	MCFG_SOUND_ADD("tms", TMS5220, MASTER_XTAL/2/11)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.75)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.75)
 
-	MDRV_SOUND_ADD("ldsound", LASERDISC, 0)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.50)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ldsound", LASERDISC_SOUND, 0)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.50)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.50)
+MACHINE_CONFIG_END
 
 
 

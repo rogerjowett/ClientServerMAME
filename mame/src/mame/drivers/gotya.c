@@ -176,7 +176,7 @@ static const samples_interface gotya_samples_interface =
 
 static MACHINE_START( gotya )
 {
-	gotya_state *state = (gotya_state *)machine->driver_data;
+	gotya_state *state = machine->driver_data<gotya_state>();
 
 	state->samples = machine->device("samples");
 
@@ -186,47 +186,44 @@ static MACHINE_START( gotya )
 
 static MACHINE_RESET( gotya )
 {
-	gotya_state *state = (gotya_state *)machine->driver_data;
+	gotya_state *state = machine->driver_data<gotya_state>();
 
 	state->scroll_bit_8 = 0;
 	state->theme_playing = 0;
 }
 
-static MACHINE_DRIVER_START( gotya )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(gotya_state)
+static MACHINE_CONFIG_START( gotya, gotya_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80,18432000/6)	/* 3.072 MHz ??? */
-	MDRV_CPU_PROGRAM_MAP(gotya_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80,18432000/6)	/* 3.072 MHz ??? */
+	MCFG_CPU_PROGRAM_MAP(gotya_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_MACHINE_START(gotya)
-	MDRV_MACHINE_RESET(gotya)
+	MCFG_MACHINE_START(gotya)
+	MCFG_MACHINE_RESET(gotya)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(36*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0, 36*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(36*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0, 36*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(gotya)
-	MDRV_PALETTE_LENGTH(16*4)
+	MCFG_GFXDECODE(gotya)
+	MCFG_PALETTE_LENGTH(16*4)
 
-	MDRV_PALETTE_INIT(gotya)
-	MDRV_VIDEO_START(gotya)
-	MDRV_VIDEO_UPDATE(gotya)
+	MCFG_PALETTE_INIT(gotya)
+	MCFG_VIDEO_START(gotya)
+	MCFG_VIDEO_UPDATE(gotya)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("samples", SAMPLES, 0)
-	MDRV_SOUND_CONFIG(gotya_samples_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("samples", SAMPLES, 0)
+	MCFG_SOUND_CONFIG(gotya_samples_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 /***************************************************************************
 

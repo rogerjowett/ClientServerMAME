@@ -1,3 +1,5 @@
+#define DISABLE_EMUALLOC
+
 //RAKNET MUST COME FIRST, OTHER LIBS TRY TO REPLACE new/delete/malloc/free WITH THEIR OWN SHIT
 #include "RakPeerInterface.h"
 #include "RakNetStatistics.h"
@@ -16,6 +18,13 @@
 #include <cstring>
 #include <stdlib.h>
 
+#include "osdcore.h"
+#include "emu.h"
+
+#include "unicode.h"
+#include "ui.h"
+#include "osdcore.h"
+
 Client *netClient=NULL;
 
 Client *createGlobalClient(string _username)
@@ -30,18 +39,9 @@ void deleteGlobalClient()
     netClient = NULL;
 }
 
-#include "osdcore.h"
-#include "emu.h"
-
 extern unsigned char compressedBuffer[MAX_ZLIB_BUF_SIZE];
 extern unsigned char uncompressedBuffer[MAX_ZLIB_BUF_SIZE];
 extern unsigned char syncBuffer[MAX_ZLIB_BUF_SIZE];
-
-bool needToSkipAhead=false;
-
-#include "unicode.h"
-#include "ui.h"
-#include "osdcore.h"
 
 Client::Client(string _username)
     :
@@ -138,7 +138,6 @@ int GetPacketSize(RakNet::Packet *p)
 	}
 }
 
-extern void video_frame_update(running_machine *machine, int debug);
 int initialSyncPercentComplete=0;
 extern bool waitingForClientCatchup;
 
@@ -184,7 +183,7 @@ bool Client::initializeConnection(unsigned short selfPort,const char *hostname,u
 	if(!p)
 	{
 		printf("WAITING FOR SERVER TO SEND GAME WORLD...\n");
-		video_frame_update(machine, false);
+		machine->video().frame_update();
 		RakSleep(10);
 		continue; //We need the first few packets, so stall until we get them
 	}
@@ -278,6 +277,10 @@ bool Client::initializeConnection(unsigned short selfPort,const char *hostname,u
                     memcpy(&peerID,p->data+1,sizeof(int));
                     cout << "Matching: " << p->systemAddress.ToString() << " To " << peerID << endl;
                     peerIDs[p->systemAddress] = peerID;
+                    char buf[4096];
+                    strcpy(buf,(char*)(p->data+1+sizeof(int)));
+                    cout << "Matching: " << p->systemAddress.ToString() << " To " << buf << endl;
+                    peerNames[peerID] = buf;
                 }
                 break;
 
@@ -305,11 +308,16 @@ bool Client::initializeConnection(unsigned short selfPort,const char *hostname,u
 			    addConstData(GetPacketData(p),GetPacketSize(p));
 			    break;
             case ID_CLIENT_INPUTS:
-                if(peerIDs.find(p->systemAddress)==peerIDs.end() || peerInputs.find(peerIDs[p->systemAddress])==peerInputs.end())
+                if(peerIDs.find(p->systemAddress)==peerIDs.end())
                 {
-                    cout << __FILE__ << ":" << __LINE__ << " OOPS!!!!\n";
+                    cout << "GOT INPUTS FROM UNKNOWN USER: " << p->systemAddress.ToString() << endl;
                 }
-                peerInputs[peerIDs[p->systemAddress]].push_back(string((char*)GetPacketData(p),(int)GetPacketSize(p)));
+                else
+                {
+                    if(peerInputs.find(peerIDs[p->systemAddress])==peerInputs.end())
+                        peerInputs[peerIDs[p->systemAddress]] = vector<string>();
+                    peerInputs[peerIDs[p->systemAddress]].push_back(string((char*)GetPacketData(p),(int)GetPacketSize(p)));
+                }
                 break;
             case ID_SERVER_INPUTS:
             {
@@ -359,15 +367,10 @@ void Client::loadInitialData(unsigned char *data,int size)
 
 	printf("COMPRESSED SIZE: %d\n",compressedSize/1024/8);
 
-    RakNet::TimeUS timeBeforeSync;
-    initialSyncStream.Read(timeBeforeSync);
+    initialSyncStream.Read(startupTime);
 
     initialSyncStream.Read(zeroInputMinTime);
     zeroInputMinTime.seconds += 2;
-
-    if(startupTime<timeBeforeSync)
-        printf("STARTUP TIME IS TOO EARLY!!!");
-    startupTime -= timeBeforeSync;
 
     if(getSecondsBetweenSync())
     {
@@ -434,6 +437,8 @@ void Client::loadInitialData(unsigned char *data,int size)
         int numStrings;
         initialSyncStream.Read(numStrings);
         cout << "# strings: " << numStrings << endl;
+        vector<string> inputsToPush = peerInputs[peerID];
+        peerInputs[peerID].clear();
         for(int a=0; a<numStrings; a++)
         {
             int strlen;
@@ -459,9 +464,11 @@ void Client::loadInitialData(unsigned char *data,int size)
                 checksum = checksum ^ buf[b];
             }
         }
+        for(int c=0;c<inputsToPush.size();c++)
+        {
+            peerInputs[peerID].push_back(inputsToPush[c]);
+        }
     }
-
-    needToSkipAhead=true;
 
     cout << "CHECKSUM: " << int(checksum) << endl;
 
@@ -602,7 +609,8 @@ std::pair<bool,bool> Client::syncAndUpdate(running_machine *machine)
                         char buf[4096];
                         buf[0] = ID_SEND_PEER_ID;
                         memcpy(buf+1,&selfPeerID,sizeof(int));
-                        rakInterface->Send(buf,1+sizeof(int),HIGH_PRIORITY,RELIABLE_ORDERED,0,sa2,false);
+                        strcpy(buf+1+sizeof(int),username.c_str());
+                        rakInterface->Send(buf,1+sizeof(int)+username.length()+1,HIGH_PRIORITY,RELIABLE_ORDERED,0,sa2,false);
                     }
                     RakNet::RakNetGUID guid = rakInterface->GetGuidFromSystemAddress(sa);
                     cout << sa.binaryAddress << ':' << sa.port << endl;
@@ -672,7 +680,6 @@ std::pair<bool,bool> Client::syncAndUpdate(running_machine *machine)
 			    if(firstResync || hadToResync)
 			    {
                     printf("BEGINNING VIDEO SKIP\n");
-                    needToSkipAhead=true;
 				    firstResync=false;
 				    return std::pair<bool,bool>(true,true);
 			    }
@@ -1024,11 +1031,11 @@ void Client::sendInputs(const string &inputString)
     char* dataToSend = (char*)malloc(inputString.length()+1);
     dataToSend[0] = ID_CLIENT_INPUTS;
     memcpy(dataToSend+1,inputString.c_str(),inputString.length());
-        //cout << "SENDING MESSAGE WITH LENGTH: " << intSize << endl;
+    //cout << "SENDING MESSAGE WITH LENGTH: " << intSize << endl;
     rakInterface->Send(
 		    dataToSend,
 		    (int)(inputString.length()+1),
-		    HIGH_PRIORITY,
+            IMMEDIATE_PRIORITY,
 		    RELIABLE_ORDERED,
 		    ORDERING_CHANNEL_CLIENT_INPUTS,
 		    RakNet::UNASSIGNED_SYSTEM_ADDRESS,

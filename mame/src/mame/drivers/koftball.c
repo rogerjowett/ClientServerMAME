@@ -93,7 +93,7 @@ static READ16_HANDLER( bmc_RAMDAC_color_r )
 
 static READ16_HANDLER(random_number_r)
 {
-	return mame_rand(space->machine);
+	return space->machine->rand();
 }
 
 static UINT16 prot_data;
@@ -109,7 +109,7 @@ static READ16_HANDLER(prot_r)
 	}
 
 	logerror("unk prot r %x %x\n",prot_data,	cpu_get_previouspc(space->cpu));
-	return mame_rand(space->machine);
+	return space->machine->rand();
 }
 
 static WRITE16_HANDLER(prot_w)
@@ -149,7 +149,7 @@ static ADDRESS_MAP_START( koftball_mem, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x2db000, 0x2db001) AM_WRITE(bmc_RAMDAC_offset_w)
 	AM_RANGE(0x2db002, 0x2db003) AM_READWRITE(bmc_RAMDAC_color_r, bmc_RAMDAC_color_w)
 	AM_RANGE(0x2db004, 0x2db005) AM_WRITENOP
-	AM_RANGE(0x2dc000, 0x2dc001) AM_DEVREADWRITE8("oki", okim6295_r, okim6295_w, 0xff00)
+	AM_RANGE(0x2dc000, 0x2dc001) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0xff00)
 	AM_RANGE(0x2f0000, 0x2f0003) AM_READ_PORT("INPUTS")
 	AM_RANGE(0x300000, 0x300001) AM_WRITENOP
 	AM_RANGE(0x320000, 0x320001) AM_WRITENOP
@@ -202,31 +202,31 @@ static GFXDECODE_START( koftball )
 GFXDECODE_END
 
 
-static MACHINE_DRIVER_START( koftball )
-	MDRV_CPU_ADD("maincpu", M68000, 21477270/2 )
-	MDRV_CPU_PROGRAM_MAP(koftball_mem)
-	MDRV_CPU_VBLANK_INT_HACK(bmc_interrupt,3)
+static MACHINE_CONFIG_START( koftball, driver_device )
+	MCFG_CPU_ADD("maincpu", M68000, 21477270/2 )
+	MCFG_CPU_PROGRAM_MAP(koftball_mem)
+	MCFG_CPU_VBLANK_INT_HACK(bmc_interrupt,3)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
 
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_GFXDECODE(koftball)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_GFXDECODE(koftball)
 
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 64*8-1, 0*8, 30*8-1)
-	MDRV_PALETTE_LENGTH(256)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 64*8-1, 0*8, 30*8-1)
+	MCFG_PALETTE_LENGTH(256)
 
-	MDRV_VIDEO_START(koftball)
-	MDRV_VIDEO_UPDATE(koftball)
+	MCFG_VIDEO_START(koftball)
+	MCFG_VIDEO_UPDATE(koftball)
 
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_OKIM6295_ADD("oki", 1122000, OKIM6295_PIN7_LOW) /* clock frequency & pin 7 not verified */
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 1122000, OKIM6295_PIN7_LOW) /* clock frequency & pin 7 not verified */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
+MACHINE_CONFIG_END
 
 ROM_START( koftball )
 	ROM_REGION( 0x200000, "maincpu", 0 ) /* 68000 Code */

@@ -20,6 +20,7 @@ NVRAM   :   Battery for main RAM
 #include "machine/8255ppi.h"
 #include "sound/2413intf.h"
 #include "sound/okim6295.h"
+#include "machine/nvram.h"
 
 /***************************************************************************
                                 Video Hardware
@@ -409,7 +410,7 @@ static READ8_HANDLER( jingbell_magic_r )
 
 static ADDRESS_MAP_START( jingbell_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE( 0x00000, 0x0f3ff ) AM_ROM
-	AM_RANGE( 0x0f400, 0x0ffff ) AM_RAM AM_BASE_SIZE_GENERIC( nvram )
+	AM_RANGE( 0x0f400, 0x0ffff ) AM_RAM AM_SHARE("nvram")
 ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( jingbell_portmap, ADDRESS_SPACE_IO, 8 )
@@ -440,7 +441,7 @@ static ADDRESS_MAP_START( jingbell_portmap, ADDRESS_SPACE_IO, 8 )
 
 	AM_RANGE( 0x64b0, 0x64b1 ) AM_DEVWRITE( "ymsnd", ym2413_w )
 
-	AM_RANGE( 0x64c0, 0x64c0 ) AM_DEVREADWRITE( "oki", okim6295_r, okim6295_w )
+	AM_RANGE( 0x64c0, 0x64c0 ) AM_DEVREADWRITE_MODERN("oki", okim6295_device, read, write)
 
 	AM_RANGE( 0x64d0, 0x64d1 ) AM_READWRITE( jingbell_magic_r, jingbell_magic_w )	// DSW1-5
 
@@ -630,46 +631,45 @@ static INTERRUPT_GEN( jingbell_interrupt )
 		cpu_set_input_line(device, INPUT_LINE_NMI, PULSE_LINE);
 }
 
-static MACHINE_DRIVER_START( jingbell )
+static MACHINE_CONFIG_START( jingbell, driver_device )
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z180, XTAL_12MHz / 2)	/* HD64180RP8, 8 MHz? */
-	MDRV_CPU_PROGRAM_MAP(jingbell_map)
-	MDRV_CPU_IO_MAP(jingbell_portmap)
-	MDRV_CPU_VBLANK_INT("screen",jingbell_interrupt)
+	MCFG_CPU_ADD("maincpu", Z180, XTAL_12MHz / 2)	/* HD64180RP8, 8 MHz? */
+	MCFG_CPU_PROGRAM_MAP(jingbell_map)
+	MCFG_CPU_IO_MAP(jingbell_portmap)
+	MCFG_CPU_VBLANK_INT("screen",jingbell_interrupt)
 
-	MDRV_MACHINE_RESET(jingbell)
+	MCFG_MACHINE_RESET(jingbell)
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(512, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 512-1, 0, 256-16-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(512, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 512-1, 0, 256-16-1)
 
-	MDRV_GFXDECODE(jingbell)
-	MDRV_PALETTE_LENGTH(0x400)
+	MCFG_GFXDECODE(jingbell)
+	MCFG_PALETTE_LENGTH(0x400)
 
-	MDRV_VIDEO_START(jingbell)
-	MDRV_VIDEO_UPDATE(jingbell)
+	MCFG_VIDEO_START(jingbell)
+	MCFG_VIDEO_UPDATE(jingbell)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("ymsnd", YM2413, XTAL_3_579545MHz)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("ymsnd", YM2413, XTAL_3_579545MHz)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-	MDRV_OKIM6295_ADD("oki", XTAL_12MHz / 12, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", XTAL_12MHz / 12, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( gp98 )
-	MDRV_IMPORT_FROM(jingbell)
-	MDRV_GFXDECODE(gp98)
+static MACHINE_CONFIG_DERIVED( gp98, jingbell )
+	MCFG_GFXDECODE(gp98)
 
-	MDRV_VIDEO_START(gp98)
-MACHINE_DRIVER_END
+	MCFG_VIDEO_START(gp98)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************
@@ -738,8 +738,8 @@ ROM_END
 static DRIVER_INIT( jingbell )
 {
 	int i;
-	UINT8 *rom  = (UINT8 *)memory_region(machine, "maincpu");
-	size_t size = memory_region_length(machine, "maincpu");
+	UINT8 *rom  = (UINT8 *)machine->region("maincpu")->base();
+	size_t size = machine->region("maincpu")->bytes();
 
 	for (i=0; i<size; i++)
 	{

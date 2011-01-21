@@ -184,8 +184,9 @@ struct _i8085_state
 
 	device_irq_callback	irq_callback;
 	legacy_cpu_device *device;
-	const address_space *program;
-	const address_space *io;
+	address_space *program;
+	direct_read_data *direct;
+	address_space *io;
 	int					icount;
 };
 
@@ -272,7 +273,7 @@ static void execute_one(i8085_state *cpustate, int opcode);
     INLINE FUNCTIONS
 ***************************************************************************/
 
-INLINE i8085_state *get_safe_token(running_device *device)
+INLINE i8085_state *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
 	assert(device->type() == I8080 ||
@@ -353,20 +354,20 @@ INLINE void break_halt_for_interrupt(i8085_state *cpustate)
 INLINE UINT8 ROP(i8085_state *cpustate)
 {
 	set_status(cpustate, 0xa2); // instruction fetch
-	return memory_decrypted_read_byte(cpustate->program, cpustate->PC.w.l++);
+	return cpustate->direct->read_decrypted_byte(cpustate->PC.w.l++);
 }
 
 INLINE UINT8 ARG(i8085_state *cpustate)
 {
-	return memory_raw_read_byte(cpustate->program, cpustate->PC.w.l++);
+	return cpustate->direct->read_raw_byte(cpustate->PC.w.l++);
 }
 
 INLINE UINT16 ARG16(i8085_state *cpustate)
 {
 	UINT16 w;
-	w  = memory_raw_read_byte(cpustate->program, cpustate->PC.d);
+	w  = cpustate->direct->read_raw_byte(cpustate->PC.d);
 	cpustate->PC.w.l++;
-	w += memory_raw_read_byte(cpustate->program, cpustate->PC.d) << 8;
+	w += cpustate->direct->read_raw_byte(cpustate->PC.d) << 8;
 	cpustate->PC.w.l++;
 	return w;
 }
@@ -374,13 +375,13 @@ INLINE UINT16 ARG16(i8085_state *cpustate)
 INLINE UINT8 RM(i8085_state *cpustate, UINT32 a)
 {
 	set_status(cpustate, 0x82); // memory read
-	return memory_read_byte_8le(cpustate->program, a);
+	return cpustate->program->read_byte(a);
 }
 
 INLINE void WM(i8085_state *cpustate, UINT32 a, UINT8 v)
 {
 	set_status(cpustate, 0x00); // memory write
-	memory_write_byte_8le(cpustate->program, a, v);
+	cpustate->program->write_byte(a, v);
 }
 
 
@@ -981,7 +982,7 @@ static void init_808x_common(legacy_cpu_device *device, device_irq_callback irqc
 		state->state_add(I8085_SP,     "SP",     cpustate->SP.w.l);
 		state->state_add(STATE_GENSP,  "GENSP",  cpustate->SP.w.l).noshow();
 		state->state_add(STATE_GENFLAGS, "GENFLAGS", cpustate->AF.b.l).noshow().formatstr("%8s");
-		state->state_add(I8085_A,      "A",      cpustate->AF.b.l).noshow();
+		state->state_add(I8085_A,      "A",      cpustate->AF.b.h).noshow();
 		state->state_add(I8085_B,      "B",      cpustate->BC.b.h).noshow();
 		state->state_add(I8085_C,      "C",      cpustate->BC.b.l).noshow();
 		state->state_add(I8085_D,      "D",      cpustate->DE.b.h).noshow();
@@ -1006,6 +1007,7 @@ static void init_808x_common(legacy_cpu_device *device, device_irq_callback irqc
 	cpustate->device = device;
 
 	cpustate->program = device->space(AS_PROGRAM);
+	cpustate->direct = &cpustate->program->direct();
 	cpustate->io = device->space(AS_IO);
 
 	/* resolve callbacks */

@@ -42,15 +42,7 @@ Dip locations and factory settings verified with US manual
 #include "audio/seibu.h"
 #include "sound/2203intf.h"
 #include "sound/msm5205.h"
-
-extern UINT16 *deadang_video_data, *deadang_scroll_ram;
-
-extern WRITE16_HANDLER( deadang_foreground_w );
-extern WRITE16_HANDLER( deadang_text_w );
-extern WRITE16_HANDLER( deadang_bank_w );
-
-extern VIDEO_START( deadang );
-extern VIDEO_UPDATE( deadang );
+#include "includes/deadang.h"
 
 /* Read/Write Handlers */
 
@@ -72,7 +64,7 @@ static ADDRESS_MAP_START( main_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x05000, 0x05fff) AM_WRITEONLY
 	AM_RANGE(0x06000, 0x0600f) AM_READWRITE(seibu_main_word_r, seibu_main_word_w)
 	AM_RANGE(0x06010, 0x07fff) AM_WRITEONLY
-	AM_RANGE(0x08000, 0x087ff) AM_WRITE(deadang_text_w) AM_BASE_GENERIC(videoram)
+	AM_RANGE(0x08000, 0x087ff) AM_WRITE(deadang_text_w) AM_BASE_MEMBER(deadang_state, videoram)
 	AM_RANGE(0x08800, 0x0bfff) AM_WRITEONLY
 	AM_RANGE(0x0a000, 0x0a001) AM_READ_PORT("P1_P2")
 	AM_RANGE(0x0a002, 0x0a003) AM_READ_PORT("DSW")
@@ -225,41 +217,41 @@ static INTERRUPT_GEN( deadang_interrupt )
 
 /* Machine Drivers */
 
-static MACHINE_DRIVER_START( deadang )
+static MACHINE_CONFIG_START( deadang, deadang_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", V30,XTAL_16MHz/2) /* Sony 8623h9 CXQ70116D-8 (V30 compatible) */
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_VBLANK_INT_HACK(deadang_interrupt,2)
+	MCFG_CPU_ADD("maincpu", V30,XTAL_16MHz/2) /* Sony 8623h9 CXQ70116D-8 (V30 compatible) */
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_VBLANK_INT_HACK(deadang_interrupt,2)
 
-	MDRV_CPU_ADD("sub", V30,XTAL_16MHz/2) /* Sony 8623h9 CXQ70116D-8 (V30 compatible) */
-	MDRV_CPU_PROGRAM_MAP(sub_map)
-	MDRV_CPU_VBLANK_INT_HACK(deadang_interrupt,2)
+	MCFG_CPU_ADD("sub", V30,XTAL_16MHz/2) /* Sony 8623h9 CXQ70116D-8 (V30 compatible) */
+	MCFG_CPU_PROGRAM_MAP(sub_map)
+	MCFG_CPU_VBLANK_INT_HACK(deadang_interrupt,2)
 
 	SEIBU3A_SOUND_SYSTEM_CPU(XTAL_14_31818MHz/4)
 
-	MDRV_QUANTUM_TIME(HZ(60)) // the game stops working with higher interleave rates..
+	MCFG_QUANTUM_TIME(HZ(60)) // the game stops working with higher interleave rates..
 
-	MDRV_MACHINE_RESET(seibu_sound)
+	MCFG_MACHINE_RESET(seibu_sound)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(deadang)
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_GFXDECODE(deadang)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(deadang)
-	MDRV_VIDEO_UPDATE(deadang)
+	MCFG_VIDEO_START(deadang)
+	MCFG_VIDEO_UPDATE(deadang)
 
 	/* sound hardware */
 	SEIBU_SOUND_SYSTEM_YM2203_INTERFACE(XTAL_14_31818MHz/4)
 	SEIBU_SOUND_SYSTEM_ADPCM_INTERFACE
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
 /* ROMs */
 

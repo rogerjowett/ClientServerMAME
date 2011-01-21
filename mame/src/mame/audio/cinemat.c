@@ -165,15 +165,15 @@ static const samples_interface spacewar_samples_interface =
 
 static void spacewar_sound_w(running_machine *machine, UINT8 sound_val, UINT8 bits_changed)
 {
-	running_device *samples = machine->device("samples");
+	device_t *samples = machine->device("samples");
 
 	/* Explosion - rising edge */
 	if (SOUNDVAL_RISING_EDGE(0x01))
-		sample_start(samples, 0, (mame_rand(machine) & 1) ? 0 : 6, 0);
+		sample_start(samples, 0, (machine->rand() & 1) ? 0 : 6, 0);
 
 	/* Fire sound - rising edge */
 	if (SOUNDVAL_RISING_EDGE(0x02))
-		sample_start(samples, 1, (mame_rand(machine) & 1) ? 1 : 7, 0);
+		sample_start(samples, 1, (machine->rand() & 1) ? 1 : 7, 0);
 
 	/* Player 1 thrust - 0=on, 1=off */
 	if (SOUNDVAL_FALLING_EDGE(0x04))
@@ -209,16 +209,16 @@ static MACHINE_RESET( spacewar )
 	generic_init(machine, spacewar_sound_w);
 }
 
-MACHINE_DRIVER_START( spacewar_sound )
-	MDRV_MACHINE_START(generic)
-	MDRV_MACHINE_RESET(spacewar)
+MACHINE_CONFIG_FRAGMENT( spacewar_sound )
+	MCFG_MACHINE_START(generic)
+	MCFG_MACHINE_RESET(spacewar)
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("samples", SAMPLES, 0)
-	MDRV_SOUND_CONFIG(spacewar_samples_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("samples", SAMPLES, 0)
+	MCFG_SOUND_CONFIG(spacewar_samples_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 
 
@@ -245,7 +245,7 @@ static const samples_interface barrier_samples_interface =
 
 static void barrier_sound_w(running_machine *machine, UINT8 sound_val, UINT8 bits_changed)
 {
-	running_device *samples = machine->device("samples");
+	device_t *samples = machine->device("samples");
 
 	/* Player die - rising edge */
 	if (SOUNDVAL_RISING_EDGE(0x01))
@@ -265,16 +265,16 @@ static MACHINE_RESET( barrier )
 	generic_init(machine, barrier_sound_w);
 }
 
-MACHINE_DRIVER_START( barrier_sound )
-	MDRV_MACHINE_START(generic)
-	MDRV_MACHINE_RESET(barrier)
+MACHINE_CONFIG_FRAGMENT( barrier_sound )
+	MCFG_MACHINE_START(generic)
+	MCFG_MACHINE_RESET(barrier)
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("samples", SAMPLES, 0)
-	MDRV_SOUND_CONFIG(barrier_samples_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("samples", SAMPLES, 0)
+	MCFG_SOUND_CONFIG(barrier_samples_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 
 
@@ -299,7 +299,7 @@ static const samples_interface speedfrk_samples_interface =
 
 static void speedfrk_sound_w(running_machine *machine, UINT8 sound_val, UINT8 bits_changed)
 {
-	running_device *samples = machine->device("samples");
+	device_t *samples = machine->device("samples");
 
 	/* on the falling edge of bit 0x08, clock the inverse of bit 0x04 into the top of the shiftreg */
 	if (SOUNDVAL_FALLING_EDGE(0x08))
@@ -326,16 +326,16 @@ static MACHINE_RESET( speedfrk )
 	generic_init(machine, speedfrk_sound_w);
 }
 
-MACHINE_DRIVER_START( speedfrk_sound )
-	MDRV_MACHINE_START(generic)
-	MDRV_MACHINE_RESET(speedfrk)
+MACHINE_CONFIG_FRAGMENT( speedfrk_sound )
+	MCFG_MACHINE_START(generic)
+	MCFG_MACHINE_RESET(speedfrk)
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("samples", SAMPLES, 0)
-	MDRV_SOUND_CONFIG(speedfrk_samples_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("samples", SAMPLES, 0)
+	MCFG_SOUND_CONFIG(speedfrk_samples_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 
 
@@ -365,7 +365,7 @@ static const samples_interface starhawk_samples_interface =
 
 static void starhawk_sound_w(running_machine *machine, UINT8 sound_val, UINT8 bits_changed)
 {
-	running_device *samples = machine->device("samples");
+	device_t *samples = machine->device("samples");
 
 	/* explosion - falling edge */
 	if (SOUNDVAL_FALLING_EDGE(0x01))
@@ -403,16 +403,16 @@ static MACHINE_RESET( starhawk )
 	generic_init(machine, starhawk_sound_w);
 }
 
-MACHINE_DRIVER_START( starhawk_sound )
-	MDRV_MACHINE_START(generic)
-	MDRV_MACHINE_RESET(starhawk)
+MACHINE_CONFIG_FRAGMENT( starhawk_sound )
+	MCFG_MACHINE_START(generic)
+	MCFG_MACHINE_RESET(starhawk)
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("samples", SAMPLES, 0)
-	MDRV_SOUND_CONFIG(starhawk_samples_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("samples", SAMPLES, 0)
+	MCFG_SOUND_CONFIG(starhawk_samples_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 
 
@@ -442,7 +442,7 @@ static const samples_interface sundance_samples_interface =
 
 static void sundance_sound_w(running_machine *machine, UINT8 sound_val, UINT8 bits_changed)
 {
-	running_device *samples = machine->device("samples");
+	device_t *samples = machine->device("samples");
 
 	/* bong - falling edge */
 	if (SOUNDVAL_FALLING_EDGE(0x01))
@@ -474,16 +474,16 @@ static MACHINE_RESET( sundance )
 	generic_init(machine, sundance_sound_w);
 }
 
-MACHINE_DRIVER_START( sundance_sound )
-	MDRV_MACHINE_START(generic)
-	MDRV_MACHINE_RESET(sundance)
+MACHINE_CONFIG_FRAGMENT( sundance_sound )
+	MCFG_MACHINE_START(generic)
+	MCFG_MACHINE_RESET(sundance)
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("samples", SAMPLES, 0)
-	MDRV_SOUND_CONFIG(sundance_samples_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("samples", SAMPLES, 0)
+	MCFG_SOUND_CONFIG(sundance_samples_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 
 
@@ -516,7 +516,7 @@ static void tailg_sound_w(running_machine *machine, UINT8 sound_val, UINT8 bits_
 	/* the falling edge of bit 0x10 clocks bit 0x08 into the mux selected by bits 0x07 */
 	if (SOUNDVAL_FALLING_EDGE(0x10))
 	{
-		running_device *samples = machine->device("samples");
+		device_t *samples = machine->device("samples");
 
 		/* update the shift register (actually just a simple mux) */
 		current_shift = (current_shift & ~(1 << (sound_val & 7))) | (((sound_val >> 3) & 1) << (sound_val & 7));
@@ -564,16 +564,16 @@ static MACHINE_RESET( tailg )
 	generic_init(machine, tailg_sound_w);
 }
 
-MACHINE_DRIVER_START( tailg_sound )
-	MDRV_MACHINE_START(generic)
-	MDRV_MACHINE_RESET(tailg)
+MACHINE_CONFIG_FRAGMENT( tailg_sound )
+	MCFG_MACHINE_START(generic)
+	MCFG_MACHINE_RESET(tailg)
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("samples", SAMPLES, 0)
-	MDRV_SOUND_CONFIG(tailg_samples_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("samples", SAMPLES, 0)
+	MCFG_SOUND_CONFIG(tailg_samples_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 
 
@@ -602,7 +602,7 @@ static const samples_interface warrior_samples_interface =
 
 static void warrior_sound_w(running_machine *machine, UINT8 sound_val, UINT8 bits_changed)
 {
-	running_device *samples = machine->device("samples");
+	device_t *samples = machine->device("samples");
 
 	/* normal level - 0=on, 1=off */
 	if (SOUNDVAL_FALLING_EDGE(0x01))
@@ -634,16 +634,16 @@ static MACHINE_RESET( warrior )
 	generic_init(machine, warrior_sound_w);
 }
 
-MACHINE_DRIVER_START( warrior_sound )
-	MDRV_MACHINE_START(generic)
-	MDRV_MACHINE_RESET(warrior)
+MACHINE_CONFIG_FRAGMENT( warrior_sound )
+	MCFG_MACHINE_START(generic)
+	MCFG_MACHINE_RESET(warrior)
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("samples", SAMPLES, 0)
-	MDRV_SOUND_CONFIG(warrior_samples_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("samples", SAMPLES, 0)
+	MCFG_SOUND_CONFIG(warrior_samples_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 
 
@@ -674,7 +674,7 @@ static const samples_interface armora_samples_interface =
 
 static void armora_sound_w(running_machine *machine, UINT8 sound_val, UINT8 bits_changed)
 {
-	running_device *samples = machine->device("samples");
+	device_t *samples = machine->device("samples");
 
 	/* on the rising edge of bit 0x10, clock bit 0x80 into the shift register */
 	if (SOUNDVAL_RISING_EDGE(0x10))
@@ -730,16 +730,16 @@ static MACHINE_RESET( armora )
 	generic_init(machine, armora_sound_w);
 }
 
-MACHINE_DRIVER_START( armora_sound )
-	MDRV_MACHINE_START(generic)
-	MDRV_MACHINE_RESET(armora)
+MACHINE_CONFIG_FRAGMENT( armora_sound )
+	MCFG_MACHINE_START(generic)
+	MCFG_MACHINE_RESET(armora)
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("samples", SAMPLES, 0)
-	MDRV_SOUND_CONFIG(armora_samples_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("samples", SAMPLES, 0)
+	MCFG_SOUND_CONFIG(armora_samples_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 
 
@@ -776,7 +776,7 @@ static const samples_interface ripoff_samples_interface =
 
 static void ripoff_sound_w(running_machine *machine, UINT8 sound_val, UINT8 bits_changed)
 {
-	running_device *samples = machine->device("samples");
+	device_t *samples = machine->device("samples");
 
 	/* on the rising edge of bit 0x02, clock bit 0x01 into the shift register */
 	if (SOUNDVAL_RISING_EDGE(0x02))
@@ -823,16 +823,16 @@ static MACHINE_RESET( ripoff )
 	generic_init(machine, ripoff_sound_w);
 }
 
-MACHINE_DRIVER_START( ripoff_sound )
-	MDRV_MACHINE_START(generic)
-	MDRV_MACHINE_RESET(ripoff)
+MACHINE_CONFIG_FRAGMENT( ripoff_sound )
+	MCFG_MACHINE_START(generic)
+	MCFG_MACHINE_RESET(ripoff)
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("samples", SAMPLES, 0)
-	MDRV_SOUND_CONFIG(ripoff_samples_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("samples", SAMPLES, 0)
+	MCFG_SOUND_CONFIG(ripoff_samples_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 
 
@@ -864,7 +864,7 @@ static const samples_interface starcas_samples_interface =
 
 static void starcas_sound_w(running_machine *machine, UINT8 sound_val, UINT8 bits_changed)
 {
-	running_device *samples = machine->device("samples");
+	device_t *samples = machine->device("samples");
 	UINT32 target_pitch;
 
 	/* on the rising edge of bit 0x10, clock bit 0x80 into the shift register */
@@ -937,16 +937,16 @@ static MACHINE_RESET( starcas )
 	generic_init(machine, starcas_sound_w);
 }
 
-MACHINE_DRIVER_START( starcas_sound )
-	MDRV_MACHINE_START(generic)
-	MDRV_MACHINE_RESET(starcas)
+MACHINE_CONFIG_FRAGMENT( starcas_sound )
+	MCFG_MACHINE_START(generic)
+	MCFG_MACHINE_RESET(starcas)
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("samples", SAMPLES, 0)
-	MDRV_SOUND_CONFIG(starcas_samples_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.5)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("samples", SAMPLES, 0)
+	MCFG_SOUND_CONFIG(starcas_samples_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.5)
+MACHINE_CONFIG_END
 
 
 
@@ -978,7 +978,7 @@ static const samples_interface solarq_samples_interface =
 
 static void solarq_sound_w(running_machine *machine, UINT8 sound_val, UINT8 bits_changed)
 {
-	running_device *samples = machine->device("samples");
+	device_t *samples = machine->device("samples");
 	static float target_volume, current_volume;
 
 	/* on the rising edge of bit 0x10, clock bit 0x80 into the shift register */
@@ -1074,16 +1074,16 @@ static MACHINE_RESET( solarq )
 	generic_init(machine, solarq_sound_w);
 }
 
-MACHINE_DRIVER_START( solarq_sound )
-	MDRV_MACHINE_START(generic)
-	MDRV_MACHINE_RESET(solarq)
+MACHINE_CONFIG_FRAGMENT( solarq_sound )
+	MCFG_MACHINE_START(generic)
+	MCFG_MACHINE_RESET(solarq)
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("samples", SAMPLES, 0)
-	MDRV_SOUND_CONFIG(solarq_samples_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.5)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("samples", SAMPLES, 0)
+	MCFG_SOUND_CONFIG(solarq_samples_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.5)
+MACHINE_CONFIG_END
 
 
 
@@ -1119,7 +1119,7 @@ static const samples_interface boxingb_samples_interface =
 
 static void boxingb_sound_w(running_machine *machine, UINT8 sound_val, UINT8 bits_changed)
 {
-	running_device *samples = machine->device("samples");
+	device_t *samples = machine->device("samples");
 
 	/* on the rising edge of bit 0x10, clock bit 0x80 into the shift register */
 	if (SOUNDVAL_RISING_EDGE(0x10))
@@ -1210,16 +1210,16 @@ static MACHINE_RESET( boxingb )
 	generic_init(machine, boxingb_sound_w);
 }
 
-MACHINE_DRIVER_START( boxingb_sound )
-	MDRV_MACHINE_START(generic)
-	MDRV_MACHINE_RESET(boxingb)
+MACHINE_CONFIG_FRAGMENT( boxingb_sound )
+	MCFG_MACHINE_START(generic)
+	MCFG_MACHINE_RESET(boxingb)
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("samples", SAMPLES, 0)
-	MDRV_SOUND_CONFIG(boxingb_samples_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("samples", SAMPLES, 0)
+	MCFG_SOUND_CONFIG(boxingb_samples_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 
 
@@ -1251,7 +1251,7 @@ static const samples_interface wotw_samples_interface =
 
 static void wotw_sound_w(running_machine *machine, UINT8 sound_val, UINT8 bits_changed)
 {
-	running_device *samples = machine->device("samples");
+	device_t *samples = machine->device("samples");
 	UINT32 target_pitch;
 
 	/* on the rising edge of bit 0x10, clock bit 0x80 into the shift register */
@@ -1324,16 +1324,16 @@ static MACHINE_RESET( wotw )
 	generic_init(machine, wotw_sound_w);
 }
 
-MACHINE_DRIVER_START( wotw_sound )
-	MDRV_MACHINE_START(generic)
-	MDRV_MACHINE_RESET(wotw)
+MACHINE_CONFIG_FRAGMENT( wotw_sound )
+	MCFG_MACHINE_START(generic)
+	MCFG_MACHINE_RESET(wotw)
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("samples", SAMPLES, 0)
-	MDRV_SOUND_CONFIG(wotw_samples_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("samples", SAMPLES, 0)
+	MCFG_SOUND_CONFIG(wotw_samples_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 
 
@@ -1365,7 +1365,7 @@ static const samples_interface wotwc_samples_interface =
 
 static void wotwc_sound_w(running_machine *machine, UINT8 sound_val, UINT8 bits_changed)
 {
-	running_device *samples = machine->device("samples");
+	device_t *samples = machine->device("samples");
 	UINT32 target_pitch;
 
 	/* on the rising edge of bit 0x10, clock bit 0x80 into the shift register */
@@ -1438,16 +1438,16 @@ static MACHINE_RESET( wotwc )
 	generic_init(machine, wotwc_sound_w);
 }
 
-MACHINE_DRIVER_START( wotwc_sound )
-	MDRV_MACHINE_START(generic)
-	MDRV_MACHINE_RESET(wotwc)
+MACHINE_CONFIG_FRAGMENT( wotwc_sound )
+	MCFG_MACHINE_START(generic)
+	MCFG_MACHINE_RESET(wotwc)
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("samples", SAMPLES, 0)
-	MDRV_SOUND_CONFIG(wotwc_samples_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("samples", SAMPLES, 0)
+	MCFG_SOUND_CONFIG(wotwc_samples_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 
 
@@ -1585,33 +1585,33 @@ static const z80_daisy_config daisy_chain[] =
 };
 
 
-MACHINE_DRIVER_START( demon_sound )
+MACHINE_CONFIG_FRAGMENT( demon_sound )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("audiocpu", Z80, 3579545)
-	MDRV_CPU_CONFIG(daisy_chain)
-	MDRV_CPU_PROGRAM_MAP(demon_sound_map)
-	MDRV_CPU_IO_MAP(demon_sound_ports)
+	MCFG_CPU_ADD("audiocpu", Z80, 3579545)
+	MCFG_CPU_CONFIG(daisy_chain)
+	MCFG_CPU_PROGRAM_MAP(demon_sound_map)
+	MCFG_CPU_IO_MAP(demon_sound_ports)
 
-	MDRV_Z80CTC_ADD("ctc", 3579545 /* same as "audiocpu" */, demon_z80ctc_interface)
+	MCFG_Z80CTC_ADD("ctc", 3579545 /* same as "audiocpu" */, demon_z80ctc_interface)
 
-	MDRV_MACHINE_START(generic)
-	MDRV_MACHINE_RESET(demon_sound)
+	MCFG_MACHINE_START(generic)
+	MCFG_MACHINE_RESET(demon_sound)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ay1", AY8910, 3579545)
-	MDRV_SOUND_CONFIG(demon_ay8910_interface_1)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+	MCFG_SOUND_ADD("ay1", AY8910, 3579545)
+	MCFG_SOUND_CONFIG(demon_ay8910_interface_1)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
-	MDRV_SOUND_ADD("ay2", AY8910, 3579545)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+	MCFG_SOUND_ADD("ay2", AY8910, 3579545)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
-	MDRV_SOUND_ADD("ay3", AY8910, 3579545)
-	MDRV_SOUND_CONFIG(demon_ay8910_interface_3)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ay3", AY8910, 3579545)
+	MCFG_SOUND_CONFIG(demon_ay8910_interface_3)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+MACHINE_CONFIG_END
 
 
 
@@ -1635,11 +1635,10 @@ static MACHINE_RESET( qb3_sound )
 
 	/* this patch prevents the sound ROM from eating itself when command $0A is sent */
 	/* on a cube rotate */
-	memory_region(machine, "audiocpu")[0x11dc] = 0x09;
+	machine->region("audiocpu")->base()[0x11dc] = 0x09;
 }
 
 
-MACHINE_DRIVER_START( qb3_sound )
-	MDRV_IMPORT_FROM(demon_sound)
-	MDRV_MACHINE_RESET(qb3_sound)
-MACHINE_DRIVER_END
+MACHINE_CONFIG_DERIVED( qb3_sound, demon_sound )
+	MCFG_MACHINE_RESET(qb3_sound)
+MACHINE_CONFIG_END

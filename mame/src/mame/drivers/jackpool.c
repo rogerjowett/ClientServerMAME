@@ -167,7 +167,7 @@ static ADDRESS_MAP_START( jackpool_mem, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x380000, 0x380061) AM_READWRITE(jackpool_io_r,jackpool_io_w) AM_BASE(&jackpool_io)//AM_READ(jackpool_io_r)
 
 	AM_RANGE(0x800000, 0x80000f) AM_READ(jackpool_ff_r) AM_WRITENOP //UART
-	AM_RANGE(0xa00000, 0xa00001) AM_DEVREADWRITE8("oki", okim6295_r, okim6295_w, 0x00ff)
+	AM_RANGE(0xa00000, 0xa00001) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0x00ff)
 ADDRESS_MAP_END
 
 
@@ -239,32 +239,32 @@ static INTERRUPT_GEN( jackpool_interrupt )
 }
 
 
-static MACHINE_DRIVER_START( jackpool )
-	MDRV_CPU_ADD("maincpu", M68000, 12000000) // ?
-	MDRV_CPU_PROGRAM_MAP(jackpool_mem)
-	MDRV_CPU_VBLANK_INT("screen",jackpool_interrupt)  // ?
+static MACHINE_CONFIG_START( jackpool, driver_device )
+	MCFG_CPU_ADD("maincpu", M68000, 12000000) // ?
+	MCFG_CPU_PROGRAM_MAP(jackpool_mem)
+	MCFG_CPU_VBLANK_INT("screen",jackpool_interrupt)  // ?
 
-	MDRV_GFXDECODE(jackpool)
+	MCFG_GFXDECODE(jackpool)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 64*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 64*8-1, 0*8, 32*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 64*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 64*8-1, 0*8, 32*8-1)
 
-	MDRV_EEPROM_93C46_ADD("eeprom")
+	MCFG_EEPROM_93C46_ADD("eeprom")
 
-	MDRV_PALETTE_LENGTH(0x200)
+	MCFG_PALETTE_LENGTH(0x200)
 
-	MDRV_VIDEO_START(jackpool)
-	MDRV_VIDEO_UPDATE(jackpool)
+	MCFG_VIDEO_START(jackpool)
+	MCFG_VIDEO_UPDATE(jackpool)
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 ROM_START( jackpool )
@@ -284,7 +284,7 @@ ROM_END
 
 static DRIVER_INIT( jackpool )
 {
-	UINT16 *rom = (UINT16 *)memory_region(machine, "maincpu");
+	UINT16 *rom = (UINT16 *)machine->region("maincpu")->base();
 
 	/* patch NVRAM routine */
 	rom[0x9040/2] = 0x6602;

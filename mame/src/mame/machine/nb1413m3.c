@@ -27,8 +27,6 @@ int nb1413m3_sndrombank2;
 int nb1413m3_busyctr;
 int nb1413m3_busyflag;
 int nb1413m3_inputport;
-UINT8 *nb1413m3_nvram;
-size_t nb1413m3_nvram_size;
 
 static int nb1413m3_74ls193_counter;
 static int nb1413m3_nmi_count;			// for debug
@@ -225,19 +223,6 @@ INTERRUPT_GEN( nb1413m3_interrupt )
 #endif
 }
 
-NVRAM_HANDLER( nb1413m3 )
-{
-	if (read_or_write)
-		mame_fwrite(file, nb1413m3_nvram, nb1413m3_nvram_size);
-	else
-	{
-		if (file)
-			mame_fread(file, nb1413m3_nvram, nb1413m3_nvram_size);
-		else
-			memset(nb1413m3_nvram, 0, nb1413m3_nvram_size);
-	}
-}
-
 READ8_HANDLER( nb1413m3_sndrom_r )
 {
 	int rombank;
@@ -330,8 +315,8 @@ READ8_HANDLER( nb1413m3_sndrom_r )
 	popmessage("Sound ROM %02X:%05X [B1:%02X B2:%02X]", rombank, offset, nb1413m3_sndrombank1, nb1413m3_sndrombank2);
 #endif
 
-	if (offset < memory_region_length(space->machine, nb1413m3_sndromrgntag))
-		return memory_region(space->machine, nb1413m3_sndromrgntag)[offset];
+	if (offset < space->machine->region(nb1413m3_sndromrgntag)->bytes())
+		return space->machine->region(nb1413m3_sndromrgntag)->base()[offset];
 	else
 	{
 		popmessage("read past sound ROM length (%05x[%02X])",offset, rombank);
@@ -354,7 +339,7 @@ WRITE8_HANDLER( nb1413m3_sndrombank2_w )
 
 READ8_HANDLER( nb1413m3_gfxrom_r )
 {
-	UINT8 *GFXROM = memory_region(space->machine, "gfx1");
+	UINT8 *GFXROM = space->machine->region("gfx1")->base();
 
 	return GFXROM[(0x20000 * (nb1413m3_gfxrombank | ((nb1413m3_sndrombank1 & 0x02) << 3))) + ((0x0200 * nb1413m3_gfxradr_h) + (0x0002 * nb1413m3_gfxradr_l)) + (offset & 0x01)];
 }

@@ -99,7 +99,7 @@ static WRITE8_HANDLER( himesiki_rombank_w )
 
 static WRITE8_HANDLER( himesiki_sound_w )
 {
-	himesiki_state *state = (himesiki_state *)space->machine->driver_data;
+	himesiki_state *state = space->machine->driver_data<himesiki_state>();
 	soundlatch_w(space, offset, data);
 	cpu_set_input_line(state->subcpu, INPUT_LINE_NMI, PULSE_LINE);
 }
@@ -269,8 +269,8 @@ GFXDECODE_END
 
 static MACHINE_START( himesiki )
 {
-	himesiki_state *state = (himesiki_state *)machine->driver_data;
-	UINT8 *ROM = memory_region(machine, "maincpu");
+	himesiki_state *state = machine->driver_data<himesiki_state>();
+	UINT8 *ROM = machine->region("maincpu")->base();
 
 	memory_configure_bank(machine, "bank1", 0, 2, &ROM[0x10000], 0x4000);
 
@@ -282,53 +282,50 @@ static MACHINE_START( himesiki )
 
 static MACHINE_RESET( himesiki )
 {
-	himesiki_state *state = (himesiki_state *)machine->driver_data;
+	himesiki_state *state = machine->driver_data<himesiki_state>();
 
 	state->scrollx[0] = 0;
 	state->scrollx[1] = 0;
 	state->flipscreen = 0;
 }
 
-static MACHINE_DRIVER_START( himesiki )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(himesiki_state)
+static MACHINE_CONFIG_START( himesiki, himesiki_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, MCLK/2) /* 6.000 MHz */
-	MDRV_CPU_PROGRAM_MAP(himesiki_prm0)
-	MDRV_CPU_IO_MAP(himesiki_iom0)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80, MCLK/2) /* 6.000 MHz */
+	MCFG_CPU_PROGRAM_MAP(himesiki_prm0)
+	MCFG_CPU_IO_MAP(himesiki_iom0)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("sub", Z80, MCLK/3) /* 4.000 MHz */
-	MDRV_CPU_PROGRAM_MAP(himesiki_prm1)
-	MDRV_CPU_IO_MAP(himesiki_iom1)
+	MCFG_CPU_ADD("sub", Z80, MCLK/3) /* 4.000 MHz */
+	MCFG_CPU_PROGRAM_MAP(himesiki_prm1)
+	MCFG_CPU_IO_MAP(himesiki_iom1)
 
-	MDRV_MACHINE_START(himesiki)
-	MDRV_MACHINE_RESET(himesiki)
+	MCFG_MACHINE_START(himesiki)
+	MCFG_MACHINE_RESET(himesiki)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 0*8, 24*8-1)
-	MDRV_GFXDECODE(himesiki)
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 0*8, 24*8-1)
+	MCFG_GFXDECODE(himesiki)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_VIDEO_START(himesiki)
-	MDRV_VIDEO_UPDATE(himesiki)
+	MCFG_VIDEO_START(himesiki)
+	MCFG_VIDEO_UPDATE(himesiki)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("ym2203", YM2203, MCLK/4)
-	MDRV_SOUND_ROUTE(0, "mono", 0.10)
-	MDRV_SOUND_ROUTE(1, "mono", 0.10)
-	MDRV_SOUND_ROUTE(2, "mono", 0.10)
-	MDRV_SOUND_ROUTE(3, "mono", 0.50)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("ym2203", YM2203, MCLK/4)
+	MCFG_SOUND_ROUTE(0, "mono", 0.10)
+	MCFG_SOUND_ROUTE(1, "mono", 0.10)
+	MCFG_SOUND_ROUTE(2, "mono", 0.10)
+	MCFG_SOUND_ROUTE(3, "mono", 0.50)
 
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
 /****************************************************************************/
 

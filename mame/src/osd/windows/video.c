@@ -88,8 +88,6 @@ win_video_config video_config;
 win_monitor_info *win_monitor_list;
 static win_monitor_info *primary_monitor;
 
-static bitmap_t *effect_bitmap;
-
 
 
 //============================================================
@@ -104,7 +102,6 @@ static win_monitor_info *pick_monitor(int index);
 static void check_osd_inputs(running_machine *machine);
 
 static void extract_video_config(running_machine *machine);
-static void load_effect_overlay(running_machine *machine, const char *filename);
 static float get_aspect(const char *name, int report_error);
 static void get_resolution(const char *name, win_window_config *config, int report_error);
 
@@ -148,10 +145,6 @@ void winvideo_init(running_machine *machine)
 
 static void winvideo_exit(running_machine &machine)
 {
-	// free the overlay effect
-	global_free(effect_bitmap);
-	effect_bitmap = NULL;
-
 	// free all of our monitor information
 	while (win_monitor_list != NULL)
 	{
@@ -217,25 +210,23 @@ win_monitor_info *winvideo_monitor_from_handle(HMONITOR hmonitor)
 
 
 //============================================================
-//  osd_update
+//  update
 //============================================================
 
-void osd_update(running_machine *machine, int skip_redraw)
+void windows_osd_interface::update(bool skip_redraw)
 {
-	win_window_info *window;
-
 	// ping the watchdog on each update
 	winmain_watchdog_ping();
 
 	// if we're not skipping this redraw, update all windows
 	if (!skip_redraw)
-		for (window = win_window_list; window != NULL; window = window->next)
+		for (win_window_info *window = win_window_list; window != NULL; window = window->next)
 			winwindow_video_window_update(window);
 
 	// poll the joystick values here
-	winwindow_process_events(machine, TRUE);
-	wininput_poll(machine);
-	check_osd_inputs(machine);
+	winwindow_process_events(&machine(), TRUE);
+	wininput_poll(&machine());
+	check_osd_inputs(&machine());
 }
 
 
@@ -382,8 +373,8 @@ static void check_osd_inputs(running_machine *machine)
 		winwindow_toggle_full_screen();
 
 #ifdef MESS
-	// check for toggling menu bar
-	if (ui_input_pressed(machine, IPT_OSD_2))
+	// check for toggling menu bar (only if ui is active)
+	if (ui_input_pressed(machine, IPT_OSD_2) && machine->ui_active)
 		win_toggle_menubar();
 #endif
 }
@@ -407,9 +398,6 @@ static void extract_video_config(running_machine *machine)
 	// if we are in debug mode, never go full screen
 	if (machine->debug_flags & DEBUG_FLAG_OSD_ENABLED)
 		video_config.windowed = TRUE;
-	stemp                      = options_get_string(machine->options(), WINOPTION_EFFECT);
-	if (strcmp(stemp, "none") != 0)
-		load_effect_overlay(machine, stemp);
 
 	// per-window options: extract the data
 	get_resolution(WINOPTION_RESOLUTION0, &video_config.window[0], TRUE);
@@ -459,40 +447,6 @@ static void extract_video_config(running_machine *machine)
 	options_get_float(machine->options(), WINOPTION_FULLSCREENBRIGHTNESS);
 	options_get_float(machine->options(), WINOPTION_FULLLSCREENCONTRAST);
 	options_get_float(machine->options(), WINOPTION_FULLSCREENGAMMA);
-}
-
-
-
-//============================================================
-//  load_effect_overlay
-//============================================================
-
-static void load_effect_overlay(running_machine *machine, const char *filename)
-{
-	char *tempstr = global_alloc_array(char, strlen(filename) + 5);
-	char *dest;
-
-	// append a .PNG extension
-	strcpy(tempstr, filename);
-	dest = strrchr(tempstr, '.');
-	if (dest == NULL)
-		dest = &tempstr[strlen(tempstr)];
-	strcpy(dest, ".png");
-
-	// load the file
-	effect_bitmap = render_load_png(OPTION_ARTPATH, NULL, tempstr, NULL, NULL);
-	if (effect_bitmap == NULL)
-	{
-		mame_printf_error("Unable to load PNG file '%s'\n", tempstr);
-		global_free(tempstr);
-		return;
-	}
-
-	// set the overlay on all screens
-	for (screen_device *screen = screen_first(*machine); screen != NULL; screen = screen_next(screen))
-		render_container_set_overlay(render_container_get_screen(screen), effect_bitmap);
-
-	global_free(tempstr);
 }
 
 

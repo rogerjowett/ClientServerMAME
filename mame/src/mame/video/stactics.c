@@ -91,7 +91,7 @@ static PALETTE_INIT( stactics )
 
 WRITE8_HANDLER( stactics_scroll_ram_w )
 {
-	stactics_state *state = (stactics_state *)space->machine->driver_data;
+	stactics_state *state = space->machine->driver_data<stactics_state>();
 
 	if (data & 0x01)
 	{
@@ -114,7 +114,7 @@ WRITE8_HANDLER( stactics_scroll_ram_w )
 
 CUSTOM_INPUT( stactics_get_frame_count_d3 )
 {
-	stactics_state *state = (stactics_state *)field->port->machine->driver_data;
+	stactics_state *state = field->port->machine->driver_data<stactics_state>();
 
 	return (state->frame_count >> 3) & 0x01;
 }
@@ -129,7 +129,7 @@ CUSTOM_INPUT( stactics_get_frame_count_d3 )
 
 WRITE8_HANDLER( stactics_speed_latch_w )
 {
-	stactics_state *state = (stactics_state *)space->machine->driver_data;
+	stactics_state *state = space->machine->driver_data<stactics_state>();
 
 	/* This writes to a shift register which is clocked by   */
 	/* a 555 oscillator.  This value determines the speed of */
@@ -156,7 +156,7 @@ WRITE8_HANDLER( stactics_speed_latch_w )
 
 WRITE8_HANDLER( stactics_shot_trigger_w )
 {
-	stactics_state *state = (stactics_state *)space->machine->driver_data;
+	stactics_state *state = space->machine->driver_data<stactics_state>();
 
 	state->shot_standby = 0;
 }
@@ -164,7 +164,7 @@ WRITE8_HANDLER( stactics_shot_trigger_w )
 
 WRITE8_HANDLER( stactics_shot_flag_clear_w )
 {
-	stactics_state *state = (stactics_state *)space->machine->driver_data;
+	stactics_state *state = space->machine->driver_data<stactics_state>();
 
 	state->shot_arrive = 0;
 }
@@ -172,7 +172,7 @@ WRITE8_HANDLER( stactics_shot_flag_clear_w )
 
 CUSTOM_INPUT( stactics_get_shot_standby )
 {
-	stactics_state *state = (stactics_state *)field->port->machine->driver_data;
+	stactics_state *state = field->port->machine->driver_data<stactics_state>();
 
 	return state->shot_standby;
 }
@@ -180,7 +180,7 @@ CUSTOM_INPUT( stactics_get_shot_standby )
 
 CUSTOM_INPUT( stactics_get_not_shot_arrive )
 {
-	stactics_state *state = (stactics_state *)field->port->machine->driver_data;
+	stactics_state *state = field->port->machine->driver_data<stactics_state>();
 
 	return !state->shot_arrive;
 }
@@ -312,7 +312,7 @@ static void set_indicator_leds(int data, const char *output_name, int base_index
 static void update_artwork(running_machine *machine, stactics_state *state)
 {
 	int i;
-	UINT8 *beam_region = memory_region(machine, "user1");
+	UINT8 *beam_region = machine->region("user1")->base();
 
 	/* set the lamps first */
 	output_set_indexed_value("base_lamp", 4, state->lamps[0] & 0x01);
@@ -367,7 +367,7 @@ static void update_artwork(running_machine *machine, stactics_state *state)
 
 static VIDEO_START( stactics )
 {
-	stactics_state *state = (stactics_state *)machine->driver_data;
+	stactics_state *state = machine->driver_data<stactics_state>();
 
 	state->y_scroll_d = 0;
 	state->y_scroll_e = 0;
@@ -390,7 +390,7 @@ static VIDEO_START( stactics )
 
 static VIDEO_UPDATE( stactics )
 {
-	stactics_state *state = (stactics_state *)screen->machine->driver_data;
+	stactics_state *state = screen->machine->driver_data<stactics_state>();
 
 	update_beam(state);
 	draw_background(state, bitmap, cliprect);
@@ -409,20 +409,20 @@ static VIDEO_UPDATE( stactics )
  *
  *************************************/
 
-MACHINE_DRIVER_START( stactics_video )
+MACHINE_CONFIG_FRAGMENT( stactics_video )
 
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_ALWAYS_UPDATE)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_ALWAYS_UPDATE)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 0*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 0*8, 30*8-1)
 
-	MDRV_PALETTE_LENGTH(0x400)
+	MCFG_PALETTE_LENGTH(0x400)
 
-	MDRV_PALETTE_INIT(stactics)
-	MDRV_VIDEO_START(stactics)
-	MDRV_VIDEO_UPDATE(stactics)
-MACHINE_DRIVER_END
+	MCFG_PALETTE_INIT(stactics)
+	MCFG_VIDEO_START(stactics)
+	MCFG_VIDEO_UPDATE(stactics)
+MACHINE_CONFIG_END

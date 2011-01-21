@@ -1,3 +1,5 @@
+#define DISABLE_EMUALLOC
+
 #include "RakPeerInterface.h"
 #include "RakNetStatistics.h"
 #include "RakNetTypes.h"
@@ -90,12 +92,7 @@ RakNet::SystemAddress Common::ConnectBlocking(const char *defaultAddress, unsign
 
 void Common::setSecondsBetweenSync(int _secondsBetweenSync)
 {
-#ifdef MESS
-    //Disable syncing on MESS because save states are unsupported
-    secondsBetweenSync = 0;
-#else
     secondsBetweenSync = _secondsBetweenSync;
-#endif
 }
 
 int Common::getLargestPing()
@@ -106,6 +103,11 @@ int Common::getLargestPing()
         largestPing = max(rakInterface->GetAveragePing(rakInterface->GetSystemAddressFromIndex(a)),largestPing);
     }
     return largestPing;
+}
+
+void Common::destroyConstBlock(int i)
+{
+  constBlocks.erase(constBlocks.begin()+i);
 }
 
 string Common::getLatencyString(int peerID)
@@ -119,7 +121,7 @@ string Common::getLatencyString(int peerID)
         if(it->second==peerID)
         {
             char buf[4096];
-            sprintf(buf,"Client %d Ping: %d ms", peerID, rakInterface->GetAveragePing(it->first));
+            sprintf(buf,"Peer %d: %d ms", peerID, rakInterface->GetAveragePing(it->first));
             return string(buf);
         }
     }
@@ -135,8 +137,30 @@ string Common::getStatisticsString()
     {
         char message[4096];
         rss=rakInterface->GetStatistics(rakInterface->GetSystemAddressFromIndex(a));
-        StatisticsToString(rss, message, 0);
+        sprintf(
+                message,
+                "Sent: %"PRINTF_64_BIT_MODIFIER"u\n"
+                "Recv: %"PRINTF_64_BIT_MODIFIER"u\n"
+                "Loss: %.0f%%\n",
+                rss->valueOverLastSecond[RakNet::ACTUAL_BYTES_SENT],
+                rss->valueOverLastSecond[RakNet::ACTUAL_BYTES_RECEIVED],
+                rss->packetlossLastSecond
+                );
         retval += string(message) + string("\n");
+    }
+    return retval;
+}
+
+vector<int> Common::getPeerIDs()
+{
+    vector<int> retval;
+    for(
+        std::map<RakNet::SystemAddress,int>::iterator it = peerIDs.begin();
+        it != peerIDs.end();
+        it++
+        )
+    {
+        retval.push_back(it->second);
     }
     return retval;
 }
@@ -211,8 +235,20 @@ string Common::popInputBuffer(int clientIndex)
     if(peerInputs[peerID].empty())
         return string("");
 
-    string retval = peerInputs[peerID].back();
+    string retval = peerInputs[peerID].front();
     oldPeerInputs[peerID].push_back(retval);
-    peerInputs[peerID].pop_back();
+    peerInputs[peerID].erase(peerInputs[peerID].begin());
+    return retval;
+}
+
+string Common::popSelfInputBuffer()
+{
+    int peerID = selfPeerID;
+    if(peerInputs[peerID].empty())
+        return string("");
+
+    string retval = peerInputs[peerID].front();
+    oldPeerInputs[peerID].push_back(retval);
+    peerInputs[peerID].erase(peerInputs[peerID].begin());
     return retval;
 }

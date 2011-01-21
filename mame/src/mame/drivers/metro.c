@@ -112,7 +112,7 @@ driver modified by Eisuke Watanabe
 
 static READ16_HANDLER( metro_irq_cause_r )
 {
-	metro_state *state = (metro_state *)space->machine->driver_data;
+	metro_state *state = space->machine->driver_data<metro_state>();
 
 	return	state->requested_int[0] * 0x01 +	// vblank
 			state->requested_int[1] * 0x02 +
@@ -128,8 +128,8 @@ static READ16_HANDLER( metro_irq_cause_r )
 /* Update the IRQ state based on all possible causes */
 static void update_irq_state( running_machine *machine )
 {
-	metro_state *state = (metro_state *)machine->driver_data;
-	const address_space *space = cpu_get_address_space(state->maincpu, ADDRESS_SPACE_PROGRAM);
+	metro_state *state = machine->driver_data<metro_state>();
+	address_space *space = cpu_get_address_space(state->maincpu, ADDRESS_SPACE_PROGRAM);
 
 	/*  Get the pending IRQs (only the enabled ones, e.g. where irq_enable is *0*)  */
 	UINT16 irq = metro_irq_cause_r(space, 0, 0xffff) & ~*state->irq_enable;
@@ -161,7 +161,7 @@ static void update_irq_state( running_machine *machine )
 /* For games that supply an *IRQ Vector* on the data bus */
 static IRQ_CALLBACK( metro_irq_callback )
 {
-	metro_state *state = (metro_state *)device->machine->driver_data;
+	metro_state *state = device->machine->driver_data<metro_state>();
 
 	// logerror("%s: irq callback returns %04X\n", cpuexec_describe_context(device->machine), state->irq_vectors[int_level]);
 	return state->irq_vectors[irqline] & 0xff;
@@ -170,7 +170,7 @@ static IRQ_CALLBACK( metro_irq_callback )
 
 static WRITE16_HANDLER( metro_irq_cause_w )
 {
-	metro_state *state = (metro_state *)space->machine->driver_data;
+	metro_state *state = space->machine->driver_data<metro_state>();
 
 	//if (data & ~0x15) logerror("CPU #0 PC %06X : unknown bits of irqcause written: %04X\n", cpu_get_pc(space->cpu), data);
 
@@ -194,7 +194,7 @@ static WRITE16_HANDLER( metro_irq_cause_w )
 
 static INTERRUPT_GEN( metro_interrupt )
 {
-	metro_state *state = (metro_state *)device->machine->driver_data;
+	metro_state *state = device->machine->driver_data<metro_state>();
 
 	switch (cpu_getiloops(device))
 	{
@@ -213,7 +213,7 @@ static INTERRUPT_GEN( metro_interrupt )
 /* Lev 1. Lev 2 seems sound related */
 static INTERRUPT_GEN( bangball_interrupt )
 {
-	metro_state *state = (metro_state *)device->machine->driver_data;
+	metro_state *state = device->machine->driver_data<metro_state>();
 
 	state->requested_int[0] = 1;	// set scroll regs if a flag is set
 	state->requested_int[4] = 1;	// clear that flag
@@ -222,7 +222,7 @@ static INTERRUPT_GEN( bangball_interrupt )
 
 static INTERRUPT_GEN( msgogo_interrupt )
 {
-    metro_state *state = (metro_state *)device->machine->driver_data;
+    metro_state *state = device->machine->driver_data<metro_state>();
 
     switch (cpu_getiloops(device))
     {
@@ -241,14 +241,14 @@ static INTERRUPT_GEN( msgogo_interrupt )
 
 static TIMER_CALLBACK( vblank_end_callback )
 {
-	metro_state *state = (metro_state *)machine->driver_data;
+	metro_state *state = machine->driver_data<metro_state>();
 	state->requested_int[5] = param;
 }
 
 /* lev 2-7 (lev 1 seems sound related) */
 static INTERRUPT_GEN( karatour_interrupt )
 {
-	metro_state *state = (metro_state *)device->machine->driver_data;
+	metro_state *state = device->machine->driver_data<metro_state>();
 
 	switch (cpu_getiloops(device))
 	{
@@ -270,7 +270,7 @@ static INTERRUPT_GEN( karatour_interrupt )
 
 static TIMER_CALLBACK( mouja_irq_callback )
 {
-	metro_state *state = (metro_state *)machine->driver_data;
+	metro_state *state = machine->driver_data<metro_state>();
 
 	state->requested_int[0] = 1;
 	update_irq_state(machine);
@@ -278,7 +278,7 @@ static TIMER_CALLBACK( mouja_irq_callback )
 
 static WRITE16_HANDLER( mouja_irq_timer_ctrl_w )
 {
-	metro_state *state = (metro_state *)space->machine->driver_data;
+	metro_state *state = space->machine->driver_data<metro_state>();
 	double freq = 58.0 + (0xff - (data & 0xff)) / 2.2;					/* 0xff=58Hz, 0x80=116Hz? */
 
 	timer_adjust_periodic(state->mouja_irq_timer, attotime_zero, 0, ATTOTIME_IN_HZ(freq));
@@ -286,7 +286,7 @@ static WRITE16_HANDLER( mouja_irq_timer_ctrl_w )
 
 static INTERRUPT_GEN( mouja_interrupt )
 {
-	metro_state *state = (metro_state *)device->machine->driver_data;
+	metro_state *state = device->machine->driver_data<metro_state>();
 
 	state->requested_int[1] = 1;
 	update_irq_state(device->machine);
@@ -295,7 +295,7 @@ static INTERRUPT_GEN( mouja_interrupt )
 
 static INTERRUPT_GEN( gakusai_interrupt )
 {
-	metro_state *state = (metro_state *)device->machine->driver_data;
+	metro_state *state = device->machine->driver_data<metro_state>();
 
 	switch (cpu_getiloops(device))
 	{
@@ -308,7 +308,7 @@ static INTERRUPT_GEN( gakusai_interrupt )
 
 static INTERRUPT_GEN( dokyusei_interrupt )
 {
-	metro_state *state = (metro_state *)device->machine->driver_data;
+	metro_state *state = device->machine->driver_data<metro_state>();
 
 	switch (cpu_getiloops(device))
 	{
@@ -323,9 +323,9 @@ static INTERRUPT_GEN( dokyusei_interrupt )
 	}
 }
 
-static void ymf278b_interrupt( running_device *device, int active )
+static void ymf278b_interrupt( device_t *device, int active )
 {
-	metro_state *state = (metro_state *)device->machine->driver_data;
+	metro_state *state = device->machine->driver_data<metro_state>();
 	cpu_set_input_line(state->maincpu, 2, active);
 }
 
@@ -337,10 +337,10 @@ static void ymf278b_interrupt( running_device *device, int active )
 
 ***************************************************************************/
 
-static int metro_io_callback( running_device *device, int ioline, int state )
+static int metro_io_callback( device_t *device, int ioline, int state )
 {
-	metro_state *driver_state = (metro_state *)device->machine->driver_data;
-	const address_space *space = cpu_get_address_space(driver_state->maincpu, ADDRESS_SPACE_PROGRAM);
+	metro_state *driver_state = device->machine->driver_data<metro_state>();
+	address_space *space = cpu_get_address_space(driver_state->maincpu, ADDRESS_SPACE_PROGRAM);
 	UINT8 data = 0;
 
 	switch (ioline)
@@ -359,7 +359,7 @@ static int metro_io_callback( running_device *device, int ioline, int state )
 
 static WRITE16_HANDLER( metro_soundlatch_w )
 {
-	metro_state *state = (metro_state *)space->machine->driver_data;
+	metro_state *state = space->machine->driver_data<metro_state>();
 
 	if (ACCESSING_BITS_0_7)
 	{
@@ -373,19 +373,19 @@ static WRITE16_HANDLER( metro_soundlatch_w )
 
 static READ16_HANDLER( metro_soundstatus_r )
 {
-	metro_state *state = (metro_state *)space->machine->driver_data;
+	metro_state *state = space->machine->driver_data<metro_state>();
 	return (state->busy_sndcpu ? 0x00 : 0x01);
 }
 
 static CUSTOM_INPUT( custom_soundstatus_r )
 {
-	metro_state *state = (metro_state *)field->port->machine->driver_data;
+	metro_state *state = field->port->machine->driver_data<metro_state>();
 	return (state->busy_sndcpu ? 0x01 : 0x00);
 }
 
 static WRITE16_HANDLER( metro_soundstatus_w )
 {
-	metro_state *state = (metro_state *)space->machine->driver_data;
+	metro_state *state = space->machine->driver_data<metro_state>();
 
 	if (ACCESSING_BITS_0_7)
 		state->soundstatus = data & 0x01;
@@ -395,7 +395,7 @@ static WRITE16_HANDLER( metro_soundstatus_w )
 static WRITE8_HANDLER( metro_sound_rombank_w )
 {
 	int bankaddress;
-	UINT8 *ROM = memory_region(space->machine, "audiocpu");
+	UINT8 *ROM = space->machine->region("audiocpu")->base();
 
 	bankaddress = 0x10000-0x4000 + ((data >> 4) & 0x03) * 0x4000;
 	if (bankaddress < 0x10000) bankaddress = 0x0000;
@@ -406,7 +406,7 @@ static WRITE8_HANDLER( metro_sound_rombank_w )
 static WRITE8_HANDLER( daitorid_sound_rombank_w )
 {
 	int bankaddress;
-	UINT8 *ROM = memory_region(space->machine, "audiocpu");
+	UINT8 *ROM = space->machine->region("audiocpu")->base();
 
 	bankaddress = 0x10000-0x4000 + ((data >> 4) & 0x07) * 0x4000;
 	if (bankaddress < 0x10000) bankaddress = 0x10000;
@@ -417,13 +417,13 @@ static WRITE8_HANDLER( daitorid_sound_rombank_w )
 
 static READ8_HANDLER( metro_porta_r )
 {
-	metro_state *state = (metro_state *)space->machine->driver_data;
+	metro_state *state = space->machine->driver_data<metro_state>();
 	return state->porta;
 }
 
 static WRITE8_HANDLER( metro_porta_w )
 {
-	metro_state *state = (metro_state *)space->machine->driver_data;
+	metro_state *state = space->machine->driver_data<metro_state>();
 	state->porta = data;
 }
 
@@ -440,7 +440,7 @@ static WRITE8_HANDLER( metro_portb_w )
        0
     */
 
-	metro_state *state = (metro_state *)space->machine->driver_data;
+	metro_state *state = space->machine->driver_data<metro_state>();
 
 	if (BIT(state->portb, 7) && !BIT(data, 7))	/* clock 1->0 */
 	{
@@ -463,7 +463,7 @@ static WRITE8_HANDLER( metro_portb_w )
 	{
 		/* write */
 		if (!BIT(data, 4))
-			okim6295_w(state->oki, 0, state->porta);
+			state->oki->write(*space, 0, state->porta);
 	}
 
 	state->portb = data;
@@ -482,7 +482,7 @@ static WRITE8_HANDLER( daitorid_portb_w )
        1 select YM2151 register or data port
        0
     */
-	metro_state *state = (metro_state *)space->machine->driver_data;
+	metro_state *state = space->machine->driver_data<metro_state>();
 
 	if (BIT(state->portb, 7) && !BIT(data, 7))	/* clock 1->0 */
 	{
@@ -513,22 +513,22 @@ static WRITE8_HANDLER( daitorid_portb_w )
 	{
 		/* write */
 		if (!BIT(data, 4))
-			okim6295_w(state->oki, 0, state->porta);
+			state->oki->write(*space, 0, state->porta);
 	}
 
 	if (BIT(state->portb, 3) && !BIT(data, 3))	/* clock 1->0 */
 	{
 		/* read */
 		if (!BIT(data, 4))
-			state->porta = okim6295_r(state->oki, 0);
+			state->porta = state->oki->read(*space, 0);
 	}
 
 	state->portb = data;
 }
 
-static void metro_sound_irq_handler( running_device *device, int state )
+static void metro_sound_irq_handler( device_t *device, int state )
 {
-	metro_state *driver_state = (metro_state *)device->machine->driver_data;
+	metro_state *driver_state = device->machine->driver_data<metro_state>();
 	cpu_set_input_line(driver_state->audiocpu, UPD7810_INTF2, state ? ASSERT_LINE : CLEAR_LINE);
 }
 
@@ -592,9 +592,9 @@ static WRITE16_HANDLER( metro_coin_lockout_4words_w )
 
 static READ16_HANDLER( metro_bankedrom_r )
 {
-	metro_state *state = (metro_state *)space->machine->driver_data;
-	UINT8 *ROM = memory_region(space->machine, "gfx1");
-	size_t len = memory_region_length(space->machine, "gfx1");
+	metro_state *state = space->machine->driver_data<metro_state>();
+	UINT8 *ROM = space->machine->region("gfx1")->base();
+	size_t len = space->machine->region("gfx1")->bytes();
 
 	offset = offset * 2 + 0x10000 * (*state->rombank);
 
@@ -655,7 +655,7 @@ static READ16_HANDLER( metro_bankedrom_r )
 
 static TIMER_CALLBACK( metro_blit_done )
 {
-	metro_state *state = (metro_state *)machine->driver_data;
+	metro_state *state = machine->driver_data<metro_state>();
 	state->requested_int[state->blitter_bit] = 1;
 	update_irq_state(machine);
 }
@@ -665,7 +665,7 @@ INLINE int blt_read( const UINT8 *ROM, const int offs )
 	return ROM[offs];
 }
 
-INLINE void blt_write( const address_space *space, const int tmap, const offs_t offs, const UINT16 data, const UINT16 mask )
+INLINE void blt_write( address_space *space, const int tmap, const offs_t offs, const UINT16 data, const UINT16 mask )
 {
 	switch(tmap)
 	{
@@ -679,13 +679,13 @@ INLINE void blt_write( const address_space *space, const int tmap, const offs_t 
 
 static WRITE16_HANDLER( metro_blitter_w )
 {
-	metro_state *state = (metro_state *)space->machine->driver_data;
+	metro_state *state = space->machine->driver_data<metro_state>();
 	COMBINE_DATA(&state->blitter_regs[offset]);
 
 	if (offset == 0x0c / 2)
 	{
-		UINT8 *src     = memory_region(space->machine, "gfx1");
-		size_t src_len = memory_region_length(space->machine, "gfx1");
+		UINT8 *src     = space->machine->region("gfx1")->base();
+		size_t src_len = space->machine->region("gfx1")->bytes();
 
 		UINT32 tmap     = (state->blitter_regs[0x00 / 2] << 16) + state->blitter_regs[0x02 / 2];
 		UINT32 src_offs = (state->blitter_regs[0x04 / 2] << 16) + state->blitter_regs[0x06 / 2];
@@ -1120,7 +1120,7 @@ ADDRESS_MAP_END
 #define KARATOUR_VRAM( _n_ ) \
 static READ16_HANDLER( karatour_vram_##_n_##_r ) \
 { \
-	metro_state *state = (metro_state *)space->machine->driver_data; \
+	metro_state *state = space->machine->driver_data<metro_state>(); \
 	return state->vram_##_n_[KARATOUR_OFFS(offset)]; \
 } \
 static WRITE16_HANDLER( karatour_vram_##_n_##_w ) \
@@ -1270,16 +1270,16 @@ ADDRESS_MAP_END
                                 Mahjong Gakuensai
 ***************************************************************************/
 
-static void gakusai_oki_bank_set(running_device *device)
+static void gakusai_oki_bank_set(device_t *device)
 {
-	metro_state *state = (metro_state *)device->machine->driver_data;
+	metro_state *state = device->machine->driver_data<metro_state>();
 	int bank = (state->gakusai_oki_bank_lo & 7) + (state->gakusai_oki_bank_hi & 1) * 8;
 	downcast<okim6295_device *>(device)->set_bank_base(bank * 0x40000);
 }
 
 static WRITE16_DEVICE_HANDLER( gakusai_oki_bank_hi_w )
 {
-	metro_state *state = (metro_state *)device->machine->driver_data;
+	metro_state *state = device->machine->driver_data<metro_state>();
 
 	if (ACCESSING_BITS_0_7)
 	{
@@ -1290,7 +1290,7 @@ static WRITE16_DEVICE_HANDLER( gakusai_oki_bank_hi_w )
 
 static WRITE16_DEVICE_HANDLER( gakusai_oki_bank_lo_w )
 {
-	metro_state *state = (metro_state *)device->machine->driver_data;
+	metro_state *state = device->machine->driver_data<metro_state>();
 
 	if (ACCESSING_BITS_0_7)
 	{
@@ -1302,7 +1302,7 @@ static WRITE16_DEVICE_HANDLER( gakusai_oki_bank_lo_w )
 
 static READ16_HANDLER( gakusai_input_r )
 {
-	metro_state *state = (metro_state *)space->machine->driver_data;
+	metro_state *state = space->machine->driver_data<metro_state>();
 	UINT16 input_sel = (*state->input_sel) ^ 0x3e;
 	// Bit 0 ??
 	if (input_sel & 0x0002)	return input_port_read(space->machine, "KEY0");
@@ -1360,7 +1360,7 @@ static ADDRESS_MAP_START( gakusai_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x400000, 0x400001) AM_WRITENOP										// ? 5
 	AM_RANGE(0x500000, 0x500001) AM_DEVWRITE("oki", gakusai_oki_bank_lo_w)					// Sound
 	AM_RANGE(0x600000, 0x600003) AM_DEVWRITE8("ymsnd", ym2413_w, 0x00ff)
-	AM_RANGE(0x700000, 0x700001) AM_DEVREADWRITE8("oki", okim6295_r,okim6295_w, 0x00ff)			// Sound
+	AM_RANGE(0x700000, 0x700001) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0x00ff)			// Sound
 	AM_RANGE(0xc00000, 0xc00001) AM_DEVREADWRITE("eeprom", gakusai_eeprom_r, gakusai_eeprom_w)	// EEPROM
 	AM_RANGE(0xd00000, 0xd00001) AM_DEVWRITE("oki", gakusai_oki_bank_hi_w)
 ADDRESS_MAP_END
@@ -1398,7 +1398,7 @@ static ADDRESS_MAP_START( gakusai2_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x800000, 0x800001) AM_WRITENOP										// ? 5
 	AM_RANGE(0x900000, 0x900001) AM_DEVWRITE("oki", gakusai_oki_bank_lo_w)					// Sound bank
 	AM_RANGE(0xa00000, 0xa00001) AM_DEVWRITE("oki", gakusai_oki_bank_hi_w)
-	AM_RANGE(0xb00000, 0xb00001) AM_DEVREADWRITE8("oki", okim6295_r,okim6295_w, 0x00ff)			// Sound
+	AM_RANGE(0xb00000, 0xb00001) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0x00ff)			// Sound
 	AM_RANGE(0xc00000, 0xc00003) AM_DEVWRITE8("ymsnd", ym2413_w, 0x00ff)
 	AM_RANGE(0xe00000, 0xe00001) AM_DEVREADWRITE("eeprom", gakusai_eeprom_r,gakusai_eeprom_w)		// EEPROM
 ADDRESS_MAP_END
@@ -1466,7 +1466,7 @@ static ADDRESS_MAP_START( dokyusp_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x400000, 0x400001) AM_WRITENOP										// ? 5
 	AM_RANGE(0x500000, 0x500001) AM_DEVWRITE("oki", gakusai_oki_bank_lo_w)					// Sound
 	AM_RANGE(0x600000, 0x600003) AM_DEVWRITE8("ymsnd", ym2413_w, 0x00ff)
-	AM_RANGE(0x700000, 0x700001) AM_DEVREADWRITE8("oki", okim6295_r, okim6295_w, 0x00ff)		// Sound
+	AM_RANGE(0x700000, 0x700001) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0x00ff)		// Sound
 	AM_RANGE(0xc00000, 0xc00001) AM_DEVWRITE("eeprom", dokyusp_eeprom_reset_w)				// EEPROM
 	AM_RANGE(0xd00000, 0xd00001) AM_DEVREADWRITE("eeprom", dokyusp_eeprom_r, dokyusp_eeprom_bit_w)	// EEPROM
 ADDRESS_MAP_END
@@ -1508,7 +1508,7 @@ static ADDRESS_MAP_START( dokyusei_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x900000, 0x900001) AM_WRITENOP										// ? 4
 	AM_RANGE(0xa00000, 0xa00001) AM_DEVWRITE("oki", gakusai_oki_bank_lo_w)					// Samples Bank
 	AM_RANGE(0xc00000, 0xc00003) AM_DEVWRITE8("ymsnd", ym2413_w, 0x00ff)					//
-	AM_RANGE(0xd00000, 0xd00001) AM_DEVREADWRITE8("oki", okim6295_r, okim6295_w, 0x00ff)		// Sound
+	AM_RANGE(0xd00000, 0xd00001) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0x00ff)		// Sound
 ADDRESS_MAP_END
 
 
@@ -1691,7 +1691,7 @@ ADDRESS_MAP_END
 
 static WRITE16_HANDLER( blzntrnd_sound_w )
 {
-	metro_state *state = (metro_state *)space->machine->driver_data;
+	metro_state *state = space->machine->driver_data<metro_state>();
 
 	soundlatch_w(space, offset, data >> 8);
 	cpu_set_input_line(state->audiocpu, INPUT_LINE_NMI, PULSE_LINE);
@@ -1699,16 +1699,16 @@ static WRITE16_HANDLER( blzntrnd_sound_w )
 
 static WRITE8_HANDLER( blzntrnd_sh_bankswitch_w )
 {
-	UINT8 *RAM = memory_region(space->machine, "audiocpu");
+	UINT8 *RAM = space->machine->region("audiocpu")->base();
 	int bankaddress;
 
 	bankaddress = 0x10000 + (data & 0x03) * 0x4000;
 	memory_set_bankptr(space->machine, "bank1", &RAM[bankaddress]);
 }
 
-static void blzntrnd_irqhandler(running_device *device, int irq)
+static void blzntrnd_irqhandler(device_t *device, int irq)
 {
-	metro_state *state = (metro_state *)device->machine->driver_data;
+	metro_state *state = device->machine->driver_data<metro_state>();
 	cpu_set_input_line(state->audiocpu, 0, irq ? ASSERT_LINE : CLEAR_LINE);
 }
 
@@ -1769,7 +1769,7 @@ ADDRESS_MAP_END
 
 static WRITE16_DEVICE_HANDLER( mouja_sound_rombank_w )
 {
-	metro_state *state = (metro_state *)device->machine->driver_data;
+	metro_state *state = device->machine->driver_data<metro_state>();
 
 	if (ACCESSING_BITS_0_7)
 		state->oki->set_bank_base(((data >> 3) & 0x07) * 0x40000);
@@ -1801,7 +1801,7 @@ static ADDRESS_MAP_START( mouja_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x479700, 0x479713) AM_WRITEONLY AM_BASE_MEMBER(metro_state, videoregs)			// Video Registers
 	AM_RANGE(0x800000, 0x800001) AM_DEVWRITE("oki", mouja_sound_rombank_w)
 	AM_RANGE(0xc00000, 0xc00003) AM_DEVWRITE8("ymsnd", ym2413_w, 0x00ff)
-	AM_RANGE(0xd00000, 0xd00001) AM_DEVREADWRITE8("oki", okim6295_r,okim6295_w, 0xffff)
+	AM_RANGE(0xd00000, 0xd00001) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0xffff)
 #if 0
 	AM_RANGE(0x460000, 0x46ffff) AM_READ(metro_bankedrom_r)							// Banked ROM
 	AM_RANGE(0x478840, 0x47884d) AM_WRITE(metro_blitter_w) AM_BASE_MEMBER(metro_state, blitter_regs)	// Tiles Blitter
@@ -1817,7 +1817,7 @@ ADDRESS_MAP_END
 
 static WRITE16_HANDLER( puzzlet_irq_enable_w )
 {
-	metro_state *state = (metro_state *)space->machine->driver_data;
+	metro_state *state = space->machine->driver_data<metro_state>();
 
 	if (ACCESSING_BITS_0_7)
 		*state->irq_enable = data ^ 0xffff;
@@ -1827,7 +1827,7 @@ static WRITE16_HANDLER( puzzlet_irq_enable_w )
 static WRITE16_HANDLER( vram_0_clr_w )
 {
 	static int i;
-	metro_state *state = (metro_state *)space->machine->driver_data;
+	metro_state *state = space->machine->driver_data<metro_state>();
 
 //  printf("0 %04x %04x\n",offset,data);
 	for(i=0;i<0x20/2;i++)
@@ -1837,7 +1837,7 @@ static WRITE16_HANDLER( vram_0_clr_w )
 static WRITE16_HANDLER( vram_1_clr_w )
 {
 	static int i;
-	metro_state *state = (metro_state *)space->machine->driver_data;
+	metro_state *state = space->machine->driver_data<metro_state>();
 
 //  printf("0 %04x %04x\n",offset,data);
 	for(i=0;i<0x20/2;i++)
@@ -1847,7 +1847,7 @@ static WRITE16_HANDLER( vram_1_clr_w )
 static WRITE16_HANDLER( vram_2_clr_w )
 {
 	static int i;
-	metro_state *state = (metro_state *)space->machine->driver_data;
+	metro_state *state = space->machine->driver_data<metro_state>();
 
 //  printf("0 %04x %04x\n",offset,data);
 	for(i=0;i<0x20/2;i++)
@@ -1861,7 +1861,7 @@ static ADDRESS_MAP_START( puzzlet_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x430000, 0x433fff) AM_RAM
 	AM_RANGE(0x470000, 0x47dfff) AM_RAM
 
-	AM_RANGE(0x500000, 0x500001) AM_DEVREADWRITE8("oki", okim6295_r, okim6295_w, 0xff00)
+	AM_RANGE(0x500000, 0x500001) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0xff00)
 	AM_RANGE(0x580000, 0x580003) AM_DEVWRITE8("ymsnd", ym2413_w, 0xff00)
 
 	AM_RANGE(0x700000, 0x71ffff) AM_RAM_WRITE(metro_vram_0_w) AM_BASE_MEMBER(metro_state, vram_0)	// Layer 0
@@ -2390,7 +2390,7 @@ static INPUT_PORTS_START( gstrik2 )
 	PORT_DIPNAME( 0x0040, 0x0040, DEF_STR( Unknown ) )
 	PORT_DIPSETTING(      0x0040, DEF_STR( Off ) )
 	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
-	PORT_DIPNAME( 0x0080, 0x0080, "Extra Time" )
+	PORT_DIPNAME( 0x0080, 0x0080, "Time Period" )
 	PORT_DIPSETTING(      0x0080, "Sudden Death" )
 	PORT_DIPSETTING(      0x0000, "Full" )
 	PORT_DIPNAME( 0x0700, 0x0400, DEF_STR( Difficulty ) )
@@ -3032,7 +3032,7 @@ static INPUT_PORTS_START( mouja )
 	PORT_DIPNAME( 0x0002, 0x0002, DEF_STR( Flip_Screen ) )
 	PORT_DIPSETTING(      0x0002, DEF_STR( Off ) )
 	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
-	PORT_DIPNAME( 0x0004, 0x0004, DEF_STR( Service_Mode ) )
+	PORT_DIPNAME( 0x0004, 0x0004, "Test Mode" )
 	PORT_DIPSETTING(      0x0004, DEF_STR( Off ) )
 	PORT_DIPSETTING(      0x0000, DEF_STR( On ) )
 	PORT_DIPNAME( 0x0008, 0x0000, DEF_STR( Demo_Sounds ) )
@@ -3577,7 +3577,7 @@ GFXDECODE_END
 
 static MACHINE_START( metro )
 {
-	metro_state *state = (metro_state *)machine->driver_data;
+	metro_state *state = machine->driver_data<metro_state>();
 
 	state_save_register_global(machine, state->blitter_bit);
 	state_save_register_global(machine, state->irq_line);
@@ -3596,7 +3596,7 @@ static MACHINE_START( metro )
 
 static MACHINE_RESET( metro )
 {
-	metro_state *state = (metro_state *)machine->driver_data;
+	metro_state *state = machine->driver_data<metro_state>();
 
 	if (state->irq_line == -1)
 		cpu_set_irq_callback(machine->device("maincpu"), metro_irq_callback);
@@ -3609,885 +3609,822 @@ static const UPD7810_CONFIG metro_cpu_config =
 	metro_io_callback
 };
 
-static MACHINE_DRIVER_START( balcube )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(metro_state)
+static MACHINE_CONFIG_START( balcube, metro_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 16000000)
-	MDRV_CPU_PROGRAM_MAP(balcube_map)
-	MDRV_CPU_VBLANK_INT_HACK(metro_interrupt,10)	/* ? */
+	MCFG_CPU_ADD("maincpu", M68000, 16000000)
+	MCFG_CPU_PROGRAM_MAP(balcube_map)
+	MCFG_CPU_VBLANK_INT_HACK(metro_interrupt,10)	/* ? */
 
-	MDRV_MACHINE_START(metro)
-	MDRV_MACHINE_RESET(metro)
+	MCFG_MACHINE_START(metro)
+	MCFG_MACHINE_RESET(metro)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(320, 224)
-	MDRV_SCREEN_VISIBLE_AREA(0, 320-1, 0, 224-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(320, 224)
+	MCFG_SCREEN_VISIBLE_AREA(0, 320-1, 0, 224-1)
 
-	MDRV_GFXDECODE(14220)
-	MDRV_PALETTE_LENGTH(8192)
+	MCFG_GFXDECODE(14220)
+	MCFG_PALETTE_LENGTH(8192)
 
-	MDRV_VIDEO_START(metro_14220)
-	MDRV_VIDEO_UPDATE(metro)
+	MCFG_VIDEO_START(metro_14220)
+	MCFG_VIDEO_UPDATE(metro)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymf", YMF278B, YMF278B_STD_CLOCK)
-	MDRV_SOUND_CONFIG(ymf278b_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymf", YMF278B, YMF278B_STD_CLOCK)
+	MCFG_SOUND_CONFIG(ymf278b_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( daitoa )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(metro_state)
+static MACHINE_CONFIG_START( daitoa, metro_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 16000000)
-	MDRV_CPU_PROGRAM_MAP(daitoa_map)
-	MDRV_CPU_VBLANK_INT_HACK(metro_interrupt,10)	/* ? */
+	MCFG_CPU_ADD("maincpu", M68000, 16000000)
+	MCFG_CPU_PROGRAM_MAP(daitoa_map)
+	MCFG_CPU_VBLANK_INT_HACK(metro_interrupt,10)	/* ? */
 
-	MDRV_MACHINE_START(metro)
-	MDRV_MACHINE_RESET(metro)
+	MCFG_MACHINE_START(metro)
+	MCFG_MACHINE_RESET(metro)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(320, 224)
-	MDRV_SCREEN_VISIBLE_AREA(0, 320-1, 0, 224-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(320, 224)
+	MCFG_SCREEN_VISIBLE_AREA(0, 320-1, 0, 224-1)
 
-	MDRV_GFXDECODE(14220)
-	MDRV_PALETTE_LENGTH(8192)
+	MCFG_GFXDECODE(14220)
+	MCFG_PALETTE_LENGTH(8192)
 
-	MDRV_VIDEO_START(metro_14220)
-	MDRV_VIDEO_UPDATE(metro)
+	MCFG_VIDEO_START(metro_14220)
+	MCFG_VIDEO_UPDATE(metro)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymf", YMF278B, YMF278B_STD_CLOCK)
-	MDRV_SOUND_CONFIG(ymf278b_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymf", YMF278B, YMF278B_STD_CLOCK)
+	MCFG_SOUND_CONFIG(ymf278b_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( msgogo )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(metro_state)
+static MACHINE_CONFIG_START( msgogo, metro_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 16000000)
-	MDRV_CPU_PROGRAM_MAP(msgogo_map)
-	MDRV_CPU_VBLANK_INT_HACK(msgogo_interrupt,262)    /* ? */
+	MCFG_CPU_ADD("maincpu", M68000, 16000000)
+	MCFG_CPU_PROGRAM_MAP(msgogo_map)
+	MCFG_CPU_VBLANK_INT_HACK(msgogo_interrupt,262)    /* ? */
 
-	MDRV_MACHINE_START(metro)
-	MDRV_MACHINE_RESET(metro)
+	MCFG_MACHINE_START(metro)
+	MCFG_MACHINE_RESET(metro)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(320, 224)
-	MDRV_SCREEN_VISIBLE_AREA(0, 320-1, 0, 224-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(320, 224)
+	MCFG_SCREEN_VISIBLE_AREA(0, 320-1, 0, 224-1)
 
-	MDRV_GFXDECODE(14220)
-	MDRV_PALETTE_LENGTH(8192)
+	MCFG_GFXDECODE(14220)
+	MCFG_PALETTE_LENGTH(8192)
 
-	MDRV_VIDEO_START(metro_14220)
-	MDRV_VIDEO_UPDATE(metro)
+	MCFG_VIDEO_START(metro_14220)
+	MCFG_VIDEO_UPDATE(metro)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymf", YMF278B, YMF278B_STD_CLOCK)
-	MDRV_SOUND_CONFIG(ymf278b_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymf", YMF278B, YMF278B_STD_CLOCK)
+	MCFG_SOUND_CONFIG(ymf278b_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( bangball )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(metro_state)
+static MACHINE_CONFIG_START( bangball, metro_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 16000000)
-	MDRV_CPU_PROGRAM_MAP(bangball_map)
-	MDRV_CPU_VBLANK_INT("screen", bangball_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, 16000000)
+	MCFG_CPU_PROGRAM_MAP(bangball_map)
+	MCFG_CPU_VBLANK_INT("screen", bangball_interrupt)
 
-	MDRV_MACHINE_START(metro)
-	MDRV_MACHINE_RESET(metro)
+	MCFG_MACHINE_START(metro)
+	MCFG_MACHINE_RESET(metro)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(320, 224)
-	MDRV_SCREEN_VISIBLE_AREA(0, 320-1, 0, 224-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(320, 224)
+	MCFG_SCREEN_VISIBLE_AREA(0, 320-1, 0, 224-1)
 
-	MDRV_GFXDECODE(14220)
-	MDRV_PALETTE_LENGTH(8192)
+	MCFG_GFXDECODE(14220)
+	MCFG_PALETTE_LENGTH(8192)
 
-	MDRV_VIDEO_START(metro_14220)
-	MDRV_VIDEO_UPDATE(metro)
+	MCFG_VIDEO_START(metro_14220)
+	MCFG_VIDEO_UPDATE(metro)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymf", YMF278B, YMF278B_STD_CLOCK)
-	MDRV_SOUND_CONFIG(ymf278b_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymf", YMF278B, YMF278B_STD_CLOCK)
+	MCFG_SOUND_CONFIG(ymf278b_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( batlbubl )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(metro_state)
+static MACHINE_CONFIG_START( batlbubl, metro_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 16000000)
-	MDRV_CPU_PROGRAM_MAP(batlbubl_map)
-	MDRV_CPU_VBLANK_INT("screen", bangball_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, 16000000)
+	MCFG_CPU_PROGRAM_MAP(batlbubl_map)
+	MCFG_CPU_VBLANK_INT("screen", bangball_interrupt)
 
-	MDRV_MACHINE_START(metro)
-	MDRV_MACHINE_RESET(metro)
+	MCFG_MACHINE_START(metro)
+	MCFG_MACHINE_RESET(metro)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(320, 224)
-	MDRV_SCREEN_VISIBLE_AREA(0, 320-1, 0, 224-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(320, 224)
+	MCFG_SCREEN_VISIBLE_AREA(0, 320-1, 0, 224-1)
 
-	MDRV_GFXDECODE(14220)
-	MDRV_PALETTE_LENGTH(8192)
+	MCFG_GFXDECODE(14220)
+	MCFG_PALETTE_LENGTH(8192)
 
-	MDRV_VIDEO_START(metro_14220)
-	MDRV_VIDEO_UPDATE(metro)
+	MCFG_VIDEO_START(metro_14220)
+	MCFG_VIDEO_UPDATE(metro)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymf", YMF278B, YMF278B_STD_CLOCK)
-	MDRV_SOUND_CONFIG(ymf278b_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymf", YMF278B, YMF278B_STD_CLOCK)
+	MCFG_SOUND_CONFIG(ymf278b_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( daitorid )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(metro_state)
+static MACHINE_CONFIG_START( daitorid, metro_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 16000000)
-	MDRV_CPU_PROGRAM_MAP(daitorid_map)
-	MDRV_CPU_VBLANK_INT_HACK(metro_interrupt,10)	/* ? */
+	MCFG_CPU_ADD("maincpu", M68000, 16000000)
+	MCFG_CPU_PROGRAM_MAP(daitorid_map)
+	MCFG_CPU_VBLANK_INT_HACK(metro_interrupt,10)	/* ? */
 
-	MDRV_CPU_ADD("audiocpu", UPD7810, 12000000)
-	MDRV_CPU_CONFIG(metro_cpu_config)
-	MDRV_CPU_PROGRAM_MAP(metro_sound_map)
-	MDRV_CPU_IO_MAP(daitorid_sound_io_map)
+	MCFG_CPU_ADD("audiocpu", UPD7810, 12000000)
+	MCFG_CPU_CONFIG(metro_cpu_config)
+	MCFG_CPU_PROGRAM_MAP(metro_sound_map)
+	MCFG_CPU_IO_MAP(daitorid_sound_io_map)
 
-	MDRV_MACHINE_START(metro)
-	MDRV_MACHINE_RESET(metro)
+	MCFG_MACHINE_START(metro)
+	MCFG_MACHINE_RESET(metro)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(58)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(320, 224)
-	MDRV_SCREEN_VISIBLE_AREA(0, 320-1, 0, 224-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(58)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(320, 224)
+	MCFG_SCREEN_VISIBLE_AREA(0, 320-1, 0, 224-1)
 
-	MDRV_GFXDECODE(14220)
-	MDRV_PALETTE_LENGTH(8192)
+	MCFG_GFXDECODE(14220)
+	MCFG_PALETTE_LENGTH(8192)
 
-	MDRV_VIDEO_START(metro_14220)
-	MDRV_VIDEO_UPDATE(metro)
+	MCFG_VIDEO_START(metro_14220)
+	MCFG_VIDEO_UPDATE(metro)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, 4000000)
-	MDRV_SOUND_CONFIG(ym2151_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.80)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.80)
+	MCFG_SOUND_ADD("ymsnd", YM2151, 4000000)
+	MCFG_SOUND_CONFIG(ym2151_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.80)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.80)
 
-	MDRV_OKIM6295_ADD("oki", 1200000, OKIM6295_PIN7_HIGH) // was /128.. so pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.40)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.40)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 1200000, OKIM6295_PIN7_HIGH) // was /128.. so pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.40)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.40)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( dharma )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(metro_state)
+static MACHINE_CONFIG_START( dharma, metro_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 12000000)
-	MDRV_CPU_PROGRAM_MAP(dharma_map)
-	MDRV_CPU_VBLANK_INT_HACK(metro_interrupt,10)	/* ? */
+	MCFG_CPU_ADD("maincpu", M68000, 12000000)
+	MCFG_CPU_PROGRAM_MAP(dharma_map)
+	MCFG_CPU_VBLANK_INT_HACK(metro_interrupt,10)	/* ? */
 
-	MDRV_CPU_ADD("audiocpu", UPD7810, 12000000)
-	MDRV_CPU_CONFIG(metro_cpu_config)
-	MDRV_CPU_PROGRAM_MAP(metro_sound_map)
-	MDRV_CPU_IO_MAP(metro_sound_io_map)
+	MCFG_CPU_ADD("audiocpu", UPD7810, 12000000)
+	MCFG_CPU_CONFIG(metro_cpu_config)
+	MCFG_CPU_PROGRAM_MAP(metro_sound_map)
+	MCFG_CPU_IO_MAP(metro_sound_io_map)
 
-	MDRV_MACHINE_START(metro)
-	MDRV_MACHINE_RESET(metro)
+	MCFG_MACHINE_START(metro)
+	MCFG_MACHINE_RESET(metro)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(320, 224)
-	MDRV_SCREEN_VISIBLE_AREA(0, 320-1, 0, 224-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(320, 224)
+	MCFG_SCREEN_VISIBLE_AREA(0, 320-1, 0, 224-1)
 
-	MDRV_GFXDECODE(14100)
-	MDRV_PALETTE_LENGTH(8192)
+	MCFG_GFXDECODE(14100)
+	MCFG_PALETTE_LENGTH(8192)
 
-	MDRV_VIDEO_START(metro_14100)
-	MDRV_VIDEO_UPDATE(metro)
+	MCFG_VIDEO_START(metro_14100)
+	MCFG_VIDEO_UPDATE(metro)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_OKIM6295_ADD("oki", 1200000, OKIM6295_PIN7_HIGH) // was /128.. so pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.10)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.10)
+	MCFG_OKIM6295_ADD("oki", 1200000, OKIM6295_PIN7_HIGH) // was /128.. so pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.10)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.10)
 
-	MDRV_SOUND_ADD("ymsnd", YM2413, 3579545)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.90)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.90)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2413, 3579545)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.90)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.90)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( karatour )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(metro_state)
+static MACHINE_CONFIG_START( karatour, metro_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 12000000)
-	MDRV_CPU_PROGRAM_MAP(karatour_map)
-	MDRV_CPU_VBLANK_INT_HACK(karatour_interrupt,10)	/* ? */
+	MCFG_CPU_ADD("maincpu", M68000, 12000000)
+	MCFG_CPU_PROGRAM_MAP(karatour_map)
+	MCFG_CPU_VBLANK_INT_HACK(karatour_interrupt,10)	/* ? */
 
-	MDRV_CPU_ADD("audiocpu", UPD7810, 12000000)
-	MDRV_CPU_CONFIG(metro_cpu_config)
-	MDRV_CPU_PROGRAM_MAP(metro_sound_map)
-	MDRV_CPU_IO_MAP(metro_sound_io_map)
+	MCFG_CPU_ADD("audiocpu", UPD7810, 12000000)
+	MCFG_CPU_CONFIG(metro_cpu_config)
+	MCFG_CPU_PROGRAM_MAP(metro_sound_map)
+	MCFG_CPU_IO_MAP(metro_sound_io_map)
 
-	MDRV_MACHINE_START(metro)
-	MDRV_MACHINE_RESET(metro)
+	MCFG_MACHINE_START(metro)
+	MCFG_MACHINE_RESET(metro)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(320, 240)
-	MDRV_SCREEN_VISIBLE_AREA(0, 320-1, 0, 240-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(320, 240)
+	MCFG_SCREEN_VISIBLE_AREA(0, 320-1, 0, 240-1)
 
-	MDRV_GFXDECODE(14100)
-	MDRV_PALETTE_LENGTH(8192)
+	MCFG_GFXDECODE(14100)
+	MCFG_PALETTE_LENGTH(8192)
 
-	MDRV_VIDEO_START(metro_14100)
-	MDRV_VIDEO_UPDATE(metro)
+	MCFG_VIDEO_START(metro_14100)
+	MCFG_VIDEO_UPDATE(metro)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_OKIM6295_ADD("oki", 1200000, OKIM6295_PIN7_HIGH) // was /128.. so pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.10)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.10)
+	MCFG_OKIM6295_ADD("oki", 1200000, OKIM6295_PIN7_HIGH) // was /128.. so pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.10)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.10)
 
-	MDRV_SOUND_ADD("ymsnd", YM2413, 3579545)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.90)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.90)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2413, 3579545)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.90)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.90)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( 3kokushi )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(metro_state)
+static MACHINE_CONFIG_START( 3kokushi, metro_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 12000000)
-	MDRV_CPU_PROGRAM_MAP(kokushi_map)
-	MDRV_CPU_VBLANK_INT_HACK(karatour_interrupt,10)	/* ? */
+	MCFG_CPU_ADD("maincpu", M68000, 12000000)
+	MCFG_CPU_PROGRAM_MAP(kokushi_map)
+	MCFG_CPU_VBLANK_INT_HACK(karatour_interrupt,10)	/* ? */
 
-	MDRV_CPU_ADD("audiocpu", UPD7810, 12000000)
-	MDRV_CPU_CONFIG(metro_cpu_config)
-	MDRV_CPU_PROGRAM_MAP(metro_sound_map)
-	MDRV_CPU_IO_MAP(metro_sound_io_map)
+	MCFG_CPU_ADD("audiocpu", UPD7810, 12000000)
+	MCFG_CPU_CONFIG(metro_cpu_config)
+	MCFG_CPU_PROGRAM_MAP(metro_sound_map)
+	MCFG_CPU_IO_MAP(metro_sound_io_map)
 
-	MDRV_MACHINE_START(metro)
-	MDRV_MACHINE_RESET(metro)
+	MCFG_MACHINE_START(metro)
+	MCFG_MACHINE_RESET(metro)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(320, 240)
-	MDRV_SCREEN_VISIBLE_AREA(0, 320-1, 0, 240-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(320, 240)
+	MCFG_SCREEN_VISIBLE_AREA(0, 320-1, 0, 240-1)
 
-	MDRV_GFXDECODE(14220)
-	MDRV_PALETTE_LENGTH(8192)
+	MCFG_GFXDECODE(14220)
+	MCFG_PALETTE_LENGTH(8192)
 
-	MDRV_VIDEO_START(metro_14220)
-	MDRV_VIDEO_UPDATE(metro)
+	MCFG_VIDEO_START(metro_14220)
+	MCFG_VIDEO_UPDATE(metro)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_OKIM6295_ADD("oki", 1200000, OKIM6295_PIN7_HIGH) // was /128.. so pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.10)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.10)
+	MCFG_OKIM6295_ADD("oki", 1200000, OKIM6295_PIN7_HIGH) // was /128.. so pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.10)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.10)
 
-	MDRV_SOUND_ADD("ymsnd", YM2413, 3579545)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.90)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.90)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2413, 3579545)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.90)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.90)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( lastfort )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(metro_state)
+static MACHINE_CONFIG_START( lastfort, metro_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 12000000)
-	MDRV_CPU_PROGRAM_MAP(lastfort_map)
-	MDRV_CPU_VBLANK_INT_HACK(metro_interrupt,10)	/* ? */
+	MCFG_CPU_ADD("maincpu", M68000, 12000000)
+	MCFG_CPU_PROGRAM_MAP(lastfort_map)
+	MCFG_CPU_VBLANK_INT_HACK(metro_interrupt,10)	/* ? */
 
-	MDRV_CPU_ADD("audiocpu", UPD7810, 12000000)
-	MDRV_CPU_CONFIG(metro_cpu_config)
-	MDRV_CPU_PROGRAM_MAP(metro_sound_map)
-	MDRV_CPU_IO_MAP(metro_sound_io_map)
+	MCFG_CPU_ADD("audiocpu", UPD7810, 12000000)
+	MCFG_CPU_CONFIG(metro_cpu_config)
+	MCFG_CPU_PROGRAM_MAP(metro_sound_map)
+	MCFG_CPU_IO_MAP(metro_sound_io_map)
 
-	MDRV_MACHINE_START(metro)
-	MDRV_MACHINE_RESET(metro)
+	MCFG_MACHINE_START(metro)
+	MCFG_MACHINE_RESET(metro)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(58)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(360, 224)
-	MDRV_SCREEN_VISIBLE_AREA(0, 360-1, 0, 224-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(58)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(360, 224)
+	MCFG_SCREEN_VISIBLE_AREA(0, 360-1, 0, 224-1)
 
-	MDRV_GFXDECODE(14100)
-	MDRV_PALETTE_LENGTH(8192)
+	MCFG_GFXDECODE(14100)
+	MCFG_PALETTE_LENGTH(8192)
 
-	MDRV_VIDEO_START(metro_14100)
-	MDRV_VIDEO_UPDATE(metro)
+	MCFG_VIDEO_START(metro_14100)
+	MCFG_VIDEO_UPDATE(metro)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_OKIM6295_ADD("oki", 1200000, OKIM6295_PIN7_HIGH) // was /128.. so pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.10)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.10)
+	MCFG_OKIM6295_ADD("oki", 1200000, OKIM6295_PIN7_HIGH) // was /128.. so pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.10)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.10)
 
-	MDRV_SOUND_ADD("ymsnd", YM2413, 3579545)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.90)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.90)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2413, 3579545)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.90)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.90)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( lastforg )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(metro_state)
+static MACHINE_CONFIG_START( lastforg, metro_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 12000000)
-	MDRV_CPU_PROGRAM_MAP(lastforg_map)
-	MDRV_CPU_VBLANK_INT_HACK(karatour_interrupt,10)	/* ? */
+	MCFG_CPU_ADD("maincpu", M68000, 12000000)
+	MCFG_CPU_PROGRAM_MAP(lastforg_map)
+	MCFG_CPU_VBLANK_INT_HACK(karatour_interrupt,10)	/* ? */
 
-	MDRV_CPU_ADD("audiocpu", UPD7810, 12000000)
-	MDRV_CPU_CONFIG(metro_cpu_config)
-	MDRV_CPU_PROGRAM_MAP(metro_sound_map)
-	MDRV_CPU_IO_MAP(metro_sound_io_map)
+	MCFG_CPU_ADD("audiocpu", UPD7810, 12000000)
+	MCFG_CPU_CONFIG(metro_cpu_config)
+	MCFG_CPU_PROGRAM_MAP(metro_sound_map)
+	MCFG_CPU_IO_MAP(metro_sound_io_map)
 
-	MDRV_MACHINE_START(metro)
-	MDRV_MACHINE_RESET(metro)
+	MCFG_MACHINE_START(metro)
+	MCFG_MACHINE_RESET(metro)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(360, 224)
-	MDRV_SCREEN_VISIBLE_AREA(0, 360-1, 0, 224-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(360, 224)
+	MCFG_SCREEN_VISIBLE_AREA(0, 360-1, 0, 224-1)
 
-	MDRV_GFXDECODE(14100)
-	MDRV_PALETTE_LENGTH(8192)
+	MCFG_GFXDECODE(14100)
+	MCFG_PALETTE_LENGTH(8192)
 
-	MDRV_VIDEO_START(metro_14100)
-	MDRV_VIDEO_UPDATE(metro)
+	MCFG_VIDEO_START(metro_14100)
+	MCFG_VIDEO_UPDATE(metro)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_OKIM6295_ADD("oki", 1200000, OKIM6295_PIN7_HIGH) // was /128.. so pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.10)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.10)
+	MCFG_OKIM6295_ADD("oki", 1200000, OKIM6295_PIN7_HIGH) // was /128.. so pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.10)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.10)
 
-	MDRV_SOUND_ADD("ymsnd", YM2413, 3579545)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.90)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.90)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2413, 3579545)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.90)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.90)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( dokyusei )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(metro_state)
+static MACHINE_CONFIG_START( dokyusei, metro_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 16000000)
-	MDRV_CPU_PROGRAM_MAP(dokyusei_map)
-	MDRV_CPU_VBLANK_INT_HACK(dokyusei_interrupt,2)	/* ? */
+	MCFG_CPU_ADD("maincpu", M68000, 16000000)
+	MCFG_CPU_PROGRAM_MAP(dokyusei_map)
+	MCFG_CPU_VBLANK_INT_HACK(dokyusei_interrupt,2)	/* ? */
 
-	MDRV_MACHINE_START(metro)
-	MDRV_MACHINE_RESET(metro)
+	MCFG_MACHINE_START(metro)
+	MCFG_MACHINE_RESET(metro)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(320, 256-32)
-	MDRV_SCREEN_VISIBLE_AREA(0, 320-1, 0, 256-32-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(320, 256-32)
+	MCFG_SCREEN_VISIBLE_AREA(0, 320-1, 0, 256-32-1)
 
-	MDRV_GFXDECODE(14300)
-	MDRV_PALETTE_LENGTH(8192)
+	MCFG_GFXDECODE(14300)
+	MCFG_PALETTE_LENGTH(8192)
 
-	MDRV_VIDEO_START(metro_14300)
-	MDRV_VIDEO_UPDATE(metro)
+	MCFG_VIDEO_START(metro_14300)
+	MCFG_VIDEO_UPDATE(metro)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
+	MCFG_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
 
-	MDRV_SOUND_ADD("ymsnd", YM2413, 8000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.90)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.90)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2413, 8000000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.90)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.90)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( dokyusp )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(metro_state)
+static MACHINE_CONFIG_START( dokyusp, metro_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 16000000)
-	MDRV_CPU_PROGRAM_MAP(dokyusp_map)
-	MDRV_CPU_VBLANK_INT("screen", gakusai_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, 16000000)
+	MCFG_CPU_PROGRAM_MAP(dokyusp_map)
+	MCFG_CPU_VBLANK_INT("screen", gakusai_interrupt)
 
-	MDRV_MACHINE_START(metro)
-	MDRV_MACHINE_RESET(metro)
-	MDRV_EEPROM_93C46_ADD("eeprom")
+	MCFG_MACHINE_START(metro)
+	MCFG_MACHINE_RESET(metro)
+	MCFG_EEPROM_93C46_ADD("eeprom")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(384, 256-32)
-	MDRV_SCREEN_VISIBLE_AREA(0, 384-1, 0, 256-32-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(384, 256-32)
+	MCFG_SCREEN_VISIBLE_AREA(0, 384-1, 0, 256-32-1)
 
-	MDRV_GFXDECODE(14300)
-	MDRV_PALETTE_LENGTH(8192)
+	MCFG_GFXDECODE(14300)
+	MCFG_PALETTE_LENGTH(8192)
 
-	MDRV_VIDEO_START(metro_14300)
-	MDRV_VIDEO_UPDATE(metro)
+	MCFG_VIDEO_START(metro_14300)
+	MCFG_VIDEO_UPDATE(metro)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_OKIM6295_ADD("oki", 2112000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
+	MCFG_OKIM6295_ADD("oki", 2112000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
 
-	MDRV_SOUND_ADD("ymsnd", YM2413, 8000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.90)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.90)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2413, 8000000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.90)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.90)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( gakusai )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(metro_state)
+static MACHINE_CONFIG_START( gakusai, metro_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 16000000)
-	MDRV_CPU_PROGRAM_MAP(gakusai_map)
-	MDRV_CPU_VBLANK_INT("screen", gakusai_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, 16000000)
+	MCFG_CPU_PROGRAM_MAP(gakusai_map)
+	MCFG_CPU_VBLANK_INT("screen", gakusai_interrupt)
 
-	MDRV_MACHINE_START(metro)
-	MDRV_MACHINE_RESET(metro)
-	MDRV_EEPROM_93C46_ADD("eeprom")
+	MCFG_MACHINE_START(metro)
+	MCFG_MACHINE_RESET(metro)
+	MCFG_EEPROM_93C46_ADD("eeprom")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(320, 240)
-	MDRV_SCREEN_VISIBLE_AREA(0, 320-1, 0, 240-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(320, 240)
+	MCFG_SCREEN_VISIBLE_AREA(0, 320-1, 0, 240-1)
 
-	MDRV_GFXDECODE(14300)
-	MDRV_PALETTE_LENGTH(8192)
+	MCFG_GFXDECODE(14300)
+	MCFG_PALETTE_LENGTH(8192)
 
-	MDRV_VIDEO_START(metro_14300)
-	MDRV_VIDEO_UPDATE(metro)
+	MCFG_VIDEO_START(metro_14300)
+	MCFG_VIDEO_UPDATE(metro)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_OKIM6295_ADD("oki", 2112000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
+	MCFG_OKIM6295_ADD("oki", 2112000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
 
-	MDRV_SOUND_ADD("ymsnd", YM2413, 8000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.90)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.90)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2413, 8000000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.90)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.90)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( gakusai2 )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(metro_state)
+static MACHINE_CONFIG_START( gakusai2, metro_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 16000000)
-	MDRV_CPU_PROGRAM_MAP(gakusai2_map)
-	MDRV_CPU_VBLANK_INT("screen", gakusai_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, 16000000)
+	MCFG_CPU_PROGRAM_MAP(gakusai2_map)
+	MCFG_CPU_VBLANK_INT("screen", gakusai_interrupt)
 
-	MDRV_MACHINE_START(metro)
-	MDRV_MACHINE_RESET(metro)
-	MDRV_EEPROM_93C46_ADD("eeprom")
+	MCFG_MACHINE_START(metro)
+	MCFG_MACHINE_RESET(metro)
+	MCFG_EEPROM_93C46_ADD("eeprom")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(320, 240)
-	MDRV_SCREEN_VISIBLE_AREA(0, 320-1, 0, 240-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(320, 240)
+	MCFG_SCREEN_VISIBLE_AREA(0, 320-1, 0, 240-1)
 
-	MDRV_GFXDECODE(14300)
-	MDRV_PALETTE_LENGTH(8192)
+	MCFG_GFXDECODE(14300)
+	MCFG_PALETTE_LENGTH(8192)
 
-	MDRV_VIDEO_START(metro_14300)
-	MDRV_VIDEO_UPDATE(metro)
+	MCFG_VIDEO_START(metro_14300)
+	MCFG_VIDEO_UPDATE(metro)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_OKIM6295_ADD("oki", 2112000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
+	MCFG_OKIM6295_ADD("oki", 2112000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
 
-	MDRV_SOUND_ADD("ymsnd", YM2413, 8000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.90)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.90)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2413, 8000000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.90)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.90)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( pangpoms )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(metro_state)
+static MACHINE_CONFIG_START( pangpoms, metro_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 12000000)
-	MDRV_CPU_PROGRAM_MAP(pangpoms_map)
-	MDRV_CPU_VBLANK_INT_HACK(metro_interrupt,10)	/* ? */
+	MCFG_CPU_ADD("maincpu", M68000, 12000000)
+	MCFG_CPU_PROGRAM_MAP(pangpoms_map)
+	MCFG_CPU_VBLANK_INT_HACK(metro_interrupt,10)	/* ? */
 
-	MDRV_CPU_ADD("audiocpu", UPD7810, 12000000)
-	MDRV_CPU_CONFIG(metro_cpu_config)
-	MDRV_CPU_PROGRAM_MAP(metro_sound_map)
-	MDRV_CPU_IO_MAP(metro_sound_io_map)
+	MCFG_CPU_ADD("audiocpu", UPD7810, 12000000)
+	MCFG_CPU_CONFIG(metro_cpu_config)
+	MCFG_CPU_PROGRAM_MAP(metro_sound_map)
+	MCFG_CPU_IO_MAP(metro_sound_io_map)
 
-	MDRV_MACHINE_START(metro)
-	MDRV_MACHINE_RESET(metro)
+	MCFG_MACHINE_START(metro)
+	MCFG_MACHINE_RESET(metro)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(360, 224)
-	MDRV_SCREEN_VISIBLE_AREA(0, 360-1, 0, 224-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(360, 224)
+	MCFG_SCREEN_VISIBLE_AREA(0, 360-1, 0, 224-1)
 
-	MDRV_GFXDECODE(14100)
-	MDRV_PALETTE_LENGTH(8192)
+	MCFG_GFXDECODE(14100)
+	MCFG_PALETTE_LENGTH(8192)
 
-	MDRV_VIDEO_START(metro_14100)
-	MDRV_VIDEO_UPDATE(metro)
+	MCFG_VIDEO_START(metro_14100)
+	MCFG_VIDEO_UPDATE(metro)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_OKIM6295_ADD("oki", 1200000, OKIM6295_PIN7_HIGH) // was /128.. so pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.10)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.10)
+	MCFG_OKIM6295_ADD("oki", 1200000, OKIM6295_PIN7_HIGH) // was /128.. so pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.10)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.10)
 
-	MDRV_SOUND_ADD("ymsnd", YM2413, 3579545)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.90)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.90)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2413, 3579545)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.90)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.90)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( poitto )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(metro_state)
+static MACHINE_CONFIG_START( poitto, metro_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 12000000)
-	MDRV_CPU_PROGRAM_MAP(poitto_map)
-	MDRV_CPU_VBLANK_INT_HACK(metro_interrupt,10)	/* ? */
+	MCFG_CPU_ADD("maincpu", M68000, 12000000)
+	MCFG_CPU_PROGRAM_MAP(poitto_map)
+	MCFG_CPU_VBLANK_INT_HACK(metro_interrupt,10)	/* ? */
 
-	MDRV_CPU_ADD("audiocpu", UPD7810, 12000000)
-	MDRV_CPU_CONFIG(metro_cpu_config)
-	MDRV_CPU_PROGRAM_MAP(metro_sound_map)
-	MDRV_CPU_IO_MAP(metro_sound_io_map)
+	MCFG_CPU_ADD("audiocpu", UPD7810, 12000000)
+	MCFG_CPU_CONFIG(metro_cpu_config)
+	MCFG_CPU_PROGRAM_MAP(metro_sound_map)
+	MCFG_CPU_IO_MAP(metro_sound_io_map)
 
-	MDRV_MACHINE_START(metro)
-	MDRV_MACHINE_RESET(metro)
+	MCFG_MACHINE_START(metro)
+	MCFG_MACHINE_RESET(metro)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(360, 224)
-	MDRV_SCREEN_VISIBLE_AREA(0, 360-1, 0, 224-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(360, 224)
+	MCFG_SCREEN_VISIBLE_AREA(0, 360-1, 0, 224-1)
 
-	MDRV_GFXDECODE(14100)
-	MDRV_PALETTE_LENGTH(8192)
+	MCFG_GFXDECODE(14100)
+	MCFG_PALETTE_LENGTH(8192)
 
-	MDRV_VIDEO_START(metro_14100)
-	MDRV_VIDEO_UPDATE(metro)
+	MCFG_VIDEO_START(metro_14100)
+	MCFG_VIDEO_UPDATE(metro)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_OKIM6295_ADD("oki", 1200000, OKIM6295_PIN7_HIGH) // was /128.. so pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.10)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.10)
+	MCFG_OKIM6295_ADD("oki", 1200000, OKIM6295_PIN7_HIGH) // was /128.. so pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.10)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.10)
 
-	MDRV_SOUND_ADD("ymsnd", YM2413, 3579545)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.90)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.90)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2413, 3579545)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.90)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.90)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( pururun )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(metro_state)
+static MACHINE_CONFIG_START( pururun, metro_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 12000000)
-	MDRV_CPU_PROGRAM_MAP(pururun_map)
-	//MDRV_CPU_VBLANK_INT_HACK(msgogo_interrupt,262)    /* fixes the title screen scroll in GunMaster, but makes the game painfully slow */
-	MDRV_CPU_VBLANK_INT_HACK(metro_interrupt,10)    /* ? */
+	MCFG_CPU_ADD("maincpu", M68000, 12000000)
+	MCFG_CPU_PROGRAM_MAP(pururun_map)
+	//MCFG_CPU_VBLANK_INT_HACK(msgogo_interrupt,262)    /* fixes the title screen scroll in GunMaster, but makes the game painfully slow */
+	MCFG_CPU_VBLANK_INT_HACK(metro_interrupt,10)    /* ? */
 
-	MDRV_CPU_ADD("audiocpu", UPD7810, 12000000)
-	MDRV_CPU_CONFIG(metro_cpu_config)
-	MDRV_CPU_PROGRAM_MAP(metro_sound_map)
-	MDRV_CPU_IO_MAP(daitorid_sound_io_map)
+	MCFG_CPU_ADD("audiocpu", UPD7810, 12000000)
+	MCFG_CPU_CONFIG(metro_cpu_config)
+	MCFG_CPU_PROGRAM_MAP(metro_sound_map)
+	MCFG_CPU_IO_MAP(daitorid_sound_io_map)
 
-	MDRV_MACHINE_START(metro)
-	MDRV_MACHINE_RESET(metro)
+	MCFG_MACHINE_START(metro)
+	MCFG_MACHINE_RESET(metro)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(320, 224)
-	MDRV_SCREEN_VISIBLE_AREA(0, 320-1, 0, 224-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(320, 224)
+	MCFG_SCREEN_VISIBLE_AREA(0, 320-1, 0, 224-1)
 
-	MDRV_GFXDECODE(14100)
-	MDRV_PALETTE_LENGTH(8192)
+	MCFG_GFXDECODE(14100)
+	MCFG_PALETTE_LENGTH(8192)
 
-	MDRV_VIDEO_START(metro_14100)
-	MDRV_VIDEO_UPDATE(metro)
+	MCFG_VIDEO_START(metro_14100)
+	MCFG_VIDEO_UPDATE(metro)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, 4000000)
-	MDRV_SOUND_CONFIG(ym2151_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.80)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.80)
+	MCFG_SOUND_ADD("ymsnd", YM2151, 4000000)
+	MCFG_SOUND_CONFIG(ym2151_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.80)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.80)
 
-	MDRV_OKIM6295_ADD("oki", 1200000, OKIM6295_PIN7_HIGH) // was /128.. so pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.40)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.40)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 1200000, OKIM6295_PIN7_HIGH) // was /128.. so pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.40)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.40)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( skyalert )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(metro_state)
+static MACHINE_CONFIG_START( skyalert, metro_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 12000000)
-	MDRV_CPU_PROGRAM_MAP(skyalert_map)
-	MDRV_CPU_VBLANK_INT_HACK(metro_interrupt,10)	/* ? */
+	MCFG_CPU_ADD("maincpu", M68000, 12000000)
+	MCFG_CPU_PROGRAM_MAP(skyalert_map)
+	MCFG_CPU_VBLANK_INT_HACK(metro_interrupt,10)	/* ? */
 
-	MDRV_CPU_ADD("audiocpu", UPD7810, 12000000)
-	MDRV_CPU_CONFIG(metro_cpu_config)
-	MDRV_CPU_PROGRAM_MAP(metro_sound_map)
-	MDRV_CPU_IO_MAP(metro_sound_io_map)
+	MCFG_CPU_ADD("audiocpu", UPD7810, 12000000)
+	MCFG_CPU_CONFIG(metro_cpu_config)
+	MCFG_CPU_PROGRAM_MAP(metro_sound_map)
+	MCFG_CPU_IO_MAP(metro_sound_io_map)
 
-	MDRV_MACHINE_START(metro)
-	MDRV_MACHINE_RESET(metro)
+	MCFG_MACHINE_START(metro)
+	MCFG_MACHINE_RESET(metro)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(360, 224)
-	MDRV_SCREEN_VISIBLE_AREA(0, 360-1, 0, 224-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(360, 224)
+	MCFG_SCREEN_VISIBLE_AREA(0, 360-1, 0, 224-1)
 
-	MDRV_GFXDECODE(14100)
-	MDRV_PALETTE_LENGTH(8192)
+	MCFG_GFXDECODE(14100)
+	MCFG_PALETTE_LENGTH(8192)
 
-	MDRV_VIDEO_START(metro_14100)
-	MDRV_VIDEO_UPDATE(metro)
+	MCFG_VIDEO_START(metro_14100)
+	MCFG_VIDEO_UPDATE(metro)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_OKIM6295_ADD("oki", 1200000, OKIM6295_PIN7_HIGH) // was /128.. so pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.10)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.10)
+	MCFG_OKIM6295_ADD("oki", 1200000, OKIM6295_PIN7_HIGH) // was /128.. so pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.10)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.10)
 
-	MDRV_SOUND_ADD("ymsnd", YM2413, 3579545)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.90)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.90)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2413, 3579545)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.90)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.90)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( toride2g )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(metro_state)
+static MACHINE_CONFIG_START( toride2g, metro_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 12000000)
-	MDRV_CPU_PROGRAM_MAP(toride2g_map)
-	MDRV_CPU_VBLANK_INT_HACK(metro_interrupt,10)	/* ? */
+	MCFG_CPU_ADD("maincpu", M68000, 12000000)
+	MCFG_CPU_PROGRAM_MAP(toride2g_map)
+	MCFG_CPU_VBLANK_INT_HACK(metro_interrupt,10)	/* ? */
 
-	MDRV_CPU_ADD("audiocpu", UPD7810, 12000000)
-	MDRV_CPU_CONFIG(metro_cpu_config)
-	MDRV_CPU_PROGRAM_MAP(metro_sound_map)
-	MDRV_CPU_IO_MAP(metro_sound_io_map)
+	MCFG_CPU_ADD("audiocpu", UPD7810, 12000000)
+	MCFG_CPU_CONFIG(metro_cpu_config)
+	MCFG_CPU_PROGRAM_MAP(metro_sound_map)
+	MCFG_CPU_IO_MAP(metro_sound_io_map)
 
-	MDRV_MACHINE_START(metro)
-	MDRV_MACHINE_RESET(metro)
+	MCFG_MACHINE_START(metro)
+	MCFG_MACHINE_RESET(metro)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(320, 224)
-	MDRV_SCREEN_VISIBLE_AREA(0, 320-1, 0, 224-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(320, 224)
+	MCFG_SCREEN_VISIBLE_AREA(0, 320-1, 0, 224-1)
 
-	MDRV_GFXDECODE(14100)
-	MDRV_PALETTE_LENGTH(8192)
+	MCFG_GFXDECODE(14100)
+	MCFG_PALETTE_LENGTH(8192)
 
-	MDRV_VIDEO_START(metro_14100)
-	MDRV_VIDEO_UPDATE(metro)
+	MCFG_VIDEO_START(metro_14100)
+	MCFG_VIDEO_UPDATE(metro)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_OKIM6295_ADD("oki", 1200000, OKIM6295_PIN7_HIGH) // was /128.. so pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.10)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.10)
+	MCFG_OKIM6295_ADD("oki", 1200000, OKIM6295_PIN7_HIGH) // was /128.. so pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.10)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.10)
 
-	MDRV_SOUND_ADD("ymsnd", YM2413, 3579545)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.90)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.90)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2413, 3579545)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.90)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.90)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( mouja )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(metro_state)
+static MACHINE_CONFIG_START( mouja, metro_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 12000000)	/* ??? */
-	MDRV_CPU_PROGRAM_MAP(mouja_map)
-	MDRV_CPU_VBLANK_INT("screen", mouja_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, 12000000)	/* ??? */
+	MCFG_CPU_PROGRAM_MAP(mouja_map)
+	MCFG_CPU_VBLANK_INT("screen", mouja_interrupt)
 
-	MDRV_MACHINE_START(metro)
-	MDRV_MACHINE_RESET(metro)
+	MCFG_MACHINE_START(metro)
+	MCFG_MACHINE_RESET(metro)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(58)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(512, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 320-1, 0, 224-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(58)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(512, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 320-1, 0, 224-1)
 
-	MDRV_GFXDECODE(14300)
-	MDRV_PALETTE_LENGTH(8192)
+	MCFG_GFXDECODE(14300)
+	MCFG_PALETTE_LENGTH(8192)
 
-	MDRV_VIDEO_START(metro_14300)
-	MDRV_VIDEO_UPDATE(metro)
+	MCFG_VIDEO_START(metro_14300)
+	MCFG_VIDEO_UPDATE(metro)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
-	MDRV_OKIM6295_ADD("oki", 16000000/1024*132, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.25)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.25)
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_OKIM6295_ADD("oki", 16000000/1024*132, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.25)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.25)
 
-	MDRV_SOUND_ADD("ymsnd", YM2413, 3579545)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.00)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.00)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2413, 3579545)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.00)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.00)
+MACHINE_CONFIG_END
 
 
 static const k053936_interface blzntrnd_k053936_intf =
@@ -4495,49 +4432,46 @@ static const k053936_interface blzntrnd_k053936_intf =
 	0, -69, -21
 };
 
-static MACHINE_DRIVER_START( blzntrnd )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(metro_state)
+static MACHINE_CONFIG_START( blzntrnd, metro_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 16000000)
-	MDRV_CPU_PROGRAM_MAP(blzntrnd_map)
-	MDRV_CPU_VBLANK_INT_HACK(karatour_interrupt,10)	/* ? */
+	MCFG_CPU_ADD("maincpu", M68000, 16000000)
+	MCFG_CPU_PROGRAM_MAP(blzntrnd_map)
+	MCFG_CPU_VBLANK_INT_HACK(karatour_interrupt,10)	/* ? */
 
-	MDRV_CPU_ADD("audiocpu", Z80, 8000000)
-	MDRV_CPU_PROGRAM_MAP(blzntrnd_sound_map)
-	MDRV_CPU_IO_MAP(blzntrnd_sound_io_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 8000000)
+	MCFG_CPU_PROGRAM_MAP(blzntrnd_sound_map)
+	MCFG_CPU_IO_MAP(blzntrnd_sound_io_map)
 
-	MDRV_MACHINE_START(metro)
-	MDRV_MACHINE_RESET(metro)
+	MCFG_MACHINE_START(metro)
+	MCFG_MACHINE_RESET(metro)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(58)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(320, 224)
-	MDRV_SCREEN_VISIBLE_AREA(8, 320-8-1, 0, 224-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(58)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(320, 224)
+	MCFG_SCREEN_VISIBLE_AREA(8, 320-8-1, 0, 224-1)
 
-	MDRV_GFXDECODE(blzntrnd)
-	MDRV_PALETTE_LENGTH(8192)
+	MCFG_GFXDECODE(blzntrnd)
+	MCFG_PALETTE_LENGTH(8192)
 
-	MDRV_VIDEO_START(blzntrnd)
-	MDRV_VIDEO_UPDATE(metro)
+	MCFG_VIDEO_START(blzntrnd)
+	MCFG_VIDEO_UPDATE(metro)
 
-	MDRV_K053936_ADD("k053936", blzntrnd_k053936_intf)
+	MCFG_K053936_ADD("k053936", blzntrnd_k053936_intf)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2610, 8000000)
-	MDRV_SOUND_CONFIG(blzntrnd_ym2610_interface)
-	MDRV_SOUND_ROUTE(0, "lspeaker",  0.25)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.25)
-	MDRV_SOUND_ROUTE(1, "lspeaker",  1.0)
-	MDRV_SOUND_ROUTE(2, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2610, 8000000)
+	MCFG_SOUND_CONFIG(blzntrnd_ym2610_interface)
+	MCFG_SOUND_ROUTE(0, "lspeaker",  0.25)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.25)
+	MCFG_SOUND_ROUTE(1, "lspeaker",  1.0)
+	MCFG_SOUND_ROUTE(2, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 /* like blzntrnd but new vidstart / gfxdecode for the different bg tilemap */
 
@@ -4546,54 +4480,51 @@ static const k053936_interface gstrik2_k053936_intf =
 	0, -69, -19
 };
 
-static MACHINE_DRIVER_START( gstrik2 )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(metro_state)
+static MACHINE_CONFIG_START( gstrik2, metro_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 16000000)
-	MDRV_CPU_PROGRAM_MAP(blzntrnd_map)
-	MDRV_CPU_VBLANK_INT_HACK(karatour_interrupt,10)	/* ? */
+	MCFG_CPU_ADD("maincpu", M68000, 16000000)
+	MCFG_CPU_PROGRAM_MAP(blzntrnd_map)
+	MCFG_CPU_VBLANK_INT_HACK(karatour_interrupt,10)	/* ? */
 
-	MDRV_CPU_ADD("audiocpu", Z80, 8000000)
-	MDRV_CPU_PROGRAM_MAP(blzntrnd_sound_map)
-	MDRV_CPU_IO_MAP(blzntrnd_sound_io_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 8000000)
+	MCFG_CPU_PROGRAM_MAP(blzntrnd_sound_map)
+	MCFG_CPU_IO_MAP(blzntrnd_sound_io_map)
 
-	MDRV_MACHINE_START(metro)
-	MDRV_MACHINE_RESET(metro)
+	MCFG_MACHINE_START(metro)
+	MCFG_MACHINE_RESET(metro)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(58)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(320, 224)
-	MDRV_SCREEN_VISIBLE_AREA(8, 320-8-1, 0, 224-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(58)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(320, 224)
+	MCFG_SCREEN_VISIBLE_AREA(8, 320-8-1, 0, 224-1)
 
-	MDRV_GFXDECODE(gstrik2)
-	MDRV_PALETTE_LENGTH(8192)
+	MCFG_GFXDECODE(gstrik2)
+	MCFG_PALETTE_LENGTH(8192)
 
-	MDRV_VIDEO_START(gstrik2)
-	MDRV_VIDEO_UPDATE(metro)
+	MCFG_VIDEO_START(gstrik2)
+	MCFG_VIDEO_UPDATE(metro)
 
-	MDRV_K053936_ADD("k053936", gstrik2_k053936_intf)
+	MCFG_K053936_ADD("k053936", gstrik2_k053936_intf)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2610, 8000000)
-	MDRV_SOUND_CONFIG(blzntrnd_ym2610_interface)
-	MDRV_SOUND_ROUTE(0, "lspeaker",  0.25)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.25)
-	MDRV_SOUND_ROUTE(1, "lspeaker",  1.0)
-	MDRV_SOUND_ROUTE(2, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2610, 8000000)
+	MCFG_SOUND_CONFIG(blzntrnd_ym2610_interface)
+	MCFG_SOUND_ROUTE(0, "lspeaker",  0.25)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.25)
+	MCFG_SOUND_ROUTE(1, "lspeaker",  1.0)
+	MCFG_SOUND_ROUTE(2, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 
 static INTERRUPT_GEN( puzzlet_interrupt )
 {
-	metro_state *state = (metro_state *)device->machine->driver_data;
+	metro_state *state = device->machine->driver_data<metro_state>();
 
 	switch (cpu_getiloops(device))
 	{
@@ -4624,45 +4555,42 @@ static INTERRUPT_GEN( puzzlet_interrupt )
 	}
 }
 
-static MACHINE_DRIVER_START( puzzlet )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(metro_state)
+static MACHINE_CONFIG_START( puzzlet, metro_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", H83007, XTAL_20MHz)	// H8/3007 - Hitachi HD6413007F20 CPU. Clock 20MHz
-	MDRV_CPU_PROGRAM_MAP(puzzlet_map)
-	MDRV_CPU_IO_MAP(puzzlet_io_map)
-	MDRV_CPU_VBLANK_INT_HACK(puzzlet_interrupt, 5)
+	MCFG_CPU_ADD("maincpu", H83007, XTAL_20MHz)	// H8/3007 - Hitachi HD6413007F20 CPU. Clock 20MHz
+	MCFG_CPU_PROGRAM_MAP(puzzlet_map)
+	MCFG_CPU_IO_MAP(puzzlet_io_map)
+	MCFG_CPU_VBLANK_INT_HACK(puzzlet_interrupt, 5)
 
-	MDRV_MACHINE_START(metro)
-	MDRV_MACHINE_RESET(metro)
+	MCFG_MACHINE_START(metro)
+	MCFG_MACHINE_RESET(metro)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(58)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(320, 256-32)
-	MDRV_SCREEN_VISIBLE_AREA(0, 320-1, 0, 256-32-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(58)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(320, 256-32)
+	MCFG_SCREEN_VISIBLE_AREA(0, 320-1, 0, 256-32-1)
 
-	MDRV_GFXDECODE(14300)
-	MDRV_PALETTE_LENGTH(8192)
+	MCFG_GFXDECODE(14300)
+	MCFG_PALETTE_LENGTH(8192)
 
-	MDRV_VIDEO_START(metro_14300)
-	MDRV_VIDEO_UPDATE(metro)
+	MCFG_VIDEO_START(metro_14300)
+	MCFG_VIDEO_UPDATE(metro)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_OKIM6295_ADD("oki", XTAL_20MHz/5, OKIM6295_PIN7_LOW)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
+	MCFG_OKIM6295_ADD("oki", XTAL_20MHz/5, OKIM6295_PIN7_LOW)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
 
-	MDRV_SOUND_ADD("ymsnd", YM2413, XTAL_20MHz/5)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.90)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.90)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2413, XTAL_20MHz/5)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.90)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.90)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************
@@ -6082,7 +6010,7 @@ ROM_END
 
 static void metro_common( running_machine *machine )
 {
-	metro_state *state = (metro_state *)machine->driver_data;
+	metro_state *state = machine->driver_data<metro_state>();
 
 	memset(state->requested_int, 0, ARRAY_LENGTH(state->requested_int));
 	state->irq_line = 2;
@@ -6094,8 +6022,8 @@ static void metro_common( running_machine *machine )
 
 static DRIVER_INIT( metro )
 {
-	metro_state *state = (metro_state *)machine->driver_data;
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	metro_state *state = machine->driver_data<metro_state>();
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	metro_common(machine);
 
@@ -6107,7 +6035,7 @@ static DRIVER_INIT( metro )
 
 static DRIVER_INIT( karatour )
 {
-	metro_state *state = (metro_state *)machine->driver_data;
+	metro_state *state = machine->driver_data<metro_state>();
 	UINT16 *RAM = auto_alloc_array(machine, UINT16, 0x20000*3/2);
 	int i;
 
@@ -6116,7 +6044,7 @@ static DRIVER_INIT( karatour )
 	state->vram_2 = RAM + (0x20000/2) * 2;
 
 	for (i = 0; i < (0x20000 * 3) / 2; i++)
-		RAM[i] = mame_rand(machine);
+		RAM[i] = machine->rand();
 
 	DRIVER_INIT_CALL(metro);
 
@@ -6127,8 +6055,8 @@ static DRIVER_INIT( karatour )
 
 static DRIVER_INIT( daitorid )
 {
-	metro_state *state = (metro_state *)machine->driver_data;
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	metro_state *state = machine->driver_data<metro_state>();
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 
 	metro_common(machine);
 
@@ -6142,10 +6070,10 @@ static DRIVER_INIT( daitorid )
 /* Unscramble the GFX ROMs */
 static DRIVER_INIT( balcube )
 {
-	metro_state *state = (metro_state *)machine->driver_data;
+	metro_state *state = machine->driver_data<metro_state>();
 
-	const size_t len = memory_region_length(machine, "gfx1");
-	UINT8 *src       = memory_region(machine, "gfx1");
+	const size_t len = machine->region("gfx1")->bytes();
+	UINT8 *src       = machine->region("gfx1")->base();
 	UINT8 *end       = src + len;
 
 	while (src < end)
@@ -6165,7 +6093,7 @@ static DRIVER_INIT( balcube )
 
 static DRIVER_INIT( dharmak )
 {
-	UINT8 *src = memory_region( machine, "gfx1" );
+	UINT8 *src = machine->region( "gfx1" )->base();
 	int i;
 
 	for (i = 0; i < 0x200000; i += 4)
@@ -6185,14 +6113,14 @@ static DRIVER_INIT( dharmak )
 
 static DRIVER_INIT( blzntrnd )
 {
-	metro_state *state = (metro_state *)machine->driver_data;
+	metro_state *state = machine->driver_data<metro_state>();
 	metro_common(machine);
 	state->irq_line = 1;
 }
 
 static DRIVER_INIT( mouja )
 {
-	metro_state *state = (metro_state *)machine->driver_data;
+	metro_state *state = machine->driver_data<metro_state>();
 	metro_common(machine);
 	state->irq_line = -1;	/* split interrupt handlers */
 	state->mouja_irq_timer = timer_alloc(machine, mouja_irq_callback, NULL);
@@ -6200,7 +6128,7 @@ static DRIVER_INIT( mouja )
 
 static DRIVER_INIT( gakusai )
 {
-	metro_state *state = (metro_state *)machine->driver_data;
+	metro_state *state = machine->driver_data<metro_state>();
 	metro_common(machine);
 	state->irq_line = -1;
 	state->blitter_bit = 3;
@@ -6208,7 +6136,7 @@ static DRIVER_INIT( gakusai )
 
 static DRIVER_INIT( puzzlet )
 {
-	metro_state *state = (metro_state *)machine->driver_data;
+	metro_state *state = machine->driver_data<metro_state>();
 	metro_common(machine);
 	state->irq_line = 0;
 	state->blitter_bit = 0;

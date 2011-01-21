@@ -7,12 +7,11 @@
 #define CPU_CLOCK       (XTAL_24MHz / 2)		/* 68000 clock */
 #define SOUND_CLOCK     XTAL_16_9344MHz		/* YMZ280 clock */
 
-class bishi_state
+class bishi_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, bishi_state(machine)); }
-
-	bishi_state(running_machine &machine) { }
+	bishi_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *    ram;
@@ -25,12 +24,12 @@ public:
 	UINT16     cur_control, cur_control2;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *audiocpu;
-	running_device *k007232;
-	running_device *k056832;
-	running_device *k054338;
-	running_device *k055555;
+	device_t *maincpu;
+	device_t *audiocpu;
+	device_t *k007232;
+	device_t *k056832;
+	device_t *k054338;
+	device_t *k055555;
 };
 
 /*----------- defined in video/bishi.c -----------*/

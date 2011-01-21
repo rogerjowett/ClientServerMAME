@@ -1,6 +1,7 @@
 #include "emu.h"
 #include "deprecat.h"
 #include "cpu/m6502/m6502.h"
+#include "includes/spdodgeb.h"
 
 
 UINT8 *spdodgeb_videoram;
@@ -115,7 +116,7 @@ WRITE8_HANDLER( spdodgeb_scrollx_lo_w )
 
 WRITE8_HANDLER( spdodgeb_ctrl_w )
 {
-	UINT8 *rom = memory_region(space->machine, "maincpu");
+	UINT8 *rom = space->machine->region("maincpu")->base();
 
 	/* bit 0 = flip screen */
 	flip_screen_set(space->machine, data & 0x01);

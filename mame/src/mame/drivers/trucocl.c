@@ -35,17 +35,7 @@ Daughterboard: Custom made, plugged in the 2 roms and Z80 mainboard sockets.
 #include "emu.h"
 #include "cpu/z80/z80.h"
 #include "sound/dac.h"
-
-/* from video */
-extern UINT8 *trucocl_videoram;
-extern UINT8 *trucocl_colorram;
-
-WRITE8_HANDLER( trucocl_videoram_w );
-WRITE8_HANDLER( trucocl_colorram_w );
-PALETTE_INIT( trucocl );
-VIDEO_START( trucocl );
-VIDEO_UPDATE( trucocl );
-
+#include "includes/trucocl.h"
 
 static WRITE8_HANDLER( irq_enable_w )
 {
@@ -62,7 +52,7 @@ static TIMER_CALLBACK( dac_irq )
 
 static WRITE8_DEVICE_HANDLER( audio_dac_w )
 {
-	UINT8 *rom = memory_region(device->machine, "maincpu");
+	UINT8 *rom = device->machine->region("maincpu")->base();
 	int	dac_address = ( data & 0xf0 ) << 8;
 	int	sel = ( ( (~data) >> 1 ) & 2 ) | ( data & 1 );
 
@@ -137,33 +127,33 @@ static INTERRUPT_GEN( trucocl_interrupt )
 	irq0_line_hold(device);
 }
 
-static MACHINE_DRIVER_START( trucocl )
+static MACHINE_CONFIG_START( trucocl, driver_device )
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, 18432000/6)
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_VBLANK_INT("screen", trucocl_interrupt)
+	MCFG_CPU_ADD("maincpu", Z80, 18432000/6)
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_VBLANK_INT("screen", trucocl_interrupt)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 0*8, 32*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 0*8, 32*8-1)
 
-	MDRV_GFXDECODE(trucocl)
-	MDRV_PALETTE_LENGTH(32)
+	MCFG_GFXDECODE(trucocl)
+	MCFG_PALETTE_LENGTH(32)
 
-	MDRV_PALETTE_INIT(trucocl)
-	MDRV_VIDEO_START(trucocl)
-	MDRV_VIDEO_UPDATE(trucocl)
+	MCFG_PALETTE_INIT(trucocl)
+	MCFG_VIDEO_START(trucocl)
+	MCFG_VIDEO_UPDATE(trucocl)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("dac", DAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("dac", DAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 /***************************************************************************
 

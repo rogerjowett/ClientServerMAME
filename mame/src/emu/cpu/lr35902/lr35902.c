@@ -66,7 +66,7 @@ typedef struct {
 	int	ei_delay;
 	device_irq_callback irq_callback;
 	legacy_cpu_device *device;
-	const address_space *program;
+	address_space *program;
 	int icount;
 	/* Timer stuff */
 	lr35902_timer_fired_func timer_fired_func;
@@ -113,7 +113,7 @@ union _lr35902_state {
 	lr35902_8BitRegs b;
 };
 
-INLINE lr35902_state *get_safe_token(running_device *device)
+INLINE lr35902_state *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
 	assert(device->type() == LR35902);
@@ -129,8 +129,8 @@ typedef int (*OpcodeEmulator) (lr35902_state *cpustate);
 /* Memory functions                                                         */
 /****************************************************************************/
 
-#define mem_ReadByte(cs,A)		((UINT8)memory_read_byte_8le((cs)->w.program,A))
-#define mem_WriteByte(cs,A,V)	(memory_write_byte_8le((cs)->w.program,A,V))
+#define mem_ReadByte(cs,A)		((UINT8)(cs)->w.program->read_byte(A))
+#define mem_WriteByte(cs,A,V)	((cs)->w.program->write_byte(A,V))
 
 INLINE UINT16 mem_ReadWord (lr35902_state *cpustate, UINT32 address)
 {

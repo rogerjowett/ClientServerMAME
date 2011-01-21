@@ -88,7 +88,7 @@ struct _pioneer_pia
 typedef struct _simutrek_data simutrek_data;
 struct _simutrek_data
 {
-	running_device *cpu;					/* 8748 CPU device */
+	device_t *cpu;					/* 8748 CPU device */
 	UINT8				audio_squelch;			/* audio squelch value */
 	UINT8				data;					/* parallel data for simutrek */
 	UINT8				data_ready;				/* ready flag for simutrek data */
@@ -109,7 +109,7 @@ struct _ldplayer_data
 	attotime			firstbittime;			/* time of first bit in command */
 
 	/* low-level emulation data */
-	running_device *cpu;					/* 8049 CPU device */
+	device_t *cpu;					/* 8049 CPU device */
 	attotime			slowtrg;				/* time of the last SLOW TRG */
 	pioneer_pia			pia;					/* PIA state */
 	UINT8				vsync;					/* live VSYNC state */
@@ -285,10 +285,10 @@ static ADDRESS_MAP_START( pr8210_portmap, ADDRESS_SPACE_IO, 8 )
 ADDRESS_MAP_END
 
 
-static MACHINE_DRIVER_START( pr8210 )
-	MDRV_CPU_ADD("pr8210", I8049, XTAL_4_41MHz)
-	MDRV_CPU_IO_MAP(pr8210_portmap)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_FRAGMENT( pr8210 )
+	MCFG_CPU_ADD("pr8210", I8049, XTAL_4_41MHz)
+	MCFG_CPU_IO_MAP(pr8210_portmap)
+MACHINE_CONFIG_END
 
 
 ROM_START( pr8210 )
@@ -308,7 +308,7 @@ const ldplayer_interface pr8210_interface =
 	sizeof(ldplayer_data),						/* size of the state */
 	"Pioneer PR-8210",							/* name of the player */
 	ROM_NAME(pr8210),							/* pointer to ROM region information */
-	MACHINE_DRIVER_NAME(pr8210),				/* pointer to machine configuration */
+	MACHINE_CONFIG_NAME(pr8210),				/* pointer to machine configuration */
 	pr8210_init,								/* initialization callback */
 	pr8210_vsync,								/* vsync callback */
 	pr8210_update,								/* update callback */
@@ -996,12 +996,12 @@ static ADDRESS_MAP_START( simutrek_portmap, ADDRESS_SPACE_IO, 8 )
 ADDRESS_MAP_END
 
 
-static MACHINE_DRIVER_START( simutrek )
-	MDRV_CPU_ADD("simutrek", I8748, XTAL_6MHz)
-	MDRV_CPU_IO_MAP(simutrek_portmap)
+static MACHINE_CONFIG_FRAGMENT( simutrek )
+	MCFG_CPU_ADD("simutrek", I8748, XTAL_6MHz)
+	MCFG_CPU_IO_MAP(simutrek_portmap)
 
-	MDRV_IMPORT_FROM(pr8210)
-MACHINE_DRIVER_END
+	MCFG_FRAGMENT_ADD(pr8210)
+MACHINE_CONFIG_END
 
 
 ROM_START( simutrek )
@@ -1024,7 +1024,7 @@ const ldplayer_interface simutrek_interface =
 	sizeof(ldplayer_data),						/* size of the state */
 	"Simutrek Modified PR-8210",				/* name of the player */
 	ROM_NAME(simutrek),							/* pointer to ROM region information */
-	MACHINE_DRIVER_NAME(simutrek),				/* pointer to machine configuration */
+	MACHINE_CONFIG_NAME(simutrek),				/* pointer to machine configuration */
 	simutrek_init,								/* initialization callback */
 	simutrek_vsync,								/* vsync callback */
 	simutrek_update,							/* update callback */
@@ -1054,7 +1054,7 @@ const ldplayer_interface simutrek_interface =
     command to enable/disable audio squelch
 -------------------------------------------------*/
 
-void simutrek_set_audio_squelch(running_device *device, int state)
+void simutrek_set_audio_squelch(device_t *device, int state)
 {
 	laserdisc_state *ld = ldcore_get_safe_token(device);
 	ldplayer_data *player = ld->player;

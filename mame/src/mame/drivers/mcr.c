@@ -290,6 +290,7 @@
 #include "machine/z80sio.h"
 #include "audio/mcr.h"
 #include "sound/samples.h"
+#include "machine/nvram.h"
 #include "includes/mcr.h"
 
 
@@ -413,7 +414,7 @@ static WRITE8_HANDLER( kroozr_op4_w )
 
 static WRITE8_HANDLER( journey_op4_w )
 {
-	running_device *samples = space->machine->device("samples");
+	device_t *samples = space->machine->device("samples");
 
 	/* if we're not playing the sample yet, start it */
 	if (!sample_playing(samples, 0))
@@ -534,7 +535,7 @@ static READ8_HANDLER( nflfoot_ip2_r )
 
 static WRITE8_HANDLER( nflfoot_op4_w )
 {
-	running_device *sio = space->machine->device("ipu_sio");
+	device_t *sio = space->machine->device("ipu_sio");
 
 	/* bit 7 = J3-7 on IPU board = /RXDA on SIO */
 	logerror("%04X:op4_w(%d%d%d)\n", cpu_get_pc(space->cpu), (data >> 7) & 1, (data >> 6) & 1, (data >> 5) & 1);
@@ -617,11 +618,11 @@ static WRITE8_HANDLER( demoderb_op4_w )
 static ADDRESS_MAP_START( cpu_90009_map, ADDRESS_SPACE_PROGRAM, 8 )
 	ADDRESS_MAP_UNMAP_HIGH
 	AM_RANGE(0x0000, 0x6fff) AM_ROM
-	AM_RANGE(0x7000, 0x77ff) AM_MIRROR(0x0800) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0x7000, 0x77ff) AM_MIRROR(0x0800) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0xf000, 0xf1ff) AM_MIRROR(0x0200) AM_RAM AM_BASE_SIZE_GENERIC(spriteram)
 	AM_RANGE(0xf400, 0xf41f) AM_MIRROR(0x03e0) AM_WRITE(paletteram_xxxxRRRRBBBBGGGG_split1_w) AM_BASE_GENERIC(paletteram)
 	AM_RANGE(0xf800, 0xf81f) AM_MIRROR(0x03e0) AM_WRITE(paletteram_xxxxRRRRBBBBGGGG_split2_w) AM_BASE_GENERIC(paletteram2)
-	AM_RANGE(0xfc00, 0xffff) AM_RAM_WRITE(mcr_90009_videoram_w) AM_BASE_GENERIC(videoram) AM_SIZE_GENERIC(videoram)
+	AM_RANGE(0xfc00, 0xffff) AM_RAM_WRITE(mcr_90009_videoram_w) AM_BASE_MEMBER(mcr_state, videoram)
 ADDRESS_MAP_END
 
 /* upper I/O map determined by PAL; only SSIO ports are verified from schematics */
@@ -646,9 +647,9 @@ ADDRESS_MAP_END
 static ADDRESS_MAP_START( cpu_90010_map, ADDRESS_SPACE_PROGRAM, 8 )
 	ADDRESS_MAP_UNMAP_HIGH
 	AM_RANGE(0x0000, 0xbfff) AM_ROM
-	AM_RANGE(0xc000, 0xc7ff) AM_MIRROR(0x1800) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0xc000, 0xc7ff) AM_MIRROR(0x1800) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0xe000, 0xe1ff) AM_MIRROR(0x1600) AM_RAM AM_BASE_SIZE_GENERIC(spriteram)
-	AM_RANGE(0xe800, 0xefff) AM_MIRROR(0x1000) AM_RAM_WRITE(mcr_90010_videoram_w) AM_BASE_GENERIC(videoram) AM_SIZE_GENERIC(videoram)
+	AM_RANGE(0xe800, 0xefff) AM_MIRROR(0x1000) AM_RAM_WRITE(mcr_90010_videoram_w) AM_BASE_MEMBER(mcr_state, videoram)
 ADDRESS_MAP_END
 
 /* upper I/O map determined by PAL; only SSIO ports are verified from schematics */
@@ -673,9 +674,9 @@ ADDRESS_MAP_END
 static ADDRESS_MAP_START( cpu_91490_map, ADDRESS_SPACE_PROGRAM, 8 )
 	ADDRESS_MAP_UNMAP_HIGH
 	AM_RANGE(0x0000, 0xdfff) AM_ROM
-	AM_RANGE(0xe000, 0xe7ff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0xe000, 0xe7ff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0xe800, 0xe9ff) AM_MIRROR(0x0200) AM_RAM AM_BASE_SIZE_GENERIC(spriteram)
-	AM_RANGE(0xf000, 0xf7ff) AM_RAM_WRITE(mcr_91490_videoram_w) AM_BASE_GENERIC(videoram) AM_SIZE_GENERIC(videoram)
+	AM_RANGE(0xf000, 0xf7ff) AM_RAM_WRITE(mcr_91490_videoram_w) AM_BASE_MEMBER(mcr_state, videoram)
 	AM_RANGE(0xf800, 0xf87f) AM_MIRROR(0x0780) AM_WRITE(mcr_91490_paletteram_w) AM_BASE_GENERIC(paletteram)
 ADDRESS_MAP_END
 
@@ -1566,123 +1567,117 @@ static const samples_interface journey_samples_interface =
  *************************************/
 
 /* 90009 CPU board plus 90908/90913/91483 sound board */
-static MACHINE_DRIVER_START( mcr_90009 )
+static MACHINE_CONFIG_START( mcr_90009, mcr_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, MAIN_OSC_MCR_I/8)
-	MDRV_CPU_CONFIG(mcr_daisy_chain)
-	MDRV_CPU_PROGRAM_MAP(cpu_90009_map)
-	MDRV_CPU_IO_MAP(cpu_90009_portmap)
-	MDRV_CPU_VBLANK_INT_HACK(mcr_interrupt,2)
+	MCFG_CPU_ADD("maincpu", Z80, MAIN_OSC_MCR_I/8)
+	MCFG_CPU_CONFIG(mcr_daisy_chain)
+	MCFG_CPU_PROGRAM_MAP(cpu_90009_map)
+	MCFG_CPU_IO_MAP(cpu_90009_portmap)
+	MCFG_CPU_VBLANK_INT_HACK(mcr_interrupt,2)
 
-	MDRV_Z80CTC_ADD("ctc", MAIN_OSC_MCR_I/8 /* same as "maincpu" */, mcr_ctc_intf)
+	MCFG_Z80CTC_ADD("ctc", MAIN_OSC_MCR_I/8 /* same as "maincpu" */, mcr_ctc_intf)
 
-	MDRV_WATCHDOG_VBLANK_INIT(16)
-	MDRV_MACHINE_START(mcr)
-	MDRV_MACHINE_RESET(mcr)
-	MDRV_NVRAM_HANDLER(generic_1fill)
+	MCFG_WATCHDOG_VBLANK_INIT(16)
+	MCFG_MACHINE_START(mcr)
+	MCFG_MACHINE_RESET(mcr)
+	MCFG_NVRAM_ADD_1FILL("nvram")
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(30)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*16, 30*16)
-	MDRV_SCREEN_VISIBLE_AREA(0*16, 32*16-1, 0*16, 30*16-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(30)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*16, 30*16)
+	MCFG_SCREEN_VISIBLE_AREA(0*16, 32*16-1, 0*16, 30*16-1)
 
-	MDRV_GFXDECODE(mcr)
-	MDRV_PALETTE_LENGTH(32)
+	MCFG_GFXDECODE(mcr)
+	MCFG_PALETTE_LENGTH(32)
 
-	MDRV_VIDEO_START(mcr)
-	MDRV_VIDEO_UPDATE(mcr)
+	MCFG_VIDEO_START(mcr)
+	MCFG_VIDEO_UPDATE(mcr)
 
 	/* sound hardware */
-	MDRV_IMPORT_FROM(mcr_ssio)
-MACHINE_DRIVER_END
+	MCFG_FRAGMENT_ADD(mcr_ssio)
+MACHINE_CONFIG_END
 
 
 /* 90010 CPU board plus 90908/90913/91483 sound board */
-static MACHINE_DRIVER_START( mcr_90010 )
-	MDRV_IMPORT_FROM(mcr_90009)
+static MACHINE_CONFIG_DERIVED( mcr_90010, mcr_90009 )
 
 	/* basic machine hardware */
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(cpu_90010_map)
-	MDRV_CPU_IO_MAP(cpu_90010_portmap)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(cpu_90010_map)
+	MCFG_CPU_IO_MAP(cpu_90010_portmap)
 
 	/* video hardware */
-	MDRV_PALETTE_LENGTH(64)
-MACHINE_DRIVER_END
+	MCFG_PALETTE_LENGTH(64)
+MACHINE_CONFIG_END
 
 
 /* 91475 CPU board plus 90908/90913/91483 sound board plus cassette interface */
-static MACHINE_DRIVER_START( mcr_91475 )
-	MDRV_IMPORT_FROM(mcr_90010)
+static MACHINE_CONFIG_DERIVED( mcr_91475, mcr_90010 )
 
 	/* video hardware */
-	MDRV_PALETTE_LENGTH(128)
+	MCFG_PALETTE_LENGTH(128)
 
 	/* sound hardware */
-	MDRV_SOUND_ADD("samples", SAMPLES, 0)
-	MDRV_SOUND_CONFIG(journey_samples_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.25)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.25)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("samples", SAMPLES, 0)
+	MCFG_SOUND_CONFIG(journey_samples_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.25)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.25)
+MACHINE_CONFIG_END
 
 
 /* 91490 CPU board plus 90908/90913/91483 sound board */
-static MACHINE_DRIVER_START( mcr_91490 )
-	MDRV_IMPORT_FROM(mcr_90010)
+static MACHINE_CONFIG_DERIVED( mcr_91490, mcr_90010 )
 
 	/* basic machine hardware */
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_CLOCK(5000000)
-	MDRV_CPU_PROGRAM_MAP(cpu_91490_map)
-	MDRV_CPU_IO_MAP(cpu_91490_portmap)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_CLOCK(5000000)
+	MCFG_CPU_PROGRAM_MAP(cpu_91490_map)
+	MCFG_CPU_IO_MAP(cpu_91490_portmap)
 
-	MDRV_DEVICE_MODIFY("ctc")
-	MDRV_DEVICE_CLOCK(5000000 /* same as "maincpu" */)
-MACHINE_DRIVER_END
+	MCFG_DEVICE_MODIFY("ctc")
+	MCFG_DEVICE_CLOCK(5000000 /* same as "maincpu" */)
+MACHINE_CONFIG_END
 
 
 /* 91490 CPU board plus 90908/90913/91483 sound board plus Squawk n' Talk sound board */
-static MACHINE_DRIVER_START( mcr_91490_snt )
+static MACHINE_CONFIG_DERIVED( mcr_91490_snt, mcr_91490 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(mcr_91490)
-	MDRV_IMPORT_FROM(squawk_n_talk)
-MACHINE_DRIVER_END
+	MCFG_FRAGMENT_ADD(squawk_n_talk)
+MACHINE_CONFIG_END
 
 
 /* 91490 CPU board plus 90908/90913/91483 sound board plus Squawk n' Talk sound board plus IPU */
-static MACHINE_DRIVER_START( mcr_91490_ipu )
+static MACHINE_CONFIG_DERIVED( mcr_91490_ipu, mcr_91490_snt )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(mcr_91490_snt)
-	MDRV_MACHINE_START(nflfoot)
+	MCFG_MACHINE_START(nflfoot)
 
-	MDRV_CPU_ADD("ipu", Z80, 7372800/2)
-	MDRV_CPU_CONFIG(mcr_ipu_daisy_chain)
-	MDRV_CPU_PROGRAM_MAP(ipu_91695_map)
-	MDRV_CPU_IO_MAP(ipu_91695_portmap)
-	MDRV_CPU_VBLANK_INT_HACK(mcr_ipu_interrupt,2)
+	MCFG_CPU_ADD("ipu", Z80, 7372800/2)
+	MCFG_CPU_CONFIG(mcr_ipu_daisy_chain)
+	MCFG_CPU_PROGRAM_MAP(ipu_91695_map)
+	MCFG_CPU_IO_MAP(ipu_91695_portmap)
+	MCFG_CPU_VBLANK_INT_HACK(mcr_ipu_interrupt,2)
 
-	MDRV_Z80CTC_ADD("ipu_ctc", 7372800/2 /* same as "ipu" */, nflfoot_ctc_intf)
-	MDRV_Z80PIO_ADD("ipu_pio0", 7372800/2, nflfoot_pio_intf)
-	MDRV_Z80PIO_ADD("ipu_pio1", 7372800/2, nflfoot_pio_intf)
-	MDRV_Z80SIO_ADD("ipu_sio", 7372800/2 /* same as "ipu" */, nflfoot_sio_intf)
-MACHINE_DRIVER_END
+	MCFG_Z80CTC_ADD("ipu_ctc", 7372800/2 /* same as "ipu" */, nflfoot_ctc_intf)
+	MCFG_Z80PIO_ADD("ipu_pio0", 7372800/2, nflfoot_pio_intf)
+	MCFG_Z80PIO_ADD("ipu_pio1", 7372800/2, nflfoot_pio_intf)
+	MCFG_Z80SIO_ADD("ipu_sio", 7372800/2 /* same as "ipu" */, nflfoot_sio_intf)
+MACHINE_CONFIG_END
 
 
 /* 91490 CPU board plus 90908/90913/91483 sound board plus Turbo Chip Squeak sound board */
-static MACHINE_DRIVER_START( mcr_91490_tcs )
+static MACHINE_CONFIG_DERIVED( mcr_91490_tcs, mcr_91490 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(mcr_91490)
-	MDRV_IMPORT_FROM(turbo_chip_squeak)
-MACHINE_DRIVER_END
+	MCFG_FRAGMENT_ADD(turbo_chip_squeak)
+MACHINE_CONFIG_END
 
 
 
@@ -2654,7 +2649,7 @@ static DRIVER_INIT( demoderb )
 	ssio_set_custom_output(4, 0xff, demoderb_op4_w);
 
 	/* the SSIO Z80 doesn't have any program to execute */
-	cputag_suspend(machine, "tcscpu", SUSPEND_REASON_DISABLE, 1);
+	machine->device<cpu_device>("tcscpu")->suspend(SUSPEND_REASON_DISABLE, 1);
 }
 
 

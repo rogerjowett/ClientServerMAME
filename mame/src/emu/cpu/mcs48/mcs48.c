@@ -154,9 +154,10 @@ struct _mcs48_state
 	int			icount;
 
 	/* Memory spaces */
-    const address_space *program;
-    const address_space *data;
-    const address_space *io;
+    address_space *program;
+    direct_read_data *direct;
+    address_space *data;
+    address_space *io;
 
 	UINT8		feature_mask;		/* processor feature flags */
 	UINT16		int_rom_size;		/* internal rom size */
@@ -175,23 +176,23 @@ typedef int (*mcs48_ophandler)(mcs48_state *state);
 ***************************************************************************/
 
 /* ROM is mapped to ADDRESS_SPACE_PROGRAM */
-#define program_r(a)	memory_read_byte_8le(cpustate->program, a)
+#define program_r(a)	cpustate->program->read_byte(a)
 
 /* RAM is mapped to ADDRESS_SPACE_DATA */
-#define ram_r(a)		memory_read_byte_8le(cpustate->data, a)
-#define ram_w(a,V)		memory_write_byte_8le(cpustate->data, a, V)
+#define ram_r(a)		cpustate->data->read_byte(a)
+#define ram_w(a,V)		cpustate->data->write_byte(a, V)
 
 /* ports are mapped to ADDRESS_SPACE_IO */
-#define ext_r(a)		memory_read_byte_8le(cpustate->io, a)
-#define ext_w(a,V)		memory_write_byte_8le(cpustate->io, a, V)
-#define port_r(a)		memory_read_byte_8le(cpustate->io, MCS48_PORT_P0 + a)
-#define port_w(a,V)		memory_write_byte_8le(cpustate->io, MCS48_PORT_P0 + a, V)
-#define test_r(a)		memory_read_byte_8le(cpustate->io, MCS48_PORT_T0 + a)
-#define test_w(a,V)		memory_write_byte_8le(cpustate->io, MCS48_PORT_T0 + a, V)
-#define bus_r()			memory_read_byte_8le(cpustate->io, MCS48_PORT_BUS)
-#define bus_w(V)		memory_write_byte_8le(cpustate->io, MCS48_PORT_BUS, V)
-#define ea_r()			memory_read_byte_8le(cpustate->io, MCS48_PORT_EA)
-#define prog_w(V)		memory_write_byte_8le(cpustate->io, MCS48_PORT_PROG, V)
+#define ext_r(a)		cpustate->io->read_byte(a)
+#define ext_w(a,V)		cpustate->io->write_byte(a, V)
+#define port_r(a)		cpustate->io->read_byte(MCS48_PORT_P0 + a)
+#define port_w(a,V)		cpustate->io->write_byte(MCS48_PORT_P0 + a, V)
+#define test_r(a)		cpustate->io->read_byte(MCS48_PORT_T0 + a)
+#define test_w(a,V)		cpustate->io->write_byte(MCS48_PORT_T0 + a, V)
+#define bus_r()			cpustate->io->read_byte(MCS48_PORT_BUS)
+#define bus_w(V)		cpustate->io->write_byte(MCS48_PORT_BUS, V)
+#define ea_r()			cpustate->io->read_byte(MCS48_PORT_EA)
+#define prog_w(V)		cpustate->io->write_byte(MCS48_PORT_PROG, V)
 
 /* r0-r7 map to memory via the regptr */
 #define R0				regptr[0]
@@ -217,10 +218,12 @@ static int check_irqs(mcs48_state *cpustate);
     INLINE FUNCTIONS
 ***************************************************************************/
 
-INLINE mcs48_state *get_safe_token(running_device *device)
+INLINE mcs48_state *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
-	assert(device->type() == I8035 ||
+	assert(device->type() == I8021 ||
+		   device->type() == I8022 ||
+		   device->type() == I8035 ||
 		   device->type() == I8048 ||
 		   device->type() == I8648 ||
 		   device->type() == I8748 ||
@@ -247,7 +250,7 @@ INLINE mcs48_state *get_safe_token(running_device *device)
 
 INLINE UINT8 opcode_fetch(mcs48_state *cpustate)
 {
-	return memory_decrypted_read_byte(cpustate->program, cpustate->pc++);
+	return cpustate->direct->read_decrypted_byte(cpustate->pc++);
 }
 
 
@@ -258,7 +261,7 @@ INLINE UINT8 opcode_fetch(mcs48_state *cpustate)
 
 INLINE UINT8 argument_fetch(mcs48_state *cpustate)
 {
-	return memory_raw_read_byte(cpustate->program, cpustate->pc++);
+	return cpustate->direct->read_raw_byte(cpustate->pc++);
 }
 
 
@@ -269,7 +272,7 @@ INLINE UINT8 argument_fetch(mcs48_state *cpustate)
 
 INLINE void update_regptr(mcs48_state *cpustate)
 {
-	cpustate->regptr = (UINT8 *)memory_get_write_ptr(cpustate->data, (cpustate->psw & B_FLAG) ? 24 : 0);
+	cpustate->regptr = (UINT8 *)cpustate->data->get_write_ptr((cpustate->psw & B_FLAG) ? 24 : 0);
 }
 
 
@@ -857,6 +860,7 @@ static void mcs48_init(legacy_cpu_device *device, device_irq_callback irqcallbac
 	cpustate->feature_mask = feature_mask;
 
 	cpustate->program = device->space(AS_PROGRAM);
+	cpustate->direct = &cpustate->program->direct();
 	cpustate->data = device->space(AS_DATA);
 	cpustate->io = device->space(AS_IO);
 
@@ -1159,7 +1163,7 @@ static CPU_EXECUTE( mcs48 )
     read
 -------------------------------------------------*/
 
-UINT8 upi41_master_r(running_device *device, UINT8 a0)
+UINT8 upi41_master_r(device_t *device, UINT8 a0)
 {
 	mcs48_state *cpustate = get_safe_token(device);
 
@@ -1208,7 +1212,7 @@ static TIMER_CALLBACK( master_callback )
 		cpustate->sts |= STS_F1;
 }
 
-void upi41_master_w(running_device *_device, UINT8 a0, UINT8 data)
+void upi41_master_w(device_t *_device, UINT8 a0, UINT8 data)
 {
 	legacy_cpu_device *device = downcast<legacy_cpu_device *>(_device);
 	timer_call_after_resynch(device->machine, (void *)device, (a0 << 8) | data, master_callback);

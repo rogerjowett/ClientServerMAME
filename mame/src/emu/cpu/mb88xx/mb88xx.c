@@ -75,13 +75,14 @@ struct _mb88_state
     UINT8 pending_interrupt;
     device_irq_callback irqcallback;
     legacy_cpu_device *device;
-    const address_space *program;
-    const address_space *data;
-    const address_space *io;
+    address_space *program;
+    direct_read_data *direct;
+    address_space *data;
+    address_space *io;
     int icount;
 };
 
-INLINE mb88_state *get_safe_token(running_device *device)
+INLINE mb88_state *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
 	assert(device->type() == MB88 ||
@@ -98,13 +99,13 @@ static TIMER_CALLBACK( serial_timer );
     MACROS
 ***************************************************************************/
 
-#define READOP(a)			(memory_decrypted_read_byte(cpustate->program, a))
+#define READOP(a)			(cpustate->direct->read_decrypted_byte(a))
 
-#define RDMEM(a)			(memory_read_byte_8be(cpustate->data, a))
-#define WRMEM(a,v)			(memory_write_byte_8be(cpustate->data, (a), (v)))
+#define RDMEM(a)			(cpustate->data->read_byte(a))
+#define WRMEM(a,v)			(cpustate->data->write_byte((a), (v)))
 
-#define READPORT(a)			(memory_read_byte_8be(cpustate->io, a))
-#define WRITEPORT(a,v)		(memory_write_byte_8be(cpustate->io, (a), (v)))
+#define READPORT(a)			(cpustate->io->read_byte(a))
+#define WRITEPORT(a,v)		(cpustate->io->write_byte((a), (v)))
 
 #define TEST_ST()			(cpustate->st & 1)
 #define TEST_ZF()			(cpustate->zf & 1)
@@ -144,6 +145,7 @@ static CPU_INIT( mb88 )
 	cpustate->irqcallback = irqcallback;
 	cpustate->device = device;
 	cpustate->program = device->space(AS_PROGRAM);
+	cpustate->direct = &cpustate->program->direct();
 	cpustate->data = device->space(AS_DATA);
 	cpustate->io = device->space(AS_IO);
 
@@ -301,26 +303,38 @@ static void update_pio( mb88_state *cpustate, int cycles )
 	/* process pending interrupts */
 	if (cpustate->pending_interrupt & cpustate->pio)
 	{
-		/* if we have a live external source, call the irqcallback */
-		if (cpustate->pending_interrupt & cpustate->pio & INT_CAUSE_EXTERNAL)
-			(*cpustate->irqcallback)(cpustate->device, 0);
-
-		cpustate->pending_interrupt = 0;
-
 		cpustate->SP[cpustate->SI] = GETPC();
 		cpustate->SP[cpustate->SI] |= TEST_CF() << 15;
 		cpustate->SP[cpustate->SI] |= TEST_ZF() << 14;
 		cpustate->SP[cpustate->SI] |= TEST_ST() << 13;
 		cpustate->SI = ( cpustate->SI + 1 ) & 3;
-		cpustate->PC = 0x02;
+
+		/* the datasheet doesn't mention interrupt vectors but
+        the Arabian MCU program expects the following */
+		if (cpustate->pending_interrupt & cpustate->pio & INT_CAUSE_EXTERNAL)
+		{
+			/* if we have a live external source, call the irqcallback */
+			(*cpustate->irqcallback)(cpustate->device, 0);
+			cpustate->PC = 0x02;
+		}
+		else if (cpustate->pending_interrupt & cpustate->pio & INT_CAUSE_TIMER)
+		{
+			cpustate->PC = 0x04;
+		}
+		else if (cpustate->pending_interrupt & cpustate->pio & INT_CAUSE_SERIAL)
+		{
+			cpustate->PC = 0x06;
+		}
+
 		cpustate->PA = 0x00;
 		cpustate->st = 1;
+		cpustate->pending_interrupt = 0;
 
 		CYCLES(3); /* ? */
 	}
 }
 
-void mb88_external_clock_w(running_device *device, int state)
+void mb88_external_clock_w(device_t *device, int state)
 {
 	mb88_state *cpustate = get_safe_token(device);
 	if (state != cpustate->ctr)

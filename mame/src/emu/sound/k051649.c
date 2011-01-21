@@ -55,10 +55,10 @@ struct _k051649_state
 	int f[10];
 };
 
-INLINE k051649_state *get_safe_token(running_device *device)
+INLINE k051649_state *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
-	assert(device->type() == SOUND_K051649);
+	assert(device->type() == K051649);
 	return (k051649_state *)downcast<legacy_device_base *>(device)->token();
 }
 

@@ -191,6 +191,7 @@ NEP-16
 #include "sound/ymz280b.h"
 #include "cpu/sh2/sh2.h"
 #include "includes/suprnova.h"
+#include "machine/nvram.h"
 
 #define BIOS_SKIP 1 // Skip Bios as it takes too long and doesn't complete atm.
 
@@ -369,7 +370,7 @@ static READ32_HANDLER( skns_hit_r )
 	switch(adr) {
 	case 0x28:
 	case 0x2a:
-		return (UINT16)mame_rand(space->machine);
+		return (UINT16)space->machine->rand();
 	case 0x00:
 	case 0x10:
 		return (UINT16)hit.x_in;
@@ -456,7 +457,7 @@ static TIMER_DEVICE_CALLBACK( interrupt_callback )
 
 static MACHINE_RESET(skns)
 {
-	memory_set_bankptr(machine, "bank1",memory_region(machine, "user1"));
+	memory_set_bankptr(machine, "bank1",machine->region("user1")->base());
 }
 
 
@@ -746,7 +747,7 @@ static READ32_HANDLER( skns_msm6242_r )
 
 static WRITE32_HANDLER( skns_v3t_w )
 {
-	UINT8 *btiles = memory_region(space->machine, "gfx3");
+	UINT8 *btiles = space->machine->region("gfx3")->base();
 
 	COMBINE_DATA(&skns_v3t_ram[offset]);
 
@@ -768,7 +769,7 @@ static ADDRESS_MAP_START( skns_map, ADDRESS_SPACE_PROGRAM, 32 )
 	AM_RANGE(0x00400004, 0x00400007) AM_READ_PORT("400004")
 	/* In between is write only */
 	AM_RANGE(0x0040000c, 0x0040000f) AM_READ_PORT("40000c")
-	AM_RANGE(0x00800000, 0x00801fff) AM_RAM AM_BASE_SIZE_GENERIC(nvram) /* 'backup' RAM */
+	AM_RANGE(0x00800000, 0x00801fff) AM_RAM AM_SHARE("nvram") /* 'backup' RAM */
 	AM_RANGE(0x00c00000, 0x00c00003) AM_DEVREADWRITE8("ymz", ymz280b_r, ymz280b_w, 0xffff0000) /* ymz280_w (sound) */
 	AM_RANGE(0x01000000, 0x0100000f) AM_READWRITE(skns_msm6242_r, skns_msm6242_w)
 	AM_RANGE(0x01800000, 0x01800003) AM_WRITE(skns_hit2_w)
@@ -830,53 +831,53 @@ static const ymz280b_interface ymz280b_intf =
 	0	// irq ?
 };
 
-static MACHINE_DRIVER_START(skns)
-	MDRV_CPU_ADD("maincpu", SH2,28638000)
-	MDRV_CPU_PROGRAM_MAP(skns_map)
-	MDRV_CPU_VBLANK_INT_HACK(skns_interrupt,2)
+static MACHINE_CONFIG_START( skns, driver_device )
+	MCFG_CPU_ADD("maincpu", SH2,28638000)
+	MCFG_CPU_PROGRAM_MAP(skns_map)
+	MCFG_CPU_VBLANK_INT_HACK(skns_interrupt,2)
 
-	MDRV_MACHINE_RESET(skns)
-	MDRV_NVRAM_HANDLER(generic_1fill)
+	MCFG_MACHINE_RESET(skns)
+	MCFG_NVRAM_ADD_1FILL("nvram")
 
-	MDRV_TIMER_ADD_PERIODIC("int15_timer", interrupt_callback, MSEC(2))
-	MDRV_TIMER_PARAM(15)
-	MDRV_TIMER_ADD_PERIODIC("int11_timer", interrupt_callback, MSEC(8))
-	MDRV_TIMER_PARAM(11)
-	MDRV_TIMER_ADD_PERIODIC("int9_timer", interrupt_callback, HZ(28638000/1824))
-	MDRV_TIMER_PARAM(9)
+	MCFG_TIMER_ADD_PERIODIC("int15_timer", interrupt_callback, MSEC(2))
+	MCFG_TIMER_PARAM(15)
+	MCFG_TIMER_ADD_PERIODIC("int11_timer", interrupt_callback, MSEC(8))
+	MCFG_TIMER_PARAM(11)
+	MCFG_TIMER_ADD_PERIODIC("int9_timer", interrupt_callback, HZ(28638000/1824))
+	MCFG_TIMER_PARAM(9)
 
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_ALWAYS_UPDATE)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_ALWAYS_UPDATE)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(59.5971) // measured by Guru
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(320,240)
-	MDRV_SCREEN_VISIBLE_AREA(0,319,0,239)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(59.5971) // measured by Guru
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(320,240)
+	MCFG_SCREEN_VISIBLE_AREA(0,319,0,239)
 
-	MDRV_PALETTE_LENGTH(32768)
-	MDRV_GFXDECODE(skns_bg)
+	MCFG_PALETTE_LENGTH(32768)
+	MCFG_GFXDECODE(skns_bg)
 
-	MDRV_VIDEO_START(skns)
-	MDRV_VIDEO_RESET(skns)
-	MDRV_VIDEO_EOF(skns)
-	MDRV_VIDEO_UPDATE(skns)
+	MCFG_VIDEO_START(skns)
+	MCFG_VIDEO_RESET(skns)
+	MCFG_VIDEO_EOF(skns)
+	MCFG_VIDEO_UPDATE(skns)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymz", YMZ280B, 33333333 / 2)
-	MDRV_SOUND_CONFIG(ymz280b_intf)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymz", YMZ280B, 33333333 / 2)
+	MCFG_SOUND_CONFIG(ymz280b_intf)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 /***** BIOS SKIPPING *****/
 
 static READ32_HANDLER( bios_skip_r )
 {
 #if BIOS_SKIP
-	if ((cpu_get_pc(space->cpu)==0x6f8) || (cpu_get_pc(space->cpu)==0x6fa)) memory_write_byte(space, 0x06000029,1);
+	if ((cpu_get_pc(space->cpu)==0x6f8) || (cpu_get_pc(space->cpu)==0x6fa)) space->write_byte(0x06000029,1);
 #endif
 	return skns_main_ram[0x00028/4];
 }

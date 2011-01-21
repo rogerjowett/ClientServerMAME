@@ -4,12 +4,11 @@
 
 *************************************************************************/
 
-class chqflag_state
+class chqflag_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, chqflag_state(machine)); }
-
-	chqflag_state(running_machine &machine) { }
+	chqflag_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *    ram;
@@ -25,13 +24,13 @@ public:
 	int        accel, wheel;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *audiocpu;
-	running_device *k007232_1;
-	running_device *k007232_2;
-	running_device *k051960;
-	running_device *k051316_1;
-	running_device *k051316_2;
+	device_t *maincpu;
+	device_t *audiocpu;
+	device_t *k007232_1;
+	device_t *k007232_2;
+	device_t *k051960;
+	device_t *k051316_1;
+	device_t *k051316_2;
 };
 
 /*----------- defined in video/chqflag.c -----------*/

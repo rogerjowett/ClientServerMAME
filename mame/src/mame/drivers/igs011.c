@@ -67,6 +67,7 @@ Notes:
 #include "sound/2413intf.h"
 #include "sound/3812intf.h"
 #include "sound/ics2115.h"
+#include "machine/nvram.h"
 
 #define LOG_BLITTER 0
 
@@ -84,6 +85,18 @@ Notes:
     The value at that address (0-7) is the topmost layer.
 
 ***************************************************************************/
+
+// ASC trampolines
+/*static READ8_DEVICE_HANDLER(igs011_ics2115_r)
+{
+    return downcast<ics2115_device *>(device)->read(offset);
+    //return 0;
+}
+
+static WRITE8_DEVICE_HANDLER(igs011_ics2115_w)
+{
+//  device<ics2115_device>("asc")->write(offset, data);
+}*/
 
 static UINT8 *layer[8];
 
@@ -277,10 +290,10 @@ static WRITE16_HANDLER( igs011_blit_flags_w )
 	UINT8 trans_pen, clear_pen, pen_hi, *dest;
 	UINT8 pen = 0;
 
-	UINT8 *gfx		=	memory_region(space->machine, "blitter");
-	UINT8 *gfx2		=	memory_region(space->machine, "blitter_hi");
-	int gfx_size	=	memory_region_length(space->machine, "blitter");
-	int gfx2_size	=	memory_region_length(space->machine, "blitter_hi");
+	UINT8 *gfx		=	space->machine->region("blitter")->base();
+	UINT8 *gfx2		=	space->machine->region("blitter_hi")->base();
+	int gfx_size	=	space->machine->region("blitter")->bytes();
+	int gfx2_size	=	space->machine->region("blitter_hi")->bytes();
 
 	const rectangle &clip = space->machine->primary_screen->visible_area();
 
@@ -424,7 +437,7 @@ IGS_DIPS_R( 5 )
 static void wlcc_decrypt(running_machine *machine)
 {
 	int i;
-	UINT16 *src = (UINT16 *) (memory_region(machine, "maincpu"));
+	UINT16 *src = (UINT16 *) (machine->region("maincpu")->base());
 
 	int rom_size = 0x80000;
 
@@ -448,7 +461,7 @@ static void wlcc_decrypt(running_machine *machine)
 static void lhb_decrypt(running_machine *machine)
 {
 	int i;
-	UINT16 *src = (UINT16 *) (memory_region(machine, "maincpu"));
+	UINT16 *src = (UINT16 *) (machine->region("maincpu")->base());
 
 	int rom_size = 0x80000;
 
@@ -473,7 +486,7 @@ static void lhb_decrypt(running_machine *machine)
 static void drgnwrld_type3_decrypt(running_machine *machine)
 {
 	int i;
-	UINT16 *src = (UINT16 *) (memory_region(machine, "maincpu"));
+	UINT16 *src = (UINT16 *) (machine->region("maincpu")->base());
 
 	int rom_size = 0x80000;
 
@@ -501,7 +514,7 @@ static void drgnwrld_type3_decrypt(running_machine *machine)
 static void drgnwrld_type2_decrypt(running_machine *machine)
 {
 	int i;
-	UINT16 *src = (UINT16 *) (memory_region(machine, "maincpu"));
+	UINT16 *src = (UINT16 *) (machine->region("maincpu")->base());
 
 	int rom_size = 0x80000;
 
@@ -534,7 +547,7 @@ static void drgnwrld_type2_decrypt(running_machine *machine)
 static void drgnwrld_type1_decrypt(running_machine *machine)
 {
 	int i;
-	UINT16 *src = (UINT16 *) (memory_region(machine, "maincpu"));
+	UINT16 *src = (UINT16 *) (machine->region("maincpu")->base());
 
 	int rom_size = 0x80000;
 
@@ -564,7 +577,7 @@ static void lhb2_decrypt(running_machine *machine)
 {
 	int i,j;
 	int rom_size = 0x80000;
-	UINT16 *src = (UINT16 *) (memory_region(machine, "maincpu"));
+	UINT16 *src = (UINT16 *) (machine->region("maincpu")->base());
 	UINT16 *result_data = auto_alloc_array(machine, UINT16, rom_size/2);
 
 	for (i=0; i<rom_size/2; i++)
@@ -605,7 +618,7 @@ static void nkishusp_decrypt(running_machine *machine)
 
 	int i,j;
 	int rom_size = 0x80000;
-	UINT16 *src = (UINT16 *) (memory_region(machine, "maincpu"));
+	UINT16 *src = (UINT16 *) (machine->region("maincpu")->base());
 	UINT16 *result_data = auto_alloc_array(machine, UINT16, rom_size/2);
 
 	for (i=0; i<rom_size/2; i++)
@@ -635,7 +648,7 @@ static void nkishusp_decrypt(running_machine *machine)
 static void vbowlj_decrypt(running_machine *machine)
 {
 	int i;
-	UINT16 *src = (UINT16 *) (memory_region(machine, "maincpu"));
+	UINT16 *src = (UINT16 *) (machine->region("maincpu")->base());
 
 	int rom_size = 0x80000;
 
@@ -669,7 +682,7 @@ static void vbowlj_decrypt(running_machine *machine)
 static void dbc_decrypt(running_machine *machine)
 {
 	int i;
-	UINT16 *src = (UINT16 *) (memory_region(machine, "maincpu"));
+	UINT16 *src = (UINT16 *) (machine->region("maincpu")->base());
 
 	int rom_size = 0x80000;
 
@@ -719,7 +732,7 @@ static void dbc_decrypt(running_machine *machine)
 static void ryukobou_decrypt(running_machine *machine)
 {
 	int i;
-	UINT16 *src = (UINT16 *) memory_region(machine, "maincpu");
+	UINT16 *src = (UINT16 *) machine->region("maincpu")->base();
 	int rom_size = 0x80000;
 
 	for (i=0; i<rom_size/2; i++)
@@ -751,7 +764,7 @@ static void lhb2_decrypt_gfx(running_machine *machine)
 {
 	int i;
 	unsigned rom_size = 0x200000;
-	UINT8 *src = (UINT8 *) (memory_region(machine, "blitter"));
+	UINT8 *src = (UINT8 *) (machine->region("blitter")->base());
 	UINT8 *result_data = auto_alloc_array(machine, UINT8, rom_size);
 
 	for (i=0; i<rom_size; i++)
@@ -766,7 +779,7 @@ static void drgnwrld_gfx_decrypt(running_machine *machine)
 {
 	int i;
 	unsigned rom_size = 0x400000;
-	UINT8 *src = (UINT8 *) (memory_region(machine, "blitter"));
+	UINT8 *src = (UINT8 *) (machine->region("blitter")->base());
 	UINT8 *result_data = auto_alloc_array(machine, UINT8, rom_size);
 
 	for (i=0; i<rom_size; i++)
@@ -881,8 +894,8 @@ static WRITE16_HANDLER( igs011_prot_addr_w )
 
 //  igs011_prot2 = 0x00;
 
-	const address_space *sp = cputag_get_address_space(space->machine, "maincpu", ADDRESS_SPACE_PROGRAM);
-	UINT8 *rom = memory_region(space->machine, "maincpu");
+	address_space *sp = cputag_get_address_space(space->machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	UINT8 *rom = space->machine->region("maincpu")->base();
 
 	// Plug previous address range with ROM access
 	memory_install_rom(sp, igs011_prot1_addr + 0, igs011_prot1_addr + 9, 0, 0, rom + igs011_prot1_addr);
@@ -1628,7 +1641,7 @@ static READ16_HANDLER( vbowl_igs003_r )
 // V0400O
 static DRIVER_INIT( drgnwrld )
 {
-//  UINT16 *rom = (UINT16 *) memory_region(machine, "maincpu");
+//  UINT16 *rom = (UINT16 *) machine->region("maincpu")->base();
 
 	drgnwrld_type1_decrypt(machine);
 	drgnwrld_gfx_decrypt(machine);
@@ -1654,7 +1667,7 @@ static DRIVER_INIT( drgnwrld )
 
 static DRIVER_INIT( drgnwrldv30 )
 {
-//  UINT16 *rom = (UINT16 *) memory_region(machine, "maincpu");
+//  UINT16 *rom = (UINT16 *) machine->region("maincpu")->base();
 
 	drgnwrld_type1_decrypt(machine);
 	drgnwrld_gfx_decrypt(machine);
@@ -1679,7 +1692,7 @@ static DRIVER_INIT( drgnwrldv30 )
 
 static DRIVER_INIT( drgnwrldv21 )
 {
-//  UINT16 *rom = (UINT16 *) memory_region(machine, "maincpu");
+//  UINT16 *rom = (UINT16 *) machine->region("maincpu")->base();
 
 	drgnwrld_type2_decrypt(machine);
 	drgnwrld_gfx_decrypt(machine);
@@ -1709,7 +1722,7 @@ static DRIVER_INIT( drgnwrldv21 )
 
 static DRIVER_INIT( drgnwrldv21j )
 {
-//  UINT16 *rom = (UINT16 *) memory_region(machine, "maincpu");
+//  UINT16 *rom = (UINT16 *) machine->region("maincpu")->base();
 
 	drgnwrld_type3_decrypt(machine);
 	drgnwrld_gfx_decrypt(machine);
@@ -1736,7 +1749,7 @@ static DRIVER_INIT( drgnwrldv21j )
 
 static DRIVER_INIT( drgnwrldv20j )
 {
-//  UINT16 *rom = (UINT16 *) memory_region(machine, "maincpu");
+//  UINT16 *rom = (UINT16 *) machine->region("maincpu")->base();
 
 	drgnwrld_type3_decrypt(machine);
 	drgnwrld_gfx_decrypt(machine);
@@ -1774,7 +1787,7 @@ static DRIVER_INIT( drgnwrldv11h )
 
 static DRIVER_INIT( drgnwrldv10c )
 {
-//  UINT16 *rom = (UINT16 *) memory_region(machine, "maincpu");
+//  UINT16 *rom = (UINT16 *) machine->region("maincpu")->base();
 
 	drgnwrld_type1_decrypt(machine);
 	drgnwrld_gfx_decrypt(machine);
@@ -1800,7 +1813,7 @@ static DRIVER_INIT( drgnwrldv10c )
 
 static DRIVER_INIT( lhb )
 {
-//  UINT16 *rom = (UINT16 *) memory_region(machine, "maincpu");
+//  UINT16 *rom = (UINT16 *) machine->region("maincpu")->base();
 
 	lhb_decrypt(machine);
 
@@ -1810,7 +1823,7 @@ static DRIVER_INIT( lhb )
 
 static DRIVER_INIT( lhbv33c )
 {
-//  UINT16 *rom = (UINT16 *) memory_region(machine, "maincpu");
+//  UINT16 *rom = (UINT16 *) machine->region("maincpu")->base();
 
 	lhb_decrypt(machine);
 
@@ -1820,7 +1833,7 @@ static DRIVER_INIT( lhbv33c )
 
 static DRIVER_INIT( dbc )
 {
-//  UINT16 *rom = (UINT16 *) memory_region(machine, "maincpu");
+//  UINT16 *rom = (UINT16 *) machine->region("maincpu")->base();
 
 	dbc_decrypt(machine);
 
@@ -1849,7 +1862,7 @@ static DRIVER_INIT( dbc )
 
 static DRIVER_INIT( ryukobou )
 {
-//  UINT16 *rom = (UINT16 *) memory_region(machine, "maincpu");
+//  UINT16 *rom = (UINT16 *) machine->region("maincpu")->base();
 
 	ryukobou_decrypt(machine);
 
@@ -1862,7 +1875,7 @@ static DRIVER_INIT( ryukobou )
 
 static DRIVER_INIT( xymg )
 {
-//  UINT16 *rom = (UINT16 *) memory_region(machine, "maincpu");
+//  UINT16 *rom = (UINT16 *) machine->region("maincpu")->base();
 
 	lhb_decrypt(machine);
 /*
@@ -1896,7 +1909,7 @@ static DRIVER_INIT( xymg )
 
 static DRIVER_INIT( wlcc )
 {
-//  UINT16 *rom = (UINT16 *) memory_region(machine, "maincpu");
+//  UINT16 *rom = (UINT16 *) machine->region("maincpu")->base();
 
 	wlcc_decrypt(machine);
 /*
@@ -1920,7 +1933,7 @@ static DRIVER_INIT( wlcc )
 
 static DRIVER_INIT( lhb2 )
 {
-	UINT16 *rom = (UINT16 *) memory_region(machine, "maincpu");
+	UINT16 *rom = (UINT16 *) machine->region("maincpu")->base();
 
 	lhb2_decrypt(machine);
 	lhb2_decrypt_gfx(machine);
@@ -1942,8 +1955,8 @@ static DRIVER_INIT( lhb2 )
 
 static DRIVER_INIT( vbowl )
 {
-	UINT16 *rom = (UINT16 *) memory_region(machine, "maincpu");
-	UINT8  *gfx = (UINT8 *)  memory_region(machine, "blitter");
+	UINT16 *rom = (UINT16 *) machine->region("maincpu")->base();
+	UINT8  *gfx = (UINT8 *)  machine->region("blitter")->base();
 	int i;
 
 	vbowlj_decrypt(machine);
@@ -1967,8 +1980,8 @@ static DRIVER_INIT( vbowl )
 
 static DRIVER_INIT( vbowlj )
 {
-	UINT16 *rom = (UINT16 *) memory_region(machine, "maincpu");
-	UINT8  *gfx = (UINT8 *)  memory_region(machine, "blitter");
+	UINT16 *rom = (UINT16 *) machine->region("maincpu")->base();
+	UINT8  *gfx = (UINT8 *)  machine->region("blitter")->base();
 	int i;
 
 	vbowlj_decrypt(machine);
@@ -2007,11 +2020,11 @@ static ADDRESS_MAP_START( drgnwrld, ADDRESS_SPACE_PROGRAM, 16 )
 //  AM_RANGE( 0x01dd78, 0x01dd79 ) AM_READ ( igs011_prot1_r )
 
 	AM_RANGE( 0x000000, 0x07ffff ) AM_ROM
-	AM_RANGE( 0x100000, 0x103fff ) AM_RAM AM_BASE_SIZE_GENERIC( nvram )
+	AM_RANGE( 0x100000, 0x103fff ) AM_RAM AM_SHARE("nvram")
 	AM_RANGE( 0x200000, 0x200fff ) AM_RAM AM_BASE( &igs011_priority_ram )
 	AM_RANGE( 0x400000, 0x401fff ) AM_RAM_WRITE( igs011_palette ) AM_BASE_GENERIC( paletteram )
 	AM_RANGE( 0x500000, 0x500001 ) AM_READ_PORT( "COIN" )
-	AM_RANGE( 0x600000, 0x600001 ) AM_DEVREADWRITE8( "oki", okim6295_r, okim6295_w, 0x00ff )
+	AM_RANGE( 0x600000, 0x600001 ) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0x00ff )
 	AM_RANGE( 0x700000, 0x700003 ) AM_DEVWRITE8( "ymsnd", ym3812_w, 0x00ff )
 
 	AM_RANGE( 0x800000, 0x800003 ) AM_WRITE( drgnwrld_igs003_w )
@@ -2093,11 +2106,11 @@ static ADDRESS_MAP_START( lhb, ADDRESS_SPACE_PROGRAM, 16 )
 	// no reset
 
 	AM_RANGE( 0x000000, 0x07ffff ) AM_ROM
-	AM_RANGE( 0x100000, 0x103fff ) AM_RAM AM_BASE_SIZE_GENERIC( nvram )
+	AM_RANGE( 0x100000, 0x103fff ) AM_RAM AM_SHARE("nvram")
 	AM_RANGE( 0x200000, 0x200fff ) AM_RAM AM_BASE( &igs011_priority_ram )
 	AM_RANGE( 0x300000, 0x3fffff ) AM_READWRITE( igs011_layers_r, igs011_layers_w )
 	AM_RANGE( 0x400000, 0x401fff ) AM_RAM_WRITE( igs011_palette ) AM_BASE_GENERIC( paletteram )
-	AM_RANGE( 0x600000, 0x600001 ) AM_DEVREADWRITE8( "oki", okim6295_r, okim6295_w, 0x00ff )
+	AM_RANGE( 0x600000, 0x600001 ) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0x00ff )
 	AM_RANGE( 0x700000, 0x700001 ) AM_READ_PORT( "COIN" )
 	AM_RANGE( 0x700002, 0x700005 ) AM_READ ( lhb_inputs_r )
 	AM_RANGE( 0x700002, 0x700003 ) AM_WRITE( lhb_inputs_w )
@@ -2134,11 +2147,11 @@ static ADDRESS_MAP_START( xymg, ADDRESS_SPACE_PROGRAM, 16 )
 
 	AM_RANGE( 0x000000, 0x07ffff ) AM_ROM
 	AM_RANGE( 0x100000, 0x103fff ) AM_RAM
-	AM_RANGE( 0x1f0000, 0x1f3fff ) AM_RAM AM_BASE_SIZE_GENERIC( nvram ) // extra ram
+	AM_RANGE( 0x1f0000, 0x1f3fff ) AM_RAM AM_SHARE("nvram") // extra ram
 	AM_RANGE( 0x200000, 0x200fff ) AM_RAM AM_BASE( &igs011_priority_ram )
 	AM_RANGE( 0x300000, 0x3fffff ) AM_READWRITE( igs011_layers_r, igs011_layers_w )
 	AM_RANGE( 0x400000, 0x401fff ) AM_RAM_WRITE( igs011_palette ) AM_BASE_GENERIC( paletteram )
-	AM_RANGE( 0x600000, 0x600001 ) AM_DEVREADWRITE8( "oki", okim6295_r, okim6295_w, 0x00ff )
+	AM_RANGE( 0x600000, 0x600001 ) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0x00ff )
 	AM_RANGE( 0x700000, 0x700003 ) AM_WRITE( xymg_igs003_w )
 	AM_RANGE( 0x700002, 0x700003 ) AM_READ ( xymg_igs003_r )
 	AM_RANGE( 0x820000, 0x820001 ) AM_WRITE( igs011_priority_w )
@@ -2170,12 +2183,12 @@ static ADDRESS_MAP_START( wlcc, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE( 0x519000, 0x5195ff ) AM_READ ( lhb_igs011_prot2_r			)	// read
 
 	AM_RANGE( 0x000000, 0x07ffff ) AM_ROM
-	AM_RANGE( 0x100000, 0x103fff ) AM_RAM AM_BASE_SIZE_GENERIC( nvram )
+	AM_RANGE( 0x100000, 0x103fff ) AM_RAM AM_SHARE("nvram")
 	AM_RANGE( 0x200000, 0x200fff ) AM_RAM AM_BASE( &igs011_priority_ram )
 	AM_RANGE( 0x300000, 0x3fffff ) AM_READWRITE( igs011_layers_r, igs011_layers_w )
 	AM_RANGE( 0x400000, 0x401fff ) AM_RAM_WRITE( igs011_palette ) AM_BASE_GENERIC( paletteram )
 	AM_RANGE( 0x520000, 0x520001 ) AM_READ_PORT( "COIN" )
-	AM_RANGE( 0x600000, 0x600001 ) AM_DEVREADWRITE8( "oki", okim6295_r, okim6295_w, 0x00ff )
+	AM_RANGE( 0x600000, 0x600001 ) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0x00ff )
 	AM_RANGE( 0x800000, 0x800003 ) AM_WRITE( wlcc_igs003_w )
 	AM_RANGE( 0x800002, 0x800003 ) AM_READ ( wlcc_igs003_r )
 	AM_RANGE( 0xa20000, 0xa20001 ) AM_WRITE( igs011_priority_w )
@@ -2209,8 +2222,8 @@ static ADDRESS_MAP_START( lhb2, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE( 0x020600, 0x0207ff ) AM_WRITE( igs011_prot2_reset_w		)	// reset (55)
 
 	AM_RANGE( 0x000000, 0x07ffff ) AM_ROM
-	AM_RANGE( 0x100000, 0x103fff ) AM_RAM AM_BASE_SIZE_GENERIC( nvram )
-	AM_RANGE( 0x200000, 0x200001 ) AM_DEVREADWRITE8( "oki", okim6295_r, okim6295_w, 0x00ff )
+	AM_RANGE( 0x100000, 0x103fff ) AM_RAM AM_SHARE("nvram")
+	AM_RANGE( 0x200000, 0x200001 ) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0x00ff )
 	AM_RANGE( 0x204000, 0x204003 ) AM_DEVWRITE8( "ymsnd", ym2413_w, 0x00ff )
 	AM_RANGE( 0x208000, 0x208003 ) AM_WRITE( lhb2_igs003_w )
 	AM_RANGE( 0x208002, 0x208003 ) AM_READ ( lhb2_igs003_r )
@@ -2238,27 +2251,29 @@ ADDRESS_MAP_END
 
 
 
-static READ16_DEVICE_HANDLER( ics2115_word_r )
+static READ16_HANDLER( ics2115_word_r )
 {
+    ics2115_device* ics2115 = space->machine->device<ics2115_device>("ics2115");
 	switch(offset)
 	{
-		case 0:	return ics2115_r(device,0);
-		case 1:	return ics2115_r(device,1);
-		case 2:	return (ics2115_r(device,3) << 8) | ics2115_r(device,2);
+		case 0:	return ics2115_device::read(ics2115, (offs_t)0);
+		case 1:	return ics2115_device::read(ics2115, (offs_t)1);
+		case 2:	return (ics2115_device::read(ics2115, (offs_t)3) << 8) | ics2115_device::read(ics2115, (offs_t)2);
 	}
 	return 0xff;
 }
 
-static WRITE16_DEVICE_HANDLER( ics2115_word_w )
+static WRITE16_HANDLER( ics2115_word_w )
 {
+    ics2115_device* ics2115 = space->machine->device<ics2115_device>("ics2115");
 	switch(offset)
 	{
 		case 1:
-			if (ACCESSING_BITS_0_7)		ics2115_w(device,1,data);
+			if (ACCESSING_BITS_0_7)		ics2115_device::write(ics2115,1,data);
 			break;
 		case 2:
-			if (ACCESSING_BITS_0_7)		ics2115_w(device,2,data);
-			if (ACCESSING_BITS_8_15)	ics2115_w(device,3,data>>8);
+			if (ACCESSING_BITS_0_7)		ics2115_device::write(ics2115,2,data);
+			if (ACCESSING_BITS_8_15)	ics2115_device::write(ics2115,3,data>>8);
 			break;
 	}
 }
@@ -2320,12 +2335,13 @@ static ADDRESS_MAP_START( vbowl, ADDRESS_SPACE_PROGRAM, 16 )
 //  AM_RANGE( 0x902000, 0x902005 ) AM_WRITE( igs012_prot_fake_r )
 
 	AM_RANGE( 0x000000, 0x07ffff ) AM_ROM
-	AM_RANGE( 0x100000, 0x103fff ) AM_RAM AM_BASE_SIZE_GENERIC( nvram )
+	AM_RANGE( 0x100000, 0x103fff ) AM_RAM AM_SHARE("nvram")
 	AM_RANGE( 0x200000, 0x200fff ) AM_RAM AM_BASE( &igs011_priority_ram )
 	AM_RANGE( 0x300000, 0x3fffff ) AM_READWRITE( igs011_layers_r, igs011_layers_w )
 	AM_RANGE( 0x400000, 0x401fff ) AM_RAM_WRITE( igs011_palette ) AM_BASE_GENERIC( paletteram )
 	AM_RANGE( 0x520000, 0x520001 ) AM_READ_PORT( "COIN" )
-	AM_RANGE( 0x600000, 0x600007 ) AM_DEVREADWRITE( "ics", ics2115_word_r, ics2115_word_w )
+//  AM_RANGE( 0x600000, 0x600007 ) AM_DEVREADWRITE( "ics", ics2115_word_r, ics2115_word_w )
+    AM_RANGE( 0x600000, 0x600007 ) AM_READWRITE( ics2115_word_r, ics2115_word_w )
 	AM_RANGE( 0x700000, 0x700003 ) AM_RAM AM_BASE( &vbowl_trackball )
 	AM_RANGE( 0x700004, 0x700005 ) AM_WRITE( vbowl_pen_hi_w )
 	AM_RANGE( 0x800000, 0x800003 ) AM_WRITE( vbowl_igs003_w )
@@ -3444,30 +3460,30 @@ static GFXDECODE_START( igs011_hi )
 GFXDECODE_END
 #endif
 
-static MACHINE_DRIVER_START( igs011_base )
-	MDRV_CPU_ADD("maincpu",M68000, XTAL_22MHz/3)
+static MACHINE_CONFIG_START( igs011_base, driver_device )
+	MCFG_CPU_ADD("maincpu",M68000, XTAL_22MHz/3)
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(512, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 512-1, 0, 240-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(512, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 512-1, 0, 240-1)
 
-	MDRV_PALETTE_LENGTH(0x800)
-//  MDRV_GFXDECODE(igs011)
+	MCFG_PALETTE_LENGTH(0x800)
+//  MCFG_GFXDECODE(igs011)
 
-	MDRV_VIDEO_START( igs011 )
-	MDRV_VIDEO_UPDATE( igs011 )
+	MCFG_VIDEO_START( igs011 )
+	MCFG_VIDEO_UPDATE( igs011 )
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_OKIM6295_ADD("oki", XTAL_22MHz/21, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_OKIM6295_ADD("oki", XTAL_22MHz/21, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 static INTERRUPT_GEN( drgnwrld_interrupt )
 {
@@ -3479,21 +3495,19 @@ static INTERRUPT_GEN( drgnwrld_interrupt )
 	}
 }
 
-static MACHINE_DRIVER_START( drgnwrld )
-	MDRV_IMPORT_FROM(igs011_base)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(drgnwrld)
-	MDRV_CPU_VBLANK_INT_HACK(drgnwrld_interrupt,1+4)	// lev5 frequency drives the music tempo
+static MACHINE_CONFIG_DERIVED( drgnwrld, igs011_base )
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(drgnwrld)
+	MCFG_CPU_VBLANK_INT_HACK(drgnwrld_interrupt,1+4)	// lev5 frequency drives the music tempo
 
-	MDRV_SOUND_ADD("ymsnd", YM3812, 3579545)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 2.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM3812, 3579545)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 2.0)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( drgnwrld_igs012 )
-	MDRV_IMPORT_FROM(drgnwrld)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(drgnwrld_igs012)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( drgnwrld_igs012, drgnwrld )
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(drgnwrld_igs012)
+MACHINE_CONFIG_END
 
 
 
@@ -3512,12 +3526,11 @@ static INTERRUPT_GEN( lhb_interrupt )
 	}
 }
 
-static MACHINE_DRIVER_START( lhb )
-	MDRV_IMPORT_FROM(igs011_base)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(lhb)
-	MDRV_CPU_VBLANK_INT_HACK(lhb_interrupt,3+1)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( lhb, igs011_base )
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(lhb)
+	MCFG_CPU_VBLANK_INT_HACK(lhb_interrupt,3+1)
+MACHINE_CONFIG_END
 
 
 
@@ -3530,46 +3543,43 @@ static INTERRUPT_GEN( wlcc_interrupt )
 	}
 }
 
-static MACHINE_DRIVER_START( wlcc )
-	MDRV_IMPORT_FROM(igs011_base)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(wlcc)
-	MDRV_CPU_VBLANK_INT_HACK(wlcc_interrupt,2)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( wlcc, igs011_base )
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(wlcc)
+	MCFG_CPU_VBLANK_INT_HACK(wlcc_interrupt,2)
+MACHINE_CONFIG_END
 
 
 
-static MACHINE_DRIVER_START( xymg )
-	MDRV_IMPORT_FROM(igs011_base)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(xymg)
-	MDRV_CPU_VBLANK_INT_HACK(wlcc_interrupt,2)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( xymg, igs011_base )
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(xymg)
+	MCFG_CPU_VBLANK_INT_HACK(wlcc_interrupt,2)
+MACHINE_CONFIG_END
 
 
 
-static MACHINE_DRIVER_START( lhb2 )
-	MDRV_IMPORT_FROM(igs011_base)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(lhb2)
-	MDRV_CPU_VBLANK_INT_HACK(drgnwrld_interrupt,1+4)	// lev5 frequency drives the music tempo
+static MACHINE_CONFIG_DERIVED( lhb2, igs011_base )
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(lhb2)
+	MCFG_CPU_VBLANK_INT_HACK(drgnwrld_interrupt,1+4)	// lev5 frequency drives the music tempo
 
-//  MDRV_GFXDECODE(igs011_hi)
+//  MCFG_GFXDECODE(igs011_hi)
 
-	MDRV_SOUND_ADD("ymsnd", YM2413, 3579545)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 2.0)
-MACHINE_DRIVER_END
-
+	MCFG_SOUND_ADD("ymsnd", YM2413, 3579545)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 2.0)
+MACHINE_CONFIG_END
 
 
-static void sound_irq(running_device *device, int state)
+
+static void sound_irq(device_t *device, int state)
 {
 //   cputag_set_input_line(machine, "maincpu", 3, state);
 }
 
-static const ics2115_interface vbowl_ics2115_interface = {
-	sound_irq
-};
+/*static const ics2115_interface vbowl_ics2115_interface = {
+    sound_irq
+};*/
 
 static INTERRUPT_GEN( vbowl_interrupt )
 {
@@ -3583,20 +3593,20 @@ static INTERRUPT_GEN( vbowl_interrupt )
 	}
 }
 
-static MACHINE_DRIVER_START( vbowl )
-	MDRV_IMPORT_FROM(igs011_base)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(vbowl)
-	MDRV_CPU_VBLANK_INT_HACK(vbowl_interrupt,3+4)
+static MACHINE_CONFIG_DERIVED( vbowl, igs011_base )
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(vbowl)
+	MCFG_CPU_VBLANK_INT_HACK(vbowl_interrupt,3+4)
 
-	MDRV_VIDEO_EOF(vbowl)	// trackball
-//  MDRV_GFXDECODE(igs011_hi)
+	MCFG_VIDEO_EOF(vbowl)	// trackball
+//  MCFG_GFXDECODE(igs011_hi)
 
-	MDRV_DEVICE_REMOVE("oki")
-	MDRV_SOUND_ADD("ics", ICS2115, 0)
-	MDRV_SOUND_CONFIG(vbowl_ics2115_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 5.0)
-MACHINE_DRIVER_END
+	MCFG_DEVICE_REMOVE("oki")
+//  MCFG_SOUND_ADD("ics", ICS2115, 0)
+	MCFG_ICS2115_ADD("ics", 0, sound_irq)
+//  MCFG_SOUND_CONFIG(vbowl_ics2115_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 5.0)
+MACHINE_CONFIG_END
 
 
 

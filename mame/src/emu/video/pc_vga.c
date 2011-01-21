@@ -179,31 +179,31 @@ static const unsigned short vga_colortable[] =
     15, 0,15, 1,15, 2,15, 3,15, 4,15, 5,15, 6,15, 7,15, 8,15, 9,15,10,15,11,15,12,15,13,15,14,15,15
 };
 
-MACHINE_DRIVER_START( pcvideo_vga )
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(720, 480)
-	MDRV_SCREEN_VISIBLE_AREA(0,720-1, 0,480-1)
-	MDRV_PALETTE_LENGTH(0x100)
-	MDRV_PALETTE_INIT(vga)
+MACHINE_CONFIG_FRAGMENT( pcvideo_vga )
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(720, 480)
+	MCFG_SCREEN_VISIBLE_AREA(0,720-1, 0,480-1)
+	MCFG_PALETTE_LENGTH(0x100)
+	MCFG_PALETTE_INIT(vga)
 
-	MDRV_VIDEO_START(vga)
-	MDRV_VIDEO_RESET(vga)
-	MDRV_VIDEO_UPDATE(pc_video)
-MACHINE_DRIVER_END
+	MCFG_VIDEO_START(vga)
+	MCFG_VIDEO_RESET(vga)
+	MCFG_VIDEO_UPDATE(pc_video)
+MACHINE_CONFIG_END
 
-MACHINE_DRIVER_START( pcvideo_pc1640 )
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(720, 350)
-	MDRV_SCREEN_VISIBLE_AREA(0,720-1, 0,350-1)
-	MDRV_PALETTE_LENGTH(sizeof(ega_palette) / 3)
-	MDRV_PALETTE_INIT(ega)
+MACHINE_CONFIG_FRAGMENT( pcvideo_pc1640 )
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(720, 350)
+	MCFG_SCREEN_VISIBLE_AREA(0,720-1, 0,350-1)
+	MCFG_PALETTE_LENGTH(sizeof(ega_palette) / 3)
+	MCFG_PALETTE_INIT(ega)
 
-	MDRV_VIDEO_START(ega)
-	MDRV_VIDEO_RESET(ega)
-	MDRV_VIDEO_UPDATE(pc_video)
-MACHINE_DRIVER_END
+	MCFG_VIDEO_START(ega)
+	MCFG_VIDEO_RESET(ega)
+	MCFG_VIDEO_UPDATE(pc_video)
+MACHINE_CONFIG_END
 
 /***************************************************************************/
 
@@ -596,7 +596,7 @@ static WRITE64_HANDLER( vga_ega64_w ) { write64be_with_write8_handler(vga_ega_w,
 
 static void vga_cpu_interface(running_machine *machine)
 {
-	const address_space *space = cpu_get_address_space(machine->firstcpu, ADDRESS_SPACE_PROGRAM);
+	address_space *space = cpu_get_address_space(machine->firstcpu, ADDRESS_SPACE_PROGRAM);
 	static int sequencer, gc;
 	read8_space_func read_handler;
 	write8_space_func write_handler;
@@ -1220,7 +1220,7 @@ static WRITE64_HANDLER( vga_port64be_03d0_w ) { write64be_with_write8_handler(vg
 void pc_vga_init(running_machine *machine, const struct pc_vga_interface *vga_intf, const struct pc_svga_interface *svga_intf)
 {
 	int i, j, k, mask, buswidth;
-	const address_space *spacevga;
+	address_space *spacevga;
 
 	memset(&vga, 0, sizeof(vga));
 

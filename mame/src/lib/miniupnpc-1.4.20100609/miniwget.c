@@ -5,6 +5,7 @@
  * This software is subject to the conditions detailed in the
  * LICENCE file provided in this distribution. */
  
+#define WINVER 0x0501
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

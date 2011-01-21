@@ -4,12 +4,11 @@
 
 *************************************************************************/
 
-class flkatck_state
+class flkatck_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, flkatck_state(machine)); }
-
-	flkatck_state(running_machine &machine) { }
+	flkatck_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *    k007121_ram;
@@ -24,8 +23,8 @@ public:
 	int        multiply_reg[2];
 
 	/* devices */
-	running_device *audiocpu;
-	running_device *k007121;
+	device_t *audiocpu;
+	device_t *k007121;
 };
 
 

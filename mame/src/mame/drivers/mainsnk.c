@@ -111,21 +111,13 @@ cc_p14.j2 8192 0xedc6a1eb M5L2764k
 #include "cpu/z80/z80.h"
 #include "includes/snk.h"
 #include "sound/ay8910.h"
-
-extern UINT8 *mainsnk_fgram;
-extern UINT8 *mainsnk_bgram;
-WRITE8_HANDLER(mainsnk_c600_w);
-WRITE8_HANDLER(mainsnk_fgram_w);
-WRITE8_HANDLER(mainsnk_bgram_w);
-VIDEO_START(mainsnk);
-VIDEO_UPDATE(mainsnk);
-
-static int sound_cpu_busy;
-
+#include "includes/mainsnk.h"
 
 static WRITE8_HANDLER( sound_command_w )
 {
-	sound_cpu_busy = 1;
+	mainsnk_state *state = space->machine->driver_data<mainsnk_state>();
+
+	state->sound_cpu_busy = 1;
 	soundlatch_w(space, 0, data);
 	cputag_set_input_line(space->machine, "audiocpu", INPUT_LINE_NMI, PULSE_LINE);
 }
@@ -137,13 +129,17 @@ static READ8_HANDLER( sound_command_r )
 
 static READ8_HANDLER( sound_ack_r )
 {
-	sound_cpu_busy = 0;
+	mainsnk_state *state = space->machine->driver_data<mainsnk_state>();
+
+	state->sound_cpu_busy = 0;
 	return 0xff;
 }
 
 static CUSTOM_INPUT( mainsnk_sound_r )
 {
-	return (sound_cpu_busy) ? 0x01 : 0x00;
+	mainsnk_state *state = field->port->machine->driver_data<mainsnk_state>();
+
+	return (state->sound_cpu_busy) ? 0x01 : 0x00;
 }
 
 
@@ -158,10 +154,10 @@ static ADDRESS_MAP_START( main_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0xc500, 0xc500) AM_READ_PORT("DSW2")
 	AM_RANGE(0xc600, 0xc600) AM_WRITE(mainsnk_c600_w)
 	AM_RANGE(0xc700, 0xc700) AM_WRITE(sound_command_w)
-	AM_RANGE(0xd800, 0xdbff) AM_RAM_WRITE(mainsnk_bgram_w) AM_BASE(&mainsnk_bgram)
+	AM_RANGE(0xd800, 0xdbff) AM_RAM_WRITE(mainsnk_bgram_w) AM_BASE_MEMBER(mainsnk_state, bgram)
 	AM_RANGE(0xdc00, 0xe7ff) AM_RAM
-	AM_RANGE(0xe800, 0xefff) AM_RAM AM_BASE_GENERIC(spriteram)
-	AM_RANGE(0xf000, 0xf7ff) AM_RAM_WRITE(mainsnk_fgram_w) AM_BASE(&mainsnk_fgram)	// + work RAM
+	AM_RANGE(0xe800, 0xefff) AM_RAM AM_BASE_MEMBER(mainsnk_state, spriteram)
+	AM_RANGE(0xf000, 0xf7ff) AM_RAM_WRITE(mainsnk_fgram_w) AM_BASE_MEMBER(mainsnk_state, fgram)	// + work RAM
 ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( sound_map, ADDRESS_SPACE_PROGRAM, 8 )
@@ -394,40 +390,41 @@ GFXDECODE_END
 
 
 
-static MACHINE_DRIVER_START( mainsnk )
-	MDRV_CPU_ADD("maincpu", Z80, 3360000)
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+static MACHINE_CONFIG_START( mainsnk, mainsnk_state )
 
-	MDRV_CPU_ADD("audiocpu", Z80,4000000)
-	MDRV_CPU_PROGRAM_MAP(sound_map)
-	MDRV_CPU_IO_MAP(sound_portmap)
-	MDRV_CPU_PERIODIC_INT(irq0_line_hold, 244)
+	MCFG_CPU_ADD("maincpu", Z80, 3360000)
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
+
+	MCFG_CPU_ADD("audiocpu", Z80,4000000)
+	MCFG_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_IO_MAP(sound_portmap)
+	MCFG_CPU_PERIODIC_INT(irq0_line_hold, 244)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(36*8, 28*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 36*8-1, 1*8, 28*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(36*8, 28*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 36*8-1, 1*8, 28*8-1)
 
-	MDRV_GFXDECODE(mainsnk)
-	MDRV_PALETTE_LENGTH(0x400)
+	MCFG_GFXDECODE(mainsnk)
+	MCFG_PALETTE_LENGTH(0x400)
 
-	MDRV_PALETTE_INIT(tnk3)
-	MDRV_VIDEO_START(mainsnk)
-	MDRV_VIDEO_UPDATE(mainsnk)
+	MCFG_PALETTE_INIT(tnk3)
+	MCFG_VIDEO_START(mainsnk)
+	MCFG_VIDEO_UPDATE(mainsnk)
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ay1", AY8910, 2000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.35)
+	MCFG_SOUND_ADD("ay1", AY8910, 2000000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.35)
 
-	MDRV_SOUND_ADD("ay2", AY8910, 2000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.35)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ay2", AY8910, 2000000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.35)
+MACHINE_CONFIG_END
 
 
 ROM_START( mainsnk)

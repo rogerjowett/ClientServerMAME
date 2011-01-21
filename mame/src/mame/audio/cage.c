@@ -160,8 +160,8 @@ void cage_init(running_machine *machine, offs_t speedup)
 
 	cage_irqhandler = NULL;
 
-	memory_set_bankptr(machine, "bank10", memory_region(machine, "cageboot"));
-	memory_set_bankptr(machine, "bank11", memory_region(machine, "cage"));
+	memory_set_bankptr(machine, "bank10", machine->region("cageboot")->base());
+	memory_set_bankptr(machine, "bank11", machine->region("cage")->base());
 
 	cage_cpu = machine->device<cpu_device>("cage");
 	cage_cpu_clock_period = ATTOTIME_IN_HZ(cage_cpu->clock());
@@ -237,7 +237,7 @@ static TIMER_DEVICE_CALLBACK( dma_timer_callback )
 }
 
 
-static void update_dma_state(const address_space *space)
+static void update_dma_state(address_space *space)
 {
 	/* determine the new enabled state */
 	int enabled = ((tms32031_io_regs[DMA_GLOBAL_CTL] & 3) == 3) && (tms32031_io_regs[DMA_TRANSFER_COUNT] != 0);
@@ -260,7 +260,7 @@ static void update_dma_state(const address_space *space)
 		inc = (tms32031_io_regs[DMA_GLOBAL_CTL] >> 4) & 1;
 		for (i = 0; i < tms32031_io_regs[DMA_TRANSFER_COUNT]; i++)
 		{
-			sound_data[i % STACK_SOUND_BUFSIZE] = memory_read_dword(space, addr * 4);
+			sound_data[i % STACK_SOUND_BUFSIZE] = space->read_dword(addr * 4);
 			addr += inc;
 			if (i % STACK_SOUND_BUFSIZE == STACK_SOUND_BUFSIZE - 1)
 				dmadac_transfer(&dmadac[0], DAC_BUFFER_CHANNELS, 1, DAC_BUFFER_CHANNELS, STACK_SOUND_BUFSIZE / DAC_BUFFER_CHANNELS, sound_data);
@@ -517,7 +517,7 @@ static READ32_HANDLER( cage_io_status_r )
 }
 
 
-UINT16 main_from_cage_r(const address_space *space)
+UINT16 main_from_cage_r(address_space *space)
 {
 	if (LOG_COMM)
 		logerror("%s:main read data = %04X\n", cpuexec_describe_context(space->machine), soundlatch_word_r(space, 0, 0));
@@ -647,45 +647,44 @@ ADDRESS_MAP_END
  *
  *************************************/
 
-MACHINE_DRIVER_START( cage )
+MACHINE_CONFIG_FRAGMENT( cage )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("cage", TMS32031, 33868800)
-	MDRV_CPU_CONFIG(cage_config)
-	MDRV_CPU_PROGRAM_MAP(cage_map)
+	MCFG_CPU_ADD("cage", TMS32031, 33868800)
+	MCFG_CPU_CONFIG(cage_config)
+	MCFG_CPU_PROGRAM_MAP(cage_map)
 
-	MDRV_TIMER_ADD("cage_dma_timer", dma_timer_callback)
-	MDRV_TIMER_ADD("cage_timer0", cage_timer_callback)
-	MDRV_TIMER_ADD("cage_timer1", cage_timer_callback)
+	MCFG_TIMER_ADD("cage_dma_timer", dma_timer_callback)
+	MCFG_TIMER_ADD("cage_timer0", cage_timer_callback)
+	MCFG_TIMER_ADD("cage_timer1", cage_timer_callback)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
 #if (DAC_BUFFER_CHANNELS == 4)
-	MDRV_SOUND_ADD("dac1", DMADAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
+	MCFG_SOUND_ADD("dac1", DMADAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
 
-	MDRV_SOUND_ADD("dac2", DMADAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
+	MCFG_SOUND_ADD("dac2", DMADAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
 
-	MDRV_SOUND_ADD("dac3", DMADAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
+	MCFG_SOUND_ADD("dac3", DMADAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
 
-	MDRV_SOUND_ADD("dac4", DMADAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
+	MCFG_SOUND_ADD("dac4", DMADAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
 #else
-	MDRV_SOUND_ADD("dac1", DMADAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ADD("dac1", DMADAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
 
-	MDRV_SOUND_ADD("dac2", DMADAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("dac2", DMADAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
 #endif
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
 
-MACHINE_DRIVER_START( cage_seattle )
-	MDRV_IMPORT_FROM(cage)
+MACHINE_CONFIG_DERIVED( cage_seattle, cage )
 
-	MDRV_CPU_MODIFY("cage")
-	MDRV_CPU_PROGRAM_MAP(cage_map_seattle)
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("cage")
+	MCFG_CPU_PROGRAM_MAP(cage_map_seattle)
+MACHINE_CONFIG_END

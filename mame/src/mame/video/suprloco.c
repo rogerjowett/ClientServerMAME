@@ -7,6 +7,7 @@
 ***************************************************************************/
 
 #include "emu.h"
+#include "includes/suprloco.h"
 
 UINT8 *suprloco_videoram;
 UINT8 *suprloco_scrollram;
@@ -207,7 +208,7 @@ static void draw_sprite(running_machine *machine, bitmap_t *bitmap,const rectang
 		dy = -1;
 	}
 
-	gfx2 = memory_region(machine, "gfx2");
+	gfx2 = machine->region("gfx2")->base();
 	for (row = 0;row < height;row++,adjy+=dy)
 	{
 		int color1,color2,flipx;

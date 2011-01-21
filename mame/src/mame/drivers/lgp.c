@@ -73,10 +73,12 @@ Dumping Notes:
 #define SOUND_PCB_CLOCK (6000000)
 
 /* Misc variables */
-static running_device *laserdisc;
+static device_t *laserdisc;
 
 static UINT8 *tile_ram;
 static UINT8 *tile_control_ram;
+
+static emu_timer *irq_timer;
 
 
 /* VIDEO GOODS */
@@ -327,49 +329,50 @@ static INTERRUPT_GEN( vblank_callback_lgp )
 
 	// IRQ
 	cpu_set_input_line(device, 0, ASSERT_LINE);
-	timer_set(device->machine, ATTOTIME_IN_USEC(50), NULL, 0, irq_stop);
+	timer_adjust_oneshot(irq_timer, ATTOTIME_IN_USEC(50), 0);
 }
 
 
 static MACHINE_START( lgp )
 {
 	laserdisc = machine->device("laserdisc");
+    irq_timer = timer_alloc(machine, irq_stop, 0);
 }
 
 
 /* DRIVER */
-static MACHINE_DRIVER_START( lgp )
+static MACHINE_CONFIG_START( lgp, driver_device )
 	/* main cpu */
-	MDRV_CPU_ADD("maincpu", Z80, CPU_PCB_CLOCK)
-	MDRV_CPU_PROGRAM_MAP(main_program_map)
-	MDRV_CPU_IO_MAP(main_io_map)
-	MDRV_CPU_VBLANK_INT("screen", vblank_callback_lgp)
+	MCFG_CPU_ADD("maincpu", Z80, CPU_PCB_CLOCK)
+	MCFG_CPU_PROGRAM_MAP(main_program_map)
+	MCFG_CPU_IO_MAP(main_io_map)
+	MCFG_CPU_VBLANK_INT("screen", vblank_callback_lgp)
 
 	/* sound cpu */
-	MDRV_CPU_ADD("audiocpu", Z80, SOUND_PCB_CLOCK)
-	MDRV_CPU_PROGRAM_MAP(sound_program_map)
-	MDRV_CPU_IO_MAP(sound_io_map)
+	MCFG_CPU_ADD("audiocpu", Z80, SOUND_PCB_CLOCK)
+	MCFG_CPU_PROGRAM_MAP(sound_program_map)
+	MCFG_CPU_IO_MAP(sound_io_map)
 
-	MDRV_MACHINE_START(lgp)
+	MCFG_MACHINE_START(lgp)
 
-	MDRV_LASERDISC_ADD("laserdisc", PIONEER_LDV1000, "screen", "ldsound")
-	MDRV_LASERDISC_OVERLAY(lgp, 256, 256, BITMAP_FORMAT_INDEXED16)
+	MCFG_LASERDISC_ADD("laserdisc", PIONEER_LDV1000, "screen", "ldsound")
+	MCFG_LASERDISC_OVERLAY(lgp, 256, 256, BITMAP_FORMAT_INDEXED16)
 
 	/* video hardware */
-	MDRV_LASERDISC_SCREEN_ADD_NTSC("screen", BITMAP_FORMAT_INDEXED16)
+	MCFG_LASERDISC_SCREEN_ADD_NTSC("screen", BITMAP_FORMAT_INDEXED16)
 
-	MDRV_PALETTE_LENGTH(256)
-	/* MDRV_PALETTE_INIT(lgp) */
+	MCFG_PALETTE_LENGTH(256)
+	/* MCFG_PALETTE_INIT(lgp) */
 
-	MDRV_GFXDECODE(lgp)
+	MCFG_GFXDECODE(lgp)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ldsound", LASERDISC, 0)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ldsound", LASERDISC_SOUND, 0)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 
 ROM_START( lgp )

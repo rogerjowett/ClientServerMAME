@@ -118,7 +118,7 @@ ADDRESS_MAP_END
 static ADDRESS_MAP_START( sound_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x7fff) AM_ROM
 	AM_RANGE(0xc000, 0xc001) AM_DEVREADWRITE("ymsnd", ym2151_r, ym2151_w)
-	AM_RANGE(0xc002, 0xc003) AM_DEVWRITE("oki", okim6295_w)	// TWO addresses!
+	AM_RANGE(0xc002, 0xc003) AM_DEVWRITE_MODERN("oki", okim6295_device, write)	// TWO addresses!
 	AM_RANGE(0xc006, 0xc006) AM_READ(soundlatch_r)
 	AM_RANGE(0xd000, 0xd7ff) AM_RAM
 ADDRESS_MAP_END
@@ -236,9 +236,9 @@ GFXDECODE_END
 
 
 
-static void irqhandler( running_device *device, int linestate )
+static void irqhandler( device_t *device, int linestate )
 {
-	gotcha_state *state = (gotcha_state *)device->machine->driver_data;
+	gotcha_state *state = device->machine->driver_data<gotcha_state>();
 	cpu_set_input_line(state->audiocpu, 0, linestate);
 }
 
@@ -250,7 +250,7 @@ static const ym2151_interface ym2151_config =
 
 static MACHINE_START( gotcha )
 {
-	gotcha_state *state = (gotcha_state *)machine->driver_data;
+	gotcha_state *state = machine->driver_data<gotcha_state>();
 
 	state->audiocpu = machine->device("audiocpu");
 
@@ -261,7 +261,7 @@ static MACHINE_START( gotcha )
 
 static MACHINE_RESET( gotcha )
 {
-	gotcha_state *state = (gotcha_state *)machine->driver_data;
+	gotcha_state *state = machine->driver_data<gotcha_state>();
 	int i;
 
 	for (i = 0; i < 4; i++)
@@ -273,48 +273,45 @@ static MACHINE_RESET( gotcha )
 	state->banksel = 0;
 }
 
-static MACHINE_DRIVER_START( gotcha )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(gotcha_state)
+static MACHINE_CONFIG_START( gotcha, gotcha_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000,14318180)	/* 14.31818 MHz */
-	MDRV_CPU_PROGRAM_MAP(gotcha_map)
-	MDRV_CPU_VBLANK_INT("screen", irq6_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000,14318180)	/* 14.31818 MHz */
+	MCFG_CPU_PROGRAM_MAP(gotcha_map)
+	MCFG_CPU_VBLANK_INT("screen", irq6_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80,6000000)	/* 6 MHz */
-	MDRV_CPU_PROGRAM_MAP(sound_map)
-//  MDRV_CPU_VBLANK_INT("screen", nmi_line_pulse)
+	MCFG_CPU_ADD("audiocpu", Z80,6000000)	/* 6 MHz */
+	MCFG_CPU_PROGRAM_MAP(sound_map)
+//  MCFG_CPU_VBLANK_INT("screen", nmi_line_pulse)
 
-	MDRV_MACHINE_START(gotcha)
-	MDRV_MACHINE_RESET(gotcha)
+	MCFG_MACHINE_START(gotcha)
+	MCFG_MACHINE_RESET(gotcha)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(55)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(40*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(55)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(40*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 1*8, 31*8-1)
 
-	MDRV_GFXDECODE(gotcha)
-	MDRV_PALETTE_LENGTH(768)
+	MCFG_GFXDECODE(gotcha)
+	MCFG_PALETTE_LENGTH(768)
 
-	MDRV_VIDEO_START(gotcha)
-	MDRV_VIDEO_UPDATE(gotcha)
+	MCFG_VIDEO_START(gotcha)
+	MCFG_VIDEO_UPDATE(gotcha)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, 14318180/4)
-	MDRV_SOUND_CONFIG(ym2151_config)
-	MDRV_SOUND_ROUTE(0, "mono", 0.80)
-	MDRV_SOUND_ROUTE(1, "mono", 0.80)
+	MCFG_SOUND_ADD("ymsnd", YM2151, 14318180/4)
+	MCFG_SOUND_CONFIG(ym2151_config)
+	MCFG_SOUND_ROUTE(0, "mono", 0.80)
+	MCFG_SOUND_ROUTE(1, "mono", 0.80)
 
-	MDRV_OKIM6295_ADD("oki", 1000000, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.60)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 1000000, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.60)
+MACHINE_CONFIG_END
 
 
 

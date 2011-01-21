@@ -124,8 +124,8 @@ static READ32_HANDLER( skimaxx_blitter_r )
 
 static VIDEO_START( skimaxx )
 {
-	skimaxx_blitter_gfx = (UINT16 *) memory_region( machine, "blitter" );
-	skimaxx_blitter_gfx_len = memory_region_length( machine, "blitter" ) / 2;
+	skimaxx_blitter_gfx = (UINT16 *) machine->region( "blitter" )->base();
+	skimaxx_blitter_gfx_len = machine->region( "blitter" )->bytes() / 2;
 
 	bg_buffer = auto_alloc_array(machine, UINT32, 0x400 * 0x100 * sizeof(UINT16) / sizeof(UINT32) * 2);	// 2 buffers
 	skimaxx_bg_buffer_back  = bg_buffer + 0x400 * 0x100 * sizeof(UINT16) / sizeof(UINT32) * 0;
@@ -150,12 +150,12 @@ static VIDEO_UPDATE( skimaxx )
  *************************************/
 
 // TODO: Might not be used
-static void skimaxx_to_shiftreg(const address_space *space, UINT32 address, UINT16 *shiftreg)
+static void skimaxx_to_shiftreg(address_space *space, UINT32 address, UINT16 *shiftreg)
 {
 	memcpy(shiftreg, &fg_buffer[TOWORD(address)], 512 * sizeof(UINT16));
 }
 
-static void skimaxx_from_shiftreg(const address_space *space, UINT32 address, UINT16 *shiftreg)
+static void skimaxx_from_shiftreg(address_space *space, UINT32 address, UINT16 *shiftreg)
 {
 	memcpy(&fg_buffer[TOWORD(address)], shiftreg, 512 * sizeof(UINT16));
 }
@@ -274,7 +274,7 @@ static WRITE32_HANDLER( skimaxx_sub_ctrl_w )
 	// 7e/7f at the start. 3f/7f, related to reads from 1018xxxx
 	if (ACCESSING_BITS_0_7)
 	{
-		running_device *subcpu = space->machine->device("subcpu");
+		device_t *subcpu = space->machine->device("subcpu");
 
 		cpu_set_input_line(subcpu, INPUT_LINE_RESET, (data & 0x01) ? CLEAR_LINE : ASSERT_LINE);
 		cpu_set_input_line(subcpu, INPUT_LINE_HALT,  (data & 0x40) ? CLEAR_LINE : ASSERT_LINE);
@@ -309,10 +309,10 @@ static ADDRESS_MAP_START( 68030_1_map, ADDRESS_SPACE_PROGRAM, 32 )
 	AM_RANGE(0x10180000, 0x1018ffff) AM_RAM AM_SHARE("share1")	// above 10188000 accessed at level end (game bug?)
 	AM_RANGE(0x20000000, 0x20000003) AM_READNOP	// watchdog_r?
 
-	AM_RANGE(0x20000010, 0x20000013) AM_DEVREADWRITE8("oki1", okim6295_r, okim6295_w, 0x00ff)	// left
-	AM_RANGE(0x20000014, 0x20000017) AM_DEVREADWRITE8("oki2", okim6295_r, okim6295_w, 0x00ff)	// left
-	AM_RANGE(0x20000018, 0x2000001b) AM_DEVREADWRITE8("oki3", okim6295_r, okim6295_w, 0x00ff)	// right
-	AM_RANGE(0x2000001c, 0x2000001f) AM_DEVREADWRITE8("oki4", okim6295_r, okim6295_w, 0x00ff)	// right
+	AM_RANGE(0x20000010, 0x20000013) AM_DEVREADWRITE8_MODERN("oki1", okim6295_device, read, write, 0x00ff)	// left
+	AM_RANGE(0x20000014, 0x20000017) AM_DEVREADWRITE8_MODERN("oki2", okim6295_device, read, write, 0x00ff)	// left
+	AM_RANGE(0x20000018, 0x2000001b) AM_DEVREADWRITE8_MODERN("oki3", okim6295_device, read, write, 0x00ff)	// right
+	AM_RANGE(0x2000001c, 0x2000001f) AM_DEVREADWRITE8_MODERN("oki4", okim6295_device, read, write, 0x00ff)	// right
 
 	AM_RANGE(0x20000020, 0x20000023) AM_READ ( skimaxx_unk1_r )	// units linking?
 	AM_RANGE(0x20000024, 0x20000027) AM_WRITE( skimaxx_unk1_w )	// ""
@@ -468,7 +468,7 @@ INPUT_PORTS_END
  *
  *************************************/
 
-static void skimaxx_tms_irq(running_device *device, int state)
+static void skimaxx_tms_irq(device_t *device, int state)
 {
 	// TODO
 }
@@ -503,53 +503,53 @@ static MACHINE_RESET( skimaxx )
  *
  *************************************/
 
-static MACHINE_DRIVER_START( skimaxx )
-	MDRV_CPU_ADD("maincpu", M68EC030, XTAL_40MHz)
-	MDRV_CPU_PROGRAM_MAP(68030_1_map)
-	MDRV_CPU_VBLANK_INT("screen", irq3_line_hold)	// 1,3,7 are identical, rest is RTE
+static MACHINE_CONFIG_START( skimaxx, driver_device )
+	MCFG_CPU_ADD("maincpu", M68EC030, XTAL_40MHz)
+	MCFG_CPU_PROGRAM_MAP(68030_1_map)
+	MCFG_CPU_VBLANK_INT("screen", irq3_line_hold)	// 1,3,7 are identical, rest is RTE
 
-	MDRV_CPU_ADD("subcpu", M68EC030, XTAL_40MHz)
-	MDRV_CPU_PROGRAM_MAP(68030_2_map)
+	MCFG_CPU_ADD("subcpu", M68EC030, XTAL_40MHz)
+	MCFG_CPU_PROGRAM_MAP(68030_2_map)
 
-	MDRV_MACHINE_RESET(skimaxx)
+	MCFG_MACHINE_RESET(skimaxx)
 
 	/* video hardware */
-	MDRV_CPU_ADD("tms", TMS34010, XTAL_50MHz)
-	MDRV_CPU_CONFIG(tms_config)
-	MDRV_CPU_PROGRAM_MAP(tms_program_map)
+	MCFG_CPU_ADD("tms", TMS34010, XTAL_50MHz)
+	MCFG_CPU_CONFIG(tms_config)
+	MCFG_CPU_PROGRAM_MAP(tms_program_map)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-//  MDRV_SCREEN_RAW_PARAMS(40000000/4, 156*4, 0, 100*4, 328, 0, 300) // TODO - Wrong but TMS overrides it anyway
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500))
-	MDRV_SCREEN_SIZE(0x400, 0x100)
-	MDRV_SCREEN_VISIBLE_AREA(0, 0x280-1, 0, 0xf0-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+//  MCFG_SCREEN_RAW_PARAMS(40000000/4, 156*4, 0, 100*4, 328, 0, 300) // TODO - Wrong but TMS overrides it anyway
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500))
+	MCFG_SCREEN_SIZE(0x400, 0x100)
+	MCFG_SCREEN_VISIBLE_AREA(0, 0x280-1, 0, 0xf0-1)
 
-	MDRV_VIDEO_START(skimaxx)
-//  MDRV_VIDEO_UPDATE(tms340x0)
-	MDRV_VIDEO_UPDATE(skimaxx)
+	MCFG_VIDEO_START(skimaxx)
+//  MCFG_VIDEO_UPDATE(tms340x0)
+	MCFG_VIDEO_UPDATE(skimaxx)
 
-//  MDRV_GFXDECODE( skimaxx )
+//  MCFG_GFXDECODE( skimaxx )
 
-	MDRV_PALETTE_INIT(RRRRR_GGGGG_BBBBB)
-	MDRV_PALETTE_LENGTH(32768)
+	MCFG_PALETTE_INIT(RRRRR_GGGGG_BBBBB)
+	MCFG_PALETTE_LENGTH(32768)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_OKIM6295_ADD("oki1", XTAL_4MHz, OKIM6295_PIN7_LOW)		// ?
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_OKIM6295_ADD("oki1", XTAL_4MHz, OKIM6295_PIN7_LOW)		// ?
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
 
-	MDRV_OKIM6295_ADD("oki2", XTAL_4MHz/2, OKIM6295_PIN7_HIGH)	// ?
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_OKIM6295_ADD("oki2", XTAL_4MHz/2, OKIM6295_PIN7_HIGH)	// ?
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
 
-	MDRV_OKIM6295_ADD("oki3", XTAL_4MHz, OKIM6295_PIN7_LOW)		// ?
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+	MCFG_OKIM6295_ADD("oki3", XTAL_4MHz, OKIM6295_PIN7_LOW)		// ?
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
 
-	MDRV_OKIM6295_ADD("oki4", XTAL_4MHz/2, OKIM6295_PIN7_HIGH)	// ?
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki4", XTAL_4MHz/2, OKIM6295_PIN7_HIGH)	// ?
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 
 /*************************************

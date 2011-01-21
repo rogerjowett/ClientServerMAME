@@ -1085,7 +1085,7 @@ ADDRESS_MAP_END
 
 static WRITE8_HANDLER( sfbonus_bank_w )
 {
-	UINT8 *ROM = memory_region(space->machine, "maincpu");
+	UINT8 *ROM = space->machine->region("maincpu")->base();
 	UINT8 bank;
 
 	bank = data & 7;
@@ -1097,22 +1097,22 @@ static WRITE8_HANDLER( sfbonus_bank_w )
 
 static READ8_HANDLER( sfbonus_2800_r )
 {
-	return mame_rand(space->machine);
+	return space->machine->rand();
 }
 
 static READ8_HANDLER( sfbonus_2801_r )
 {
-	return mame_rand(space->machine);
+	return space->machine->rand();
 }
 
 static READ8_HANDLER( sfbonus_2c00_r )
 {
-	return mame_rand(space->machine);
+	return space->machine->rand();
 }
 
 static READ8_HANDLER( sfbonus_2c01_r )
 {
-	return mame_rand(space->machine);
+	return space->machine->rand();
 }
 
 static READ8_HANDLER( sfbonus_3800_r )
@@ -1159,7 +1159,7 @@ static ADDRESS_MAP_START( sfbonus_io, ADDRESS_SPACE_IO, 8 )
 	AM_RANGE(0x0430, 0x0430) AM_READ_PORT("SWITCH4")
 	AM_RANGE(0x0438, 0x0438) AM_READ_PORT("SWITCH5")
 
-	AM_RANGE(0x0800, 0x0800) AM_DEVREADWRITE("oki", okim6295_r, okim6295_w)
+	AM_RANGE(0x0800, 0x0800) AM_DEVREADWRITE_MODERN("oki", okim6295_device, read, write)
 
 	AM_RANGE(0x0c00, 0x0c03) AM_WRITE( paletteram_io_w )
 
@@ -1217,7 +1217,7 @@ GFXDECODE_END
 
 static MACHINE_RESET( sfbonus )
 {
-	UINT8 *ROM = memory_region(machine, "maincpu");
+	UINT8 *ROM = machine->region("maincpu")->base();
 
 	memory_set_bankptr(machine, "bank1", &ROM[0]);
 }
@@ -1235,48 +1235,48 @@ static NVRAM_HANDLER( sfbonus )
 		}
 		else
 		{
-			UINT8* defaultram = memory_region(machine, "defaults");
+			UINT8* defaultram = machine->region("defaults")->base();
 			memset(nvram,0x00,nvram_size);
 
 			if (defaultram)
 				if ((defaultram[0x02]==0x00) && (defaultram[0x03]==0x00)) // hack! rom region optional regions get cleared with garbage if no rom is present, this is not good!
-					memcpy(nvram, memory_region(machine, "defaults"), memory_region_length(machine, "defaults"));
+					memcpy(nvram, machine->region("defaults")->base(), machine->region("defaults")->bytes());
 		}
 	}
 }
 
 
-static MACHINE_DRIVER_START( sfbonus )
-	MDRV_CPU_ADD("maincpu", Z80, 6000000) // custom packaged z80 CPU ?? Mhz
-	MDRV_CPU_PROGRAM_MAP(sfbonus_map)
-	MDRV_CPU_IO_MAP(sfbonus_io)
-	MDRV_CPU_VBLANK_INT("screen",irq0_line_hold)
-	//MDRV_CPU_PERIODIC_INT(nmi_line_pulse,100)
+static MACHINE_CONFIG_START( sfbonus, driver_device )
+	MCFG_CPU_ADD("maincpu", Z80, 6000000) // custom packaged z80 CPU ?? Mhz
+	MCFG_CPU_PROGRAM_MAP(sfbonus_map)
+	MCFG_CPU_IO_MAP(sfbonus_io)
+	MCFG_CPU_VBLANK_INT("screen",irq0_line_hold)
+	//MCFG_CPU_PERIODIC_INT(nmi_line_pulse,100)
 
-	MDRV_MACHINE_RESET( sfbonus )
+	MCFG_MACHINE_RESET( sfbonus )
 
-	MDRV_NVRAM_HANDLER(sfbonus)
+	MCFG_NVRAM_HANDLER(sfbonus)
 
 
-	MDRV_GFXDECODE(sfbonus)
+	MCFG_GFXDECODE(sfbonus)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(128*8, 64*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 512-1, 0*8, 288-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(128*8, 64*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 512-1, 0*8, 288-1)
 
-	MDRV_PALETTE_LENGTH(0x100*2) // *2 for priority workaraound / custom drawing
+	MCFG_PALETTE_LENGTH(0x100*2) // *2 for priority workaraound / custom drawing
 
-	MDRV_VIDEO_START(sfbonus)
-	MDRV_VIDEO_UPDATE(sfbonus)
+	MCFG_VIDEO_START(sfbonus)
+	MCFG_VIDEO_UPDATE(sfbonus)
 
 	/* Parrot 3 seems fine at 1 Mhz, but Double Challenge isn't? */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_OKIM6295_ADD("oki", 1000000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
-MACHINE_DRIVER_END
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_OKIM6295_ADD("oki", 1000000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
+MACHINE_CONFIG_END
 
 
 /* Skill Fruit Bonus */
@@ -5259,6 +5259,45 @@ ROM_START( bugfeverv2 )
 	ROM_LOAD_OPTIONAL( "bf17ex.id", 0x00, 0x20, CRC(38bd8ec4) SHA1(4e6b85348f2fa821934f7666f77ba0f016e200ec) )
 ROM_END
 
+/* Devil Island */
+ROM_START( dvisland )
+	ROM_REGION( 0x80000, "maincpu", 0 ) /* Z80 Code */
+	ROM_LOAD( "did14r.bin", 0x00000, 0x80000, CRC(28c3a7eb) SHA1(5389338ef42e05542e3ff052b2bbc918cf619874) )
+
+	ROM_REGION( 0x040000, "oki", ROMREGION_ERASE00 ) /* Samples */
+	ROM_LOAD( "dirom2.bin", 0x00000, 0x40000, CRC(9fddeea4) SHA1(6651b70011798a2e58a468b57323da344bd4b2b6) )
+
+	ROM_REGION( 0x100000, "gfx1", 0 )
+	ROM_LOAD16_BYTE( "dirom3.bin", 0x00000, 0x80000, CRC(a61036ce) SHA1(d125899ae7d672f258cd383949fffc73bf232ffd) )
+	ROM_LOAD16_BYTE( "dirom4.bin", 0x00001, 0x80000, CRC(4b34ea74) SHA1(9564f65f48354f589e291fc505e187ae8a3b0d71) )
+
+	ROM_REGION( 0x100000, "gfx2", 0 )
+	ROM_LOAD16_BYTE( "dirom5.bin", 0x00000, 0x80000, CRC(041eb83f) SHA1(d50784b52ac3b801cfd83adba9ced0f9eab39890) )
+	ROM_LOAD16_BYTE( "dirom6.bin", 0x00001, 0x80000, CRC(291cbe5c) SHA1(fd15dceff0705c8c8d992e5047c7280247e21520) )
+
+	ROM_REGION( 0x20, "defaults", 0 ) /* default settings */
+	ROM_LOAD_OPTIONAL( "di24re.id", 0x00, 0x20, CRC(d69c8ee5) SHA1(122c196fe03817b5c507339c7c64d6ee7ae12bad) )
+ROM_END
+
+ROM_START( dvislando )
+	ROM_REGION( 0x80000, "maincpu", 0 ) /* Z80 Code */
+	ROM_LOAD( "did10r.bin", 0x00000, 0x80000, CRC(cfd9f256) SHA1(a7786c47094f8ace2d83bc4d6f1cf4b4367d13ca) )
+
+	ROM_REGION( 0x040000, "oki", ROMREGION_ERASE00 ) /* Samples */
+	ROM_LOAD( "dirom2.bin", 0x00000, 0x40000, CRC(9fddeea4) SHA1(6651b70011798a2e58a468b57323da344bd4b2b6) )
+
+	ROM_REGION( 0x100000, "gfx1", 0 )
+	ROM_LOAD16_BYTE( "dirom3.bin", 0x00000, 0x80000, CRC(a61036ce) SHA1(d125899ae7d672f258cd383949fffc73bf232ffd) )
+	ROM_LOAD16_BYTE( "dirom4.bin", 0x00001, 0x80000, CRC(4b34ea74) SHA1(9564f65f48354f589e291fc505e187ae8a3b0d71) )
+
+	ROM_REGION( 0x100000, "gfx2", 0 )
+	ROM_LOAD16_BYTE( "dirom5.bin", 0x00000, 0x80000, CRC(041eb83f) SHA1(d50784b52ac3b801cfd83adba9ced0f9eab39890) )
+	ROM_LOAD16_BYTE( "dirom6.bin", 0x00001, 0x80000, CRC(291cbe5c) SHA1(fd15dceff0705c8c8d992e5047c7280247e21520) )
+
+	ROM_REGION( 0x20, "defaults", 0 ) /* default settings */
+	ROM_LOAD_OPTIONAL( "di20re.id", 0x00, 0x20, CRC(8b70dfe9) SHA1(080e9797c766f116e794d6ba48bd38a922da740e) )
+ROM_END
+
 /* Around The World */
 ROM_START( atworld )
 	ROM_REGION( 0x80000, "maincpu", 0 ) /* Z80 Code */
@@ -5316,25 +5355,6 @@ ROM_START( version4 )
 
 	ROM_REGION( 0x20, "defaults", 0 ) /* default settings */
 	ROM_LOAD_OPTIONAL( "fcs40r1.id", 0x00, 0x20, CRC(b3638cdb) SHA1(283824c57f3f62f6e2b505f6e13b100a7d7f33af) )
-ROM_END
-
-ROM_START( dvisland )
-	ROM_REGION( 0x80000, "maincpu", 0 ) /* Z80 Code */
-	ROM_LOAD( "did14r.bin", 0x00000, 0x80000, CRC(28c3a7eb) SHA1(5389338ef42e05542e3ff052b2bbc918cf619874) )
-
-	ROM_REGION( 0x040000, "oki", ROMREGION_ERASE00 ) /* Samples */
-	ROM_LOAD( "dirom2.bin", 0x00000, 0x40000, NO_DUMP )
-
-	ROM_REGION( 0x100000, "gfx1", 0 )
-	ROM_LOAD16_BYTE( "dirom3.bin", 0x00000, 0x80000, NO_DUMP )
-	ROM_LOAD16_BYTE( "dirom4.bin", 0x00001, 0x80000, NO_DUMP )
-
-	ROM_REGION( 0x100000, "gfx2", 0 )
-	ROM_LOAD16_BYTE( "dirom5.bin", 0x00000, 0x80000, NO_DUMP )
-	ROM_LOAD16_BYTE( "dirom6.bin", 0x00001, 0x80000, NO_DUMP )
-
-	ROM_REGION( 0x20, "defaults", 0 ) /* default settings */
-	ROM_LOAD_OPTIONAL( "di24re.id", 0x00, 0x20, CRC(d69c8ee5) SHA1(122c196fe03817b5c507339c7c64d6ee7ae12bad) )
 ROM_END
 
 ROM_START( funriver )
@@ -5445,7 +5465,7 @@ static DRIVER_INIT( sfbonus_common)
 	state_save_register_global_pointer(machine, sfbonus_reel4_ram , 0x0800);
 
 	// hack, because the debugger is broken
-	sfbonus_videoram = memory_region(machine, "debugram");
+	sfbonus_videoram = machine->region("debugram")->base();
 	if (!sfbonus_videoram)
 		sfbonus_videoram = auto_alloc_array(machine, UINT8, 0x10000);
 
@@ -5455,9 +5475,9 @@ static DRIVER_INIT( sfbonus_common)
 
 	// dummy.rom helper
 	{
-		UINT8 *ROM = memory_region(machine, "maincpu");
-		int length = memory_region_length(machine, "maincpu");
-		UINT8* ROM2 = memory_region(machine, "user1");
+		UINT8 *ROM = machine->region("maincpu")->base();
+		int length = machine->region("maincpu")->bytes();
+		UINT8* ROM2 = machine->region("user1")->base();
 
 		if (ROM2)
 		{
@@ -5507,9 +5527,9 @@ static void sfbonus_bitswap( running_machine* machine,
 {
 
 	int i;
-	UINT8 *ROM = memory_region(machine, "maincpu");
+	UINT8 *ROM = machine->region("maincpu")->base();
 
-	for(i = 0; i < memory_region_length(machine, "maincpu"); i++)
+	for(i = 0; i < machine->region("maincpu")->bytes(); i++)
 	{
 		UINT8 x = ROM[i];
 
@@ -5899,6 +5919,9 @@ GAME( 2006, bugfeverd,   bugfever, sfbonus,    amcoe1_reels3,    bugfeverd,     
 GAME( 2006, bugfeverv2,  bugfever, sfbonus,    amcoe1_reels3,    bugfeverv2,      ROT0,  "Amcoe", "Bugs Fever (Version 1.7E Dual)", 0)
 GAME( 2006, bugfevero,   bugfever, sfbonus,    amcoe1_reels3,    bugfever,        ROT0,  "Amcoe", "Bugs Fever (Version 1.6R CGA)", 0)
 
+GAME( 2006, dvisland,    0,        sfbonus,    amcoe1_reels3,    dvisland,        ROT0,  "Amcoe", "Devil Island (Version 1.4R CGA)", 0)
+GAME( 2006, dvislando,   dvisland, sfbonus,    amcoe1_reels3,    dvisland,        ROT0,  "Amcoe", "Devil Island (Version 1.0R CGA)", 0)
+
 GAME( 2007, atworld,     0,        sfbonus,    amcoe1_reels3,    atworld,         ROT0,  "Amcoe", "Around The World (Version 1.3E CGA)", 0) /* Year according to Amcoe web site */
 GAME( 2007, atworldd1,   atworld,  sfbonus,    amcoe1_reels3,    atworldd,        ROT0,  "Amcoe", "Around The World (Version 1.3R CGA)", 0) /* Year according to Amcoe web site */
 
@@ -5906,7 +5929,6 @@ GAME( 2007, atworldd1,   atworld,  sfbonus,    amcoe1_reels3,    atworldd,      
 GAME( 2005, funriver,    0,        sfbonus,    amcoe1_reels3,    funriver,        ROT0,  "Amcoe", "Fun River (set 1)", GAME_NOT_WORKING)
 GAME( 2005, funriverv,   funriver, sfbonus,    amcoe1_reels3,    funriverv,       ROT0,  "Amcoe", "Fun River (set 2)", GAME_NOT_WORKING)
 GAME( 2006, version4,    0,        sfbonus,    amcoe1_reels3,    version4,        ROT0,  "Amcoe", "Version 4 (Version 4.2R)", GAME_NOT_WORKING)
-GAME( 2006, dvisland,    0,        sfbonus,    amcoe1_reels3,    dvisland,        ROT0,  "Amcoe", "Devil Island", GAME_NOT_WORKING)
 GAME( 200?, spooky,      0,        sfbonus,    amcoe1_reels3,    spooky,          ROT0,  "Amcoe", "Spooky Night (Version 2.0.4)", GAME_NOT_WORKING) /* After Around The World */
 GAME( 200?, fbdeluxe,    0,        sfbonus,    amcoe1_reels3,    fbdeluxe,        ROT0,  "Amcoe", "Fruit Bonus Deluxe (Version 1.0.7)", GAME_NOT_WORKING) /* After Around The World */
 

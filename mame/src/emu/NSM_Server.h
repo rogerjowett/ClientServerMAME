@@ -54,11 +54,6 @@ public:
 
     void popSyncQueue();
 
-    int getClientID(int i)
-    {
-	    return i+1;
-    }
-
 	void setSyncTransferTime(int _syncTransferSeconds)
 	{
 		syncTransferSeconds = _syncTransferSeconds;

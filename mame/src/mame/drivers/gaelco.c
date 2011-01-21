@@ -23,7 +23,7 @@
 
 static WRITE16_HANDLER( bigkarnk_sound_command_w )
 {
-	gaelco_state *state = (gaelco_state *)space->machine->driver_data;
+	gaelco_state *state = space->machine->driver_data<gaelco_state>();
 
 	if (ACCESSING_BITS_0_7)
 	{
@@ -52,7 +52,7 @@ static WRITE16_HANDLER( bigkarnk_coin_w )
 
 static WRITE16_HANDLER( OKIM6295_bankswitch_w )
 {
-	UINT8 *RAM = memory_region(space->machine, "oki");
+	UINT8 *RAM = space->machine->region("oki")->base();
 
 	if (ACCESSING_BITS_0_7)
 	{
@@ -64,7 +64,7 @@ static WRITE16_HANDLER( OKIM6295_bankswitch_w )
 
 static WRITE16_HANDLER( gaelco_vram_encrypted_w )
 {
-	gaelco_state *state = (gaelco_state *)space->machine->driver_data;
+	gaelco_state *state = space->machine->driver_data<gaelco_state>();
 
 	// mame_printf_debug("gaelco_vram_encrypted_w!!\n");
 	data = gaelco_decrypt(space, offset, data, 0x0f, 0x4228);
@@ -76,7 +76,7 @@ static WRITE16_HANDLER( gaelco_vram_encrypted_w )
 
 static WRITE16_HANDLER(gaelco_encrypted_w)
 {
-	gaelco_state *state = (gaelco_state *)space->machine->driver_data;
+	gaelco_state *state = space->machine->driver_data<gaelco_state>();
 
 	// mame_printf_debug("gaelco_encrypted_w!!\n");
 	data = gaelco_decrypt(space, offset, data, 0x0f, 0x4228);
@@ -87,7 +87,7 @@ static WRITE16_HANDLER(gaelco_encrypted_w)
 
 static WRITE16_HANDLER( thoop_vram_encrypted_w )
 {
-	gaelco_state *state = (gaelco_state *)space->machine->driver_data;
+	gaelco_state *state = space->machine->driver_data<gaelco_state>();
 
 	// mame_printf_debug("gaelco_vram_encrypted_w!!\n");
 	data = gaelco_decrypt(space, offset, data, 0x0e, 0x4228);
@@ -98,7 +98,7 @@ static WRITE16_HANDLER( thoop_vram_encrypted_w )
 
 static WRITE16_HANDLER(thoop_encrypted_w)
 {
-	gaelco_state *state = (gaelco_state *)space->machine->driver_data;
+	gaelco_state *state = space->machine->driver_data<gaelco_state>();
 
 	// mame_printf_debug("gaelco_encrypted_w!!\n");
 	data = gaelco_decrypt(space, offset, data, 0x0e, 0x4228);
@@ -131,7 +131,7 @@ ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( bigkarnk_snd_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x07ff) AM_RAM											/* RAM */
-	AM_RANGE(0x0800, 0x0801) AM_DEVREADWRITE("oki", okim6295_r, okim6295_w)	/* OKI6295 */
+	AM_RANGE(0x0800, 0x0801) AM_DEVREADWRITE_MODERN("oki", okim6295_device, read, write)	/* OKI6295 */
 //  AM_RANGE(0x0900, 0x0900) AM_WRITENOP                                    /* enable sound output? */
 	AM_RANGE(0x0a00, 0x0a01) AM_DEVREADWRITE("ymsnd", ym3812_r, ym3812_w)		/* YM3812 */
 	AM_RANGE(0x0b00, 0x0b00) AM_READ(soundlatch_r)							/* Sound latch */
@@ -151,7 +151,7 @@ static ADDRESS_MAP_START( maniacsq_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x700004, 0x700005) AM_READ_PORT("P1")
 	AM_RANGE(0x700006, 0x700007) AM_READ_PORT("P2")
 	AM_RANGE(0x70000c, 0x70000d) AM_WRITE(OKIM6295_bankswitch_w)										/* OKI6295 bankswitch */
-	AM_RANGE(0x70000e, 0x70000f) AM_DEVREADWRITE8("oki", okim6295_r, okim6295_w, 0x00ff)						/* OKI6295 status register */
+	AM_RANGE(0x70000e, 0x70000f) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0x00ff)						/* OKI6295 status register */
 	AM_RANGE(0xff0000, 0xffffff) AM_RAM															/* Work RAM */
 ADDRESS_MAP_END
 
@@ -168,7 +168,7 @@ static ADDRESS_MAP_START( squash_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x700004, 0x700005) AM_READ_PORT("P1")
 	AM_RANGE(0x700006, 0x700007) AM_READ_PORT("P2")
 	AM_RANGE(0x70000c, 0x70000d) AM_WRITE(OKIM6295_bankswitch_w)										/* OKI6295 bankswitch */
-	AM_RANGE(0x70000e, 0x70000f) AM_DEVREADWRITE8("oki", okim6295_r, okim6295_w, 0x00ff)						/* OKI6295 status register */
+	AM_RANGE(0x70000e, 0x70000f) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0x00ff)						/* OKI6295 status register */
 	AM_RANGE(0xff0000, 0xffffff) AM_RAM															/* Work RAM */
 ADDRESS_MAP_END
 
@@ -185,7 +185,7 @@ static ADDRESS_MAP_START( thoop_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x700004, 0x700005) AM_READ_PORT("P1")
 	AM_RANGE(0x700006, 0x700007) AM_READ_PORT("P2")
 	AM_RANGE(0x70000c, 0x70000d) AM_WRITE(OKIM6295_bankswitch_w)										/* OKI6295 bankswitch */
-	AM_RANGE(0x70000e, 0x70000f) AM_DEVREADWRITE8("oki", okim6295_r, okim6295_w, 0x00ff)						/* OKI6295 status register */
+	AM_RANGE(0x70000e, 0x70000f) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0x00ff)						/* OKI6295 status register */
 	AM_RANGE(0xff0000, 0xffffff) AM_RAM															/* Work RAM */
 ADDRESS_MAP_END
 
@@ -492,154 +492,142 @@ GFXDECODEINFO(0x100000,64)
 
 static MACHINE_START( gaelco )
 {
-	gaelco_state *state = (gaelco_state *)machine->driver_data;
+	gaelco_state *state = machine->driver_data<gaelco_state>();
 
 	state->audiocpu = machine->device("audiocpu");
 }
 
-static MACHINE_DRIVER_START( bigkarnk )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(gaelco_state)
+static MACHINE_CONFIG_START( bigkarnk, gaelco_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 10000000)	/* MC68000P10, 10 MHz */
-	MDRV_CPU_PROGRAM_MAP(bigkarnk_map)
-	MDRV_CPU_VBLANK_INT("screen", irq6_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, 10000000)	/* MC68000P10, 10 MHz */
+	MCFG_CPU_PROGRAM_MAP(bigkarnk_map)
+	MCFG_CPU_VBLANK_INT("screen", irq6_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", M6809, 8867000/4)	/* 68B09, 2.21675 MHz? */
-	MDRV_CPU_PROGRAM_MAP(bigkarnk_snd_map)
+	MCFG_CPU_ADD("audiocpu", M6809, 8867000/4)	/* 68B09, 2.21675 MHz? */
+	MCFG_CPU_PROGRAM_MAP(bigkarnk_snd_map)
 
-	MDRV_QUANTUM_TIME(HZ(600))
+	MCFG_QUANTUM_TIME(HZ(600))
 
-	MDRV_MACHINE_START(gaelco)
+	MCFG_MACHINE_START(gaelco)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*16, 32*16)
-	MDRV_SCREEN_VISIBLE_AREA(0, 320-1, 16, 256-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*16, 32*16)
+	MCFG_SCREEN_VISIBLE_AREA(0, 320-1, 16, 256-1)
 
-	MDRV_GFXDECODE(0x100000)
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_GFXDECODE(0x100000)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_VIDEO_START(bigkarnk)
-	MDRV_VIDEO_UPDATE(bigkarnk)
+	MCFG_VIDEO_START(bigkarnk)
+	MCFG_VIDEO_UPDATE(bigkarnk)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM3812, 3580000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM3812, 3580000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-	MDRV_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( maniacsq )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(gaelco_state)
+static MACHINE_CONFIG_START( maniacsq, gaelco_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000,24000000/2)			/* 12 MHz */
-	MDRV_CPU_PROGRAM_MAP(maniacsq_map)
-	MDRV_CPU_VBLANK_INT("screen", irq6_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000,24000000/2)			/* 12 MHz */
+	MCFG_CPU_PROGRAM_MAP(maniacsq_map)
+	MCFG_CPU_VBLANK_INT("screen", irq6_line_hold)
 
-	MDRV_MACHINE_START(gaelco)
+	MCFG_MACHINE_START(gaelco)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*16, 32*16)
-	MDRV_SCREEN_VISIBLE_AREA(0, 320-1, 16, 256-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*16, 32*16)
+	MCFG_SCREEN_VISIBLE_AREA(0, 320-1, 16, 256-1)
 
-	MDRV_GFXDECODE(0x100000)
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_GFXDECODE(0x100000)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_VIDEO_START(maniacsq)
-	MDRV_VIDEO_UPDATE(maniacsq)
+	MCFG_VIDEO_START(maniacsq)
+	MCFG_VIDEO_UPDATE(maniacsq)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( squash )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(gaelco_state)
+static MACHINE_CONFIG_START( squash, gaelco_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 12000000)	/* MC68000P12, 12 MHz */
-	MDRV_CPU_PROGRAM_MAP(squash_map)
-	MDRV_CPU_VBLANK_INT("screen", irq6_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, 12000000)	/* MC68000P12, 12 MHz */
+	MCFG_CPU_PROGRAM_MAP(squash_map)
+	MCFG_CPU_VBLANK_INT("screen", irq6_line_hold)
 
-	MDRV_QUANTUM_TIME(HZ(600))
+	MCFG_QUANTUM_TIME(HZ(600))
 
-	MDRV_MACHINE_START(gaelco)
+	MCFG_MACHINE_START(gaelco)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*16, 32*16)
-	MDRV_SCREEN_VISIBLE_AREA(0, 320-1, 16, 256-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*16, 32*16)
+	MCFG_SCREEN_VISIBLE_AREA(0, 320-1, 16, 256-1)
 
-	MDRV_GFXDECODE(0x100000)
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_GFXDECODE(0x100000)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_VIDEO_START(maniacsq)
-	MDRV_VIDEO_UPDATE(maniacsq)
+	MCFG_VIDEO_START(maniacsq)
+	MCFG_VIDEO_UPDATE(maniacsq)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( thoop )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(gaelco_state)
+static MACHINE_CONFIG_START( thoop, gaelco_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 12000000)	/* MC68000P12, 12 MHz */
-	MDRV_CPU_PROGRAM_MAP(thoop_map)
-	MDRV_CPU_VBLANK_INT("screen", irq6_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, 12000000)	/* MC68000P12, 12 MHz */
+	MCFG_CPU_PROGRAM_MAP(thoop_map)
+	MCFG_CPU_VBLANK_INT("screen", irq6_line_hold)
 
-	MDRV_QUANTUM_TIME(HZ(600))
+	MCFG_QUANTUM_TIME(HZ(600))
 
-	MDRV_MACHINE_START(gaelco)
+	MCFG_MACHINE_START(gaelco)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*16, 32*16)
-	MDRV_SCREEN_VISIBLE_AREA(0, 320-1, 16, 256-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*16, 32*16)
+	MCFG_SCREEN_VISIBLE_AREA(0, 320-1, 16, 256-1)
 
-	MDRV_GFXDECODE(0x100000)
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_GFXDECODE(0x100000)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_VIDEO_START(maniacsq)
-	MDRV_VIDEO_UPDATE(maniacsq)
+	MCFG_VIDEO_START(maniacsq)
+	MCFG_VIDEO_UPDATE(maniacsq)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 /*************************************
@@ -648,7 +636,7 @@ MACHINE_DRIVER_END
  *
  *************************************/
 
-ROM_START( bigkarnk )
+ROM_START( bigkarnk ) /* PCB silkscreened REF.901112 */
 	ROM_REGION( 0x080000, "maincpu", 0 )	/* 68000 code */
 	ROM_LOAD16_BYTE(	"d16",	0x000000, 0x040000, CRC(44fb9c73) SHA1(c33852b37afea15482f4a43cb045434660e7a056) )
 	ROM_LOAD16_BYTE(	"d19",	0x000001, 0x040000, CRC(ff79dfdd) SHA1(2bfa440299317967ba2018d3a148291ae0c144ae) )

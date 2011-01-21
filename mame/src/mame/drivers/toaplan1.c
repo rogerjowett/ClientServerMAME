@@ -353,7 +353,7 @@ static ADDRESS_MAP_START( rallybik_main_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x000000, 0x00ffff) AM_ROM
 	AM_RANGE(0x040000, 0x07ffff) AM_ROM
 	AM_RANGE(0x080000, 0x083fff) AM_RAM
-	AM_RANGE(0x0c0000, 0x0c0fff) AM_RAM AM_BASE_SIZE_GENERIC(spriteram)
+	AM_RANGE(0x0c0000, 0x0c0fff) AM_RAM AM_BASE_SIZE_MEMBER(toaplan1_state, spriteram, spriteram_size)
 	AM_RANGE(0x100000, 0x100001) AM_WRITE(rallybik_bcu_flipscreen_w)
 	AM_RANGE(0x100002, 0x100003) AM_READWRITE(toaplan1_tileram_offs_r, toaplan1_tileram_offs_w)
 	AM_RANGE(0x100004, 0x100007) AM_READWRITE(rallybik_tileram16_r, toaplan1_tileram16_w)
@@ -362,8 +362,8 @@ static ADDRESS_MAP_START( rallybik_main_map, ADDRESS_SPACE_PROGRAM, 16 )
 //  AM_RANGE(0x140000, 0x140001) AM_WRITE(?? video frame related ??)
 	AM_RANGE(0x140002, 0x140003) AM_WRITE(toaplan1_intenable_w)
 	AM_RANGE(0x140008, 0x14000f) AM_WRITE(toaplan1_bcu_control_w)
-	AM_RANGE(0x144000, 0x1447ff) AM_READWRITE(toaplan1_colorram1_r, toaplan1_colorram1_w) AM_BASE(&toaplan1_colorram1) AM_SIZE(&toaplan1_colorram1_size)
-	AM_RANGE(0x146000, 0x1467ff) AM_READWRITE(toaplan1_colorram2_r, toaplan1_colorram2_w) AM_BASE(&toaplan1_colorram2) AM_SIZE(&toaplan1_colorram2_size)
+	AM_RANGE(0x144000, 0x1447ff) AM_READWRITE(toaplan1_colorram1_r, toaplan1_colorram1_w) AM_BASE_SIZE_MEMBER(toaplan1_state, colorram1, colorram1_size)
+	AM_RANGE(0x146000, 0x1467ff) AM_READWRITE(toaplan1_colorram2_r, toaplan1_colorram2_w) AM_BASE_SIZE_MEMBER(toaplan1_state, colorram2, colorram2_size)
 	AM_RANGE(0x180000, 0x180fff) AM_READWRITE(toaplan1_shared_r, toaplan1_shared_w)
 	AM_RANGE(0x1c0000, 0x1c0003) AM_WRITE(toaplan1_tile_offsets_w)
 	AM_RANGE(0x1c8000, 0x1c8001) AM_WRITE(toaplan1_reset_sound)
@@ -384,8 +384,8 @@ static ADDRESS_MAP_START( truxton_main_map, ADDRESS_SPACE_PROGRAM, 16 )
 //  AM_RANGE(0x140000, 0x140001) AM_WRITE(?? video frame related ??)
 	AM_RANGE(0x140002, 0x140003) AM_WRITE(toaplan1_intenable_w)
 	AM_RANGE(0x140008, 0x14000f) AM_WRITE(toaplan1_bcu_control_w)
-	AM_RANGE(0x144000, 0x1447ff) AM_READWRITE(toaplan1_colorram1_r, toaplan1_colorram1_w) AM_BASE(&toaplan1_colorram1) AM_SIZE(&toaplan1_colorram1_size)
-	AM_RANGE(0x146000, 0x1467ff) AM_READWRITE(toaplan1_colorram2_r, toaplan1_colorram2_w) AM_BASE(&toaplan1_colorram2) AM_SIZE(&toaplan1_colorram2_size)
+	AM_RANGE(0x144000, 0x1447ff) AM_READWRITE(toaplan1_colorram1_r, toaplan1_colorram1_w) AM_BASE_SIZE_MEMBER(toaplan1_state, colorram1, colorram1_size)
+	AM_RANGE(0x146000, 0x1467ff) AM_READWRITE(toaplan1_colorram2_r, toaplan1_colorram2_w) AM_BASE_SIZE_MEMBER(toaplan1_state, colorram2, colorram2_size)
 	AM_RANGE(0x180000, 0x180fff) AM_READWRITE(toaplan1_shared_r, toaplan1_shared_w)
 	AM_RANGE(0x1c0000, 0x1c0003) AM_WRITE(toaplan1_tile_offsets_w)
 	AM_RANGE(0x1c0006, 0x1c0007) AM_WRITE(toaplan1_fcu_flipscreen_w)
@@ -399,8 +399,8 @@ static ADDRESS_MAP_START( hellfire_main_map, ADDRESS_SPACE_PROGRAM, 16 )
 //  AM_RANGE(0x080000, 0x080001) AM_WRITE(?? video frame related ??)
 	AM_RANGE(0x080002, 0x080003) AM_WRITE(toaplan1_intenable_w)
 	AM_RANGE(0x080008, 0x08000f) AM_WRITE(toaplan1_bcu_control_w)
-	AM_RANGE(0x084000, 0x0847ff) AM_READWRITE(toaplan1_colorram1_r, toaplan1_colorram1_w) AM_BASE(&toaplan1_colorram1) AM_SIZE(&toaplan1_colorram1_size)
-	AM_RANGE(0x086000, 0x0867ff) AM_READWRITE(toaplan1_colorram2_r, toaplan1_colorram2_w) AM_BASE(&toaplan1_colorram2) AM_SIZE(&toaplan1_colorram2_size)
+	AM_RANGE(0x084000, 0x0847ff) AM_READWRITE(toaplan1_colorram1_r, toaplan1_colorram1_w) AM_BASE_SIZE_MEMBER(toaplan1_state, colorram1, colorram1_size)
+	AM_RANGE(0x086000, 0x0867ff) AM_READWRITE(toaplan1_colorram2_r, toaplan1_colorram2_w) AM_BASE_SIZE_MEMBER(toaplan1_state, colorram2, colorram2_size)
 	AM_RANGE(0x0c0000, 0x0c0fff) AM_READWRITE(toaplan1_shared_r, toaplan1_shared_w)
 	AM_RANGE(0x100000, 0x100001) AM_WRITE(toaplan1_bcu_flipscreen_w)
 	AM_RANGE(0x100002, 0x100003) AM_READWRITE(toaplan1_tileram_offs_r, toaplan1_tileram_offs_w)
@@ -425,8 +425,8 @@ static ADDRESS_MAP_START( zerowing_main_map, ADDRESS_SPACE_PROGRAM, 16 )
 //  AM_RANGE(0x400000, 0x400001) AM_WRITE(?? video frame related ??)
 	AM_RANGE(0x400002, 0x400003) AM_WRITE(toaplan1_intenable_w)
 	AM_RANGE(0x400008, 0x40000f) AM_WRITE(toaplan1_bcu_control_w)
-	AM_RANGE(0x404000, 0x4047ff) AM_READWRITE(toaplan1_colorram1_r, toaplan1_colorram1_w) AM_BASE(&toaplan1_colorram1) AM_SIZE(&toaplan1_colorram1_size)
-	AM_RANGE(0x406000, 0x4067ff) AM_READWRITE(toaplan1_colorram2_r, toaplan1_colorram2_w) AM_BASE(&toaplan1_colorram2) AM_SIZE(&toaplan1_colorram2_size)
+	AM_RANGE(0x404000, 0x4047ff) AM_READWRITE(toaplan1_colorram1_r, toaplan1_colorram1_w) AM_BASE_SIZE_MEMBER(toaplan1_state, colorram1, colorram1_size)
+	AM_RANGE(0x406000, 0x4067ff) AM_READWRITE(toaplan1_colorram2_r, toaplan1_colorram2_w) AM_BASE_SIZE_MEMBER(toaplan1_state, colorram2, colorram2_size)
 	AM_RANGE(0x440000, 0x440fff) AM_READWRITE(toaplan1_shared_r, toaplan1_shared_w)
 	AM_RANGE(0x480000, 0x480001) AM_WRITE(toaplan1_bcu_flipscreen_w)
 	AM_RANGE(0x480002, 0x480003) AM_READWRITE(toaplan1_tileram_offs_r, toaplan1_tileram_offs_w)
@@ -444,8 +444,8 @@ static ADDRESS_MAP_START( demonwld_main_map, ADDRESS_SPACE_PROGRAM, 16 )
 //  AM_RANGE(0x400000, 0x400001) AM_WRITE(?? video frame related ??)
 	AM_RANGE(0x400002, 0x400003) AM_WRITE(toaplan1_intenable_w)
 	AM_RANGE(0x400008, 0x40000f) AM_WRITE(toaplan1_bcu_control_w)
-	AM_RANGE(0x404000, 0x4047ff) AM_READWRITE(toaplan1_colorram1_r, toaplan1_colorram1_w) AM_BASE(&toaplan1_colorram1) AM_SIZE(&toaplan1_colorram1_size)
-	AM_RANGE(0x406000, 0x4067ff) AM_READWRITE(toaplan1_colorram2_r, toaplan1_colorram2_w) AM_BASE(&toaplan1_colorram2) AM_SIZE(&toaplan1_colorram2_size)
+	AM_RANGE(0x404000, 0x4047ff) AM_READWRITE(toaplan1_colorram1_r, toaplan1_colorram1_w) AM_BASE_SIZE_MEMBER(toaplan1_state, colorram1, colorram1_size)
+	AM_RANGE(0x406000, 0x4067ff) AM_READWRITE(toaplan1_colorram2_r, toaplan1_colorram2_w) AM_BASE_SIZE_MEMBER(toaplan1_state, colorram2, colorram2_size)
 	AM_RANGE(0x600000, 0x600fff) AM_READWRITE(toaplan1_shared_r, toaplan1_shared_w)
 	AM_RANGE(0x800000, 0x800001) AM_WRITE(toaplan1_bcu_flipscreen_w)
 	AM_RANGE(0x800002, 0x800003) AM_READWRITE(toaplan1_tileram_offs_r, toaplan1_tileram_offs_w)
@@ -472,8 +472,8 @@ static ADDRESS_MAP_START( samesame_main_map, ADDRESS_SPACE_PROGRAM, 16 )
 //  AM_RANGE(0x100000, 0x100001) AM_WRITE(?? video frame related ??)
 	AM_RANGE(0x100002, 0x100003) AM_WRITE(toaplan1_intenable_w)
 	AM_RANGE(0x100008, 0x10000f) AM_WRITE(toaplan1_bcu_control_w)
-	AM_RANGE(0x104000, 0x1047ff) AM_READWRITE(toaplan1_colorram1_r, toaplan1_colorram1_w) AM_BASE(&toaplan1_colorram1) AM_SIZE(&toaplan1_colorram1_size)
-	AM_RANGE(0x106000, 0x1067ff) AM_READWRITE(toaplan1_colorram2_r, toaplan1_colorram2_w) AM_BASE(&toaplan1_colorram2) AM_SIZE(&toaplan1_colorram2_size)
+	AM_RANGE(0x104000, 0x1047ff) AM_READWRITE(toaplan1_colorram1_r, toaplan1_colorram1_w) AM_BASE_SIZE_MEMBER(toaplan1_state, colorram1, colorram1_size)
+	AM_RANGE(0x106000, 0x1067ff) AM_READWRITE(toaplan1_colorram2_r, toaplan1_colorram2_w) AM_BASE_SIZE_MEMBER(toaplan1_state, colorram2, colorram2_size)
 	AM_RANGE(0x140000, 0x140001) AM_READ_PORT("P1")
 	AM_RANGE(0x140002, 0x140003) AM_READ_PORT("P2")
 	AM_RANGE(0x140004, 0x140005) AM_READ_PORT("DSWA")
@@ -509,8 +509,8 @@ static ADDRESS_MAP_START( outzone_main_map, ADDRESS_SPACE_PROGRAM, 16 )
 //  AM_RANGE(0x300000, 0x300001) AM_WRITE(?? video frame related ??)
 	AM_RANGE(0x300002, 0x300003) AM_WRITE(toaplan1_intenable_w)
 	AM_RANGE(0x300008, 0x30000f) AM_WRITE(toaplan1_bcu_control_w)
-	AM_RANGE(0x304000, 0x3047ff) AM_READWRITE(toaplan1_colorram1_r, toaplan1_colorram1_w) AM_BASE(&toaplan1_colorram1) AM_SIZE(&toaplan1_colorram1_size)
-	AM_RANGE(0x306000, 0x3067ff) AM_READWRITE(toaplan1_colorram2_r, toaplan1_colorram2_w) AM_BASE(&toaplan1_colorram2) AM_SIZE(&toaplan1_colorram2_size)
+	AM_RANGE(0x304000, 0x3047ff) AM_READWRITE(toaplan1_colorram1_r, toaplan1_colorram1_w) AM_BASE_SIZE_MEMBER(toaplan1_state, colorram1, colorram1_size)
+	AM_RANGE(0x306000, 0x3067ff) AM_READWRITE(toaplan1_colorram2_r, toaplan1_colorram2_w) AM_BASE_SIZE_MEMBER(toaplan1_state, colorram2, colorram2_size)
 	AM_RANGE(0x340000, 0x340003) AM_WRITE(toaplan1_tile_offsets_w)
 	AM_RANGE(0x340006, 0x340007) AM_WRITE(toaplan1_fcu_flipscreen_w)
 ADDRESS_MAP_END
@@ -527,8 +527,8 @@ static ADDRESS_MAP_START( vimana_main_map, ADDRESS_SPACE_PROGRAM, 16 )
 //  AM_RANGE(0x400000, 0x400001) AM_WRITE(?? video frame related ??)
 	AM_RANGE(0x400002, 0x400003) AM_WRITE(toaplan1_intenable_w)
 	AM_RANGE(0x400008, 0x40000f) AM_WRITE(toaplan1_bcu_control_w)
-	AM_RANGE(0x404000, 0x4047ff) AM_READWRITE(toaplan1_colorram1_r, toaplan1_colorram1_w) AM_BASE(&toaplan1_colorram1) AM_SIZE(&toaplan1_colorram1_size)
-	AM_RANGE(0x406000, 0x4067ff) AM_READWRITE(toaplan1_colorram2_r, toaplan1_colorram2_w) AM_BASE(&toaplan1_colorram2) AM_SIZE(&toaplan1_colorram2_size)
+	AM_RANGE(0x404000, 0x4047ff) AM_READWRITE(toaplan1_colorram1_r, toaplan1_colorram1_w) AM_BASE_SIZE_MEMBER(toaplan1_state, colorram1, colorram1_size)
+	AM_RANGE(0x406000, 0x4067ff) AM_READWRITE(toaplan1_colorram2_r, toaplan1_colorram2_w) AM_BASE_SIZE_MEMBER(toaplan1_state, colorram2, colorram2_size)
 	AM_RANGE(0x440000, 0x440005) AM_READWRITE(vimana_mcu_r, vimana_mcu_w)  /* shared memory from 0x440000 to 0x44ffff ? */
 	AM_RANGE(0x440006, 0x440007) AM_READ_PORT("DSWA")
 	AM_RANGE(0x440008, 0x440009) AM_READ(vimana_system_port_r)   /* "SYSTEM" + coinage simulation */
@@ -548,7 +548,7 @@ ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( toaplan1_sound_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0xffff) AM_RAM AM_BASE(&toaplan1_sharedram)
+	AM_RANGE(0x8000, 0xffff) AM_RAM AM_BASE_MEMBER(toaplan1_state, sharedram)
 ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( rallybik_sound_io_map, ADDRESS_SPACE_IO, 8 )
@@ -1498,7 +1498,7 @@ static GFXDECODE_START( vm )
 GFXDECODE_END
 
 
-static void irqhandler(running_device *device, int linestate)
+static void irqhandler(device_t *device, int linestate)
 {
 	cputag_set_input_line(device->machine, "audiocpu", 0, linestate);
 }
@@ -1510,324 +1510,324 @@ static const ym3812_interface ym3812_config =
 
 
 
-static MACHINE_DRIVER_START( rallybik )
+static MACHINE_CONFIG_START( rallybik, toaplan1_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, XTAL_10MHz)
-	MDRV_CPU_PROGRAM_MAP(rallybik_main_map)
-	MDRV_CPU_VBLANK_INT("screen", toaplan1_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, XTAL_10MHz)
+	MCFG_CPU_PROGRAM_MAP(rallybik_main_map)
+	MCFG_CPU_VBLANK_INT("screen", toaplan1_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z80, XTAL_28MHz/8)
-	MDRV_CPU_PROGRAM_MAP(toaplan1_sound_map)
-	MDRV_CPU_IO_MAP(rallybik_sound_io_map)
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL_28MHz/8)
+	MCFG_CPU_PROGRAM_MAP(toaplan1_sound_map)
+	MCFG_CPU_IO_MAP(rallybik_sound_io_map)
 
-	MDRV_QUANTUM_TIME(HZ(600))
+	MCFG_QUANTUM_TIME(HZ(600))
 
-	MDRV_MACHINE_RESET(toaplan1)
+	MCFG_MACHINE_RESET(toaplan1)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK | VIDEO_BUFFERS_SPRITERAM)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(55.14)		/* verified on pcb */
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(512, 512)	/* 512x288 active */
-	MDRV_SCREEN_VISIBLE_AREA(0, 319, 0, 239)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(55.14)		/* verified on pcb */
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(512, 512)	/* 512x288 active */
+	MCFG_SCREEN_VISIBLE_AREA(0, 319, 0, 239)
 
-	MDRV_GFXDECODE(rallybik)
-	MDRV_PALETTE_LENGTH((64*16)+(64*16))
+	MCFG_GFXDECODE(rallybik)
+	MCFG_PALETTE_LENGTH((64*16)+(64*16))
 
-	MDRV_VIDEO_START(rallybik)
-	MDRV_VIDEO_EOF(rallybik)
-	MDRV_VIDEO_UPDATE(rallybik)
+	MCFG_VIDEO_START(rallybik)
+	MCFG_VIDEO_EOF(rallybik)
+	MCFG_VIDEO_UPDATE(rallybik)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM3812, XTAL_28MHz/8)
-	MDRV_SOUND_CONFIG(ym3812_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM3812, XTAL_28MHz/8)
+	MCFG_SOUND_CONFIG(ym3812_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( truxton )
+static MACHINE_CONFIG_START( truxton, toaplan1_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, XTAL_10MHz)
-	MDRV_CPU_PROGRAM_MAP(truxton_main_map)
-	MDRV_CPU_VBLANK_INT("screen", toaplan1_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, XTAL_10MHz)
+	MCFG_CPU_PROGRAM_MAP(truxton_main_map)
+	MCFG_CPU_VBLANK_INT("screen", toaplan1_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z80, XTAL_28MHz/8)
-	MDRV_CPU_PROGRAM_MAP(toaplan1_sound_map)
-	MDRV_CPU_IO_MAP(truxton_sound_io_map)
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL_28MHz/8)
+	MCFG_CPU_PROGRAM_MAP(toaplan1_sound_map)
+	MCFG_CPU_IO_MAP(truxton_sound_io_map)
 
-	MDRV_QUANTUM_TIME(HZ(600))
+	MCFG_QUANTUM_TIME(HZ(600))
 
-	MDRV_MACHINE_RESET(toaplan1)
+	MCFG_MACHINE_RESET(toaplan1)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(57.59)		/* verified on pcb */
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(512, 512)	/* 512x320 active */
-	MDRV_SCREEN_VISIBLE_AREA(0, 319, 0, 239)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(57.59)		/* verified on pcb */
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(512, 512)	/* 512x320 active */
+	MCFG_SCREEN_VISIBLE_AREA(0, 319, 0, 239)
 
-	MDRV_GFXDECODE(toaplan1)
-	MDRV_PALETTE_LENGTH((64*16)+(64*16))
+	MCFG_GFXDECODE(toaplan1)
+	MCFG_PALETTE_LENGTH((64*16)+(64*16))
 
-	MDRV_VIDEO_START(toaplan1)
-	MDRV_VIDEO_EOF(toaplan1)
-	MDRV_VIDEO_UPDATE(toaplan1)
+	MCFG_VIDEO_START(toaplan1)
+	MCFG_VIDEO_EOF(toaplan1)
+	MCFG_VIDEO_UPDATE(toaplan1)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM3812, XTAL_28MHz/8)
-	MDRV_SOUND_CONFIG(ym3812_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM3812, XTAL_28MHz/8)
+	MCFG_SOUND_CONFIG(ym3812_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( hellfire )
+static MACHINE_CONFIG_START( hellfire, toaplan1_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, XTAL_10MHz)
-	MDRV_CPU_PROGRAM_MAP(hellfire_main_map)
-	MDRV_CPU_VBLANK_INT("screen", toaplan1_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, XTAL_10MHz)
+	MCFG_CPU_PROGRAM_MAP(hellfire_main_map)
+	MCFG_CPU_VBLANK_INT("screen", toaplan1_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z80, XTAL_28MHz/8)
-	MDRV_CPU_PROGRAM_MAP(toaplan1_sound_map)
-	MDRV_CPU_IO_MAP(hellfire_sound_io_map)
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL_28MHz/8)
+	MCFG_CPU_PROGRAM_MAP(toaplan1_sound_map)
+	MCFG_CPU_IO_MAP(hellfire_sound_io_map)
 
-	MDRV_QUANTUM_TIME(HZ(600))
+	MCFG_QUANTUM_TIME(HZ(600))
 
-	MDRV_MACHINE_RESET(toaplan1)
+	MCFG_MACHINE_RESET(toaplan1)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(512, 512)	/* 512x240 active */
-	MDRV_SCREEN_VISIBLE_AREA(0, 319, 16, 255)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(512, 512)	/* 512x240 active */
+	MCFG_SCREEN_VISIBLE_AREA(0, 319, 16, 255)
 
-	MDRV_GFXDECODE(toaplan1)
-	MDRV_PALETTE_LENGTH((64*16)+(64*16))
+	MCFG_GFXDECODE(toaplan1)
+	MCFG_PALETTE_LENGTH((64*16)+(64*16))
 
-	MDRV_VIDEO_START(toaplan1)
-	MDRV_VIDEO_EOF(toaplan1)
-	MDRV_VIDEO_UPDATE(toaplan1)
+	MCFG_VIDEO_START(toaplan1)
+	MCFG_VIDEO_EOF(toaplan1)
+	MCFG_VIDEO_UPDATE(toaplan1)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM3812, XTAL_28MHz/8)
-	MDRV_SOUND_CONFIG(ym3812_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM3812, XTAL_28MHz/8)
+	MCFG_SOUND_CONFIG(ym3812_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( zerowing )
+static MACHINE_CONFIG_START( zerowing, toaplan1_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, XTAL_10MHz)
-	MDRV_CPU_PROGRAM_MAP(zerowing_main_map)
-	MDRV_CPU_VBLANK_INT("screen", toaplan1_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, XTAL_10MHz)
+	MCFG_CPU_PROGRAM_MAP(zerowing_main_map)
+	MCFG_CPU_VBLANK_INT("screen", toaplan1_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z80, XTAL_28MHz/8)
-	MDRV_CPU_PROGRAM_MAP(toaplan1_sound_map)
-	MDRV_CPU_IO_MAP(zerowing_sound_io_map)
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL_28MHz/8)
+	MCFG_CPU_PROGRAM_MAP(toaplan1_sound_map)
+	MCFG_CPU_IO_MAP(zerowing_sound_io_map)
 
-	MDRV_QUANTUM_TIME(HZ(600))
+	MCFG_QUANTUM_TIME(HZ(600))
 
-	MDRV_MACHINE_RESET(zerowing)
+	MCFG_MACHINE_RESET(zerowing)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE( (XTAL_28MHz / 4) / (450 * 282) )	/* fixed by SUZ */
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(512, 512)	/* 512x240 mostly active, 512x512 actually used */
-	MDRV_SCREEN_VISIBLE_AREA(0, 319, 16, 255)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE( (XTAL_28MHz / 4) / (450 * 282) )	/* fixed by SUZ */
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(512, 512)	/* 512x240 mostly active, 512x512 actually used */
+	MCFG_SCREEN_VISIBLE_AREA(0, 319, 16, 255)
 
-	MDRV_GFXDECODE(toaplan1)
-	MDRV_PALETTE_LENGTH((64*16)+(64*16))
+	MCFG_GFXDECODE(toaplan1)
+	MCFG_PALETTE_LENGTH((64*16)+(64*16))
 
-	MDRV_VIDEO_START(toaplan1)
-	MDRV_VIDEO_EOF(toaplan1)
-	MDRV_VIDEO_UPDATE(toaplan1)
+	MCFG_VIDEO_START(toaplan1)
+	MCFG_VIDEO_EOF(toaplan1)
+	MCFG_VIDEO_UPDATE(toaplan1)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM3812, XTAL_28MHz/8)
-	MDRV_SOUND_CONFIG(ym3812_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM3812, XTAL_28MHz/8)
+	MCFG_SOUND_CONFIG(ym3812_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( demonwld )
+static MACHINE_CONFIG_START( demonwld, toaplan1_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, XTAL_10MHz)
-	MDRV_CPU_PROGRAM_MAP(demonwld_main_map)
-	MDRV_CPU_VBLANK_INT("screen", toaplan1_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, XTAL_10MHz)
+	MCFG_CPU_PROGRAM_MAP(demonwld_main_map)
+	MCFG_CPU_VBLANK_INT("screen", toaplan1_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z80, XTAL_28MHz/8)
-	MDRV_CPU_PROGRAM_MAP(toaplan1_sound_map)
-	MDRV_CPU_IO_MAP(demonwld_sound_io_map)
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL_28MHz/8)
+	MCFG_CPU_PROGRAM_MAP(toaplan1_sound_map)
+	MCFG_CPU_IO_MAP(demonwld_sound_io_map)
 
-	MDRV_CPU_ADD("dsp", TMS32010, XTAL_28MHz/2)
-	MDRV_CPU_PROGRAM_MAP(DSP_program_map)
-	MDRV_CPU_IO_MAP(DSP_io_map)
+	MCFG_CPU_ADD("dsp", TMS32010, XTAL_28MHz/2)
+	MCFG_CPU_PROGRAM_MAP(DSP_program_map)
+	MCFG_CPU_IO_MAP(DSP_io_map)
 
-	MDRV_QUANTUM_TIME(HZ(600))
+	MCFG_QUANTUM_TIME(HZ(600))
 
-	MDRV_MACHINE_RESET(demonwld)
+	MCFG_MACHINE_RESET(demonwld)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(55.14)		/* verified on pcb */
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(512, 512)	/* 512x240 active */
-	MDRV_SCREEN_VISIBLE_AREA(0, 319, 16, 255)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(55.14)		/* verified on pcb */
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(512, 512)	/* 512x240 active */
+	MCFG_SCREEN_VISIBLE_AREA(0, 319, 16, 255)
 
-	MDRV_GFXDECODE(toaplan1)
-	MDRV_PALETTE_LENGTH((64*16)+(64*16))
+	MCFG_GFXDECODE(toaplan1)
+	MCFG_PALETTE_LENGTH((64*16)+(64*16))
 
-	MDRV_VIDEO_START(toaplan1)
-	MDRV_VIDEO_EOF(toaplan1)
-	MDRV_VIDEO_UPDATE(demonwld)
+	MCFG_VIDEO_START(toaplan1)
+	MCFG_VIDEO_EOF(toaplan1)
+	MCFG_VIDEO_UPDATE(toaplan1)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM3812, XTAL_28MHz/8)
-	MDRV_SOUND_CONFIG(ym3812_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM3812, XTAL_28MHz/8)
+	MCFG_SOUND_CONFIG(ym3812_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( samesame )
+static MACHINE_CONFIG_START( samesame, toaplan1_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, XTAL_10MHz)
-	MDRV_CPU_PROGRAM_MAP(samesame_main_map)
-	MDRV_CPU_VBLANK_INT("screen", toaplan1_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, XTAL_10MHz)
+	MCFG_CPU_PROGRAM_MAP(samesame_main_map)
+	MCFG_CPU_VBLANK_INT("screen", toaplan1_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z180, XTAL_28MHz/8)	/* HD647180XOFS6 CPU */
-	MDRV_CPU_PROGRAM_MAP(hd647180_mem_map)
-	MDRV_DEVICE_DISABLE()		/* Internal code is not dumped */
+	MCFG_CPU_ADD("audiocpu", Z180, XTAL_28MHz/8)	/* HD647180XOFS6 CPU */
+	MCFG_CPU_PROGRAM_MAP(hd647180_mem_map)
+	MCFG_DEVICE_DISABLE()		/* Internal code is not dumped */
 
-	MDRV_MACHINE_RESET(toaplan1)
+	MCFG_MACHINE_RESET(toaplan1)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(512, 512)	/* 512x320 active */
-	MDRV_SCREEN_VISIBLE_AREA(0, 319, 0, 239)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(512, 512)	/* 512x320 active */
+	MCFG_SCREEN_VISIBLE_AREA(0, 319, 0, 239)
 
-	MDRV_GFXDECODE(toaplan1)
-	MDRV_PALETTE_LENGTH((64*16)+(64*16))
+	MCFG_GFXDECODE(toaplan1)
+	MCFG_PALETTE_LENGTH((64*16)+(64*16))
 
-	MDRV_VIDEO_START(toaplan1)
-	MDRV_VIDEO_EOF(samesame)
-	MDRV_VIDEO_UPDATE(toaplan1)
+	MCFG_VIDEO_START(toaplan1)
+	MCFG_VIDEO_EOF(samesame)
+	MCFG_VIDEO_UPDATE(toaplan1)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM3812, XTAL_28MHz/8)
-	MDRV_SOUND_CONFIG(ym3812_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM3812, XTAL_28MHz/8)
+	MCFG_SOUND_CONFIG(ym3812_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( outzone )
+static MACHINE_CONFIG_START( outzone, toaplan1_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, XTAL_10MHz)
-	MDRV_CPU_PROGRAM_MAP(outzone_main_map)
-	MDRV_CPU_VBLANK_INT("screen", toaplan1_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, XTAL_10MHz)
+	MCFG_CPU_PROGRAM_MAP(outzone_main_map)
+	MCFG_CPU_VBLANK_INT("screen", toaplan1_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z80, XTAL_28MHz/8)
-	MDRV_CPU_PROGRAM_MAP(toaplan1_sound_map)
-	MDRV_CPU_IO_MAP(outzone_sound_io_map)
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL_28MHz/8)
+	MCFG_CPU_PROGRAM_MAP(toaplan1_sound_map)
+	MCFG_CPU_IO_MAP(outzone_sound_io_map)
 
-	MDRV_QUANTUM_TIME(HZ(600))
+	MCFG_QUANTUM_TIME(HZ(600))
 
-	MDRV_MACHINE_RESET(zerowing)
+	MCFG_MACHINE_RESET(zerowing)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(512, 512)	/* 512x256 active */
-	MDRV_SCREEN_VISIBLE_AREA(0, 319, 0, 239)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(512, 512)	/* 512x256 active */
+	MCFG_SCREEN_VISIBLE_AREA(0, 319, 0, 239)
 
-	MDRV_GFXDECODE(outzone)
-	MDRV_PALETTE_LENGTH((64*16)+(64*16))
+	MCFG_GFXDECODE(outzone)
+	MCFG_PALETTE_LENGTH((64*16)+(64*16))
 
-	MDRV_VIDEO_START(toaplan1)
-	MDRV_VIDEO_EOF(toaplan1)
-	MDRV_VIDEO_UPDATE(toaplan1)
+	MCFG_VIDEO_START(toaplan1)
+	MCFG_VIDEO_EOF(toaplan1)
+	MCFG_VIDEO_UPDATE(toaplan1)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM3812, XTAL_28MHz/8)
-	MDRV_SOUND_CONFIG(ym3812_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM3812, XTAL_28MHz/8)
+	MCFG_SOUND_CONFIG(ym3812_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( vimana )
+static MACHINE_CONFIG_START( vimana, toaplan1_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, XTAL_10MHz)	/* verified on pcb */
-	MDRV_CPU_PROGRAM_MAP(vimana_main_map)
-	MDRV_CPU_VBLANK_INT("screen", toaplan1_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, XTAL_10MHz)	/* verified on pcb */
+	MCFG_CPU_PROGRAM_MAP(vimana_main_map)
+	MCFG_CPU_VBLANK_INT("screen", toaplan1_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", Z180, XTAL_28MHz/8)	/* HD647180XOFS6 CPU */
-	MDRV_CPU_PROGRAM_MAP(hd647180_mem_map)
-	MDRV_DEVICE_DISABLE()		/* Internal code is not dumped */
+	MCFG_CPU_ADD("audiocpu", Z180, XTAL_28MHz/8)	/* HD647180XOFS6 CPU */
+	MCFG_CPU_PROGRAM_MAP(hd647180_mem_map)
+	MCFG_DEVICE_DISABLE()		/* Internal code is not dumped */
 
-	MDRV_MACHINE_RESET(vimana)
+	MCFG_MACHINE_RESET(vimana)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(57.59)		/* verified on pcb */
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(512, 512)	/* 512x256 active */
-	MDRV_SCREEN_VISIBLE_AREA(0, 319, 0, 239)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(57.59)		/* verified on pcb */
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(512, 512)	/* 512x256 active */
+	MCFG_SCREEN_VISIBLE_AREA(0, 319, 0, 239)
 
-	MDRV_GFXDECODE(vm)
-	MDRV_PALETTE_LENGTH((64*16)+(64*16))
+	MCFG_GFXDECODE(vm)
+	MCFG_PALETTE_LENGTH((64*16)+(64*16))
 
-	MDRV_VIDEO_START(toaplan1)
-	MDRV_VIDEO_EOF(toaplan1)
-	MDRV_VIDEO_UPDATE(toaplan1)
+	MCFG_VIDEO_START(toaplan1)
+	MCFG_VIDEO_EOF(toaplan1)
+	MCFG_VIDEO_UPDATE(toaplan1)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM3812, XTAL_28MHz/8)	/* verified on pcb */
-	MDRV_SOUND_CONFIG(ym3812_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM3812, XTAL_28MHz/8)	/* verified on pcb */
+	MCFG_SOUND_CONFIG(ym3812_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 

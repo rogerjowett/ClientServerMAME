@@ -154,7 +154,7 @@ static ADDRESS_MAP_START( feversoc_map, ADDRESS_SPACE_PROGRAM, 32 )
 	AM_RANGE(0x06000000, 0x06000003) AM_WRITE(output_w)
 	AM_RANGE(0x06000004, 0x06000007) AM_WRITENOP //???
 	AM_RANGE(0x06000008, 0x0600000b) AM_READ(in0_r)
-	AM_RANGE(0x0600000c, 0x0600000f) AM_DEVREADWRITE8("oki", okim6295_r, okim6295_w, 0x00ff0000)
+	AM_RANGE(0x0600000c, 0x0600000f) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0x00ff0000)
 //  AM_RANGE(0x06010000, 0x06017fff) AM_RAM //contains RISE11 keys and other related stuff.
 	AM_RANGE(0x06018000, 0x06019fff) AM_RAM_WRITE(fs_paletteram_w) AM_BASE_GENERIC(paletteram)
 ADDRESS_MAP_END
@@ -234,31 +234,31 @@ static INTERRUPT_GEN( feversoc_irq )
 	cputag_set_input_line(device->machine, "maincpu", 8, HOLD_LINE );
 }
 
-static MACHINE_DRIVER_START( feversoc )
+static MACHINE_CONFIG_START( feversoc, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu",SH2,MASTER_CLOCK)
-	MDRV_CPU_PROGRAM_MAP(feversoc_map)
-	MDRV_CPU_VBLANK_INT("screen",feversoc_irq)
+	MCFG_CPU_ADD("maincpu",SH2,MASTER_CLOCK)
+	MCFG_CPU_PROGRAM_MAP(feversoc_map)
+	MCFG_CPU_VBLANK_INT("screen",feversoc_irq)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(40*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 0*8, 30*8-1) //dynamic resolution?
-	MDRV_GFXDECODE(feversoc)
-	MDRV_PALETTE_LENGTH(0x1000)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(40*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 0*8, 30*8-1) //dynamic resolution?
+	MCFG_GFXDECODE(feversoc)
+	MCFG_PALETTE_LENGTH(0x1000)
 
-	MDRV_VIDEO_START(feversoc)
-	MDRV_VIDEO_UPDATE(feversoc)
+	MCFG_VIDEO_START(feversoc)
+	MCFG_VIDEO_UPDATE(feversoc)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_OKIM6295_ADD("oki", MASTER_CLOCK/16, OKIM6295_PIN7_LOW) //pin 7 & frequency not verified (clock should be 28,6363 / n)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.6)
-MACHINE_DRIVER_END
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_OKIM6295_ADD("oki", MASTER_CLOCK/16, OKIM6295_PIN7_LOW) //pin 7 & frequency not verified (clock should be 28,6363 / n)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.6)
+MACHINE_CONFIG_END
 
 /***************************************************************************
 
@@ -282,7 +282,7 @@ ROM_END
 
 static DRIVER_INIT( feversoc )
 {
-	seibuspi_rise11_sprite_decrypt_feversoc(memory_region(machine, "gfx1"), 0x200000);
+	seibuspi_rise11_sprite_decrypt_feversoc(machine->region("gfx1")->base(), 0x200000);
 }
 
 GAME( 2004, feversoc,  0,       feversoc,  feversoc,  feversoc, ROT0, "Seibu Kaihatsu", "Fever Soccer", 0 )

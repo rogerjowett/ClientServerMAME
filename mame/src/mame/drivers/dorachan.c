@@ -16,12 +16,11 @@ Todo:
 #define NUM_PENS	(8)
 
 
-class dorachan_state
+class dorachan_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, dorachan_state(machine)); }
-
-	dorachan_state(running_machine &machine) { }
+	dorachan_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *  videoram;
@@ -31,7 +30,7 @@ public:
 	UINT8    flip_screen;
 
 	/* devices */
-	running_device *main_cpu;
+	device_t *main_cpu;
 };
 
 
@@ -43,7 +42,7 @@ public:
 
 static CUSTOM_INPUT( dorachan_protection_r )
 {
-	dorachan_state *state = (dorachan_state *)field->port->machine->driver_data;
+	dorachan_state *state = field->port->machine->driver_data<dorachan_state>();
 	UINT8 ret = 0;
 
 	switch (cpu_get_previouspc(state->main_cpu))
@@ -81,14 +80,14 @@ static void get_pens(pen_t *pens)
 
 static VIDEO_UPDATE( dorachan )
 {
-	dorachan_state *state = (dorachan_state *)screen->machine->driver_data;
+	dorachan_state *state = screen->machine->driver_data<dorachan_state>();
 	pen_t pens[NUM_PENS];
 	offs_t offs;
 	const UINT8 *color_map_base;
 
 	get_pens(pens);
 
-	color_map_base = memory_region(screen->machine, "proms");
+	color_map_base = screen->machine->region("proms")->base();
 
 	for (offs = 0; offs < state->videoram_size; offs++)
 	{
@@ -124,14 +123,14 @@ static VIDEO_UPDATE( dorachan )
 
 static WRITE8_HANDLER(dorachan_ctrl_w)
 {
-	dorachan_state *state = (dorachan_state *)space->machine->driver_data;
+	dorachan_state *state = space->machine->driver_data<dorachan_state>();
 	state->flip_screen = (data >> 6) & 0x01;
 }
 
 
 static CUSTOM_INPUT( dorachan_v128_r )
 {
-	dorachan_state *state = (dorachan_state *)field->port->machine->driver_data;
+	dorachan_state *state = field->port->machine->driver_data<dorachan_state>();
 
 	/* to avoid resetting (when player 2 starts) bit 0 need to be inverted when screen is flipped */
 	return ((field->port->machine->primary_screen->vpos() >> 7) & 0x01) ^ state->flip_screen;
@@ -225,7 +224,7 @@ INPUT_PORTS_END
 
 static MACHINE_START( dorachan )
 {
-	dorachan_state *state = (dorachan_state *)machine->driver_data;
+	dorachan_state *state = machine->driver_data<dorachan_state>();
 
 	state->main_cpu = machine->device("maincpu");
 
@@ -234,35 +233,32 @@ static MACHINE_START( dorachan )
 
 static MACHINE_RESET( dorachan )
 {
-	dorachan_state *state = (dorachan_state *)machine->driver_data;
+	dorachan_state *state = machine->driver_data<dorachan_state>();
 
 	state->flip_screen = 0;
 }
 
-static MACHINE_DRIVER_START( dorachan )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(dorachan_state)
+static MACHINE_CONFIG_START( dorachan, dorachan_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, 2000000)
-	MDRV_CPU_PROGRAM_MAP(dorachan_map)
-	MDRV_CPU_IO_MAP(dorachan_io_map)
-	MDRV_CPU_VBLANK_INT_HACK(irq0_line_hold,2)
+	MCFG_CPU_ADD("maincpu", Z80, 2000000)
+	MCFG_CPU_PROGRAM_MAP(dorachan_map)
+	MCFG_CPU_IO_MAP(dorachan_io_map)
+	MCFG_CPU_VBLANK_INT_HACK(irq0_line_hold,2)
 
-	MDRV_MACHINE_START(dorachan)
-	MDRV_MACHINE_RESET(dorachan)
+	MCFG_MACHINE_START(dorachan)
+	MCFG_MACHINE_RESET(dorachan)
 
 	/* video hardware */
-	MDRV_VIDEO_UPDATE(dorachan)
+	MCFG_VIDEO_UPDATE(dorachan)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(1*8, 31*8-1, 1*8, 31*8-1)
-	MDRV_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(1*8, 31*8-1, 1*8, 31*8-1)
+	MCFG_SCREEN_REFRESH_RATE(60)
 
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
 
 

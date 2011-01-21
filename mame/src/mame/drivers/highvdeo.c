@@ -86,6 +86,7 @@ Game is V30 based, with rom banking (2Mb)
 #include "cpu/nec/nec.h"
 #include "cpu/i86/i86.h"
 #include "sound/okim6376.h"
+#include "machine/nvram.h"
 #include "fashion.lh"
 
 static UINT16 *blit_ram;
@@ -211,7 +212,7 @@ static WRITE16_HANDLER( tv_vcf_paletteram_w )
 static WRITE16_HANDLER( tv_vcf_bankselect_w )
 {
 	static UINT32 bankaddress;
-	UINT8 *ROM = memory_region(space->machine, "user1");
+	UINT8 *ROM = space->machine->region("user1")->base();
 
 	/* bits 0, 1 select the ROM bank */
 	bankaddress = (data & 0x03) * 0x40000;
@@ -255,7 +256,7 @@ static WRITE16_HANDLER( write1_w )
 
 static ADDRESS_MAP_START( tv_vcf_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x00000, 0x003ff) AM_RAM /*irq vector area*/
-	AM_RANGE(0x00400, 0x03fff) AM_RAM AM_BASE_SIZE_GENERIC( nvram )
+	AM_RANGE(0x00400, 0x03fff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0x40000, 0x4ffff) AM_RAM AM_BASE(&blit_ram) /*blitter ram*/
 	AM_RANGE(0x80000, 0xbffff) AM_ROMBANK("bank1")
 	AM_RANGE(0xc0000, 0xfffff) AM_ROM AM_REGION("boot_prg",0)
@@ -294,7 +295,7 @@ static WRITE16_DEVICE_HANDLER( tv_ncf_oki6395_w )
 }
 static ADDRESS_MAP_START( tv_ncf_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x00000, 0x003ff) AM_RAM /*irq vector area*/
-	AM_RANGE(0x00400, 0x03fff) AM_RAM AM_BASE_SIZE_GENERIC( nvram )
+	AM_RANGE(0x00400, 0x03fff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0x20000, 0x2ffff) AM_RAM AM_BASE(&blit_ram) /*blitter ram*/
 	AM_RANGE(0x40000, 0xbffff) AM_ROM AM_REGION("user1",0x40000)
 	AM_RANGE(0xc0000, 0xfffff) AM_ROM AM_REGION("boot_prg",0)
@@ -327,7 +328,7 @@ static WRITE16_HANDLER( tv_tcf_paletteram_w )
 static WRITE16_HANDLER( tv_tcf_bankselect_w )
 {
 	static UINT32 bankaddress;
-	UINT8 *ROM = memory_region(space->machine, "user1");
+	UINT8 *ROM = space->machine->region("user1")->base();
 
 	/* bits 0, 1, 2 select the ROM bank */
 	bankaddress = (data & 0x07) * 0x40000;
@@ -337,7 +338,7 @@ static WRITE16_HANDLER( tv_tcf_bankselect_w )
 
 static ADDRESS_MAP_START( tv_tcf_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x00000, 0x003ff) AM_RAM /*irq vector area*/
-	AM_RANGE(0x00400, 0x03fff) AM_RAM AM_BASE_SIZE_GENERIC( nvram )
+	AM_RANGE(0x00400, 0x03fff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0x40000, 0x5d4bf) AM_RAM AM_BASE(&blit_ram) /*blitter ram*/
 	AM_RANGE(0x7fe00, 0x7ffff) AM_RAM_WRITE( tv_tcf_paletteram_w ) AM_BASE_GENERIC(paletteram)
 	AM_RANGE(0x80000, 0xbffff) AM_ROMBANK("bank1")
@@ -395,7 +396,7 @@ static WRITE16_HANDLER( write2_w )
 
 static ADDRESS_MAP_START( newmcard_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x00000, 0x003ff) AM_RAM /*irq vector area*/
-	AM_RANGE(0x00400, 0x0ffff) AM_RAM AM_BASE_SIZE_GENERIC( nvram )
+	AM_RANGE(0x00400, 0x0ffff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0x40000, 0x7ffff) AM_RAM AM_BASE(&blit_ram) /*blitter ram*/
 	AM_RANGE(0x80000, 0xbffff) AM_ROMBANK("bank1")
 	AM_RANGE(0xc0000, 0xfffff) AM_ROM AM_REGION("boot_prg",0)
@@ -445,7 +446,7 @@ static READ16_HANDLER( brasil_status_r )
 static WRITE16_HANDLER( brasil_status_w )
 {
 	static UINT32 bankaddress;
-	UINT8 *ROM = memory_region(space->machine, "user1");
+	UINT8 *ROM = space->machine->region("user1")->base();
 
 	switch(data & 3) //data & 7?
 	{
@@ -463,7 +464,7 @@ static WRITE16_HANDLER( brasil_status_w )
 
 static ADDRESS_MAP_START( brasil_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x00000, 0x003ff) AM_RAM /*irq vector area*/
-	AM_RANGE(0x00400, 0x0ffff) AM_RAM AM_BASE_SIZE_GENERIC( nvram )
+	AM_RANGE(0x00400, 0x0ffff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0x40000, 0x7ffff) AM_RAM AM_BASE(&blit_ram) /*blitter ram*/
 	AM_RANGE(0x80000, 0xbffff) AM_ROMBANK("bank1")
 	AM_RANGE(0xc0000, 0xfffff) AM_ROM AM_REGION("boot_prg",0)
@@ -865,103 +866,99 @@ static INTERRUPT_GEN( vblank_irq )
 	cpu_set_input_line_and_vector(device,0,HOLD_LINE,0x08/4);
 }
 
-static MACHINE_DRIVER_START( tv_vcf )
-	MDRV_CPU_ADD("maincpu", V30, XTAL_12MHz/2 )	// ?
-	MDRV_CPU_PROGRAM_MAP(tv_vcf_map)
-	MDRV_CPU_IO_MAP(tv_vcf_io)
-	MDRV_CPU_VBLANK_INT("screen", vblank_irq)
+static MACHINE_CONFIG_START( tv_vcf, driver_device )
+	MCFG_CPU_ADD("maincpu", V30, XTAL_12MHz/2 )	// ?
+	MCFG_CPU_PROGRAM_MAP(tv_vcf_map)
+	MCFG_CPU_IO_MAP(tv_vcf_io)
+	MCFG_CPU_VBLANK_INT("screen", vblank_irq)
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(400, 300)
-	MDRV_SCREEN_VISIBLE_AREA(0, 320-1, 0, 200-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(400, 300)
+	MCFG_SCREEN_VISIBLE_AREA(0, 320-1, 0, 200-1)
 
-	MDRV_PALETTE_LENGTH(0x100)
+	MCFG_PALETTE_LENGTH(0x100)
 
-	MDRV_VIDEO_START(tourvisn)
-	MDRV_VIDEO_UPDATE(tourvisn)
+	MCFG_VIDEO_START(tourvisn)
+	MCFG_VIDEO_UPDATE(tourvisn)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
 	//OkiM6376
-	MDRV_SOUND_ADD("oki", OKIM6376, XTAL_12MHz/2/2)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SOUND_ADD("oki", OKIM6376, XTAL_12MHz/2/2)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( tv_ncf )
-	MDRV_IMPORT_FROM(tv_vcf)
+static MACHINE_CONFIG_DERIVED( tv_ncf, tv_vcf )
 
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(tv_ncf_map)
-	MDRV_CPU_IO_MAP(tv_ncf_io)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(tv_ncf_map)
+	MCFG_CPU_IO_MAP(tv_ncf_io)
 
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( tv_tcf )
-	MDRV_IMPORT_FROM(tv_vcf)
+static MACHINE_CONFIG_DERIVED( tv_tcf, tv_vcf )
 
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(tv_tcf_map)
-	MDRV_CPU_IO_MAP(tv_tcf_io)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(tv_tcf_map)
+	MCFG_CPU_IO_MAP(tv_tcf_io)
 
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_VISIBLE_AREA(0, 400-1, 0, 300-1)
-MACHINE_DRIVER_END
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_VISIBLE_AREA(0, 400-1, 0, 300-1)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( newmcard )
-	MDRV_IMPORT_FROM(tv_tcf)
+static MACHINE_CONFIG_DERIVED( newmcard, tv_tcf )
 
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(newmcard_map)
-	MDRV_CPU_IO_MAP(newmcard_io)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(newmcard_map)
+	MCFG_CPU_IO_MAP(newmcard_io)
 
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_VISIBLE_AREA(0, 320-1, 0, 200-1)
-MACHINE_DRIVER_END
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_VISIBLE_AREA(0, 320-1, 0, 200-1)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( ciclone )
-	MDRV_IMPORT_FROM(tv_tcf)
+static MACHINE_CONFIG_DERIVED( ciclone, tv_tcf )
 
-	MDRV_DEVICE_REMOVE("maincpu")
+	MCFG_DEVICE_REMOVE("maincpu")
 
-	MDRV_CPU_ADD("maincpu", I80186, 20000000/2 )	// ?
-	MDRV_CPU_PROGRAM_MAP(tv_tcf_map)
-	MDRV_CPU_IO_MAP(tv_tcf_io)
-	MDRV_CPU_VBLANK_INT("screen", vblank_irq)
-MACHINE_DRIVER_END
+	MCFG_CPU_ADD("maincpu", I80186, 20000000/2 )	// ?
+	MCFG_CPU_PROGRAM_MAP(tv_tcf_map)
+	MCFG_CPU_IO_MAP(tv_tcf_io)
+	MCFG_CPU_VBLANK_INT("screen", vblank_irq)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( brasil )
-	MDRV_CPU_ADD("maincpu", I80186, 20000000 )	// fashion doesn't like 20/2 Mhz
-	MDRV_CPU_PROGRAM_MAP(brasil_map)
-	MDRV_CPU_IO_MAP(brasil_io)
-	MDRV_CPU_VBLANK_INT("screen", vblank_irq)
+static MACHINE_CONFIG_START( brasil, driver_device )
+	MCFG_CPU_ADD("maincpu", I80186, 20000000 )	// fashion doesn't like 20/2 Mhz
+	MCFG_CPU_PROGRAM_MAP(brasil_map)
+	MCFG_CPU_IO_MAP(brasil_io)
+	MCFG_CPU_VBLANK_INT("screen", vblank_irq)
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(400, 300)
-	MDRV_SCREEN_VISIBLE_AREA(0, 400-1, 0, 300-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(400, 300)
+	MCFG_SCREEN_VISIBLE_AREA(0, 400-1, 0, 300-1)
 
-	MDRV_PALETTE_LENGTH(0x100)
+	MCFG_PALETTE_LENGTH(0x100)
 
-	MDRV_VIDEO_START(tourvisn)
-	MDRV_VIDEO_UPDATE(brasil)
+	MCFG_VIDEO_START(tourvisn)
+	MCFG_VIDEO_UPDATE(brasil)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("oki", OKIM6376, XTAL_12MHz/2/2)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("oki", OKIM6376, XTAL_12MHz/2/2)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 ROM_START( tour4000 )
 	ROM_REGION( 0x100000, "user1", 0 ) /* V30 Code */

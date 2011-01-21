@@ -17,22 +17,8 @@
 #include "sound/namco.h"
 #include "rendlay.h"
 #include "tceptor2.lh"
-
-PALETTE_INIT( tceptor );
-VIDEO_START( tceptor );
-VIDEO_UPDATE( tceptor );
-VIDEO_EOF( tceptor );
-
-WRITE8_HANDLER( tceptor_tile_ram_w );
-WRITE8_HANDLER( tceptor_tile_attr_w );
-WRITE8_HANDLER( tceptor_bg_ram_w );
-WRITE8_HANDLER( tceptor_bg_scroll_w );
-
-extern UINT8 *tceptor_tile_ram;
-extern UINT8 *tceptor_tile_attr;
-extern UINT8 *tceptor_bg_ram;
-extern UINT16 *tceptor_sprite_ram;
-
+#include "includes/tceptor.h"
+#include "machine/nvram.h"
 
 /*******************************************************************/
 
@@ -231,7 +217,7 @@ ADDRESS_MAP_END
 static ADDRESS_MAP_START( mcu_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x001f) AM_READWRITE(hd63701_internal_registers_r, hd63701_internal_registers_w)
 	AM_RANGE(0x0080, 0x00ff) AM_RAM
-	AM_RANGE(0x1000, 0x13ff) AM_DEVREADWRITE("namco", namcos1_cus30_r, namcos1_cus30_w) AM_BASE(&namco_wavedata)
+	AM_RANGE(0x1000, 0x13ff) AM_DEVREADWRITE("namco", namcos1_cus30_r, namcos1_cus30_w)
 	AM_RANGE(0x1400, 0x154d) AM_RAM
 	AM_RANGE(0x17c0, 0x17ff) AM_RAM
 	AM_RANGE(0x2000, 0x20ff) AM_RAM AM_SHARE("share3")
@@ -243,7 +229,7 @@ static ADDRESS_MAP_START( mcu_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x8800, 0x8800) AM_WRITE(mcu_irq_enable_w)
 	AM_RANGE(0x8000, 0xbfff) AM_ROM
 	AM_RANGE(0xc000, 0xc7ff) AM_RAM
-	AM_RANGE(0xc800, 0xdfff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)	// Battery Backup
+	AM_RANGE(0xc800, 0xdfff) AM_RAM AM_SHARE("nvram")	// Battery Backup
 	AM_RANGE(0xf000, 0xffff) AM_ROM
 ADDRESS_MAP_END
 
@@ -377,83 +363,83 @@ static MACHINE_RESET( tceptor )
 
 /*******************************************************************/
 
-static MACHINE_DRIVER_START( tceptor )
+static MACHINE_CONFIG_START( tceptor, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6809, 49152000/32)
-	MDRV_CPU_PROGRAM_MAP(m6809_map)
-	MDRV_CPU_VBLANK_INT("2dscreen", m6809_vb_interrupt)
+	MCFG_CPU_ADD("maincpu", M6809, 49152000/32)
+	MCFG_CPU_PROGRAM_MAP(m6809_map)
+	MCFG_CPU_VBLANK_INT("2dscreen", m6809_vb_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", M65C02, 49152000/24)
-	MDRV_CPU_PROGRAM_MAP(m6502_a_map)
+	MCFG_CPU_ADD("audiocpu", M65C02, 49152000/24)
+	MCFG_CPU_PROGRAM_MAP(m6502_a_map)
 
-	MDRV_CPU_ADD("audio2", M65C02, 49152000/24)
-	MDRV_CPU_PROGRAM_MAP(m6502_b_map)
+	MCFG_CPU_ADD("audio2", M65C02, 49152000/24)
+	MCFG_CPU_PROGRAM_MAP(m6502_b_map)
 
-	MDRV_CPU_ADD("sub", M68000, 49152000/4)
-	MDRV_CPU_PROGRAM_MAP(m68k_map)
-	MDRV_CPU_VBLANK_INT("2dscreen", m68k_vb_interrupt)
+	MCFG_CPU_ADD("sub", M68000, 49152000/4)
+	MCFG_CPU_PROGRAM_MAP(m68k_map)
+	MCFG_CPU_VBLANK_INT("2dscreen", m68k_vb_interrupt)
 
-	MDRV_CPU_ADD("mcu", HD63701, 49152000/8)	/* or compatible 6808 with extra instructions */
-	MDRV_CPU_PROGRAM_MAP(mcu_map)
-	MDRV_CPU_IO_MAP(mcu_io_map)
-	MDRV_CPU_VBLANK_INT("2dscreen", mcu_vb_interrupt)
+	MCFG_CPU_ADD("mcu", HD63701, 49152000/8)	/* or compatible 6808 with extra instructions */
+	MCFG_CPU_PROGRAM_MAP(mcu_map)
+	MCFG_CPU_IO_MAP(mcu_io_map)
+	MCFG_CPU_VBLANK_INT("2dscreen", mcu_vb_interrupt)
 
-	MDRV_QUANTUM_TIME(HZ(6000))
+	MCFG_QUANTUM_TIME(HZ(6000))
 
-	MDRV_NVRAM_HANDLER(generic_1fill)
+	MCFG_NVRAM_ADD_1FILL("nvram")
 
-	MDRV_MACHINE_START(tceptor)
-	MDRV_MACHINE_RESET(tceptor)
+	MCFG_MACHINE_START(tceptor)
+	MCFG_MACHINE_RESET(tceptor)
 
 	/* video hardware */
-	MDRV_GFXDECODE(tceptor)
-	MDRV_PALETTE_LENGTH(4096)
-	MDRV_DEFAULT_LAYOUT(layout_horizont)
+	MCFG_GFXDECODE(tceptor)
+	MCFG_PALETTE_LENGTH(4096)
+	MCFG_DEFAULT_LAYOUT(layout_horizont)
 
-	MDRV_SCREEN_ADD("2dscreen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60.606060)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_SIZE(38*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(2*8, 34*8-1 + 2*8, 0*8, 28*8-1 + 0)
+	MCFG_SCREEN_ADD("2dscreen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60.606060)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_SIZE(38*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(2*8, 34*8-1 + 2*8, 0*8, 28*8-1 + 0)
 
-	MDRV_SCREEN_ADD("3dleft", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60.606060)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_SIZE(38*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(2*8, 34*8-1 + 2*8, 0*8, 28*8-1 + 0)
+	MCFG_SCREEN_ADD("3dleft", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60.606060)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_SIZE(38*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(2*8, 34*8-1 + 2*8, 0*8, 28*8-1 + 0)
 
-	MDRV_SCREEN_ADD("3dright", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60.606060)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_SIZE(38*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(2*8, 34*8-1 + 2*8, 0*8, 28*8-1 + 0)
+	MCFG_SCREEN_ADD("3dright", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60.606060)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_SIZE(38*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(2*8, 34*8-1 + 2*8, 0*8, 28*8-1 + 0)
 
-	MDRV_PALETTE_INIT(tceptor)
+	MCFG_PALETTE_INIT(tceptor)
 
-	MDRV_VIDEO_START(tceptor)
-	MDRV_VIDEO_UPDATE(tceptor)
-	MDRV_VIDEO_EOF(tceptor)
+	MCFG_VIDEO_START(tceptor)
+	MCFG_VIDEO_UPDATE(tceptor)
+	MCFG_VIDEO_EOF(tceptor)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, 14318180/4)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM2151, 14318180/4)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
 
-	MDRV_SOUND_ADD("namco", NAMCO_CUS30, 49152000/2048)
-	MDRV_SOUND_CONFIG(namco_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.40)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.40)
+	MCFG_SOUND_ADD("namco", NAMCO_CUS30, 49152000/2048)
+	MCFG_SOUND_CONFIG(namco_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.40)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.40)
 
-	MDRV_SOUND_ADD("dac", DAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.40)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.40)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("dac", DAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.40)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.40)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************

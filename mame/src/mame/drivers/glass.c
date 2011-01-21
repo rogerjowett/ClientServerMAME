@@ -15,13 +15,13 @@ The DS5002FP has up to 128KB undumped gameplay code making the game unplayable :
 
 static WRITE16_HANDLER( clr_int_w )
 {
-	glass_state *state = (glass_state *)space->machine->driver_data;
+	glass_state *state = space->machine->driver_data<glass_state>();
 	state->cause_interrupt = 1;
 }
 
 static INTERRUPT_GEN( glass_interrupt )
 {
-	glass_state *state = (glass_state *)device->machine->driver_data;
+	glass_state *state = device->machine->driver_data<glass_state>();
 
 	if (state->cause_interrupt)
 	{
@@ -55,7 +55,7 @@ GFXDECODE_END
 
 static WRITE16_HANDLER( OKIM6295_bankswitch_w )
 {
-	UINT8 *RAM = memory_region(space->machine, "oki");
+	UINT8 *RAM = space->machine->region("oki")->base();
 
 	if (ACCESSING_BITS_0_7)
 		memcpy(&RAM[0x30000], &RAM[0x40000 + (data & 0x0f) * 0x10000], 0x10000);
@@ -92,7 +92,7 @@ static ADDRESS_MAP_START( glass_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x700006, 0x700007) AM_READ_PORT("P2")
 	AM_RANGE(0x700008, 0x700009) AM_WRITE(glass_blitter_w)													/* serial blitter */
 	AM_RANGE(0x70000c, 0x70000d) AM_WRITE(OKIM6295_bankswitch_w)											/* OKI6295 bankswitch */
-	AM_RANGE(0x70000e, 0x70000f) AM_DEVREADWRITE8("oki", okim6295_r, okim6295_w, 0x00ff)					/* OKI6295 status register */
+	AM_RANGE(0x70000e, 0x70000f) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0x00ff)					/* OKI6295 status register */
 	AM_RANGE(0x70000a, 0x70004b) AM_WRITE(glass_coin_w)														/* Coin Counters/Lockout */
 	AM_RANGE(0xfec000, 0xfeffff) AM_RAM																		/* Work RAM (partially shared with DS5002FP) */
 ADDRESS_MAP_END
@@ -173,7 +173,7 @@ INPUT_PORTS_END
 
 static MACHINE_START( glass )
 {
-	glass_state *state = (glass_state *)machine->driver_data;
+	glass_state *state = machine->driver_data<glass_state>();
 
 	state_save_register_global(machine, state->cause_interrupt);
 	state_save_register_global(machine, state->current_bit);
@@ -183,7 +183,7 @@ static MACHINE_START( glass )
 
 static MACHINE_RESET( glass )
 {
-	glass_state *state = (glass_state *)machine->driver_data;
+	glass_state *state = machine->driver_data<glass_state>();
 	int i;
 
 	state->cause_interrupt = 1;
@@ -194,39 +194,36 @@ static MACHINE_RESET( glass )
 		state->blitter_serial_buffer[i] = 0;
 }
 
-static MACHINE_DRIVER_START( glass )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(glass_state)
+static MACHINE_CONFIG_START( glass, glass_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000,24000000/2)		/* 12 MHz (M680000 P12) */
-	MDRV_CPU_PROGRAM_MAP(glass_map)
-	MDRV_CPU_VBLANK_INT("screen", glass_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000,24000000/2)		/* 12 MHz (M680000 P12) */
+	MCFG_CPU_PROGRAM_MAP(glass_map)
+	MCFG_CPU_VBLANK_INT("screen", glass_interrupt)
 
-	MDRV_MACHINE_START(glass)
-	MDRV_MACHINE_RESET(glass)
+	MCFG_MACHINE_START(glass)
+	MCFG_MACHINE_RESET(glass)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*16, 32*16)
-	MDRV_SCREEN_VISIBLE_AREA(0, 368-1, 16, 256-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*16, 32*16)
+	MCFG_SCREEN_VISIBLE_AREA(0, 368-1, 16, 256-1)
 
-	MDRV_GFXDECODE(glass)
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_GFXDECODE(glass)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_VIDEO_START(glass)
-	MDRV_VIDEO_UPDATE(glass)
+	MCFG_VIDEO_START(glass)
+	MCFG_VIDEO_UPDATE(glass)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 ROM_START( glass ) /* Version 1.1 */
 	ROM_REGION( 0x080000, "maincpu", 0 )	/* 68000 code */
@@ -302,10 +299,10 @@ static void glass_ROM16_split_gfx( running_machine *machine, const char *src_reg
 	int i;
 
 	/* get a pointer to the source data */
-	UINT8 *src = (UINT8 *)memory_region(machine, src_reg);
+	UINT8 *src = (UINT8 *)machine->region(src_reg)->base();
 
 	/* get a pointer to the destination data */
-	UINT8 *dst = (UINT8 *)memory_region(machine, dst_reg);
+	UINT8 *dst = (UINT8 *)machine->region(dst_reg)->base();
 
 	/* fill destination areas with the proper data */
 	for (i = 0; i < length / 2; i++)

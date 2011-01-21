@@ -35,13 +35,7 @@ EEPROM chip: 93C46
 #include "machine/eeprom.h"
 #include "cpu/m68000/m68000.h"
 #include "sound/saa1099.h"
-
-
-extern WRITE16_HANDLER(xorworld_videoram16_w);
-
-extern PALETTE_INIT( xorworld );
-extern VIDEO_START( xorworld );
-extern VIDEO_UPDATE( xorworld );
+#include "includes/xorworld.h"
 
 
 /****************************************************************
@@ -83,7 +77,7 @@ static ADDRESS_MAP_START( xorworld_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0xa00008, 0xa00009) AM_DEVWRITE("eeprom", eeprom_chip_select_w)
 	AM_RANGE(0xa0000a, 0xa0000b) AM_DEVWRITE("eeprom", eeprom_serial_clock_w)
 	AM_RANGE(0xa0000c, 0xa0000d) AM_DEVWRITE("eeprom", eeprom_data_w)
-	AM_RANGE(0xffc000, 0xffc7ff) AM_RAM_WRITE(xorworld_videoram16_w) AM_BASE_GENERIC(videoram)
+	AM_RANGE(0xffc000, 0xffc7ff) AM_RAM_WRITE(xorworld_videoram16_w) AM_BASE_MEMBER(xorworld_state, videoram)
 	AM_RANGE(0xffc800, 0xffc87f) AM_RAM	AM_BASE_GENERIC(spriteram)
 	AM_RANGE(0xffc880, 0xffc881) AM_WRITENOP
 	AM_RANGE(0xffc882, 0xffc883) AM_WRITENOP
@@ -179,37 +173,37 @@ static INTERRUPT_GEN( xorworld_interrupt )
 }
 
 
-static MACHINE_DRIVER_START( xorworld )
+static MACHINE_CONFIG_START( xorworld, xorworld_state )
 	// basic machine hardware
-	MDRV_CPU_ADD("maincpu", M68000, 10000000)	// 10 MHz
-	MDRV_CPU_PROGRAM_MAP(xorworld_map)
-	MDRV_CPU_VBLANK_INT_HACK(xorworld_interrupt, 4)	// 1 IRQ2 + 1 IRQ4 + 1 IRQ6
+	MCFG_CPU_ADD("maincpu", M68000, 10000000)	// 10 MHz
+	MCFG_CPU_PROGRAM_MAP(xorworld_map)
+	MCFG_CPU_VBLANK_INT_HACK(xorworld_interrupt, 4)	// 1 IRQ2 + 1 IRQ4 + 1 IRQ6
 
-	MDRV_QUANTUM_TIME(HZ(60))
+	MCFG_QUANTUM_TIME(HZ(60))
 
-	MDRV_EEPROM_93C46_ADD("eeprom")
+	MCFG_EEPROM_93C46_ADD("eeprom")
 
 	// video hardware
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(xorworld)
-	MDRV_PALETTE_LENGTH(256)
+	MCFG_GFXDECODE(xorworld)
+	MCFG_PALETTE_LENGTH(256)
 
-	MDRV_PALETTE_INIT(xorworld)
-	MDRV_VIDEO_START(xorworld)
-	MDRV_VIDEO_UPDATE(xorworld)
+	MCFG_PALETTE_INIT(xorworld)
+	MCFG_VIDEO_START(xorworld)
+	MCFG_VIDEO_UPDATE(xorworld)
 
 	// sound hardware
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("saa", SAA1099, 8000000 /* guess */)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("saa", SAA1099, 8000000 /* guess */)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 ROM_START( xorworld )
@@ -235,7 +229,7 @@ static DRIVER_INIT( xorworld )
 	/*  patch some strange protection (without this, strange characters appear
         after level 5 and some pieces don't rotate properly some times) */
 
-	UINT16 *rom = (UINT16 *)(memory_region(machine, "maincpu") + 0x1390);
+	UINT16 *rom = (UINT16 *)(machine->region("maincpu")->base() + 0x1390);
 
 	PATCH(0x4239); PATCH(0x00ff); PATCH(0xe196);	/* clr.b $ffe196 */
 	PATCH(0x4239); PATCH(0x00ff); PATCH(0xe197);	/* clr.b $ffe197 */

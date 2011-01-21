@@ -15,12 +15,11 @@
 #define ATARIFB_HIT_EN			NODE_05
 
 
-class atarifb_state
+class atarifb_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, atarifb_state(machine)); }
-
-	atarifb_state(running_machine &machine) { }
+	atarifb_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* video-related */
 	UINT8 *  alphap1_videoram;
@@ -46,7 +45,7 @@ public:
 	int counter_x_in2b, counter_y_in2b;
 
 	/* devices */
-	running_device *maincpu;
+	device_t *maincpu;
 };
 
 

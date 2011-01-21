@@ -12,16 +12,16 @@
 
 WRITE8_HANDLER( cosmic_color_register_w )
 {
-	cosmic_state *state = (cosmic_state *)space->machine->driver_data;
+	cosmic_state *state = space->machine->driver_data<cosmic_state>();
 	state->color_registers[offset] = data ? 1 : 0;
 }
 
 
 static pen_t panic_map_color( running_machine *machine, UINT8 x, UINT8 y )
 {
-	cosmic_state *state = (cosmic_state *)machine->driver_data;
+	cosmic_state *state = machine->driver_data<cosmic_state>();
 	offs_t offs = (state->color_registers[0] << 9) | (state->color_registers[2] << 10) | ((x >> 4) << 5) | (y >> 3);
-	pen_t pen = memory_region(machine, "user1")[offs];
+	pen_t pen = machine->region("user1")->base()[offs];
 
 	if (state->color_registers[1])
 		pen >>= 4;
@@ -31,9 +31,9 @@ static pen_t panic_map_color( running_machine *machine, UINT8 x, UINT8 y )
 
 static pen_t cosmica_map_color( running_machine *machine, UINT8 x, UINT8 y )
 {
-	cosmic_state *state = (cosmic_state *)machine->driver_data;
+	cosmic_state *state = machine->driver_data<cosmic_state>();
 	offs_t offs = (state->color_registers[0] << 9) | ((x >> 4) << 5) | (y >> 3);
-	pen_t pen = memory_region(machine, "user1")[offs];
+	pen_t pen = machine->region("user1")->base()[offs];
 
 	if (state->color_registers[0])		/* yes, 0 again according to the schematics */
 		pen >>= 4;
@@ -43,9 +43,9 @@ static pen_t cosmica_map_color( running_machine *machine, UINT8 x, UINT8 y )
 
 static pen_t cosmicg_map_color( running_machine *machine, UINT8 x, UINT8 y )
 {
-	cosmic_state *state = (cosmic_state *)machine->driver_data;
+	cosmic_state *state = machine->driver_data<cosmic_state>();
 	offs_t offs = (state->color_registers[0] << 8) | (state->color_registers[1] << 9) | ((y >> 4) << 4) | (x >> 4);
-	pen_t pen = memory_region(machine, "user1")[offs];
+	pen_t pen = machine->region("user1")->base()[offs];
 
 	/* the upper 4 bits are for cocktail mode support */
 	return pen & 0x0f;
@@ -53,9 +53,9 @@ static pen_t cosmicg_map_color( running_machine *machine, UINT8 x, UINT8 y )
 
 static pen_t magspot_map_color( running_machine *machine, UINT8 x, UINT8 y )
 {
-	cosmic_state *state = (cosmic_state *)machine->driver_data;
+	cosmic_state *state = machine->driver_data<cosmic_state>();
 	offs_t offs = (state->color_registers[0] << 9) | ((x >> 3) << 4) | (y >> 4);
-	pen_t pen = memory_region(machine, "user1")[offs];
+	pen_t pen = machine->region("user1")->base()[offs];
 
 	if (state->color_registers[1])
 		pen >>= 4;
@@ -78,7 +78,7 @@ static pen_t magspot_map_color( running_machine *machine, UINT8 x, UINT8 y )
 
 PALETTE_INIT( panic )
 {
-	cosmic_state *state = (cosmic_state *)machine->driver_data;
+	cosmic_state *state = machine->driver_data<cosmic_state>();
 	int i;
 
 	/* allocate the colortable */
@@ -120,7 +120,7 @@ PALETTE_INIT( panic )
 
 PALETTE_INIT( cosmica )
 {
-	cosmic_state *state = (cosmic_state *)machine->driver_data;
+	cosmic_state *state = machine->driver_data<cosmic_state>();
 	int i;
 
 	/* allocate the colortable */
@@ -163,7 +163,7 @@ PALETTE_INIT( cosmica )
  */
 PALETTE_INIT( cosmicg )
 {
-	cosmic_state *state = (cosmic_state *)machine->driver_data;
+	cosmic_state *state = machine->driver_data<cosmic_state>();
 	int i;
 
 	for (i = 0; i < machine->total_colors(); i++)
@@ -181,7 +181,7 @@ PALETTE_INIT( cosmicg )
 
 PALETTE_INIT( magspot )
 {
-	cosmic_state *state = (cosmic_state *)machine->driver_data;
+	cosmic_state *state = machine->driver_data<cosmic_state>();
 	int i;
 
 	/* allocate the colortable */
@@ -215,7 +215,7 @@ PALETTE_INIT( magspot )
 
 PALETTE_INIT( nomnlnd )
 {
-	cosmic_state *state = (cosmic_state *)machine->driver_data;
+	cosmic_state *state = machine->driver_data<cosmic_state>();
 	int i;
 
 	/* allocate the colortable */
@@ -246,14 +246,14 @@ PALETTE_INIT( nomnlnd )
 
 WRITE8_HANDLER( cosmic_background_enable_w )
 {
-	cosmic_state *state = (cosmic_state *)space->machine->driver_data;
+	cosmic_state *state = space->machine->driver_data<cosmic_state>();
 	state->background_enable = data;
 }
 
 
 static void draw_bitmap( running_machine *machine, bitmap_t *bitmap, const rectangle *cliprect )
 {
-	cosmic_state *state = (cosmic_state *)machine->driver_data;
+	cosmic_state *state = machine->driver_data<cosmic_state>();
 	offs_t offs;
 
 	for (offs = 0; offs < state->videoram_size; offs++)
@@ -285,7 +285,7 @@ static void draw_bitmap( running_machine *machine, bitmap_t *bitmap, const recta
 
 static void draw_sprites( running_machine *machine, bitmap_t *bitmap, const rectangle *cliprect, int color_mask, int extra_sprites )
 {
-	cosmic_state *state = (cosmic_state *)machine->driver_data;
+	cosmic_state *state = machine->driver_data<cosmic_state>();
 	int offs;
 
 	for (offs = state->spriteram_size - 4;offs >= 0;offs -= 4)
@@ -321,7 +321,7 @@ static void cosmica_draw_starfield( screen_device *screen, bitmap_t *bitmap, con
 {
 	UINT8 y = 0;
 	UINT8 map = 0;
-	UINT8 *PROM = memory_region(screen->machine, "user2");
+	UINT8 *PROM = screen->machine->region("user2")->base();
 
 	while (1)
 	{
@@ -369,8 +369,8 @@ static void cosmica_draw_starfield( screen_device *screen, bitmap_t *bitmap, con
 static void devzone_draw_grid( running_machine *machine, bitmap_t *bitmap, const rectangle *cliprect )
 {
 	UINT8 y;
-	UINT8 *horz_PROM = memory_region(machine, "user2");
-	UINT8 *vert_PROM = memory_region(machine, "user3");
+	UINT8 *horz_PROM = machine->region("user2")->base();
+	UINT8 *vert_PROM = machine->region("user3")->base();
 	offs_t horz_addr = 0;
 
 	UINT8 count = 0;
@@ -428,7 +428,7 @@ static void nomnlnd_draw_background( screen_device *screen, bitmap_t *bitmap, co
 {
 	UINT8 y = 0;
 	UINT8 water = screen->frame_number();
-	UINT8 *PROM = memory_region(screen->machine, "user2");
+	UINT8 *PROM = screen->machine->region("user2")->base();
 
 	/* all positioning is via logic gates:
 
@@ -584,7 +584,7 @@ VIDEO_UPDATE( magspot )
 
 VIDEO_UPDATE( devzone )
 {
-	cosmic_state *state = (cosmic_state *)screen->machine->driver_data;
+	cosmic_state *state = screen->machine->driver_data<cosmic_state>();
 
 	bitmap_fill(bitmap, cliprect, 0);
 
@@ -599,7 +599,7 @@ VIDEO_UPDATE( devzone )
 
 VIDEO_UPDATE( nomnlnd )
 {
-	cosmic_state *state = (cosmic_state *)screen->machine->driver_data;
+	cosmic_state *state = screen->machine->driver_data<cosmic_state>();
 
 	/* according to the video summation logic on pg4, the trees and river
        have the highest priority */

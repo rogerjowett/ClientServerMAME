@@ -1,12 +1,11 @@
 
 // later, this might be merged with segas1x_state in segas16.h
 
-class segas1x_bootleg_state
+class segas1x_bootleg_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, segas1x_bootleg_state(machine)); }
-
-	segas1x_bootleg_state(running_machine &machine) { }
+	segas1x_bootleg_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	UINT16 *    bg0_tileram;
 	UINT16 *    bg1_tileram;
@@ -88,8 +87,8 @@ public:
 	UINT8 *decrypted_region;	// goldnaxeb1 & bayrouteb1
 
 	/* devices */
-	running_device *maincpu;
-	running_device *soundcpu;
+	device_t *maincpu;
+	device_t *soundcpu;
 };
 
 /*----------- defined in video/system16.c -----------*/

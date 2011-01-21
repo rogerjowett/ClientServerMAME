@@ -156,7 +156,7 @@ static ADDRESS_MAP_START( polyplay_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x1000, 0x8fff) AM_ROM
 	AM_RANGE(0xe800, 0xebff) AM_ROM AM_REGION("gfx1", 0)
 	AM_RANGE(0xec00, 0xf7ff) AM_RAM_WRITE(polyplay_characterram_w) AM_BASE(&polyplay_characterram)
-	AM_RANGE(0xf800, 0xffff) AM_RAM AM_BASE_GENERIC(videoram) AM_SIZE_GENERIC(videoram)
+	AM_RANGE(0xf800, 0xffff) AM_RAM AM_BASE_MEMBER(polyplay_state, videoram)
 ADDRESS_MAP_END
 
 
@@ -242,7 +242,7 @@ static WRITE8_HANDLER( polyplay_start_timer2 )
 
 static READ8_HANDLER( polyplay_random_read )
 {
-	return mame_rand(space->machine) & 0xff;
+	return space->machine->rand() & 0xff;
 }
 
 /* graphic structures */
@@ -276,41 +276,41 @@ GFXDECODE_END
 
 /* the machine driver */
 
-static MACHINE_DRIVER_START( polyplay )
+static MACHINE_CONFIG_START( polyplay, polyplay_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, 9830400/4)
-	MDRV_CPU_PROGRAM_MAP(polyplay_map)
-	MDRV_CPU_IO_MAP(polyplay_io_map)
-	MDRV_CPU_PERIODIC_INT(periodic_interrupt,75)
-	MDRV_CPU_VBLANK_INT("screen", coin_interrupt)
+	MCFG_CPU_ADD("maincpu", Z80, 9830400/4)
+	MCFG_CPU_PROGRAM_MAP(polyplay_map)
+	MCFG_CPU_IO_MAP(polyplay_io_map)
+	MCFG_CPU_PERIODIC_INT(periodic_interrupt,75)
+	MCFG_CPU_VBLANK_INT("screen", coin_interrupt)
 
-	MDRV_MACHINE_RESET(polyplay)
+	MCFG_MACHINE_RESET(polyplay)
 
-	MDRV_TIMER_ADD("timer", polyplay_timer_callback)
+	MCFG_TIMER_ADD("timer", polyplay_timer_callback)
 
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(50)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 64*8-1, 0*8, 32*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(50)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 64*8-1, 0*8, 32*8-1)
 
-	MDRV_GFXDECODE(polyplay)
-	MDRV_PALETTE_LENGTH(10)
+	MCFG_GFXDECODE(polyplay)
+	MCFG_PALETTE_LENGTH(10)
 
-	MDRV_PALETTE_INIT(polyplay)
-	MDRV_VIDEO_START(polyplay)
-	MDRV_VIDEO_UPDATE(polyplay)
+	MCFG_PALETTE_INIT(polyplay)
+	MCFG_VIDEO_START(polyplay)
+	MCFG_VIDEO_UPDATE(polyplay)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("samples", SAMPLES, 0)
-	MDRV_SOUND_CONFIG(polyplay_samples_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("samples", SAMPLES, 0)
+	MCFG_SOUND_CONFIG(polyplay_samples_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+MACHINE_CONFIG_END
 
 
 /* ROM loading and mapping */

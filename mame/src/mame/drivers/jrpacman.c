@@ -128,7 +128,7 @@ static ADDRESS_MAP_START( main_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x5001, 0x5001) AM_DEVWRITE("namco", pacman_sound_enable_w)
 	AM_RANGE(0x5003, 0x5003) AM_WRITE(pacman_flipscreen_w)
 	AM_RANGE(0x5040, 0x507f) AM_READ_PORT("P2")
-	AM_RANGE(0x5040, 0x505f) AM_DEVWRITE("namco", pacman_sound_w) AM_BASE(&pacman_soundregs)
+	AM_RANGE(0x5040, 0x505f) AM_DEVWRITE("namco", pacman_sound_w)
 	AM_RANGE(0x5060, 0x506f) AM_WRITEONLY AM_BASE_GENERIC(spriteram2)
 	AM_RANGE(0x5070, 0x5070) AM_WRITE(pengo_palettebank_w)
 	AM_RANGE(0x5071, 0x5071) AM_WRITE(pengo_colortablebank_w)
@@ -263,36 +263,36 @@ static const namco_interface namco_config =
  *
  *************************************/
 
-static MACHINE_DRIVER_START( jrpacman )
+static MACHINE_CONFIG_START( jrpacman, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, 18432000/6)	/* 3.072 MHz */
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_IO_MAP(port_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80, 18432000/6)	/* 3.072 MHz */
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_IO_MAP(port_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60.606060)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(36*8, 28*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 36*8-1, 0*8, 28*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60.606060)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(36*8, 28*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 36*8-1, 0*8, 28*8-1)
 
-	MDRV_GFXDECODE(jrpacman)
-	MDRV_PALETTE_LENGTH(128*4)
+	MCFG_GFXDECODE(jrpacman)
+	MCFG_PALETTE_LENGTH(128*4)
 
-	MDRV_PALETTE_INIT(pacman)
-	MDRV_VIDEO_START(jrpacman)
-	MDRV_VIDEO_UPDATE(pacman)
+	MCFG_PALETTE_INIT(pacman)
+	MCFG_VIDEO_START(jrpacman)
+	MCFG_VIDEO_UPDATE(pacman)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("namco", NAMCO, 3072000/32)
-	MDRV_SOUND_CONFIG(namco_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("namco", NAMCO, 3072000/32)
+	MCFG_SOUND_CONFIG(namco_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 
@@ -369,7 +369,7 @@ static DRIVER_INIT( jrpacman )
 	    { 0,0 }
 	};
 
-	UINT8 *RAM = memory_region(machine, "maincpu");
+	UINT8 *RAM = machine->region("maincpu")->base();
 	int i, j, A;
 
 	for (i = A = 0; table[i].count; i++)

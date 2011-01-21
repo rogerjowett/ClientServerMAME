@@ -577,18 +577,10 @@ TODO:
 /***************************************************************************/
 
 
-static WRITE8_DEVICE_HANDLER( mappy_snd_sharedram_w )
-{
-	if (offset < 0x40)
-		namco_15xx_w(device,offset,data);
-	else
-		namco_soundregs[offset] = data;
-}
-
 static WRITE8_HANDLER( superpac_latch_w )
 {
-	running_device *namcoio_1 = space->machine->device("namcoio_1");
-	running_device *namcoio_2 = space->machine->device("namcoio_2");
+	device_t *namcoio_1 = space->machine->device("namcoio_1");
+	device_t *namcoio_2 = space->machine->device("namcoio_2");
 	int bit = offset & 1;
 
 	switch (offset & 0x0e)
@@ -631,8 +623,8 @@ static WRITE8_HANDLER( superpac_latch_w )
 
 static WRITE8_HANDLER( phozon_latch_w )
 {
-	running_device *namcoio_1 = space->machine->device("namcoio_1");
-	running_device *namcoio_2 = space->machine->device("namcoio_2");
+	device_t *namcoio_1 = space->machine->device("namcoio_1");
+	device_t *namcoio_2 = space->machine->device("namcoio_2");
 	int bit = offset & 1;
 
 	switch (offset & 0x0e)
@@ -679,8 +671,8 @@ static WRITE8_HANDLER( phozon_latch_w )
 
 static WRITE8_HANDLER( mappy_latch_w )
 {
-	running_device *namcoio_1 = space->machine->device("namcoio_1");
-	running_device *namcoio_2 = space->machine->device("namcoio_2");
+	device_t *namcoio_1 = space->machine->device("namcoio_1");
+	device_t *namcoio_2 = space->machine->device("namcoio_2");
 	int bit = offset & 1;
 
 	switch (offset & 0x0e)
@@ -725,7 +717,7 @@ static WRITE8_HANDLER( mappy_latch_w )
 
 static MACHINE_RESET( superpac )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 	int i;
 
 	/* Reset all latches */
@@ -735,7 +727,7 @@ static MACHINE_RESET( superpac )
 
 static MACHINE_RESET( phozon )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 	int i;
 
 	/* Reset all latches */
@@ -745,7 +737,7 @@ static MACHINE_RESET( phozon )
 
 static MACHINE_RESET( mappy )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 	int i;
 
 	/* Reset all latches */
@@ -757,8 +749,8 @@ static MACHINE_RESET( mappy )
 
 static TIMER_CALLBACK( superpac_io_run )
 {
-	running_device *io56xx_1 = machine->device("namcoio_1");
-	running_device *io56xx_2 = machine->device("namcoio_2");
+	device_t *io56xx_1 = machine->device("namcoio_1");
+	device_t *io56xx_2 = machine->device("namcoio_2");
 
 	switch (param)
 	{
@@ -773,8 +765,8 @@ static TIMER_CALLBACK( superpac_io_run )
 
 static INTERRUPT_GEN( superpac_interrupt_1 )
 {
-	running_device *namcoio_1 = device->machine->device("namcoio_1");
-	running_device *namcoio_2 = device->machine->device("namcoio_2");
+	device_t *namcoio_1 = device->machine->device("namcoio_1");
+	device_t *namcoio_2 = device->machine->device("namcoio_2");
 
 	irq0_line_assert(device);	// this also checks if irq is enabled - IMPORTANT!
 						// so don't replace with cputag_set_input_line(machine, "maincpu", 0, ASSERT_LINE);
@@ -788,8 +780,8 @@ static INTERRUPT_GEN( superpac_interrupt_1 )
 
 static TIMER_CALLBACK( pacnpal_io_run )
 {
-	running_device *io56xx = machine->device("namcoio_1");
-	running_device *io59xx = machine->device("namcoio_2");
+	device_t *io56xx = machine->device("namcoio_1");
+	device_t *io59xx = machine->device("namcoio_2");
 
 	switch (param)
 	{
@@ -804,8 +796,8 @@ static TIMER_CALLBACK( pacnpal_io_run )
 
 static INTERRUPT_GEN( pacnpal_interrupt_1 )
 {
-	running_device *namcoio_1 = device->machine->device("namcoio_1");
-	running_device *namcoio_2 = device->machine->device("namcoio_2");
+	device_t *namcoio_1 = device->machine->device("namcoio_1");
+	device_t *namcoio_2 = device->machine->device("namcoio_2");
 
 	irq0_line_assert(device);	// this also checks if irq is enabled - IMPORTANT!
 						// so don't replace with cputag_set_input_line(machine, "maincpu", 0, ASSERT_LINE);
@@ -819,8 +811,8 @@ static INTERRUPT_GEN( pacnpal_interrupt_1 )
 
 static TIMER_CALLBACK( phozon_io_run )
 {
-	running_device *io58xx = machine->device("namcoio_1");
-	running_device *io56xx = machine->device("namcoio_2");
+	device_t *io58xx = machine->device("namcoio_1");
+	device_t *io56xx = machine->device("namcoio_2");
 
 	switch (param)
 	{
@@ -835,8 +827,8 @@ static TIMER_CALLBACK( phozon_io_run )
 
 static INTERRUPT_GEN( phozon_interrupt_1 )
 {
-	running_device *namcoio_1 = device->machine->device("namcoio_1");
-	running_device *namcoio_2 = device->machine->device("namcoio_2");
+	device_t *namcoio_1 = device->machine->device("namcoio_1");
+	device_t *namcoio_2 = device->machine->device("namcoio_2");
 
 	irq0_line_assert(device);	// this also checks if irq is enabled - IMPORTANT!
 						// so don't replace with cputag_set_input_line(machine, "maincpu", 0, ASSERT_LINE);
@@ -850,8 +842,8 @@ static INTERRUPT_GEN( phozon_interrupt_1 )
 
 static TIMER_CALLBACK( mappy_io_run )
 {
-	running_device *io58xx_1 = machine->device("namcoio_1");
-	running_device *io58xx_2 = machine->device("namcoio_2");
+	device_t *io58xx_1 = machine->device("namcoio_1");
+	device_t *io58xx_2 = machine->device("namcoio_2");
 
 	switch (param)
 	{
@@ -866,8 +858,8 @@ static TIMER_CALLBACK( mappy_io_run )
 
 static INTERRUPT_GEN( mappy_interrupt_1 )
 {
-	running_device *namcoio_1 = device->machine->device("namcoio_1");
-	running_device *namcoio_2 = device->machine->device("namcoio_2");
+	device_t *namcoio_1 = device->machine->device("namcoio_1");
+	device_t *namcoio_2 = device->machine->device("namcoio_2");
 
 	irq0_line_assert(device);	// this also checks if irq is enabled - IMPORTANT!
 						// so don't replace with cputag_set_input_line(machine, "maincpu", 0, ASSERT_LINE);
@@ -884,7 +876,7 @@ static ADDRESS_MAP_START( superpac_cpu1_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x07ff) AM_RAM_WRITE(superpac_videoram_w) AM_BASE_MEMBER(mappy_state,videoram)	/* video RAM */
 	AM_RANGE(0x0800, 0x1fff) AM_RAM AM_BASE_MEMBER(mappy_state,spriteram)		/* work RAM with embedded sprite RAM */
 	AM_RANGE(0x2000, 0x2000) AM_READWRITE(superpac_flipscreen_r, superpac_flipscreen_w)
-	AM_RANGE(0x4000, 0x43ff) AM_RAM_DEVWRITE("namco", mappy_snd_sharedram_w) AM_SHARE("share1")	/* shared RAM with the sound CPU */
+	AM_RANGE(0x4000, 0x43ff) AM_DEVREADWRITE("namco", namco_snd_sharedram_r, namco_snd_sharedram_w)	/* shared RAM with the sound CPU */
 	AM_RANGE(0x4800, 0x480f) AM_DEVREADWRITE("namcoio_1", namcoio_r, namcoio_w)		/* custom I/O chips interface */
 	AM_RANGE(0x4810, 0x481f) AM_DEVREADWRITE("namcoio_2", namcoio_r, namcoio_w)		/* custom I/O chips interface */
 	AM_RANGE(0x5000, 0x500f) AM_WRITE(superpac_latch_w)				/* various control bits */
@@ -895,7 +887,7 @@ ADDRESS_MAP_END
 static ADDRESS_MAP_START( phozon_cpu1_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x07ff) AM_RAM_WRITE(superpac_videoram_w) AM_SHARE("share2") AM_BASE_MEMBER(mappy_state,videoram)	/* video RAM */
 	AM_RANGE(0x0800, 0x1fff) AM_RAM AM_BASE_MEMBER(mappy_state,spriteram) AM_SHARE("share3") /* shared RAM with CPU #2/sprite RAM*/
-	AM_RANGE(0x4000, 0x43ff) AM_RAM_DEVWRITE("namco", mappy_snd_sharedram_w) AM_SHARE("share1")	/* shared RAM with the sound CPU */
+	AM_RANGE(0x4000, 0x43ff) AM_DEVREADWRITE("namco", namco_snd_sharedram_r, namco_snd_sharedram_w)	/* shared RAM with the sound CPU */
 	AM_RANGE(0x4800, 0x480f) AM_DEVREADWRITE("namcoio_1", namcoio_r, namcoio_w)		/* custom I/O chips interface */
 	AM_RANGE(0x4810, 0x481f) AM_DEVREADWRITE("namcoio_2", namcoio_r, namcoio_w)		/* custom I/O chips interface */
 	AM_RANGE(0x5000, 0x500f) AM_WRITE(phozon_latch_w)				/* various control bits */
@@ -907,7 +899,7 @@ static ADDRESS_MAP_START( mappy_cpu1_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x0fff) AM_RAM_WRITE(mappy_videoram_w) AM_BASE_MEMBER(mappy_state,videoram)		/* video RAM */
 	AM_RANGE(0x1000, 0x27ff) AM_RAM AM_BASE_MEMBER(mappy_state,spriteram)		/* work RAM with embedded sprite RAM */
 	AM_RANGE(0x3800, 0x3fff) AM_WRITE(mappy_scroll_w)				/* scroll */
-	AM_RANGE(0x4000, 0x43ff) AM_RAM_DEVWRITE("namco", mappy_snd_sharedram_w) AM_SHARE("share1")	/* shared RAM with the sound CPU */
+	AM_RANGE(0x4000, 0x43ff) AM_DEVREADWRITE("namco", namco_snd_sharedram_r, namco_snd_sharedram_w)	/* shared RAM with the sound CPU */
 	AM_RANGE(0x4800, 0x480f) AM_DEVREADWRITE("namcoio_1", namcoio_r, namcoio_w)		/* custom I/O chips interface */
 	AM_RANGE(0x4810, 0x481f) AM_DEVREADWRITE("namcoio_2", namcoio_r, namcoio_w)		/* custom I/O chips interface */
 	AM_RANGE(0x5000, 0x500f) AM_WRITE(mappy_latch_w)				/* various control bits */
@@ -917,18 +909,18 @@ ADDRESS_MAP_END
 
 
 static ADDRESS_MAP_START( superpac_cpu2_map, ADDRESS_SPACE_PROGRAM, 8 )
-	AM_RANGE(0x0000, 0x03ff) AM_RAM_DEVWRITE("namco", mappy_snd_sharedram_w) AM_SHARE("share1") AM_BASE(&namco_soundregs) /* shared RAM with the main CPU (also sound registers) */
+	AM_RANGE(0x0000, 0x03ff) AM_DEVREADWRITE("namco", namco_snd_sharedram_r, namco_snd_sharedram_w)	/* shared RAM with the main CPU (also sound registers) */
 	AM_RANGE(0x2000, 0x200f) AM_WRITE(superpac_latch_w)                   /* various control bits */
 	AM_RANGE(0xe000, 0xffff) AM_ROM
 ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( phozon_cpu2_map, ADDRESS_SPACE_PROGRAM, 8 )
-	AM_RANGE(0x0000, 0x03ff) AM_RAM_DEVWRITE("namco", mappy_snd_sharedram_w) AM_SHARE("share1") AM_BASE(&namco_soundregs) /* shared RAM with the main CPU + sound registers */
+	AM_RANGE(0x0000, 0x03ff) AM_DEVREADWRITE("namco", namco_snd_sharedram_r, namco_snd_sharedram_w)	/* shared RAM with the main CPU + sound registers */
 	AM_RANGE(0xe000, 0xffff) AM_ROM											/* ROM */
 ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( mappy_cpu2_map, ADDRESS_SPACE_PROGRAM, 8 )
-	AM_RANGE(0x0000, 0x03ff) AM_RAM_DEVWRITE("namco", mappy_snd_sharedram_w) AM_SHARE("share1") AM_BASE(&namco_soundregs) /* shared RAM with the main CPU (also sound registers) */
+	AM_RANGE(0x0000, 0x03ff) AM_DEVREADWRITE("namco", namco_snd_sharedram_r, namco_snd_sharedram_w)	/* shared RAM with the main CPU (also sound registers) */
 	AM_RANGE(0x2000, 0x200f) AM_WRITE(mappy_latch_w)						/* various control bits */
 	AM_RANGE(0xe000, 0xffff) AM_ROM											/* ROM code */
 ADDRESS_MAP_END
@@ -938,7 +930,7 @@ ADDRESS_MAP_END
 static ADDRESS_MAP_START( phozon_cpu3_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x07ff) AM_RAM_WRITE(superpac_videoram_w) AM_SHARE("share2")	/* video RAM */
 	AM_RANGE(0x0800, 0x1fff) AM_RAM AM_SHARE("share3")			/* shared RAM with CPU #2/sprite RAM*/
-	AM_RANGE(0x4000, 0x43ff) AM_RAM_DEVWRITE("namco", mappy_snd_sharedram_w) AM_SHARE("share1")	/* shared RAM with CPU #2 */
+	AM_RANGE(0x4000, 0x43ff) AM_DEVREADWRITE("namco", namco_snd_sharedram_r, namco_snd_sharedram_w)	/* shared RAM with CPU #2 */
 	AM_RANGE(0xa000, 0xa7ff) AM_RAM							/* RAM */
 	AM_RANGE(0xe000, 0xffff) AM_ROM							/* ROM */
 ADDRESS_MAP_END
@@ -1551,14 +1543,14 @@ static READ8_DEVICE_HANDLER( dipA_h )	{ return input_port_read(device->machine, 
 
 static READ8_DEVICE_HANDLER( dipB_mux )	// dips B
 {
-	mappy_state *state = (mappy_state *)device->machine->driver_data;
+	mappy_state *state = device->machine->driver_data<mappy_state>();
 
 	return input_port_read(device->machine, "DSW2") >> (4 * state->mux);
 }
 
 static READ8_DEVICE_HANDLER( dipB_muxi )	// dips B
 {
-	mappy_state *state = (mappy_state *)device->machine->driver_data;
+	mappy_state *state = device->machine->driver_data<mappy_state>();
 
 	// bits are interleaved in Phozon
 	return BITSWAP8(input_port_read(device->machine, "DSW2"),6,4,2,0,7,5,3,1) >> (4 * state->mux);
@@ -1566,7 +1558,7 @@ static READ8_DEVICE_HANDLER( dipB_muxi )	// dips B
 
 static WRITE8_DEVICE_HANDLER( out_mux )
 {
-	mappy_state *state = (mappy_state *)device->machine->driver_data;
+	mappy_state *state = device->machine->driver_data<mappy_state>();
 
 	state->mux = data & 1;
 }
@@ -1610,210 +1602,199 @@ static const namcoio_interface intf1_interleave =
 };
 
 
-static MACHINE_DRIVER_START( superpac )
-
-	MDRV_DRIVER_DATA(mappy_state)
+static MACHINE_CONFIG_START( superpac, mappy_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6809, PIXEL_CLOCK/4)	/* 1.536 MHz */
-	MDRV_CPU_PROGRAM_MAP(superpac_cpu1_map)
-	MDRV_CPU_VBLANK_INT("screen", superpac_interrupt_1)	// also update the custom I/O chips
+	MCFG_CPU_ADD("maincpu", M6809, PIXEL_CLOCK/4)	/* 1.536 MHz */
+	MCFG_CPU_PROGRAM_MAP(superpac_cpu1_map)
+	MCFG_CPU_VBLANK_INT("screen", superpac_interrupt_1)	// also update the custom I/O chips
 
-	MDRV_CPU_ADD("sub", M6809, PIXEL_CLOCK/4)	/* 1.536 MHz */
-	MDRV_CPU_PROGRAM_MAP(superpac_cpu2_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_assert)
+	MCFG_CPU_ADD("sub", M6809, PIXEL_CLOCK/4)	/* 1.536 MHz */
+	MCFG_CPU_PROGRAM_MAP(superpac_cpu2_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_assert)
 
-	MDRV_WATCHDOG_VBLANK_INIT(8)
-	MDRV_QUANTUM_TIME(HZ(6000))    /* 100 CPU slices per frame - an high value to ensure proper */
+	MCFG_WATCHDOG_VBLANK_INIT(8)
+	MCFG_QUANTUM_TIME(HZ(6000))    /* 100 CPU slices per frame - an high value to ensure proper */
 							/* synchronization of the CPUs */
-	MDRV_MACHINE_RESET(superpac)
+	MCFG_MACHINE_RESET(superpac)
 
-	MDRV_NAMCO56XX_ADD("namcoio_1", intf0)
-	MDRV_NAMCO56XX_ADD("namcoio_2", intf1)
+	MCFG_NAMCO56XX_ADD("namcoio_1", intf0)
+	MCFG_NAMCO56XX_ADD("namcoio_2", intf1)
 
 	/* video hardware */
-	MDRV_GFXDECODE(superpac)
-	MDRV_PALETTE_LENGTH(64*4+64*4)
+	MCFG_GFXDECODE(superpac)
+	MCFG_PALETTE_LENGTH(64*4+64*4)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_RAW_PARAMS(PIXEL_CLOCK, HTOTAL, HBEND, HBSTART, VTOTAL, VBEND, VBSTART)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_RAW_PARAMS(PIXEL_CLOCK, HTOTAL, HBEND, HBSTART, VTOTAL, VBEND, VBSTART)
 
-	MDRV_PALETTE_INIT(superpac)
-	MDRV_VIDEO_START(superpac)
-	MDRV_VIDEO_UPDATE(superpac)
-
-	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-
-	MDRV_SOUND_ADD("namco", NAMCO_15XX, 18432000/768)
-	MDRV_SOUND_CONFIG(namco_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
-
-static MACHINE_DRIVER_START( pacnpal )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM( superpac )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_VBLANK_INT("screen", pacnpal_interrupt_1)	// also update the custom I/O chips
-
-	MDRV_DEVICE_REMOVE("namcoio_1")
-	MDRV_DEVICE_REMOVE("namcoio_2")
-	MDRV_NAMCO56XX_ADD("namcoio_1", intf0_lamps)
-	MDRV_NAMCO59XX_ADD("namcoio_2", intf1)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( grobda )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM( superpac )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_VBLANK_INT("screen", phozon_interrupt_1)	// also update the custom I/O chips
-
-	MDRV_DEVICE_REMOVE("namcoio_1")
-	MDRV_DEVICE_REMOVE("namcoio_2")
-	MDRV_NAMCO58XX_ADD("namcoio_1", intf0)
-	MDRV_NAMCO56XX_ADD("namcoio_2", intf1)
+	MCFG_PALETTE_INIT(superpac)
+	MCFG_VIDEO_START(superpac)
+	MCFG_VIDEO_UPDATE(superpac)
 
 	/* sound hardware */
-	MDRV_SOUND_ADD("dac", DAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.55)
-MACHINE_DRIVER_END
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
+	MCFG_SOUND_ADD("namco", NAMCO_15XX, 18432000/768)
+	MCFG_SOUND_CONFIG(namco_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( phozon )
-
-	MDRV_DRIVER_DATA(mappy_state)
+static MACHINE_CONFIG_DERIVED( pacnpal, superpac )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6809,	PIXEL_CLOCK/4)	/* MAIN CPU */
-	MDRV_CPU_PROGRAM_MAP(phozon_cpu1_map)
-	MDRV_CPU_VBLANK_INT("screen", phozon_interrupt_1)	// also update the custom I/O chips
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_VBLANK_INT("screen", pacnpal_interrupt_1)	// also update the custom I/O chips
 
-	MDRV_CPU_ADD("sub", M6809,	PIXEL_CLOCK/4)	/* SOUND CPU */
-	MDRV_CPU_PROGRAM_MAP(phozon_cpu2_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_assert)
+	MCFG_DEVICE_REMOVE("namcoio_1")
+	MCFG_DEVICE_REMOVE("namcoio_2")
+	MCFG_NAMCO56XX_ADD("namcoio_1", intf0_lamps)
+	MCFG_NAMCO59XX_ADD("namcoio_2", intf1)
+MACHINE_CONFIG_END
 
-	MDRV_CPU_ADD("sub2", M6809,	PIXEL_CLOCK/4)	/* SUB CPU */
-	MDRV_CPU_PROGRAM_MAP(phozon_cpu3_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_assert)
 
-	MDRV_WATCHDOG_VBLANK_INIT(8)
-	MDRV_QUANTUM_TIME(HZ(6000))    /* 100 CPU slices per frame - an high value to ensure proper */
+static MACHINE_CONFIG_DERIVED( grobda, superpac )
+
+	/* basic machine hardware */
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_VBLANK_INT("screen", phozon_interrupt_1)	// also update the custom I/O chips
+
+	MCFG_DEVICE_REMOVE("namcoio_1")
+	MCFG_DEVICE_REMOVE("namcoio_2")
+	MCFG_NAMCO58XX_ADD("namcoio_1", intf0)
+	MCFG_NAMCO56XX_ADD("namcoio_2", intf1)
+
+	/* sound hardware */
+	MCFG_SOUND_ADD("dac", DAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.55)
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_START( phozon, mappy_state )
+
+	/* basic machine hardware */
+	MCFG_CPU_ADD("maincpu", M6809,	PIXEL_CLOCK/4)	/* MAIN CPU */
+	MCFG_CPU_PROGRAM_MAP(phozon_cpu1_map)
+	MCFG_CPU_VBLANK_INT("screen", phozon_interrupt_1)	// also update the custom I/O chips
+
+	MCFG_CPU_ADD("sub", M6809,	PIXEL_CLOCK/4)	/* SOUND CPU */
+	MCFG_CPU_PROGRAM_MAP(phozon_cpu2_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_assert)
+
+	MCFG_CPU_ADD("sub2", M6809,	PIXEL_CLOCK/4)	/* SUB CPU */
+	MCFG_CPU_PROGRAM_MAP(phozon_cpu3_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_assert)
+
+	MCFG_WATCHDOG_VBLANK_INIT(8)
+	MCFG_QUANTUM_TIME(HZ(6000))    /* 100 CPU slices per frame - an high value to ensure proper */
 							/* synchronization of the CPUs */
-	MDRV_MACHINE_RESET(phozon)
+	MCFG_MACHINE_RESET(phozon)
 
-	MDRV_NAMCO58XX_ADD("namcoio_1", intf0)
-	MDRV_NAMCO56XX_ADD("namcoio_2", intf1_interleave)
+	MCFG_NAMCO58XX_ADD("namcoio_1", intf0)
+	MCFG_NAMCO56XX_ADD("namcoio_2", intf1_interleave)
 
 	/* video hardware */
-	MDRV_GFXDECODE(phozon)
-	MDRV_PALETTE_LENGTH(64*4+64*4)
+	MCFG_GFXDECODE(phozon)
+	MCFG_PALETTE_LENGTH(64*4+64*4)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_RAW_PARAMS(PIXEL_CLOCK, HTOTAL, HBEND, HBSTART, VTOTAL, VBEND, VBSTART)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_RAW_PARAMS(PIXEL_CLOCK, HTOTAL, HBEND, HBSTART, VTOTAL, VBEND, VBSTART)
 
-	MDRV_PALETTE_INIT(phozon)
-	MDRV_VIDEO_START(phozon)
-	MDRV_VIDEO_UPDATE(phozon)
+	MCFG_PALETTE_INIT(phozon)
+	MCFG_VIDEO_START(phozon)
+	MCFG_VIDEO_UPDATE(phozon)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("namco", NAMCO_15XX, 18432000/768)
-	MDRV_SOUND_CONFIG(namco_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("namco", NAMCO_15XX, 18432000/768)
+	MCFG_SOUND_CONFIG(namco_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( mappy )
-
-	MDRV_DRIVER_DATA(mappy_state)
+static MACHINE_CONFIG_START( mappy, mappy_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6809, PIXEL_CLOCK/4)	/* 1.536 MHz */
-	MDRV_CPU_PROGRAM_MAP(mappy_cpu1_map)
-	MDRV_CPU_VBLANK_INT("screen", mappy_interrupt_1)	// also update the custom I/O chips
+	MCFG_CPU_ADD("maincpu", M6809, PIXEL_CLOCK/4)	/* 1.536 MHz */
+	MCFG_CPU_PROGRAM_MAP(mappy_cpu1_map)
+	MCFG_CPU_VBLANK_INT("screen", mappy_interrupt_1)	// also update the custom I/O chips
 
-	MDRV_CPU_ADD("sub", M6809, PIXEL_CLOCK/4)	/* 1.536 MHz */
-	MDRV_CPU_PROGRAM_MAP(mappy_cpu2_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_assert)
+	MCFG_CPU_ADD("sub", M6809, PIXEL_CLOCK/4)	/* 1.536 MHz */
+	MCFG_CPU_PROGRAM_MAP(mappy_cpu2_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_assert)
 
-	MDRV_WATCHDOG_VBLANK_INIT(8)
-	MDRV_QUANTUM_TIME(HZ(6000))    /* 100 CPU slices per frame - an high value to ensure proper */
+	MCFG_WATCHDOG_VBLANK_INIT(8)
+	MCFG_QUANTUM_TIME(HZ(6000))    /* 100 CPU slices per frame - an high value to ensure proper */
 							/* synchronization of the CPUs */
-	MDRV_MACHINE_RESET(mappy)
+	MCFG_MACHINE_RESET(mappy)
 
-	MDRV_NAMCO58XX_ADD("namcoio_1", intf0)
-	MDRV_NAMCO58XX_ADD("namcoio_2", intf1)
+	MCFG_NAMCO58XX_ADD("namcoio_1", intf0)
+	MCFG_NAMCO58XX_ADD("namcoio_2", intf1)
 
 	/* video hardware */
-	MDRV_GFXDECODE(mappy)
-	MDRV_PALETTE_LENGTH(64*4+16*16)
+	MCFG_GFXDECODE(mappy)
+	MCFG_PALETTE_LENGTH(64*4+16*16)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_RAW_PARAMS(PIXEL_CLOCK, HTOTAL, HBEND, HBSTART, VTOTAL, VBEND, VBSTART)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_RAW_PARAMS(PIXEL_CLOCK, HTOTAL, HBEND, HBSTART, VTOTAL, VBEND, VBSTART)
 
-	MDRV_PALETTE_INIT(mappy)
-	MDRV_VIDEO_START(mappy)
-	MDRV_VIDEO_UPDATE(mappy)
+	MCFG_PALETTE_INIT(mappy)
+	MCFG_VIDEO_START(mappy)
+	MCFG_VIDEO_UPDATE(mappy)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("namco", NAMCO_15XX, 18432000/768)
-	MDRV_SOUND_CONFIG(namco_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("namco", NAMCO_15XX, 18432000/768)
+	MCFG_SOUND_CONFIG(namco_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( digdug2 )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM( mappy )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_VBLANK_INT("screen", phozon_interrupt_1)	// also update the custom I/O chips
-
-	MDRV_WATCHDOG_VBLANK_INIT(0)
-
-	MDRV_DEVICE_REMOVE("namcoio_1")
-	MDRV_DEVICE_REMOVE("namcoio_2")
-	MDRV_NAMCO58XX_ADD("namcoio_1", intf0)
-	MDRV_NAMCO56XX_ADD("namcoio_2", intf1)
-MACHINE_DRIVER_END
-
-static MACHINE_DRIVER_START( todruaga )
+static MACHINE_CONFIG_DERIVED( digdug2, mappy )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM( mappy )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_VBLANK_INT("screen", phozon_interrupt_1)	// also update the custom I/O chips
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_VBLANK_INT("screen", phozon_interrupt_1)	// also update the custom I/O chips
 
-	MDRV_DEVICE_REMOVE("namcoio_1")
-	MDRV_DEVICE_REMOVE("namcoio_2")
-	MDRV_NAMCO58XX_ADD("namcoio_1", intf0)
-	MDRV_NAMCO56XX_ADD("namcoio_2", intf1)
+	MCFG_WATCHDOG_VBLANK_INIT(0)
+
+	MCFG_DEVICE_REMOVE("namcoio_1")
+	MCFG_DEVICE_REMOVE("namcoio_2")
+	MCFG_NAMCO58XX_ADD("namcoio_1", intf0)
+	MCFG_NAMCO56XX_ADD("namcoio_2", intf1)
+MACHINE_CONFIG_END
+
+static MACHINE_CONFIG_DERIVED( todruaga, mappy )
+
+	/* basic machine hardware */
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_VBLANK_INT("screen", phozon_interrupt_1)	// also update the custom I/O chips
+
+	MCFG_DEVICE_REMOVE("namcoio_1")
+	MCFG_DEVICE_REMOVE("namcoio_2")
+	MCFG_NAMCO58XX_ADD("namcoio_1", intf0)
+	MCFG_NAMCO56XX_ADD("namcoio_2", intf1)
 
 	/* video hardware */
-	MDRV_GFXDECODE(todruaga)
-	MDRV_PALETTE_LENGTH(64*4+64*16)
-MACHINE_DRIVER_END
+	MCFG_GFXDECODE(todruaga)
+	MCFG_PALETTE_LENGTH(64*4+64*16)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( motos )
+static MACHINE_CONFIG_DERIVED( motos, mappy )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM( mappy )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_VBLANK_INT("screen", superpac_interrupt_1)	// also update the custom I/O chips
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_VBLANK_INT("screen", superpac_interrupt_1)	// also update the custom I/O chips
 
-	MDRV_DEVICE_REMOVE("namcoio_1")
-	MDRV_DEVICE_REMOVE("namcoio_2")
-	MDRV_NAMCO56XX_ADD("namcoio_1", intf0_lamps)
-	MDRV_NAMCO56XX_ADD("namcoio_2", intf1)
-MACHINE_DRIVER_END
+	MCFG_DEVICE_REMOVE("namcoio_1")
+	MCFG_DEVICE_REMOVE("namcoio_2")
+	MCFG_NAMCO56XX_ADD("namcoio_1", intf0_lamps)
+	MCFG_NAMCO56XX_ADD("namcoio_2", intf1)
+MACHINE_CONFIG_END
 
 
 
@@ -2258,7 +2239,7 @@ static DRIVER_INIT( grobda )
        However, removing the 15XX from the board causes sound to disappear completely, so
        the DAC might be built-in after all.
       */
-	running_device *dac = machine->device("dac");
+	device_t *dac = machine->device("dac");
 	memory_install_write8_device_handler(cputag_get_address_space(machine, "sub", ADDRESS_SPACE_PROGRAM), dac, 0x0002, 0x0002, 0, 0, grobda_DAC_w );
 }
 

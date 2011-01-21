@@ -201,7 +201,7 @@ static const res_net_info radarscp_grid_net_info =
 
 PALETTE_INIT( dkong2b)
 {
-	dkong_state *state = (dkong_state *)machine->driver_data;
+	dkong_state *state = machine->driver_data<dkong_state>();
 	rgb_t	*rgb;
 	int i;
 
@@ -231,7 +231,7 @@ PALETTE_INIT( dkong2b)
 #ifdef UNUSED_FUNCTION
 PALETTE_INIT( dkong4b )
 {
-	dkong_state *state = (dkong_state *)machine->driver_data;
+	dkong_state *state = machine->driver_data<dkong_state>();
 	int i;
 	int r,g,b;
 
@@ -270,7 +270,7 @@ PALETTE_INIT( dkong4b )
 
 PALETTE_INIT( radarscp )
 {
-	dkong_state *state = (dkong_state *)machine->driver_data;
+	dkong_state *state = machine->driver_data<dkong_state>();
 	int i;
 	int r,g,b;
 
@@ -334,7 +334,7 @@ PALETTE_INIT( radarscp )
 
 PALETTE_INIT( radarscp1 )
 {
-	dkong_state *state = (dkong_state *)machine->driver_data;
+	dkong_state *state = machine->driver_data<dkong_state>();
 	int i;
 	int r,g,b;
 
@@ -434,7 +434,7 @@ PALETTE_INIT( radarscp1 )
 
 PALETTE_INIT( dkong3 )
 {
-	dkong_state *state = (dkong_state *)machine->driver_data;
+	dkong_state *state = machine->driver_data<dkong_state>();
 	rgb_t	*rgb;
 
 	rgb = compute_res_net_all(machine, color_prom, &dkong3_decode_info, &dkong3_net_info);
@@ -449,7 +449,7 @@ PALETTE_INIT( dkong3 )
 
 static TILE_GET_INFO( dkong_bg_tile_info )
 {
-	dkong_state *state = (dkong_state *)machine->driver_data;
+	dkong_state *state = machine->driver_data<dkong_state>();
 	int code = state->video_ram[tile_index] + 256 * state->gfx_bank;
 	int color = (state->color_codes[tile_index % 32 + 32 * (tile_index / 32 / 4)] & 0x0f) + 0x10 * state->palette_bank;
 
@@ -458,7 +458,7 @@ static TILE_GET_INFO( dkong_bg_tile_info )
 
 static TILE_GET_INFO( radarscp1_bg_tile_info )
 {
-	dkong_state *state = (dkong_state *)machine->driver_data;
+	dkong_state *state = machine->driver_data<dkong_state>();
 	int code = state->video_ram[tile_index] + 256 * state->gfx_bank;
 	int color = (state->color_codes[tile_index % 32] & 0x0f);
 	color = color | (state->palette_bank<<4);
@@ -474,7 +474,7 @@ static TILE_GET_INFO( radarscp1_bg_tile_info )
 
 WRITE8_HANDLER( dkong_videoram_w )
 {
-	dkong_state *state = (dkong_state *)space->machine->driver_data;
+	dkong_state *state = space->machine->driver_data<dkong_state>();
 
 	if (state->video_ram[offset] != data)
 	{
@@ -485,7 +485,7 @@ WRITE8_HANDLER( dkong_videoram_w )
 
 WRITE8_HANDLER( dkongjr_gfxbank_w )
 {
-	dkong_state *state = (dkong_state *)space->machine->driver_data;
+	dkong_state *state = space->machine->driver_data<dkong_state>();
 
 	if (state->gfx_bank != (data & 0x01))
 	{
@@ -496,7 +496,7 @@ WRITE8_HANDLER( dkongjr_gfxbank_w )
 
 WRITE8_HANDLER( dkong3_gfxbank_w )
 {
-	dkong_state *state = (dkong_state *)space->machine->driver_data;
+	dkong_state *state = space->machine->driver_data<dkong_state>();
 
 	if (state->gfx_bank != (~data & 0x01))
 	{
@@ -507,7 +507,7 @@ WRITE8_HANDLER( dkong3_gfxbank_w )
 
 WRITE8_HANDLER( dkong_palettebank_w )
 {
-	dkong_state *state = (dkong_state *)space->machine->driver_data;
+	dkong_state *state = space->machine->driver_data<dkong_state>();
 	int newbank;
 
 	newbank = state->palette_bank;
@@ -526,14 +526,14 @@ WRITE8_HANDLER( dkong_palettebank_w )
 
 WRITE8_HANDLER( radarscp_grid_enable_w )
 {
-	dkong_state *state = (dkong_state *)space->machine->driver_data;
+	dkong_state *state = space->machine->driver_data<dkong_state>();
 
 	state->grid_on = data & 0x01;
 }
 
 WRITE8_HANDLER( radarscp_grid_color_w )
 {
-	dkong_state *state = (dkong_state *)space->machine->driver_data;
+	dkong_state *state = space->machine->driver_data<dkong_state>();
 
 	state->grid_col = (data & 0x07) ^ 0x07;
 	/* popmessage("Gridcol: %d", state->grid_col); */
@@ -541,14 +541,14 @@ WRITE8_HANDLER( radarscp_grid_color_w )
 
 WRITE8_HANDLER( dkong_flipscreen_w )
 {
-	dkong_state *state = (dkong_state *)space->machine->driver_data;
+	dkong_state *state = space->machine->driver_data<dkong_state>();
 
 	state->flip = ~data & 0x01;
 }
 
 WRITE8_HANDLER( dkong_spritebank_w )
 {
-	dkong_state *state = (dkong_state *)space->machine->driver_data;
+	dkong_state *state = space->machine->driver_data<dkong_state>();
 
 	state->sprite_bank = data & 0x01;
 }
@@ -561,7 +561,7 @@ WRITE8_HANDLER( dkong_spritebank_w )
 
 static void draw_sprites(running_machine *machine, bitmap_t *bitmap, const rectangle *cliprect, UINT32 mask_bank, UINT32 shift_bits)
 {
-	dkong_state *state = (dkong_state *)machine->driver_data;
+	dkong_state *state = machine->driver_data<dkong_state>();
 	int offs;
 	int scanline_vf;	/* buffering scanline including flip */
 	int scanline_vfc;		/* line buffering scanline including flip - this is the cached scanline_vf*/
@@ -691,7 +691,7 @@ static void draw_sprites(running_machine *machine, bitmap_t *bitmap, const recta
 
 INLINE double CD4049(running_machine *machine, double x)
 {
-	dkong_state *state = (dkong_state *)machine->driver_data;
+	dkong_state *state = machine->driver_data<dkong_state>();
 
 	if (x>0)
 		return exp(-state->cd4049_a * pow(x,state->cd4049_b));
@@ -713,7 +713,7 @@ INLINE double CD4049(running_machine *machine, double x)
 
 static void radarscp_step(running_machine *machine, int line_cnt)
 {
-	dkong_state *state = (dkong_state *)machine->driver_data;
+	dkong_state *state = machine->driver_data<dkong_state>();
 
 	/* Condensator is illegible in schematics for TRS2 board.
      * TRS1 board states 3.3u.
@@ -738,7 +738,7 @@ static void radarscp_step(running_machine *machine, int line_cnt)
 	if (line_cnt>=512)
 		line_cnt=512-VTOTAL;
 
-	if ( ( !(line_cnt & 0x40) && ((line_cnt+1) & 0x40) ) && (mame_rand(machine) > RAND_MAX/2))
+	if ( ( !(line_cnt & 0x40) && ((line_cnt+1) & 0x40) ) && (machine->rand() > RAND_MAX/2))
 		state->sig30Hz = (1-state->sig30Hz);
 
 	/* Now mix with SND02 (sound 2) line - on 74ls259, bit2 */
@@ -837,7 +837,7 @@ static void radarscp_draw_background(running_machine *machine, dkong_state *stat
 
 static void radarscp_scanline(running_machine *machine, int scanline)
 {
-	dkong_state *state = (dkong_state *)machine->driver_data;
+	dkong_state *state = machine->driver_data<dkong_state>();
 	const UINT8 *table = state->gfx3;
 	int 		table_len = state->gfx3_len;
 	int 			x,y,offset;
@@ -874,7 +874,7 @@ static void radarscp_scanline(running_machine *machine, int scanline)
 
 static TIMER_CALLBACK( scanline_callback )
 {
-	dkong_state *state = (dkong_state *)machine->driver_data;
+	dkong_state *state = machine->driver_data<dkong_state>();
 	int scanline = param;
 
 	if ((state->hardware_type == HARDWARE_TRS02) || (state->hardware_type == HARDWARE_TRS01))
@@ -890,7 +890,7 @@ static TIMER_CALLBACK( scanline_callback )
 
 static void check_palette(running_machine *machine)
 {
-	dkong_state *state = (dkong_state *)machine->driver_data;
+	dkong_state *state = machine->driver_data<dkong_state>();
 	const input_port_config *port;
 	int newset;
 
@@ -905,11 +905,11 @@ static void check_palette(running_machine *machine)
 			switch (newset)
 			{
 				case 0x00:
-					color_prom = memory_region(machine, "proms");
+					color_prom = machine->region("proms")->base();
 					PALETTE_INIT_CALL(radarscp);
 					break;
 				case 0x01:
-					color_prom = memory_region(machine, "proms");
+					color_prom = machine->region("proms")->base();
 					PALETTE_INIT_CALL(dkong2b);
 					break;
 			}
@@ -919,7 +919,7 @@ static void check_palette(running_machine *machine)
 
 static VIDEO_START( dkong_base )
 {
-	dkong_state *state = (dkong_state *)machine->driver_data;
+	dkong_state *state = machine->driver_data<dkong_state>();
 
 	state->cd4049_b = (log(0.0 - log(cd4049_al)) - log(0.0 - log((1.0-cd4049_al))) ) / log(cd4049_vh/cd4049_vl);
 	state->cd4049_a = log(0.0 - log(cd4049_al)) - state->cd4049_b * log(cd4049_vh);
@@ -940,7 +940,7 @@ static VIDEO_START( dkong_base )
 
 VIDEO_START( dkong )
 {
-	dkong_state *state = (dkong_state *)machine->driver_data;
+	dkong_state *state = machine->driver_data<dkong_state>();
 
 	VIDEO_START_CALL(dkong_base);
 
@@ -951,8 +951,8 @@ VIDEO_START( dkong )
 	{
 		case HARDWARE_TRS02:
 			state->bg_bits = machine->primary_screen->alloc_compatible_bitmap();
-			state->gfx3 = memory_region(machine, "gfx3");
-			state->gfx3_len = memory_region_length(machine, "gfx3");
+			state->gfx3 = machine->region("gfx3")->base();
+			state->gfx3_len = machine->region("gfx3")->bytes();
 		    /* fall through */
 		case HARDWARE_TKG04:
 		case HARDWARE_TKG02:
@@ -964,9 +964,9 @@ VIDEO_START( dkong )
 			tilemap_set_scrolldx(state->bg_tilemap, 0, 128);
 
 			state->bg_bits = machine->primary_screen->alloc_compatible_bitmap();
-			state->gfx4 = memory_region(machine, "gfx4");
-			state->gfx3 = memory_region(machine, "gfx3");
-			state->gfx3_len = memory_region_length(machine, "gfx3");
+			state->gfx4 = machine->region("gfx4")->base();
+			state->gfx3 = machine->region("gfx3")->base();
+			state->gfx3_len = machine->region("gfx3")->bytes();
 
 			break;
 		default:
@@ -976,7 +976,7 @@ VIDEO_START( dkong )
 
 VIDEO_UPDATE( dkong )
 {
-	dkong_state *state = (dkong_state *)screen->machine->driver_data;
+	dkong_state *state = screen->machine->driver_data<dkong_state>();
 
 	tilemap_set_flip_all(screen->machine, state->flip ? TILEMAP_FLIPX | TILEMAP_FLIPY : 0);
 	tilemap_set_scrollx(state->bg_tilemap, 0, state->flip ?  0 : 0);
@@ -1004,7 +1004,7 @@ VIDEO_UPDATE( dkong )
 
 VIDEO_UPDATE( pestplce )
 {
-	dkong_state *state = (dkong_state *)screen->machine->driver_data;
+	dkong_state *state = screen->machine->driver_data<dkong_state>();
 	int offs;
 
 	tilemap_draw(bitmap, cliprect, state->bg_tilemap, 0, 0);
@@ -1026,7 +1026,7 @@ VIDEO_UPDATE( pestplce )
 
 VIDEO_UPDATE( spclforc )
 {
-	dkong_state *state = (dkong_state *)screen->machine->driver_data;
+	dkong_state *state = screen->machine->driver_data<dkong_state>();
 
 	tilemap_draw(bitmap, cliprect, state->bg_tilemap, 0, 0);
 

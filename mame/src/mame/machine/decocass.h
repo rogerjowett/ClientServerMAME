@@ -10,18 +10,17 @@
 
 DECLARE_LEGACY_DEVICE(DECOCASS_TAPE, decocass_tape);
 
-#define MDRV_DECOCASS_TAPE_ADD(_tag) \
-	MDRV_DEVICE_ADD(_tag, DECOCASS_TAPE, 0)
+#define MCFG_DECOCASS_TAPE_ADD(_tag) \
+	MCFG_DEVICE_ADD(_tag, DECOCASS_TAPE, 0)
 
 
 
 
-class decocass_state
+class decocass_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, decocass_state(machine)); }
-
-	decocass_state(running_machine &machine) { }
+	decocass_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *   rambase;
@@ -103,10 +102,10 @@ public:
 	INT32     type5_latch;		/* latched enable PROM (1100xxxx written to E5x1) */
 
 	/* devices */
-	running_device *maincpu;
-	running_device *audiocpu;
-	running_device *mcu;
-	running_device *cassette;
+	device_t *maincpu;
+	device_t *audiocpu;
+	device_t *mcu;
+	device_t *cassette;
 };
 
 

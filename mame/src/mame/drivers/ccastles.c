@@ -133,15 +133,6 @@
 
 
 
-/*************************************
- *
- *  Globals
- *
- *************************************/
-
-static UINT8 *nvram_stage;
-
-
 /************************************* *
  *  VBLANK and IRQ generation
  *
@@ -149,7 +140,7 @@ static UINT8 *nvram_stage;
 
 INLINE void schedule_next_irq( running_machine *machine, int curscanline )
 {
-	ccastles_state *state = (ccastles_state *)machine->driver_data;
+	ccastles_state *state = machine->driver_data<ccastles_state>();
 
 	/* scan for a rising edge on the IRQCK signal */
 	for (curscanline++; ; curscanline = (curscanline + 1) & 0xff)
@@ -163,7 +154,7 @@ INLINE void schedule_next_irq( running_machine *machine, int curscanline )
 
 static TIMER_CALLBACK( clock_irq )
 {
-	ccastles_state *state = (ccastles_state *)machine->driver_data;
+	ccastles_state *state = machine->driver_data<ccastles_state>();
 
 	/* assert the IRQ if not already asserted */
 	if (!state->irq_state)
@@ -182,7 +173,7 @@ static TIMER_CALLBACK( clock_irq )
 
 static CUSTOM_INPUT( get_vblank )
 {
-	ccastles_state *state = (ccastles_state *)field->port->machine->driver_data;
+	ccastles_state *state = field->port->machine->driver_data<ccastles_state>();
 	int scanline = field->port->machine->primary_screen->vpos();
 	return state->syncprom[scanline & 0xff] & 1;
 }
@@ -197,12 +188,11 @@ static CUSTOM_INPUT( get_vblank )
 
 static MACHINE_START( ccastles )
 {
-	ccastles_state *state = (ccastles_state *)machine->driver_data;
+	ccastles_state *state = machine->driver_data<ccastles_state>();
 	rectangle visarea;
 
 	/* initialize globals */
-	state->maincpu = machine->device("maincpu");
-	state->syncprom = memory_region(machine, "proms") + 0x000;
+	state->syncprom = machine->region("proms")->base() + 0x000;
 
 	/* find the start of VBLANK in the SYNC PROM */
 	for (state->vblank_start = 0; state->vblank_start < 256; state->vblank_start++)
@@ -227,26 +217,22 @@ static MACHINE_START( ccastles )
 	machine->primary_screen->configure(320, 256, visarea, HZ_TO_ATTOSECONDS(PIXEL_CLOCK) * VTOTAL * HTOTAL);
 
 	/* configure the ROM banking */
-	memory_configure_bank(machine, "bank1", 0, 2, memory_region(machine, "maincpu") + 0xa000, 0x6000);
+	memory_configure_bank(machine, "bank1", 0, 2, machine->region("maincpu")->base() + 0xa000, 0x6000);
 
 	/* create a timer for IRQs and set up the first callback */
 	state->irq_timer = timer_alloc(machine, clock_irq, NULL);
 	state->irq_state = 0;
 	schedule_next_irq(machine, 0);
 
-	/* allocate backing memory for the NVRAM */
-	machine->generic.nvram.u8 = auto_alloc_array(machine, UINT8, machine->generic.nvram_size);
-
 	/* setup for save states */
 	state_save_register_global(machine, state->irq_state);
 	state_save_register_global_array(machine, state->nvram_store);
-	state_save_register_global_pointer(machine, machine->generic.nvram.u8, machine->generic.nvram_size);
 }
 
 
 static MACHINE_RESET( ccastles )
 {
-	ccastles_state *state = (ccastles_state *)machine->driver_data;
+	ccastles_state *state = machine->driver_data<ccastles_state>();
 	cputag_set_input_line(machine, "maincpu", 0, CLEAR_LINE);
 	state->irq_state = 0;
 }
@@ -261,7 +247,7 @@ static MACHINE_RESET( ccastles )
 
 static WRITE8_HANDLER( irq_ack_w )
 {
-	ccastles_state *state = (ccastles_state *)space->machine->driver_data;
+	ccastles_state *state = space->machine->driver_data<ccastles_state>();
 	if (state->irq_state)
 	{
 		cpu_set_input_line(state->maincpu, 0, CLEAR_LINE);
@@ -303,34 +289,39 @@ static READ8_HANDLER( leta_r )
  *
  *************************************/
 
-static NVRAM_HANDLER( ccastles )
-{
-	if (read_or_write)
-	{
-		/* on power down, the EAROM is implicitly stored */
-		memcpy(machine->generic.nvram.v, nvram_stage, machine->generic.nvram_size);
-		mame_fwrite(file, machine->generic.nvram.v, machine->generic.nvram_size);
-	}
-	else if (file)
-		mame_fread(file, machine->generic.nvram.v, machine->generic.nvram_size);
-	else
-		memset(machine->generic.nvram.v, 0, machine->generic.nvram_size);
-}
-
-
 static WRITE8_HANDLER( nvram_recall_w )
 {
-	memcpy(nvram_stage, space->machine->generic.nvram.v, space->machine->generic.nvram_size);
+	ccastles_state *state = space->machine->driver_data<ccastles_state>();
+	state->nvram_4b->recall(0);
+	state->nvram_4b->recall(1);
+	state->nvram_4b->recall(0);
+	state->nvram_4a->recall(0);
+	state->nvram_4a->recall(1);
+	state->nvram_4a->recall(0);
 }
 
 
 static WRITE8_HANDLER( nvram_store_w )
 {
-	ccastles_state *state = (ccastles_state *)space->machine->driver_data;
-
+	ccastles_state *state = space->machine->driver_data<ccastles_state>();
 	state->nvram_store[offset] = data & 1;
-	if (!state->nvram_store[0] && state->nvram_store[1])
-		memcpy(space->machine->generic.nvram.v, nvram_stage, space->machine->generic.nvram_size);
+	state->nvram_4b->store(~state->nvram_store[0] & state->nvram_store[1]);
+	state->nvram_4a->store(~state->nvram_store[0] & state->nvram_store[1]);
+}
+
+
+static READ8_HANDLER( nvram_r )
+{
+	ccastles_state *state = space->machine->driver_data<ccastles_state>();
+	return (state->nvram_4b->read(*space, offset) & 0x0f) | (state->nvram_4a->read(*space, offset) << 4);
+}
+
+
+static WRITE8_HANDLER( nvram_w )
+{
+	ccastles_state *state = space->machine->driver_data<ccastles_state>();
+	state->nvram_4b->write(*space, offset, data);
+	state->nvram_4a->write(*space, offset, data >> 4);
 }
 
 
@@ -348,7 +339,7 @@ static ADDRESS_MAP_START( main_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x7fff) AM_RAM_WRITE(ccastles_videoram_w) AM_BASE_MEMBER(ccastles_state, videoram)
 	AM_RANGE(0x8000, 0x8fff) AM_RAM
 	AM_RANGE(0x8e00, 0x8fff) AM_BASE_MEMBER(ccastles_state, spriteram)
-	AM_RANGE(0x9000, 0x90ff) AM_MIRROR(0x0300) AM_RAM AM_BASE(&nvram_stage) AM_SIZE_GENERIC(nvram)
+	AM_RANGE(0x9000, 0x90ff) AM_MIRROR(0x0300) AM_READWRITE(nvram_r, nvram_w)
 	AM_RANGE(0x9400, 0x9403) AM_MIRROR(0x01fc) AM_READ(leta_r)
 	AM_RANGE(0x9600, 0x97ff) AM_READ_PORT("IN0")
 	AM_RANGE(0x9800, 0x980f) AM_MIRROR(0x01f0) AM_DEVREADWRITE("pokey1", pokey_r, pokey_w)
@@ -487,41 +478,40 @@ static const pokey_interface pokey_config =
  *
  *************************************/
 
-static MACHINE_DRIVER_START( ccastles )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(ccastles_state)
+static MACHINE_CONFIG_START( ccastles, ccastles_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6502, MASTER_CLOCK/8)
-	MDRV_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_ADD("maincpu", M6502, MASTER_CLOCK/8)
+	MCFG_CPU_PROGRAM_MAP(main_map)
 
-	MDRV_MACHINE_START(ccastles)
-	MDRV_MACHINE_RESET(ccastles)
-	MDRV_NVRAM_HANDLER(ccastles)
-	MDRV_WATCHDOG_VBLANK_INIT(8)
+	MCFG_MACHINE_START(ccastles)
+	MCFG_MACHINE_RESET(ccastles)
+	MCFG_WATCHDOG_VBLANK_INIT(8)
+
+	MCFG_X2212_ADD_AUTOSAVE("nvram_4b")
+	MCFG_X2212_ADD_AUTOSAVE("nvram_4a")
 
 	/* video hardware */
-	MDRV_GFXDECODE(ccastles)
-	MDRV_PALETTE_LENGTH(32)
+	MCFG_GFXDECODE(ccastles)
+	MCFG_PALETTE_LENGTH(32)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_RAW_PARAMS(PIXEL_CLOCK, HTOTAL, 0, HTOTAL - 1, VTOTAL, 0, VTOTAL - 1)	/* will be adjusted later */
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_RAW_PARAMS(PIXEL_CLOCK, HTOTAL, 0, HTOTAL - 1, VTOTAL, 0, VTOTAL - 1)	/* will be adjusted later */
 
-	MDRV_VIDEO_START(ccastles)
-	MDRV_VIDEO_UPDATE(ccastles)
+	MCFG_VIDEO_START(ccastles)
+	MCFG_VIDEO_UPDATE(ccastles)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("pokey1", POKEY, MASTER_CLOCK/8)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_SOUND_ADD("pokey1", POKEY, MASTER_CLOCK/8)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MDRV_SOUND_ADD("pokey2", POKEY, MASTER_CLOCK/8)
-	MDRV_SOUND_CONFIG(pokey_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("pokey2", POKEY, MASTER_CLOCK/8)
+	MCFG_SOUND_CONFIG(pokey_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 
 

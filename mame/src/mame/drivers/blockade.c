@@ -58,7 +58,7 @@
 
 static INTERRUPT_GEN( blockade_interrupt )
 {
-	blockade_state *state = (blockade_state *)device->machine->driver_data;
+	blockade_state *state = device->machine->driver_data<blockade_state>();
 	cpu_resume(device, SUSPEND_ANY_REASON);
 
 	if ((input_port_read(device->machine, "IN0") & 0x80) == 0)
@@ -76,7 +76,7 @@ static INTERRUPT_GEN( blockade_interrupt )
 
 static READ8_HANDLER( blockade_input_port_0_r )
 {
-	blockade_state *state = (blockade_state *)space->machine->driver_data;
+	blockade_state *state = space->machine->driver_data<blockade_state>();
 	/* coin latch is bit 7 */
 	UINT8 temp = (input_port_read(space->machine, "IN0") & 0x7f);
 
@@ -85,7 +85,7 @@ static READ8_HANDLER( blockade_input_port_0_r )
 
 static WRITE8_HANDLER( blockade_coin_latch_w )
 {
-	blockade_state *state = (blockade_state *)space->machine->driver_data;
+	blockade_state *state = space->machine->driver_data<blockade_state>();
 
 	if (data & 0x80)
 	{
@@ -466,7 +466,7 @@ static PALETTE_INIT( bw )
 
 static MACHINE_START( blockade )
 {
-	blockade_state *state = (blockade_state *)machine->driver_data;
+	blockade_state *state = machine->driver_data<blockade_state>();
 
 	state_save_register_global(machine, state->coin_latch);
 	state_save_register_global(machine, state->just_been_reset);
@@ -474,69 +474,63 @@ static MACHINE_START( blockade )
 
 static MACHINE_RESET( blockade )
 {
-	blockade_state *state = (blockade_state *)machine->driver_data;
+	blockade_state *state = machine->driver_data<blockade_state>();
 
 	state->coin_latch = 1;
 	state->just_been_reset = 0;
 }
 
-static MACHINE_DRIVER_START( blockade )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(blockade_state)
+static MACHINE_CONFIG_START( blockade, blockade_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", I8080, MASTER_CLOCK/10)
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_IO_MAP(main_io_map)
-	MDRV_CPU_VBLANK_INT("screen", blockade_interrupt)
+	MCFG_CPU_ADD("maincpu", I8080, MASTER_CLOCK/10)
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_IO_MAP(main_io_map)
+	MCFG_CPU_VBLANK_INT("screen", blockade_interrupt)
 
-	MDRV_MACHINE_START(blockade)
-	MDRV_MACHINE_RESET(blockade)
+	MCFG_MACHINE_START(blockade)
+	MCFG_MACHINE_RESET(blockade)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 28*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 0*8, 28*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 28*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 0*8, 28*8-1)
 
-	MDRV_GFXDECODE(blockade)
-	MDRV_PALETTE_LENGTH(2)
+	MCFG_GFXDECODE(blockade)
+	MCFG_PALETTE_LENGTH(2)
 
-	MDRV_PALETTE_INIT(green)
-	MDRV_VIDEO_START(blockade)
-	MDRV_VIDEO_UPDATE(blockade)
+	MCFG_PALETTE_INIT(green)
+	MCFG_VIDEO_START(blockade)
+	MCFG_VIDEO_UPDATE(blockade)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("samples", SAMPLES, 0)
-	MDRV_SOUND_CONFIG(blockade_samples_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+	MCFG_SOUND_ADD("samples", SAMPLES, 0)
+	MCFG_SOUND_CONFIG(blockade_samples_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
-	MDRV_SOUND_ADD("discrete", DISCRETE, 0)
-	MDRV_SOUND_CONFIG_DISCRETE(blockade)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("discrete", DISCRETE, 0)
+	MCFG_SOUND_CONFIG_DISCRETE(blockade)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( comotion )
-	MDRV_IMPORT_FROM(blockade)
-	MDRV_PALETTE_INIT(bw)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( comotion, blockade )
+	MCFG_PALETTE_INIT(bw)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( blasto )
-	MDRV_IMPORT_FROM(blockade)
-	MDRV_GFXDECODE(blasto)
-	MDRV_PALETTE_INIT(bw)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( blasto, blockade )
+	MCFG_GFXDECODE(blasto)
+	MCFG_PALETTE_INIT(bw)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( hustle )
-	MDRV_IMPORT_FROM(blockade)
-	MDRV_GFXDECODE(blasto)
-	MDRV_PALETTE_INIT(yellow)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( hustle, blockade )
+	MCFG_GFXDECODE(blasto)
+	MCFG_PALETTE_INIT(yellow)
+MACHINE_CONFIG_END
 
 /*************************************
  *

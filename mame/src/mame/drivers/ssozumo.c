@@ -12,23 +12,7 @@ Driver by Takahiro Nogi (nogi@kt.rim.or.jp) 1999/10/04
 #include "cpu/m6809/m6809.h"
 #include "sound/ay8910.h"
 #include "sound/dac.h"
-
-extern UINT8 *ssozumo_videoram;
-extern UINT8 *ssozumo_colorram;
-extern UINT8 *ssozumo_videoram2;
-extern UINT8 *ssozumo_colorram2;
-
-extern WRITE8_HANDLER( ssozumo_videoram_w );
-extern WRITE8_HANDLER( ssozumo_colorram_w );
-extern WRITE8_HANDLER( ssozumo_videoram2_w );
-extern WRITE8_HANDLER( ssozumo_colorram2_w );
-extern WRITE8_HANDLER( ssozumo_paletteram_w );
-extern WRITE8_HANDLER( ssozumo_scroll_w );
-extern WRITE8_HANDLER( ssozumo_flipscreen_w );
-
-extern PALETTE_INIT( ssozumo );
-extern VIDEO_START( ssozumo );
-extern VIDEO_UPDATE( ssozumo );
+#include "includes/ssozumo.h"
 
 static WRITE8_HANDLER( ssozumo_sh_command_w )
 {
@@ -39,11 +23,11 @@ static WRITE8_HANDLER( ssozumo_sh_command_w )
 
 static ADDRESS_MAP_START( ssozumo_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x077f) AM_RAM
-	AM_RANGE(0x0780, 0x07ff) AM_RAM AM_BASE_SIZE_GENERIC(spriteram)
-	AM_RANGE(0x2000, 0x23ff) AM_RAM_WRITE(ssozumo_videoram2_w) AM_BASE(&ssozumo_videoram2)
-	AM_RANGE(0x2400, 0x27ff) AM_RAM_WRITE(ssozumo_colorram2_w) AM_BASE(&ssozumo_colorram2)
-	AM_RANGE(0x3000, 0x31ff) AM_RAM_WRITE(ssozumo_videoram_w) AM_BASE(&ssozumo_videoram)
-	AM_RANGE(0x3200, 0x33ff) AM_RAM_WRITE(ssozumo_colorram_w) AM_BASE(&ssozumo_colorram)
+	AM_RANGE(0x0780, 0x07ff) AM_RAM AM_BASE_SIZE_MEMBER(ssozumo_state, spriteram, spriteram_size)
+	AM_RANGE(0x2000, 0x23ff) AM_RAM_WRITE(ssozumo_videoram2_w) AM_BASE_MEMBER(ssozumo_state, videoram2)
+	AM_RANGE(0x2400, 0x27ff) AM_RAM_WRITE(ssozumo_colorram2_w) AM_BASE_MEMBER(ssozumo_state, colorram2)
+	AM_RANGE(0x3000, 0x31ff) AM_RAM_WRITE(ssozumo_videoram_w) AM_BASE_MEMBER(ssozumo_state, videoram)
+	AM_RANGE(0x3200, 0x33ff) AM_RAM_WRITE(ssozumo_colorram_w) AM_BASE_MEMBER(ssozumo_state, colorram)
 	AM_RANGE(0x3400, 0x35ff) AM_RAM
 	AM_RANGE(0x3600, 0x37ff) AM_RAM
 	AM_RANGE(0x4000, 0x4000) AM_READ_PORT("P1") AM_WRITE(ssozumo_flipscreen_w)
@@ -51,7 +35,7 @@ static ADDRESS_MAP_START( ssozumo_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x4020, 0x4020) AM_READ_PORT("DSW2") AM_WRITE(ssozumo_scroll_w)
 	AM_RANGE(0x4030, 0x4030) AM_READ_PORT("DSW1")
 //  AM_RANGE(0x4030, 0x4030) AM_WRITEONLY
-	AM_RANGE(0x4050, 0x407f) AM_RAM_WRITE(ssozumo_paletteram_w) AM_BASE_GENERIC(paletteram)
+	AM_RANGE(0x4050, 0x407f) AM_RAM_WRITE(ssozumo_paletteram_w) AM_BASE_MEMBER(ssozumo_state, paletteram)
 	AM_RANGE(0x6000, 0xffff) AM_ROM
 ADDRESS_MAP_END
 
@@ -189,44 +173,44 @@ static GFXDECODE_START( ssozumo )
 GFXDECODE_END
 
 
-static MACHINE_DRIVER_START( ssozumo )
+static MACHINE_CONFIG_START( ssozumo, ssozumo_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6502, 1200000)	/* 1.2 MHz ???? */
-	MDRV_CPU_PROGRAM_MAP(ssozumo_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", M6502, 1200000)	/* 1.2 MHz ???? */
+	MCFG_CPU_PROGRAM_MAP(ssozumo_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", M6502, 975000) 		/* 975 kHz ?? */
-	MDRV_CPU_PROGRAM_MAP(ssozumo_sound_map)
-	MDRV_CPU_PERIODIC_INT(nmi_line_pulse,60*16)	/* not accurate */
+	MCFG_CPU_ADD("audiocpu", M6502, 975000) 		/* 975 kHz ?? */
+	MCFG_CPU_PROGRAM_MAP(ssozumo_sound_map)
+	MCFG_CPU_PERIODIC_INT(nmi_line_pulse,60*16)	/* not accurate */
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8 - 1, 1*8, 31*8 - 1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8 - 1, 1*8, 31*8 - 1)
 
-	MDRV_GFXDECODE(ssozumo)
-	MDRV_PALETTE_LENGTH(64 + 16)
+	MCFG_GFXDECODE(ssozumo)
+	MCFG_PALETTE_LENGTH(64 + 16)
 
-	MDRV_PALETTE_INIT(ssozumo)
-	MDRV_VIDEO_START(ssozumo)
-	MDRV_VIDEO_UPDATE(ssozumo)
+	MCFG_PALETTE_INIT(ssozumo)
+	MCFG_VIDEO_START(ssozumo)
+	MCFG_VIDEO_UPDATE(ssozumo)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ay1", AY8910, 1500000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
+	MCFG_SOUND_ADD("ay1", AY8910, 1500000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
 
-	MDRV_SOUND_ADD("ay2", AY8910, 1500000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
+	MCFG_SOUND_ADD("ay2", AY8910, 1500000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
 
-	MDRV_SOUND_ADD("dac", DAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("dac", DAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
+MACHINE_CONFIG_END
 
 
 

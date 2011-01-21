@@ -113,12 +113,11 @@ Few words about protection:
 #include "cpu/m68000/m68000.h"
 #include "sound/2203intf.h"
 
-class ddealer_state
+class ddealer_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, ddealer_state(machine)); }
-
-	ddealer_state(running_machine &machine) { }
+	ddealer_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT16 *  mcu_shared_ram;
@@ -145,13 +144,13 @@ public:
 
 static WRITE16_HANDLER( ddealer_flipscreen_w )
 {
-	ddealer_state *state = (ddealer_state *)space->machine->driver_data;
+	ddealer_state *state = space->machine->driver_data<ddealer_state>();
 	state->flipscreen = data & 0x01;
 }
 
 static TILE_GET_INFO( get_back_tile_info )
 {
-	ddealer_state *state = (ddealer_state *)machine->driver_data;
+	ddealer_state *state = machine->driver_data<ddealer_state>();
 	int code = state->back_vram[tile_index];
 	SET_TILE_INFO(
 			0,
@@ -162,7 +161,7 @@ static TILE_GET_INFO( get_back_tile_info )
 
 static VIDEO_START( ddealer )
 {
-	ddealer_state *state = (ddealer_state *)machine->driver_data;
+	ddealer_state *state = machine->driver_data<ddealer_state>();
 	state->flipscreen = 0;
 	state->back_tilemap = tilemap_create(machine, get_back_tile_info, tilemap_scan_cols, 8, 8, 64, 32);
 }
@@ -252,7 +251,7 @@ static void ddealer_draw_video_layer( running_machine *machine, UINT16* vreg_bas
 
 static VIDEO_UPDATE( ddealer )
 {
-	ddealer_state *state = (ddealer_state *)screen->machine->driver_data;
+	ddealer_state *state = screen->machine->driver_data<ddealer_state>();
 	tilemap_set_scrollx(state->back_tilemap, 0, state->flipscreen ? -192 : -64);
 	tilemap_set_flip(state->back_tilemap, state->flipscreen ? TILEMAP_FLIPY | TILEMAP_FLIPX : 0);
 	tilemap_draw(bitmap, cliprect, state->back_tilemap, 0, 0);
@@ -294,7 +293,7 @@ static VIDEO_UPDATE( ddealer )
 
 static TIMER_DEVICE_CALLBACK( ddealer_mcu_sim )
 {
-	ddealer_state *state = (ddealer_state *)timer.machine->driver_data;
+	ddealer_state *state = timer.machine->driver_data<ddealer_state>();
 
 	/*coin/credit simulation*/
 	/*$fe002 is used,might be for multiple coins for one credit settings.*/
@@ -351,17 +350,17 @@ static TIMER_DEVICE_CALLBACK( ddealer_mcu_sim )
 	}
 
 	/*random number generators,controls order of cards*/
-	state->mcu_shared_ram[0x10 / 2] = mame_rand(timer.machine) & 0xffff;
-	state->mcu_shared_ram[0x12 / 2] = mame_rand(timer.machine) & 0xffff;
-	state->mcu_shared_ram[0x14 / 2] = mame_rand(timer.machine) & 0xffff;
-	state->mcu_shared_ram[0x16 / 2] = mame_rand(timer.machine) & 0xffff;
+	state->mcu_shared_ram[0x10 / 2] = timer.machine->rand() & 0xffff;
+	state->mcu_shared_ram[0x12 / 2] = timer.machine->rand() & 0xffff;
+	state->mcu_shared_ram[0x14 / 2] = timer.machine->rand() & 0xffff;
+	state->mcu_shared_ram[0x16 / 2] = timer.machine->rand() & 0xffff;
 }
 
 
 
 static WRITE16_HANDLER( back_vram_w )
 {
-	ddealer_state *state = (ddealer_state *)space->machine->driver_data;
+	ddealer_state *state = space->machine->driver_data<ddealer_state>();
 	COMBINE_DATA(&state->back_vram[offset]);
 	tilemap_mark_tile_dirty(state->back_tilemap, offset);
 }
@@ -369,7 +368,7 @@ static WRITE16_HANDLER( back_vram_w )
 
 static WRITE16_HANDLER( ddealer_vregs_w )
 {
-	ddealer_state *state = (ddealer_state *)space->machine->driver_data;
+	ddealer_state *state = space->machine->driver_data<ddealer_state>();
 	COMBINE_DATA(&state->vregs[offset]);
 }
 
@@ -397,7 +396,7 @@ Protection handling,identical to Hacha Mecha Fighter / Thunder Dragon with diffe
 
 static WRITE16_HANDLER( ddealer_mcu_shared_w )
 {
-	ddealer_state *state = (ddealer_state *)space->machine->driver_data;
+	ddealer_state *state = space->machine->driver_data<ddealer_state>();
 	COMBINE_DATA(&state->mcu_shared_ram[offset]);
 
 	switch(offset)
@@ -591,7 +590,7 @@ GFXDECODE_END
 
 static MACHINE_START( ddealer )
 {
-	ddealer_state *state = (ddealer_state *)machine->driver_data;
+	ddealer_state *state = machine->driver_data<ddealer_state>();
 
 	state_save_register_global(machine, state->respcount);
 	state_save_register_global(machine, state->flipscreen);
@@ -601,7 +600,7 @@ static MACHINE_START( ddealer )
 
 static MACHINE_RESET (ddealer)
 {
-	ddealer_state *state = (ddealer_state *)machine->driver_data;
+	ddealer_state *state = machine->driver_data<ddealer_state>();
 
 	state->respcount = 0;
 	state->flipscreen = 0;
@@ -614,45 +613,44 @@ static INTERRUPT_GEN( ddealer_interrupt )
 	cpu_set_input_line(device, 4, HOLD_LINE);
 }
 
-static MACHINE_DRIVER_START( ddealer )
-	MDRV_DRIVER_DATA(ddealer_state)
+static MACHINE_CONFIG_START( ddealer, ddealer_state )
 
-	MDRV_CPU_ADD("maincpu" , M68000, 10000000)
-	MDRV_CPU_PROGRAM_MAP(ddealer)
-	MDRV_CPU_VBLANK_INT("screen", ddealer_interrupt)
-	MDRV_CPU_PERIODIC_INT(irq1_line_hold, 90)//guess,controls music tempo,112 is way too fast
+	MCFG_CPU_ADD("maincpu" , M68000, 10000000)
+	MCFG_CPU_PROGRAM_MAP(ddealer)
+	MCFG_CPU_VBLANK_INT("screen", ddealer_interrupt)
+	MCFG_CPU_PERIODIC_INT(irq1_line_hold, 90)//guess,controls music tempo,112 is way too fast
 
 	// M50747 or NMK-110 8131 MCU
 
-	MDRV_MACHINE_START(ddealer)
-	MDRV_MACHINE_RESET(ddealer)
+	MCFG_MACHINE_START(ddealer)
+	MCFG_MACHINE_RESET(ddealer)
 
-	MDRV_GFXDECODE(ddealer)
+	MCFG_GFXDECODE(ddealer)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(512, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 48*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(512, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 48*8-1, 2*8, 30*8-1)
 
-	MDRV_PALETTE_LENGTH(0x400)
+	MCFG_PALETTE_LENGTH(0x400)
 
-	MDRV_VIDEO_START(ddealer)
-	MDRV_VIDEO_UPDATE(ddealer)
+	MCFG_VIDEO_START(ddealer)
+	MCFG_VIDEO_UPDATE(ddealer)
 
-	MDRV_TIMER_ADD_PERIODIC("coinsim", ddealer_mcu_sim, HZ(10000)) // not real, but for simulating the MCU
+	MCFG_TIMER_ADD_PERIODIC("coinsim", ddealer_mcu_sim, HZ(10000)) // not real, but for simulating the MCU
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("ymsnd", YM2203, 6000000 / 4)//guess
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
-MACHINE_DRIVER_END
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("ymsnd", YM2203, 6000000 / 4)//guess
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
+MACHINE_CONFIG_END
 
 
 
 static READ16_HANDLER( ddealer_mcu_r )
 {
-	ddealer_state *state = (ddealer_state *)space->machine->driver_data;
+	ddealer_state *state = space->machine->driver_data<ddealer_state>();
 	static const int resp[] =
 	{
 		0x93, 0xc7, 0x00, 0x8000,

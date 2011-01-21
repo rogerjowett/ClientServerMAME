@@ -28,6 +28,7 @@
 #include "machine/68681.h"
 #include "sound/2151intf.h"
 #include "sound/upd7759.h"
+#include "machine/nvram.h"
 #include "includes/micro3d.h"
 
 
@@ -196,7 +197,7 @@ INPUT_PORTS_END
 
 static ADDRESS_MAP_START( hostmem, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x000000, 0x143fff) AM_ROM
-	AM_RANGE(0x200000, 0x20ffff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0x200000, 0x20ffff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0x800000, 0x83ffff) AM_RAM AM_BASE_MEMBER(micro3d_state, shared_ram)
 	AM_RANGE(0x900000, 0x900001) AM_WRITE(host_drmath_int_w)
 	AM_RANGE(0x920000, 0x920001) AM_READ_PORT("INPUTS_C_D")
@@ -312,59 +313,58 @@ static const duart68681_config micro3d_duart68681_config =
  *
  *************************************/
 
-static MACHINE_DRIVER_START( micro3d )
-	MDRV_DRIVER_DATA(micro3d_state)
+static MACHINE_CONFIG_START( micro3d, micro3d_state )
 
-	MDRV_CPU_ADD("maincpu", M68000, XTAL_32MHz / 2)
-	MDRV_CPU_PROGRAM_MAP(hostmem)
-	MDRV_CPU_VBLANK_INT("screen", micro3d_vblank)
+	MCFG_CPU_ADD("maincpu", M68000, XTAL_32MHz / 2)
+	MCFG_CPU_PROGRAM_MAP(hostmem)
+	MCFG_CPU_VBLANK_INT("screen", micro3d_vblank)
 
-	MDRV_CPU_ADD("vgb", TMS34010, XTAL_40MHz)
-	MDRV_CPU_CONFIG(vgb_config)
-	MDRV_CPU_PROGRAM_MAP(vgbmem)
+	MCFG_CPU_ADD("vgb", TMS34010, XTAL_40MHz)
+	MCFG_CPU_CONFIG(vgb_config)
+	MCFG_CPU_PROGRAM_MAP(vgbmem)
 
-	MDRV_CPU_ADD("drmath", AM29000, XTAL_32MHz / 2)
-	MDRV_CPU_PROGRAM_MAP(drmath_prg)
-	MDRV_CPU_DATA_MAP(drmath_data)
+	MCFG_CPU_ADD("drmath", AM29000, XTAL_32MHz / 2)
+	MCFG_CPU_PROGRAM_MAP(drmath_prg)
+	MCFG_CPU_DATA_MAP(drmath_data)
 
-	MDRV_CPU_ADD("audiocpu", I8051, XTAL_11_0592MHz)
-	MDRV_CPU_PROGRAM_MAP(soundmem_prg)
-	MDRV_CPU_IO_MAP(soundmem_io)
+	MCFG_CPU_ADD("audiocpu", I8051, XTAL_11_0592MHz)
+	MCFG_CPU_PROGRAM_MAP(soundmem_prg)
+	MCFG_CPU_IO_MAP(soundmem_io)
 
-	MDRV_DUART68681_ADD("duart68681", XTAL_3_6864MHz, micro3d_duart68681_config)
+	MCFG_DUART68681_ADD("duart68681", XTAL_3_6864MHz, micro3d_duart68681_config)
 
-	MDRV_MACHINE_RESET(micro3d)
-	MDRV_NVRAM_HANDLER(generic_0fill)
-	MDRV_QUANTUM_TIME(HZ(3000))
+	MCFG_MACHINE_RESET(micro3d)
+	MCFG_NVRAM_ADD_0FILL("nvram")
+	MCFG_QUANTUM_TIME(HZ(3000))
 
-	MDRV_PALETTE_LENGTH(4096)
+	MCFG_PALETTE_LENGTH(4096)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_RAW_PARAMS(XTAL_40MHz/8*4, 192*4, 0, 144*4, 434, 0, 400)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_RAW_PARAMS(XTAL_40MHz/8*4, 192*4, 0, 144*4, 434, 0, 400)
 
-	MDRV_VIDEO_START(micro3d)
-	MDRV_VIDEO_RESET(micro3d)
-	MDRV_VIDEO_UPDATE(tms340x0)
+	MCFG_VIDEO_START(micro3d)
+	MCFG_VIDEO_RESET(micro3d)
+	MCFG_VIDEO_UPDATE(tms340x0)
 
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("upd7759", UPD7759, XTAL_640kHz)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.35)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.35)
+	MCFG_SOUND_ADD("upd7759", UPD7759, XTAL_640kHz)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.35)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.35)
 
-	MDRV_SOUND_ADD("ym2151", YM2151, XTAL_3_579545MHz)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.35)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.35)
+	MCFG_SOUND_ADD("ym2151", YM2151, XTAL_3_579545MHz)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.35)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.35)
 
-	MDRV_SOUND_ADD("noise_1", MICRO3D, 0)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("noise_1", MICRO3D, 0)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
 
-	MDRV_SOUND_ADD("noise_2", MICRO3D, 0)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("noise_2", MICRO3D, 0)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 
 /*************************************

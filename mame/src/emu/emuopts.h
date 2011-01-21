@@ -43,9 +43,7 @@
 
 /* core search path options */
 #define OPTION_ROMPATH				"rompath"
-#ifdef MESS
 #define OPTION_HASHPATH				"hashpath"
-#endif
 #define OPTION_SAMPLEPATH			"samplepath"
 #define OPTION_ARTPATH				"artpath"
 #define OPTION_CTRLRPATH			"ctrlrpath"
@@ -106,6 +104,7 @@
 #define OPTION_CONTRAST				"contrast"
 #define OPTION_GAMMA				"gamma"
 #define OPTION_PAUSE_BRIGHTNESS		"pause_brightness"
+#define OPTION_EFFECT				"effect"
 
 /* core vector options */
 #define OPTION_ANTIALIAS			"antialias"
@@ -153,6 +152,7 @@
 #define OPTION_BIOS					"bios"
 #define OPTION_CHEAT				"cheat"
 #define OPTION_SKIP_GAMEINFO		"skip_gameinfo"
+#define OPTION_UI_FONT				"uifont"
 
 /* image device options */
 #define OPTION_ADDED_DEVICE_OPTIONS	"added_device_options"

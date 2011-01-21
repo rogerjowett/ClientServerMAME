@@ -43,12 +43,11 @@ Notes:
 
 
 
-class discoboy_state
+class discoboy_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, discoboy_state(machine)); }
-
-	discoboy_state(running_machine &machine) { }
+	discoboy_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *  ram_1;
@@ -64,7 +63,7 @@ public:
 	int      adpcm_data;
 
 	/* devices */
-	running_device *audiocpu;
+	device_t *audiocpu;
 };
 
 
@@ -75,7 +74,7 @@ static VIDEO_START( discoboy )
 
 static void draw_sprites( running_machine *machine, bitmap_t *bitmap, const rectangle *cliprect )
 {
-	discoboy_state *state = (discoboy_state *)machine->driver_data;
+	discoboy_state *state = machine->driver_data<discoboy_state>();
 	int flipscreen = 0;
 	int offs, sx, sy;
 
@@ -108,7 +107,7 @@ static void draw_sprites( running_machine *machine, bitmap_t *bitmap, const rect
 			}
 			else
 			{
-				code = mame_rand(machine);
+				code = machine->rand();
 			}
 		}
 
@@ -123,7 +122,7 @@ static void draw_sprites( running_machine *machine, bitmap_t *bitmap, const rect
 
 static VIDEO_UPDATE( discoboy )
 {
-	discoboy_state *state = (discoboy_state *)screen->machine->driver_data;
+	discoboy_state *state = screen->machine->driver_data<discoboy_state>();
 	UINT16 x, y;
 	int i;
 	int count = 0;
@@ -183,7 +182,7 @@ static VIDEO_UPDATE( discoboy )
 #ifdef UNUSED_FUNCTION
 void discoboy_setrombank( running_machine *machine, UINT8 data )
 {
-	UINT8 *ROM = memory_region(machine, "maincpu");
+	UINT8 *ROM = machine->region("maincpu")->base();
 	data &= 0x2f;
 	memory_set_bankptr(space->machine, "bank1", &ROM[0x6000 + (data * 0x1000)] );
 }
@@ -191,21 +190,21 @@ void discoboy_setrombank( running_machine *machine, UINT8 data )
 
 static WRITE8_HANDLER( rambank_select_w )
 {
-	discoboy_state *state = (discoboy_state *)space->machine->driver_data;
+	discoboy_state *state = space->machine->driver_data<discoboy_state>();
 	state->ram_bank = data;
 	if (data &= 0x83) logerror("rambank_select_w !!!!!");
 }
 
 static WRITE8_HANDLER( discoboy_port_00_w )
 {
-	discoboy_state *state = (discoboy_state *)space->machine->driver_data;
+	discoboy_state *state = space->machine->driver_data<discoboy_state>();
 	if (data & 0xfe) logerror("unk discoboy_port_00_w %02x\n",data);
 	state->port_00 = data;
 }
 
 static WRITE8_HANDLER( discoboy_port_01_w )
 {
-	discoboy_state *state = (discoboy_state *)space->machine->driver_data;
+	discoboy_state *state = space->machine->driver_data<discoboy_state>();
 
 	// 00 10 20 30 during gameplay  1,2,3 other times?? title screen bit 0x40 toggle
 	//printf("unk discoboy_port_01_w %02x\n",data);
@@ -217,7 +216,7 @@ static WRITE8_HANDLER( discoboy_port_01_w )
 
 static WRITE8_HANDLER( discoboy_port_03_w ) // sfx? (to sound cpu)
 {
-	discoboy_state *state = (discoboy_state *)space->machine->driver_data;
+	discoboy_state *state = space->machine->driver_data<discoboy_state>();
 	//  printf("unk discoboy_port_03_w %02x\n", data);
 	//  cpu_set_input_line(state->audiocpu, INPUT_LINE_NMI, HOLD_LINE);
 	soundlatch_w(space, 0, data);
@@ -233,7 +232,7 @@ static WRITE8_HANDLER( discoboy_port_06_w )
 
 static WRITE8_HANDLER( rambank_w )
 {
-	discoboy_state *state = (discoboy_state *)space->machine->driver_data;
+	discoboy_state *state = space->machine->driver_data<discoboy_state>();
 
 	if (state->ram_bank & 0x20)
 		state->ram_2[offset] = data;
@@ -243,7 +242,7 @@ static WRITE8_HANDLER( rambank_w )
 
 static READ8_HANDLER( rambank_r )
 {
-	discoboy_state *state = (discoboy_state *)space->machine->driver_data;
+	discoboy_state *state = space->machine->driver_data<discoboy_state>();
 
 	if (state->ram_bank & 0x20)
 		return state->ram_2[offset];
@@ -253,7 +252,7 @@ static READ8_HANDLER( rambank_r )
 
 static READ8_HANDLER( rambank2_r )
 {
-	discoboy_state *state = (discoboy_state *)space->machine->driver_data;
+	discoboy_state *state = space->machine->driver_data<discoboy_state>();
 
 	if (state->port_00 == 0x00)
 		return state->ram_3[offset];
@@ -262,12 +261,12 @@ static READ8_HANDLER( rambank2_r )
 	else
 		printf("unk rb2_r\n");
 
-	return mame_rand(space->machine);
+	return space->machine->rand();
 }
 
 static WRITE8_HANDLER( rambank2_w )
 {
-	discoboy_state *state = (discoboy_state *)space->machine->driver_data;
+	discoboy_state *state = space->machine->driver_data<discoboy_state>();
 
 	if (state->port_00 == 0x00)
 		state->ram_3[offset] = data;
@@ -279,13 +278,13 @@ static WRITE8_HANDLER( rambank2_w )
 
 static READ8_HANDLER( discoboy_ram_att_r )
 {
-	discoboy_state *state = (discoboy_state *)space->machine->driver_data;
+	discoboy_state *state = space->machine->driver_data<discoboy_state>();
 	return state->ram_att[offset];
 }
 
 static WRITE8_HANDLER( discoboy_ram_att_w )
 {
-	discoboy_state *state = (discoboy_state *)space->machine->driver_data;
+	discoboy_state *state = space->machine->driver_data<discoboy_state>();
 	state->ram_att[offset] = data;
 }
 
@@ -322,9 +321,9 @@ ADDRESS_MAP_END
 //  state->adpcm_data = data;
 //}
 
-static void splash_msm5205_int( running_device *device )
+static void splash_msm5205_int( device_t *device )
 {
-	discoboy_state *state = (discoboy_state *)device->machine->driver_data;
+	discoboy_state *state = device->machine->driver_data<discoboy_state>();
 	msm5205_data_w(device, state->adpcm_data >> 4);
 //  state->adpcm_data = (state->adpcm_data << 4) & 0xf0;
 }
@@ -443,7 +442,7 @@ static const msm5205_interface discoboy_msm5205_interface =
 
 static MACHINE_START( discoboy )
 {
-	discoboy_state *state = (discoboy_state *)machine->driver_data;
+	discoboy_state *state = machine->driver_data<discoboy_state>();
 
 	state->audiocpu = machine->device("audiocpu");
 
@@ -455,7 +454,7 @@ static MACHINE_START( discoboy )
 
 static MACHINE_RESET( discoboy )
 {
-	discoboy_state *state = (discoboy_state *)machine->driver_data;
+	discoboy_state *state = machine->driver_data<discoboy_state>();
 
 	state->ram_bank = 0;
 	state->port_00 = 0;
@@ -463,51 +462,48 @@ static MACHINE_RESET( discoboy )
 	state->adpcm_data = 0x80;
 }
 
-static MACHINE_DRIVER_START( discoboy )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(discoboy_state)
+static MACHINE_CONFIG_START( discoboy, discoboy_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80,12000000/2)		 /* 6 MHz? */
-	MDRV_CPU_PROGRAM_MAP(discoboy_map)
-	MDRV_CPU_IO_MAP(io_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80,12000000/2)		 /* 6 MHz? */
+	MCFG_CPU_PROGRAM_MAP(discoboy_map)
+	MCFG_CPU_IO_MAP(io_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80,10000000/2)		 /* 5 MHz? */
-	MDRV_CPU_PROGRAM_MAP(sound_map)
-//  MDRV_CPU_IO_MAP(sound_io_map)
-//  MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
-	MDRV_CPU_VBLANK_INT_HACK(nmi_line_pulse,32)
+	MCFG_CPU_ADD("audiocpu", Z80,10000000/2)		 /* 5 MHz? */
+	MCFG_CPU_PROGRAM_MAP(sound_map)
+//  MCFG_CPU_IO_MAP(sound_io_map)
+//  MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_VBLANK_INT_HACK(nmi_line_pulse,32)
 
-	MDRV_MACHINE_START( discoboy )
-	MDRV_MACHINE_RESET( discoboy )
+	MCFG_MACHINE_START( discoboy )
+	MCFG_MACHINE_RESET( discoboy )
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_SIZE(512, 256)
-	MDRV_SCREEN_VISIBLE_AREA(8*8, 512-1-8*8, 0+8, 256-1-8)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_SIZE(512, 256)
+	MCFG_SCREEN_VISIBLE_AREA(8*8, 512-1-8*8, 0+8, 256-1-8)
 
-	MDRV_GFXDECODE(discoboy)
-	MDRV_PALETTE_LENGTH(0x1000)
+	MCFG_GFXDECODE(discoboy)
+	MCFG_PALETTE_LENGTH(0x1000)
 
-	MDRV_VIDEO_START(discoboy)
-	MDRV_VIDEO_UPDATE(discoboy)
+	MCFG_VIDEO_START(discoboy)
+	MCFG_VIDEO_UPDATE(discoboy)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM3812, 2500000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.60)
+	MCFG_SOUND_ADD("ymsnd", YM3812, 2500000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.60)
 
 
-	MDRV_SOUND_ADD("msm", MSM5205, 384000) // ???? unknown
-	MDRV_SOUND_CONFIG(discoboy_msm5205_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("msm", MSM5205, 384000) // ???? unknown
+	MCFG_SOUND_CONFIG(discoboy_msm5205_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
+MACHINE_CONFIG_END
 
 
 ROM_START( discoboy )
@@ -539,8 +535,8 @@ ROM_END
 
 static DRIVER_INIT( discoboy )
 {
-	discoboy_state *state = (discoboy_state *)machine->driver_data;
-	UINT8 *ROM = memory_region(machine, "maincpu");
+	discoboy_state *state = machine->driver_data<discoboy_state>();
+	UINT8 *ROM = machine->region("maincpu")->base();
 
 	state->ram_1 = auto_alloc_array(machine, UINT8, 0x800);
 	state->ram_2 = auto_alloc_array(machine, UINT8, 0x800);

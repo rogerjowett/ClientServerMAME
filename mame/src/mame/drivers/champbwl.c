@@ -153,12 +153,13 @@ Notes:
 #include "emu.h"
 #include "cpu/z80/z80.h"
 #include "sound/x1_010.h"
+#include "machine/nvram.h"
 #include "includes/tnzs.h"
 
 
 static READ8_HANDLER( trackball_r )
 {
-	tnzs_state *state = (tnzs_state *)space->machine->driver_data;
+	tnzs_state *state = space->machine->driver_data<tnzs_state>();
 	UINT8 ret;
 	UINT8 port4 = input_port_read(space->machine, "FAKEX");
 	UINT8 port5 = input_port_read(space->machine, "FAKEY");
@@ -184,7 +185,7 @@ static WRITE8_HANDLER( champbwl_misc_w )
 
 static WRITE8_HANDLER( champbwl_objctrl_w )
 {
-	tnzs_state *state = (tnzs_state *)space->machine->driver_data;
+	tnzs_state *state = space->machine->driver_data<tnzs_state>();
 	if(offset != 0)
 		data ^= 0xff;
 
@@ -194,7 +195,7 @@ static WRITE8_HANDLER( champbwl_objctrl_w )
 static ADDRESS_MAP_START( champbwl_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x3fff) AM_ROM AM_REGION("maincpu", 0x10000)
 	AM_RANGE(0x4000, 0x7fff) AM_ROMBANK("bank1")
-	AM_RANGE(0x8000, 0x87ff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0x8000, 0x87ff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0xa000, 0xbfff) AM_RAM AM_BASE_MEMBER(tnzs_state, objram)
 	AM_RANGE(0xc000, 0xdfff) AM_DEVREADWRITE("x1snd", seta_sound_r, seta_sound_w)
 	AM_RANGE(0xe000, 0xe1ff) AM_RAM AM_BASE_MEMBER(tnzs_state, vdcram)
@@ -332,8 +333,8 @@ static const x1_010_interface champbwl_sound_intf =
 
 static MACHINE_START( champbwl )
 {
-	tnzs_state *state = (tnzs_state *)machine->driver_data;
-	UINT8 *ROM = memory_region(machine, "maincpu");
+	tnzs_state *state = machine->driver_data<tnzs_state>();
+	UINT8 *ROM = machine->region("maincpu")->base();
 
 	state->mcu = NULL;
 
@@ -345,7 +346,7 @@ static MACHINE_START( champbwl )
 
 static MACHINE_RESET( champbwl )
 {
-	tnzs_state *state = (tnzs_state *)machine->driver_data;
+	tnzs_state *state = machine->driver_data<tnzs_state>();
 
 	state->screenflip = 0;
 	state->mcu_type = -1;
@@ -354,44 +355,41 @@ static MACHINE_RESET( champbwl )
 
 }
 
-static MACHINE_DRIVER_START( champbwl )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(tnzs_state)
+static MACHINE_CONFIG_START( champbwl, tnzs_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, 16000000/4) /* 4MHz */
-	MDRV_CPU_PROGRAM_MAP(champbwl_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80, 16000000/4) /* 4MHz */
+	MCFG_CPU_PROGRAM_MAP(champbwl_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
-	MDRV_MACHINE_START(champbwl)
-	MDRV_MACHINE_RESET(champbwl)
+	MCFG_MACHINE_START(champbwl)
+	MCFG_MACHINE_RESET(champbwl)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(57.5)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 48*8-1, 1*8, 31*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(57.5)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 48*8-1, 1*8, 31*8-1)
 
-	MDRV_GFXDECODE(champbwl)
-	MDRV_PALETTE_LENGTH(512)
+	MCFG_GFXDECODE(champbwl)
+	MCFG_PALETTE_LENGTH(512)
 
-	MDRV_PALETTE_INIT(arknoid2)
-	MDRV_VIDEO_UPDATE(tnzs)
-	MDRV_VIDEO_EOF(tnzs)
+	MCFG_PALETTE_INIT(arknoid2)
+	MCFG_VIDEO_UPDATE(tnzs)
+	MCFG_VIDEO_EOF(tnzs)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("x1snd", X1_010, 16000000)
-	MDRV_SOUND_CONFIG(champbwl_sound_intf)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("x1snd", X1_010, 16000000)
+	MCFG_SOUND_CONFIG(champbwl_sound_intf)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 ROM_START( champbwl )
 	ROM_REGION( 0x20000, "maincpu", 0 )		/* Z80 Code */

@@ -21,7 +21,7 @@ static READ8_HANDLER( citycon_in_r )
 
 static READ8_HANDLER( citycon_irq_ack_r )
 {
-	citycon_state *state = (citycon_state *)space->machine->driver_data;
+	citycon_state *state = space->machine->driver_data<citycon_state>();
 	cpu_set_input_line(state->maincpu, 0, CLEAR_LINE);
 
 	return 0;
@@ -189,7 +189,7 @@ static const ym2203_interface ym2203_config =
 
 static MACHINE_START( citycon )
 {
-	citycon_state *state = (citycon_state *)machine->driver_data;
+	citycon_state *state = machine->driver_data<citycon_state>();
 
 	state->maincpu = machine->device("maincpu");
 
@@ -198,57 +198,54 @@ static MACHINE_START( citycon )
 
 static MACHINE_RESET( citycon )
 {
-	citycon_state *state = (citycon_state *)machine->driver_data;
+	citycon_state *state = machine->driver_data<citycon_state>();
 
 	state->bg_image = 0;
 }
 
 
-static MACHINE_DRIVER_START( citycon )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(citycon_state)
+static MACHINE_CONFIG_START( citycon, citycon_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6809, 2048000)        /* 2.048 MHz ??? */
-	MDRV_CPU_PROGRAM_MAP(citycon_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_assert)
+	MCFG_CPU_ADD("maincpu", M6809, 2048000)        /* 2.048 MHz ??? */
+	MCFG_CPU_PROGRAM_MAP(citycon_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_assert)
 
-	MDRV_CPU_ADD("audiocpu", M6809, 640000)       /* 0.640 MHz ??? */
-	MDRV_CPU_PROGRAM_MAP(sound_map)
-//  MDRV_CPU_VBLANK_INT("screen", irq0_line_hold) //actually unused, probably it was during development
+	MCFG_CPU_ADD("audiocpu", M6809, 640000)       /* 0.640 MHz ??? */
+	MCFG_CPU_PROGRAM_MAP(sound_map)
+//  MCFG_CPU_VBLANK_INT("screen", irq0_line_hold) //actually unused, probably it was during development
 
-	MDRV_MACHINE_START(citycon)
-	MDRV_MACHINE_RESET(citycon)
+	MCFG_MACHINE_START(citycon)
+	MCFG_MACHINE_RESET(citycon)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(1*8, 31*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(1*8, 31*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(citycon)
-	MDRV_PALETTE_LENGTH(640+1024)	/* 640 real palette + 1024 virtual palette */
-	MDRV_PALETTE_INIT(all_black) /* guess */
+	MCFG_GFXDECODE(citycon)
+	MCFG_PALETTE_LENGTH(640+1024)	/* 640 real palette + 1024 virtual palette */
+	MCFG_PALETTE_INIT(all_black) /* guess */
 
-	MDRV_VIDEO_START(citycon)
-	MDRV_VIDEO_UPDATE(citycon)
+	MCFG_VIDEO_START(citycon)
+	MCFG_VIDEO_UPDATE(citycon)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("aysnd", AY8910, 1250000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
+	MCFG_SOUND_ADD("aysnd", AY8910, 1250000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
 
-	MDRV_SOUND_ADD("ymsnd", YM2203, 1250000)
-	MDRV_SOUND_CONFIG(ym2203_config)
-	MDRV_SOUND_ROUTE(0, "mono", 0.40)
-	MDRV_SOUND_ROUTE(1, "mono", 0.40)
-	MDRV_SOUND_ROUTE(2, "mono", 0.40)
-	MDRV_SOUND_ROUTE(3, "mono", 0.20)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM2203, 1250000)
+	MCFG_SOUND_CONFIG(ym2203_config)
+	MCFG_SOUND_ROUTE(0, "mono", 0.40)
+	MCFG_SOUND_ROUTE(1, "mono", 0.40)
+	MCFG_SOUND_ROUTE(2, "mono", 0.40)
+	MCFG_SOUND_ROUTE(3, "mono", 0.20)
+MACHINE_CONFIG_END
 
 
 
@@ -343,7 +340,7 @@ ROM_END
 
 static DRIVER_INIT( citycon )
 {
-	UINT8 *rom = memory_region(machine, "gfx1");
+	UINT8 *rom = machine->region("gfx1")->base();
 	int i;
 
 	/*

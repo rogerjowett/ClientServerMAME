@@ -249,7 +249,7 @@ static ADDRESS_MAP_START( asteroid_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x3a00, 0x3a00) AM_DEVWRITE("discrete", asteroid_thump_w)
 	AM_RANGE(0x3c00, 0x3c05) AM_DEVWRITE("discrete", asteroid_sounds_w)
 	AM_RANGE(0x3e00, 0x3e00) AM_DEVWRITE("discrete", asteroid_noise_reset_w)
-	AM_RANGE(0x4000, 0x47ff) AM_RAM AM_BASE(&vectorram) AM_SIZE(&vectorram_size) AM_REGION("maincpu", 0x4000)
+	AM_RANGE(0x4000, 0x47ff) AM_RAM AM_BASE(&avgdvg_vectorram) AM_SIZE(&avgdvg_vectorram_size) AM_REGION("maincpu", 0x4000)
 	AM_RANGE(0x5000, 0x57ff) AM_ROM						/* vector rom */
 	AM_RANGE(0x6800, 0x7fff) AM_ROM
 ADDRESS_MAP_END
@@ -275,7 +275,7 @@ static ADDRESS_MAP_START( astdelux_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x3c04, 0x3c04) AM_WRITE(astdelux_bank_switch_w)
 	AM_RANGE(0x3c05, 0x3c07) AM_WRITE(astdelux_coin_counter_w)
 	AM_RANGE(0x3e00, 0x3e00) AM_DEVWRITE("discrete", asteroid_noise_reset_w)
-	AM_RANGE(0x4000, 0x47ff) AM_RAM AM_BASE(&vectorram) AM_SIZE(&vectorram_size) AM_REGION("maincpu", 0x4000)
+	AM_RANGE(0x4000, 0x47ff) AM_RAM AM_BASE(&avgdvg_vectorram) AM_SIZE(&avgdvg_vectorram_size) AM_REGION("maincpu", 0x4000)
 	AM_RANGE(0x4800, 0x57ff) AM_ROM						/* vector rom */
 	AM_RANGE(0x6000, 0x7fff) AM_ROM
 ADDRESS_MAP_END
@@ -293,7 +293,7 @@ static ADDRESS_MAP_START( llander_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x3400, 0x3400) AM_WRITE(watchdog_reset_w)
 	AM_RANGE(0x3c00, 0x3c00) AM_DEVWRITE("discrete", llander_sounds_w)
 	AM_RANGE(0x3e00, 0x3e00) AM_DEVWRITE("discrete", llander_snd_reset_w)
-	AM_RANGE(0x4000, 0x47ff) AM_RAM AM_BASE(&vectorram) AM_SIZE(&vectorram_size) AM_REGION("maincpu", 0x4000)
+	AM_RANGE(0x4000, 0x47ff) AM_RAM AM_BASE(&avgdvg_vectorram) AM_SIZE(&avgdvg_vectorram_size) AM_REGION("maincpu", 0x4000)
 	AM_RANGE(0x4800, 0x5fff) AM_ROM						/* vector rom */
 	AM_RANGE(0x6000, 0x7fff) AM_ROM
 ADDRESS_MAP_END
@@ -609,82 +609,79 @@ static const pokey_interface pokey_config =
  *
  *************************************/
 
-static MACHINE_DRIVER_START( asteroid )
+static MACHINE_CONFIG_START( asteroid, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6502, MASTER_CLOCK/8)
-	MDRV_CPU_PROGRAM_MAP(asteroid_map)
-	MDRV_CPU_PERIODIC_INT(asteroid_interrupt, (double)MASTER_CLOCK/4096/12)
+	MCFG_CPU_ADD("maincpu", M6502, MASTER_CLOCK/8)
+	MCFG_CPU_PROGRAM_MAP(asteroid_map)
+	MCFG_CPU_PERIODIC_INT(asteroid_interrupt, (double)MASTER_CLOCK/4096/12)
 
-	MDRV_MACHINE_RESET(asteroid)
+	MCFG_MACHINE_RESET(asteroid)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", VECTOR)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_SIZE(400,300)
-	MDRV_SCREEN_VISIBLE_AREA(522, 1566, 394, 1182)
+	MCFG_SCREEN_ADD("screen", VECTOR)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_SIZE(400,300)
+	MCFG_SCREEN_VISIBLE_AREA(522, 1566, 394, 1182)
 
-	MDRV_VIDEO_START(dvg)
-	MDRV_VIDEO_UPDATE(vector)
-
-	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-
-	MDRV_SOUND_ADD("discrete", DISCRETE, 0)
-	MDRV_SOUND_CONFIG_DISCRETE(asteroid)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.4)
-MACHINE_DRIVER_END
-
-static MACHINE_DRIVER_START( asterock )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM(asteroid)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PERIODIC_INT(asterock_interrupt, (double)MASTER_CLOCK/4096/12)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( astdelux )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM(asteroid)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(astdelux_map)
-
-	MDRV_ATARIVGEAROM_ADD("earom")
+	MCFG_VIDEO_START(dvg)
+	MCFG_VIDEO_UPDATE(vector)
 
 	/* sound hardware */
-	MDRV_SOUND_REPLACE("discrete", DISCRETE, 0)
-	MDRV_SOUND_CONFIG_DISCRETE(astdelux)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("pokey", POKEY, MASTER_CLOCK/8)
-	MDRV_SOUND_CONFIG(pokey_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("discrete", DISCRETE, 0)
+	MCFG_SOUND_CONFIG_DISCRETE(asteroid)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.4)
+MACHINE_CONFIG_END
 
-
-static MACHINE_DRIVER_START( llander )
+static MACHINE_CONFIG_DERIVED( asterock, asteroid )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(asteroid)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(llander_map)
-	MDRV_CPU_PERIODIC_INT(llander_interrupt, (double)MASTER_CLOCK/4096/12)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PERIODIC_INT(asterock_interrupt, (double)MASTER_CLOCK/4096/12)
+MACHINE_CONFIG_END
 
-	MDRV_MACHINE_RESET(avgdvg)
 
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_REFRESH_RATE(40)
-	MDRV_SCREEN_VISIBLE_AREA(522, 1566, 270, 1070)
-	MDRV_VIDEO_START(dvg)
-	MDRV_VIDEO_UPDATE(vector)
+static MACHINE_CONFIG_DERIVED( astdelux, asteroid )
+
+	/* basic machine hardware */
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(astdelux_map)
+
+	MCFG_ATARIVGEAROM_ADD("earom")
 
 	/* sound hardware */
-	MDRV_SOUND_REPLACE("discrete", DISCRETE, 0)
-	MDRV_SOUND_CONFIG_DISCRETE(llander)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_REPLACE("discrete", DISCRETE, 0)
+	MCFG_SOUND_CONFIG_DISCRETE(astdelux)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+
+	MCFG_SOUND_ADD("pokey", POKEY, MASTER_CLOCK/8)
+	MCFG_SOUND_CONFIG(pokey_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( llander, asteroid )
+
+	/* basic machine hardware */
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(llander_map)
+	MCFG_CPU_PERIODIC_INT(llander_interrupt, (double)MASTER_CLOCK/4096/12)
+
+	MCFG_MACHINE_RESET(avgdvg)
+
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_REFRESH_RATE(40)
+	MCFG_SCREEN_VISIBLE_AREA(522, 1566, 270, 1070)
+	MCFG_VIDEO_START(dvg)
+	MCFG_VIDEO_UPDATE(vector)
+
+	/* sound hardware */
+	MCFG_SOUND_REPLACE("discrete", DISCRETE, 0)
+	MCFG_SOUND_CONFIG_DISCRETE(llander)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 

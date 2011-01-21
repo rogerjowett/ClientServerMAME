@@ -65,6 +65,17 @@ D.9B         [f99cac4b] /
 #include "deprecat.h"
 #include "audio/t5182.h"
 
+
+class panicr_state : public driver_device
+{
+public:
+	panicr_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
+
+	UINT8 *videoram;
+};
+
+
 #define MASTER_CLOCK	XTAL_16MHz
 #define SOUND_CLOCK		XTAL_14_31818MHz
 #define TC15_CLOCK		XTAL_12MHz
@@ -132,8 +143,8 @@ static TILE_GET_INFO( get_bgtile_info )
 {
 	int code,attr;
 
-	code=memory_region(machine, "user1")[tile_index];
-	attr=memory_region(machine, "user2")[tile_index];
+	code=machine->region("user1")->base()[tile_index];
+	attr=machine->region("user2")->base()[tile_index];
 	code+=((attr&7)<<8);
 	SET_TILE_INFO(
 		1,
@@ -144,8 +155,10 @@ static TILE_GET_INFO( get_bgtile_info )
 
 static TILE_GET_INFO( get_txttile_info )
 {
-	int code=machine->generic.videoram.u8[tile_index*4];
-	int attr=machine->generic.videoram.u8[tile_index*4+2];
+	panicr_state *state = machine->driver_data<panicr_state>();
+	UINT8 *videoram = state->videoram;
+	int code=videoram[tile_index*4];
+	int attr=videoram[tile_index*4+2];
 	int color = attr & 0x07;
 
 	tileinfo->group = color;
@@ -177,7 +190,7 @@ static ADDRESS_MAP_START( panicr_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x02000, 0x02fff) AM_RAM AM_BASE_GENERIC(spriteram)
 	AM_RANGE(0x03000, 0x03fff) AM_RAM
 	AM_RANGE(0x08000, 0x0bfff) AM_RAM AM_REGION("user3", 0) //attribue map ?
-	AM_RANGE(0x0c000, 0x0cfff) AM_RAM AM_BASE_GENERIC(videoram)
+	AM_RANGE(0x0c000, 0x0cfff) AM_RAM AM_BASE_MEMBER(panicr_state, videoram)
 	AM_RANGE(0x0d000, 0x0d000) AM_WRITE(t5182_sound_irq_w)
 	AM_RANGE(0x0d002, 0x0d002) AM_READ(t5182_sharedram_semaphore_snd_r)
 	AM_RANGE(0x0d004, 0x0d004) AM_WRITE(t5182_sharedram_semaphore_main_acquire_w)
@@ -361,38 +374,38 @@ static GFXDECODE_START( panicr )
 	GFXDECODE_ENTRY( "gfx3", 0, spritelayout, 0x200, 16 )
 GFXDECODE_END
 
-static MACHINE_DRIVER_START( panicr )
-	MDRV_CPU_ADD("maincpu", V20,MASTER_CLOCK/2) /* Sony 8623h9 CXQ70116D-8 (V20 compatible) */
-	MDRV_CPU_PROGRAM_MAP(panicr_map)
-	MDRV_CPU_VBLANK_INT_HACK(panicr_interrupt,2)
+static MACHINE_CONFIG_START( panicr, panicr_state )
+	MCFG_CPU_ADD("maincpu", V20,MASTER_CLOCK/2) /* Sony 8623h9 CXQ70116D-8 (V20 compatible) */
+	MCFG_CPU_PROGRAM_MAP(panicr_map)
+	MCFG_CPU_VBLANK_INT_HACK(panicr_interrupt,2)
 
-	MDRV_CPU_ADD(CPUTAG_T5182,Z80,SOUND_CLOCK/4)	/* 3.579545 MHz */
-	MDRV_CPU_PROGRAM_MAP(t5182_map)
-	MDRV_CPU_IO_MAP(t5182_io)
+	MCFG_CPU_ADD(CPUTAG_T5182,Z80,SOUND_CLOCK/4)	/* 3.579545 MHz */
+	MCFG_CPU_PROGRAM_MAP(t5182_map)
+	MCFG_CPU_IO_MAP(t5182_io)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(panicr)
-	MDRV_PALETTE_LENGTH(256*3)
-	MDRV_PALETTE_INIT(panicr)
+	MCFG_GFXDECODE(panicr)
+	MCFG_PALETTE_LENGTH(256*3)
+	MCFG_PALETTE_INIT(panicr)
 
-	MDRV_VIDEO_START(panicr)
-	MDRV_VIDEO_UPDATE(panicr)
+	MCFG_VIDEO_START(panicr)
+	MCFG_VIDEO_UPDATE(panicr)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, SOUND_CLOCK/4)	/* 3.579545 MHz */
-	MDRV_SOUND_CONFIG(t5182_ym2151_interface)
-	MDRV_SOUND_ROUTE(0, "mono", 1.0)
-	MDRV_SOUND_ROUTE(1, "mono", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM2151, SOUND_CLOCK/4)	/* 3.579545 MHz */
+	MCFG_SOUND_CONFIG(t5182_ym2151_interface)
+	MCFG_SOUND_ROUTE(0, "mono", 1.0)
+	MCFG_SOUND_ROUTE(1, "mono", 1.0)
 
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
 ROM_START( panicr )
 	ROM_REGION( 0x200000, "maincpu", 0 ) /* v20 main cpu */
@@ -444,8 +457,8 @@ static DRIVER_INIT( panicr )
 	int size;
 	int i;
 
-	rom = memory_region(machine, "gfx1");
-	size = memory_region_length(machine, "gfx1");
+	rom = machine->region("gfx1")->base();
+	size = machine->region("gfx1")->bytes();
 
 	// text data lines
 	for (i = 0;i < size/2;i++)
@@ -467,8 +480,8 @@ static DRIVER_INIT( panicr )
 	}
 
 
-	rom = memory_region(machine, "gfx2");
-	size = memory_region_length(machine, "gfx2");
+	rom = machine->region("gfx2")->base();
+	size = machine->region("gfx2")->bytes();
 
 	// tiles data lines
 	for (i = 0;i < size/4;i++)
@@ -494,8 +507,8 @@ static DRIVER_INIT( panicr )
 	}
 
 
-	rom = memory_region(machine, "gfx3");
-	size = memory_region_length(machine, "gfx3");
+	rom = machine->region("gfx3")->base();
+	size = machine->region("gfx3")->bytes();
 
 	// sprites data lines
 	for (i = 0;i < size/2;i++)
@@ -520,8 +533,8 @@ static DRIVER_INIT( panicr )
 
 	//rearrange  bg tilemaps a bit....
 
-	rom = memory_region(machine, "user1");
-	size = memory_region_length(machine, "user1");
+	rom = machine->region("user1")->base();
+	size = machine->region("user1")->bytes();
 	memcpy(buf,rom, size);
 
 	{
@@ -533,8 +546,8 @@ static DRIVER_INIT( panicr )
 			}
 	}
 
-	rom = memory_region(machine, "user2");
-	size = memory_region_length(machine, "user2");
+	rom = machine->region("user2")->base();
+	size = machine->region("user2")->bytes();
 
 	memcpy(buf,rom, size);
 	{

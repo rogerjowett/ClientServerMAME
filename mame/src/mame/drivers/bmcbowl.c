@@ -173,7 +173,7 @@ static VIDEO_UPDATE( bmcbowl )
 
 static READ16_HANDLER( bmc_random_read )
 {
-	return mame_rand(space->machine);
+	return space->machine->rand();
 }
 
 static READ16_HANDLER( bmc_protection_r )
@@ -190,7 +190,7 @@ static READ16_HANDLER( bmc_protection_r )
 			break;
 	}
 	logerror("Protection read @ %X\n",cpu_get_previouspc(space->cpu));
-	return mame_rand(space->machine);
+	return space->machine->rand();
 }
 
 static WRITE16_HANDLER( bmc_RAMDAC_offset_w )
@@ -210,18 +210,6 @@ static WRITE16_HANDLER( scroll_w )
 	//TODO - scroll
 }
 
-
-static READ16_HANDLER(bmcbowl_via_r)
-{
-	running_device *via_0 = space->machine->device("via6522_0");
-	return via_r(via_0, offset);
-}
-
-static WRITE16_HANDLER(bmcbowl_via_w)
-{
-	running_device *via_0 = space->machine->device("via6522_0");
-	via_w(via_0, offset, data);
-}
 
 static READ8_DEVICE_HANDLER(via_b_in)
 {
@@ -245,7 +233,7 @@ static WRITE8_DEVICE_HANDLER(via_ca2_out)
 }
 
 
-static void via_irq(running_device *device, int state)
+static void via_irq(device_t *device, int state)
 {
 	//used
 }
@@ -333,7 +321,7 @@ static ADDRESS_MAP_START( bmcbowl_mem, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x091000, 0x091001) AM_WRITENOP
 	AM_RANGE(0x091800, 0x091801) AM_WRITE(scroll_w)
 
-	AM_RANGE(0x092000, 0x09201f) AM_READWRITE(bmcbowl_via_r, bmcbowl_via_w)
+	AM_RANGE(0x092000, 0x09201f) AM_DEVREADWRITE8_MODERN("via6522_0", via6522_device, read, write, 0x00ff)
 
 	AM_RANGE(0x093000, 0x093003) AM_WRITENOP  // related to music
 	AM_RANGE(0x092800, 0x092803) AM_DEVWRITE8("aysnd", ay8910_data_address_w, 0xff00)
@@ -346,7 +334,7 @@ static ADDRESS_MAP_START( bmcbowl_mem, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x1f0000, 0x1fffff) AM_RAM
 	AM_RANGE(0x200000, 0x21ffff) AM_RAM AM_BASE(&bmcbowl_vid2)
 
-	AM_RANGE(0x28c000, 0x28c001) AM_DEVREADWRITE8("oki", okim6295_r, okim6295_w, 0xff00)
+	AM_RANGE(0x28c000, 0x28c001) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0xff00)
 
 	/* protection device*/
 	AM_RANGE(0x30c000, 0x30c001) AM_WRITENOP
@@ -402,7 +390,7 @@ static INPUT_PORTS_START( bmcbowl )
 	PORT_DIPSETTING(    0x10, DEF_STR( Off ) )
 	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
 
-	PORT_DIPNAME( 0x40, 0x00, "DSW2 4" )
+	PORT_DIPNAME( 0x40, 0x00, "DSW2 2" )
 	PORT_DIPSETTING(    0x040, DEF_STR( Off ) )
 	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
 	PORT_DIPNAME( 0x80, 0x00, "DSW2 1" )
@@ -492,41 +480,41 @@ static INTERRUPT_GEN( bmc_interrupt )
 		cpu_set_input_line(device, 2, HOLD_LINE);
 }
 
-static MACHINE_DRIVER_START( bmcbowl )
-	MDRV_CPU_ADD("maincpu", M68000, 21477270/2 )
-	MDRV_CPU_PROGRAM_MAP(bmcbowl_mem)
-	MDRV_CPU_VBLANK_INT_HACK(bmc_interrupt,2)
+static MACHINE_CONFIG_START( bmcbowl, driver_device )
+	MCFG_CPU_ADD("maincpu", M68000, 21477270/2 )
+	MCFG_CPU_PROGRAM_MAP(bmcbowl_mem)
+	MCFG_CPU_VBLANK_INT_HACK(bmc_interrupt,2)
 
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(35*8, 30*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 35*8-1, 0*8, 29*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(35*8, 30*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 35*8-1, 0*8, 29*8-1)
 
-	MDRV_PALETTE_LENGTH(256)
+	MCFG_PALETTE_LENGTH(256)
 
-	MDRV_VIDEO_START(bmcbowl)
-	MDRV_VIDEO_UPDATE(bmcbowl)
+	MCFG_VIDEO_START(bmcbowl)
+	MCFG_VIDEO_UPDATE(bmcbowl)
 
-	MDRV_NVRAM_HANDLER(bmcbowl)
-	MDRV_MACHINE_RESET(bmcbowl)
+	MCFG_NVRAM_HANDLER(bmcbowl)
+	MCFG_MACHINE_RESET(bmcbowl)
 
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("aysnd", AY8910, 3579545/2)
-	MDRV_SOUND_CONFIG(ay8910_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
+	MCFG_SOUND_ADD("aysnd", AY8910, 3579545/2)
+	MCFG_SOUND_CONFIG(ay8910_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
 
-	MDRV_OKIM6295_ADD("oki", 1122000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
+	MCFG_OKIM6295_ADD("oki", 1122000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.50)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.50)
 
 	/* via */
-	MDRV_VIA6522_ADD("via6522_0", 1000000, via_interface)
-MACHINE_DRIVER_END
+	MCFG_VIA6522_ADD("via6522_0", 1000000, via_interface)
+MACHINE_CONFIG_END
 
 ROM_START( bmcbowl )
 	ROM_REGION( 0x200000, "maincpu", 0 ) /* 68000 Code */

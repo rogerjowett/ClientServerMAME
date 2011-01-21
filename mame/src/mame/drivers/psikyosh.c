@@ -354,7 +354,7 @@ static INTERRUPT_GEN(psikyosh_interrupt)
 // bit 0 controls game speed on readback, mechanism is a little weird
 static WRITE32_HANDLER( psikyosh_irqctrl_w )
 {
-	psikyosh_state *state = (psikyosh_state *)space->machine->driver_data;
+	psikyosh_state *state = space->machine->driver_data<psikyosh_state>();
 	if (!(data & 0x00c00000))
 	{
 		cpu_set_input_line(state->maincpu, 4, CLEAR_LINE);
@@ -363,7 +363,7 @@ static WRITE32_HANDLER( psikyosh_irqctrl_w )
 
 static WRITE32_HANDLER( paletteram32_RRRRRRRRGGGGGGGGBBBBBBBBxxxxxxxx_dword_w )
 {
-	psikyosh_state *state = (psikyosh_state *)space->machine->driver_data;
+	psikyosh_state *state = space->machine->driver_data<psikyosh_state>();
 	int r, g, b;
 	COMBINE_DATA(&state->paletteram[offset]);
 
@@ -376,7 +376,7 @@ static WRITE32_HANDLER( paletteram32_RRRRRRRRGGGGGGGGBBBBBBBBxxxxxxxx_dword_w )
 
 static WRITE32_HANDLER( psikyosh_vidregs_w )
 {
-	psikyosh_state *state = (psikyosh_state *)space->machine->driver_data;
+	psikyosh_state *state = space->machine->driver_data<psikyosh_state>();
 	COMBINE_DATA(&state->vidregs[offset]);
 
 	if (offset == 4) /* Configure bank for gfx test */
@@ -388,8 +388,8 @@ static WRITE32_HANDLER( psikyosh_vidregs_w )
 
 static READ32_HANDLER( psh_sample_r ) /* Send sample data for test */
 {
-	psikyosh_state *state = (psikyosh_state *)space->machine->driver_data;
-	UINT8 *ROM = memory_region(space->machine, "ymf");
+	psikyosh_state *state = space->machine->driver_data<psikyosh_state>();
+	UINT8 *ROM = space->machine->region("ymf")->base();
 
 	return ROM[state->sample_offs++] << 16;
 }
@@ -786,9 +786,9 @@ static INPUT_PORTS_START( mjgtaste )
 INPUT_PORTS_END
 
 
-static void irqhandler(running_device *device, int linestate)
+static void irqhandler(device_t *device, int linestate)
 {
-	psikyosh_state *state = (psikyosh_state *)device->machine->driver_data;
+	psikyosh_state *state = device->machine->driver_data<psikyosh_state>();
 	cpu_set_input_line(state->maincpu, 12, linestate ? ASSERT_LINE : CLEAR_LINE);
 }
 
@@ -800,77 +800,74 @@ static const ymf278b_interface ymf278b_config =
 
 static MACHINE_START( psikyosh )
 {
-	psikyosh_state *state = (psikyosh_state *)machine->driver_data;
+	psikyosh_state *state = machine->driver_data<psikyosh_state>();
 
 	state->maincpu = machine->device("maincpu");
 
-	memory_configure_bank(machine, "bank2", 0, 0x1000, memory_region(machine, "gfx1"), 0x20000);
+	memory_configure_bank(machine, "bank2", 0, 0x1000, machine->region("gfx1")->base(), 0x20000);
 
 	state->sample_offs = 0;
 	state_save_register_global(machine, state->sample_offs);
 }
 
 
-static MACHINE_DRIVER_START( psikyo3v1 )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(psikyosh_state)
+static MACHINE_CONFIG_START( psikyo3v1, psikyosh_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", SH2, MASTER_CLOCK/2)
-	MDRV_CPU_PROGRAM_MAP(ps3v1_map)
-	MDRV_CPU_VBLANK_INT("screen", psikyosh_interrupt)
+	MCFG_CPU_ADD("maincpu", SH2, MASTER_CLOCK/2)
+	MCFG_CPU_PROGRAM_MAP(ps3v1_map)
+	MCFG_CPU_VBLANK_INT("screen", psikyosh_interrupt)
 
-	MDRV_MACHINE_START(psikyosh)
+	MCFG_MACHINE_START(psikyosh)
 
-	MDRV_EEPROM_ADD("eeprom", eeprom_interface_93C56)
-	MDRV_EEPROM_DEFAULT_VALUE(0)
+	MCFG_EEPROM_ADD("eeprom", eeprom_interface_93C56)
+	MCFG_EEPROM_DEFAULT_VALUE(0)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_BUFFERS_SPRITERAM ) /* If using alpha */
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_BUFFERS_SPRITERAM ) /* If using alpha */
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0, 40*8-1, 0, 28*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0, 40*8-1, 0, 28*8-1)
 
-	MDRV_GFXDECODE(psikyosh)
-	MDRV_PALETTE_LENGTH(0x5000/4)
+	MCFG_GFXDECODE(psikyosh)
+	MCFG_PALETTE_LENGTH(0x5000/4)
 
-	MDRV_VIDEO_START(psikyosh)
-	MDRV_VIDEO_EOF(psikyosh)
-	MDRV_VIDEO_UPDATE(psikyosh)
+	MCFG_VIDEO_START(psikyosh)
+	MCFG_VIDEO_EOF(psikyosh)
+	MCFG_VIDEO_UPDATE(psikyosh)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymf", YMF278B, MASTER_CLOCK/2)
-	MDRV_SOUND_CONFIG(ymf278b_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymf", YMF278B, MASTER_CLOCK/2)
+	MCFG_SOUND_CONFIG(ymf278b_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( psikyo5 )
+static MACHINE_CONFIG_DERIVED( psikyo5, psikyo3v1 )
+
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(psikyo3v1)
 
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(ps5_map)
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(ps5_map)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( psikyo5_240 )
+static MACHINE_CONFIG_DERIVED( psikyo5_240, psikyo3v1 )
+
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(psikyo3v1)
 
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(ps5_map)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(ps5_map)
 
 	/* Ideally this would be driven off the video register. However, it doesn't changeat runtime and MAME will pick a better screen resolution if it knows upfront */
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_VISIBLE_AREA(0, 40*8-1, 0, 30*8-1)
-MACHINE_DRIVER_END
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_VISIBLE_AREA(0, 40*8-1, 0, 30*8-1)
+MACHINE_CONFIG_END
 
 
 /* PS3 */
@@ -1206,7 +1203,7 @@ static DRIVER_INIT( s1945ii )
 
 static DRIVER_INIT( daraku )
 {
-	UINT8 *RAM = memory_region(machine, "maincpu");
+	UINT8 *RAM = machine->region("maincpu")->base();
 	memory_set_bankptr(machine, "bank1", &RAM[0x100000]);
 	sh2drc_set_options(machine->device("maincpu"), SH2DRC_FASTEST_OPTIONS);
 }
@@ -1218,14 +1215,14 @@ static DRIVER_INIT( sbomberb )
 
 static DRIVER_INIT( gunbird2 )
 {
-	UINT8 *RAM = memory_region(machine, "maincpu");
+	UINT8 *RAM = machine->region("maincpu")->base();
 	memory_set_bankptr(machine, "bank1", &RAM[0x100000]);
 	sh2drc_set_options(machine->device("maincpu"), SH2DRC_FASTEST_OPTIONS);
 }
 
 static DRIVER_INIT( s1945iii )
 {
-	UINT8 *RAM = memory_region(machine, "maincpu");
+	UINT8 *RAM = machine->region("maincpu")->base();
 	memory_set_bankptr(machine, "bank1", &RAM[0x100000]);
 	sh2drc_set_options(machine->device("maincpu"), SH2DRC_FASTEST_OPTIONS);
 }

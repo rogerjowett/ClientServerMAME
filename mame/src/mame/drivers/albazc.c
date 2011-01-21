@@ -14,12 +14,11 @@ TODO:
 #include "cpu/z80/z80.h"
 #include "sound/ay8910.h"
 
-class albazc_state
+class albazc_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, albazc_state(machine)); }
-
-	albazc_state(running_machine &machine) { }
+	albazc_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* video-related */
 	UINT8 *  spriteram1;
@@ -54,7 +53,7 @@ static VIDEO_START( hanaroku )
 
 static void draw_sprites( running_machine *machine, bitmap_t *bitmap, const rectangle *cliprect )
 {
-	albazc_state *state = (albazc_state *)machine->driver_data;
+	albazc_state *state = machine->driver_data<albazc_state>();
 	int i;
 
 	for (i = 511; i >= 0; i--)
@@ -130,7 +129,7 @@ static WRITE8_HANDLER( hanaroku_out_2_w )
 
 static WRITE8_HANDLER( albazc_vregs_w )
 {
-	albazc_state *state = (albazc_state *)space->machine->driver_data;
+	albazc_state *state = space->machine->driver_data<albazc_state>();
 
 	#ifdef UNUSED_FUNCTION
 	{
@@ -258,37 +257,34 @@ static const ay8910_interface ay8910_config =
 };
 
 
-static MACHINE_DRIVER_START( hanaroku )
+static MACHINE_CONFIG_START( hanaroku, albazc_state )
 
-	/* driver data */
-	MDRV_DRIVER_DATA(albazc_state)
-
-	MDRV_CPU_ADD("maincpu", Z80,6000000)		 /* ? MHz */
-	MDRV_CPU_PROGRAM_MAP(hanaroku_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80,6000000)		 /* ? MHz */
+	MCFG_CPU_PROGRAM_MAP(hanaroku_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 64*8)
-	MDRV_SCREEN_VISIBLE_AREA(0, 48*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 64*8)
+	MCFG_SCREEN_VISIBLE_AREA(0, 48*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(hanaroku)
-	MDRV_PALETTE_LENGTH(0x200)
+	MCFG_GFXDECODE(hanaroku)
+	MCFG_PALETTE_LENGTH(0x200)
 
-	MDRV_PALETTE_INIT(hanaroku)
-	MDRV_VIDEO_START(hanaroku)
-	MDRV_VIDEO_UPDATE(hanaroku)
+	MCFG_PALETTE_INIT(hanaroku)
+	MCFG_VIDEO_START(hanaroku)
+	MCFG_VIDEO_UPDATE(hanaroku)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("aysnd", AY8910, 1500000) /* ? MHz */
-	MDRV_SOUND_CONFIG(ay8910_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("aysnd", AY8910, 1500000) /* ? MHz */
+	MCFG_SOUND_CONFIG(ay8910_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 
 ROM_START( hanaroku )

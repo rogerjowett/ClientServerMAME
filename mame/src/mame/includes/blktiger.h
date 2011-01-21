@@ -4,12 +4,11 @@
 
 ***************************************************************************/
 
-class blktiger_state
+class blktiger_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, blktiger_state(machine)); }
-
-	blktiger_state(running_machine &machine) { }
+	blktiger_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 * txvideoram;
@@ -30,8 +29,8 @@ public:
 	UINT8   z80_latch, i8751_latch;
 
 	/* devices */
-	running_device *mcu;
-	running_device *audiocpu;
+	device_t *mcu;
+	device_t *audiocpu;
 };
 
 

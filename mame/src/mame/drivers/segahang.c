@@ -92,7 +92,7 @@ static const ppi8255_interface hangon_ppi_intf[2] =
 
 static void hangon_generic_init( running_machine *machine )
 {
-	segas1x_state *state = (segas1x_state *)machine->driver_data;
+	segas1x_state *state = machine->driver_data<segas1x_state>();
 
 	/* reset the custom handlers and other pointers */
 	state->i8751_vblank_hook = NULL;
@@ -110,7 +110,7 @@ static void hangon_generic_init( running_machine *machine )
 
 static TIMER_CALLBACK( suspend_i8751 )
 {
-	segas1x_state *state = (segas1x_state *)machine->driver_data;
+	segas1x_state *state = machine->driver_data<segas1x_state>();
 	cpu_suspend(state->mcu, SUSPEND_REASON_DISABLE, 1);
 }
 
@@ -124,7 +124,7 @@ static TIMER_CALLBACK( suspend_i8751 )
 
 static MACHINE_RESET( hangon )
 {
-	segas1x_state *state = (segas1x_state *)machine->driver_data;
+	segas1x_state *state = machine->driver_data<segas1x_state>();
 
 	fd1094_machine_init(machine->device("sub"));
 
@@ -159,14 +159,14 @@ static INTERRUPT_GEN( hangon_irq )
 
 static TIMER_CALLBACK( delayed_ppi8255_w )
 {
-	segas1x_state *state = (segas1x_state *)machine->driver_data;
+	segas1x_state *state = machine->driver_data<segas1x_state>();
 	ppi8255_w(state->ppi8255_1, param >> 8, param & 0xff);
 }
 
 
 static READ16_HANDLER( hangon_io_r )
 {
-	segas1x_state *state = (segas1x_state *)space->machine->driver_data;
+	segas1x_state *state = space->machine->driver_data<segas1x_state>();
 
 	switch (offset & 0x3020/2)
 	{
@@ -196,7 +196,7 @@ static READ16_HANDLER( hangon_io_r )
 
 static WRITE16_HANDLER( hangon_io_w )
 {
-	segas1x_state *state = (segas1x_state *)space->machine->driver_data;
+	segas1x_state *state = space->machine->driver_data<segas1x_state>();
 
 	if (ACCESSING_BITS_0_7)
 		switch (offset & 0x3020/2)
@@ -221,7 +221,7 @@ static WRITE16_HANDLER( hangon_io_w )
 
 static READ16_HANDLER( sharrier_io_r )
 {
-	segas1x_state *state = (segas1x_state *)space->machine->driver_data;
+	segas1x_state *state = space->machine->driver_data<segas1x_state>();
 
 	switch (offset & 0x0030/2)
 	{
@@ -252,7 +252,7 @@ static READ16_HANDLER( sharrier_io_r )
 
 static WRITE16_HANDLER( sharrier_io_w )
 {
-	segas1x_state *state = (segas1x_state *)space->machine->driver_data;
+	segas1x_state *state = space->machine->driver_data<segas1x_state>();
 
 	if (ACCESSING_BITS_0_7)
 		switch (offset & 0x0030/2)
@@ -284,8 +284,8 @@ static WRITE16_HANDLER( sharrier_io_w )
 
 static WRITE8_DEVICE_HANDLER( sound_latch_w )
 {
-	segas1x_state *state = (segas1x_state *)device->machine->driver_data;
-	const address_space *space = cpu_get_address_space(state->maincpu, ADDRESS_SPACE_PROGRAM);
+	segas1x_state *state = device->machine->driver_data<segas1x_state>();
+	address_space *space = cpu_get_address_space(state->maincpu, ADDRESS_SPACE_PROGRAM);
 	soundlatch_w(space, offset, data);
 }
 
@@ -313,7 +313,7 @@ static WRITE8_DEVICE_HANDLER( video_lamps_w )
 
 static WRITE8_DEVICE_HANDLER( tilemap_sound_w )
 {
-	segas1x_state *state = (segas1x_state *)device->machine->driver_data;
+	segas1x_state *state = device->machine->driver_data<segas1x_state>();
 
 	/* Port C : Tilemap origin and audio mute */
 	/* D7 : Port A handshaking signal /OBF */
@@ -333,7 +333,7 @@ static WRITE8_DEVICE_HANDLER( tilemap_sound_w )
 
 static WRITE8_DEVICE_HANDLER( sub_control_adc_w )
 {
-	segas1x_state *state = (segas1x_state *)device->machine->driver_data;
+	segas1x_state *state = device->machine->driver_data<segas1x_state>();
 
 	/* Port A : S.CPU control and ADC channel select */
 	/* D6 : INTR line on second CPU */
@@ -371,7 +371,7 @@ static READ8_DEVICE_HANDLER( adc_status_r )
 
 static INTERRUPT_GEN( i8751_main_cpu_vblank )
 {
-	segas1x_state *state = (segas1x_state *)device->machine->driver_data;
+	segas1x_state *state = device->machine->driver_data<segas1x_state>();
 
 	/* if we have a fake 8751 handler, call it on VBLANK */
 	if (state->i8751_vblank_hook != NULL)
@@ -400,16 +400,16 @@ static void sharrier_i8751_sim(running_machine *machine)
  *
  *************************************/
 
-static void sound_irq(running_device *device, int irq)
+static void sound_irq(device_t *device, int irq)
 {
-	segas1x_state *state = (segas1x_state *)device->machine->driver_data;
+	segas1x_state *state = device->machine->driver_data<segas1x_state>();
 	cpu_set_input_line(state->soundcpu, 0, irq ? ASSERT_LINE : CLEAR_LINE);
 }
 
 
 static READ8_HANDLER( sound_data_r )
 {
-	segas1x_state *state = (segas1x_state *)space->machine->driver_data;
+	segas1x_state *state = space->machine->driver_data<segas1x_state>();
 
 	/* assert ACK */
 	ppi8255_set_port_c(state->ppi8255_1, 0x00);
@@ -913,141 +913,137 @@ GFXDECODE_END
  *
  *************************************/
 
-static MACHINE_DRIVER_START( hangon_base )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(segas1x_state)
+static MACHINE_CONFIG_START( hangon_base, segas1x_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, MASTER_CLOCK_25MHz/4)
-	MDRV_CPU_PROGRAM_MAP(hangon_map)
-	MDRV_CPU_VBLANK_INT("screen", irq4_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, MASTER_CLOCK_25MHz/4)
+	MCFG_CPU_PROGRAM_MAP(hangon_map)
+	MCFG_CPU_VBLANK_INT("screen", irq4_line_hold)
 
-	MDRV_CPU_ADD("sub", M68000, MASTER_CLOCK_25MHz/4)
-	MDRV_CPU_PROGRAM_MAP(sub_map)
+	MCFG_CPU_ADD("sub", M68000, MASTER_CLOCK_25MHz/4)
+	MCFG_CPU_PROGRAM_MAP(sub_map)
 
-	MDRV_MACHINE_RESET(hangon)
-	MDRV_QUANTUM_TIME(HZ(6000))
+	MCFG_MACHINE_RESET(hangon)
+	MCFG_QUANTUM_TIME(HZ(6000))
 
-	MDRV_PPI8255_ADD( "ppi8255_1", hangon_ppi_intf[0] )
-	MDRV_PPI8255_ADD( "ppi8255_2", hangon_ppi_intf[1] )
+	MCFG_PPI8255_ADD( "ppi8255_1", hangon_ppi_intf[0] )
+	MCFG_PPI8255_ADD( "ppi8255_2", hangon_ppi_intf[1] )
 
 	/* video hardware */
-	MDRV_GFXDECODE(segahang)
-	MDRV_PALETTE_LENGTH(2048*3)
+	MCFG_GFXDECODE(segahang)
+	MCFG_PALETTE_LENGTH(2048*3)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_RAW_PARAMS(MASTER_CLOCK_25MHz/4, 400, 0, 320, 262, 0, 224)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_RAW_PARAMS(MASTER_CLOCK_25MHz/4, 400, 0, 320, 262, 0, 224)
 
-	MDRV_VIDEO_START(hangon)
-	MDRV_VIDEO_UPDATE(hangon)
-MACHINE_DRIVER_END
+	MCFG_VIDEO_START(hangon)
+	MCFG_VIDEO_UPDATE(hangon)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( sharrier_base )
-	MDRV_IMPORT_FROM(hangon_base)
+static MACHINE_CONFIG_DERIVED( sharrier_base, hangon_base )
 
 	/* basic machine hardware */
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_CLOCK(MASTER_CLOCK_10MHz)
-	MDRV_CPU_PROGRAM_MAP(sharrier_map)
-	MDRV_CPU_VBLANK_INT("screen", i8751_main_cpu_vblank)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_CLOCK(MASTER_CLOCK_10MHz)
+	MCFG_CPU_PROGRAM_MAP(sharrier_map)
+	MCFG_CPU_VBLANK_INT("screen", i8751_main_cpu_vblank)
 
-	MDRV_CPU_MODIFY("sub")
-	MDRV_CPU_CLOCK(MASTER_CLOCK_10MHz)
+	MCFG_CPU_MODIFY("sub")
+	MCFG_CPU_CLOCK(MASTER_CLOCK_10MHz)
 
 	/* video hardware */
-	MDRV_VIDEO_START(sharrier)
-MACHINE_DRIVER_END
+	MCFG_VIDEO_START(sharrier)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( sound_board_2203 )
-
-	/* basic machine hardware */
-	MDRV_CPU_ADD("soundcpu", Z80, MASTER_CLOCK_8MHz/2)
-	MDRV_CPU_PROGRAM_MAP(sound_map_2203)
-	MDRV_CPU_IO_MAP(sound_portmap_2203)
-
-	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
-
-	MDRV_SOUND_ADD("ymsnd", YM2203, MASTER_CLOCK_8MHz/2)
-	MDRV_SOUND_CONFIG(ym2203_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker",  0.13)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.13)
-	MDRV_SOUND_ROUTE(1, "lspeaker",  0.13)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.13)
-	MDRV_SOUND_ROUTE(2, "lspeaker",  0.13)
-	MDRV_SOUND_ROUTE(2, "rspeaker", 0.13)
-	MDRV_SOUND_ROUTE(3, "lspeaker",  0.37)
-	MDRV_SOUND_ROUTE(3, "rspeaker", 0.37)
-
-	MDRV_SOUND_ADD("pcm", SEGAPCM, MASTER_CLOCK_8MHz)
-	MDRV_SOUND_CONFIG(segapcm_interface)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( sound_board_2203x2 )
+static MACHINE_CONFIG_FRAGMENT( sound_board_2203 )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("soundcpu", Z80, MASTER_CLOCK_8MHz/2)
-	MDRV_CPU_PROGRAM_MAP(sound_map_2151)
-	MDRV_CPU_IO_MAP(sound_portmap_2203x2)
+	MCFG_CPU_ADD("soundcpu", Z80, MASTER_CLOCK_8MHz/2)
+	MCFG_CPU_PROGRAM_MAP(sound_map_2203)
+	MCFG_CPU_IO_MAP(sound_portmap_2203)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ym1", YM2203, MASTER_CLOCK_8MHz/2)
-	MDRV_SOUND_CONFIG(ym2203_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker",  0.13)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.13)
-	MDRV_SOUND_ROUTE(1, "lspeaker",  0.13)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.13)
-	MDRV_SOUND_ROUTE(2, "lspeaker",  0.13)
-	MDRV_SOUND_ROUTE(2, "rspeaker", 0.13)
-	MDRV_SOUND_ROUTE(3, "lspeaker",  0.37)
-	MDRV_SOUND_ROUTE(3, "rspeaker", 0.37)
+	MCFG_SOUND_ADD("ymsnd", YM2203, MASTER_CLOCK_8MHz/2)
+	MCFG_SOUND_CONFIG(ym2203_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker",  0.13)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.13)
+	MCFG_SOUND_ROUTE(1, "lspeaker",  0.13)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.13)
+	MCFG_SOUND_ROUTE(2, "lspeaker",  0.13)
+	MCFG_SOUND_ROUTE(2, "rspeaker", 0.13)
+	MCFG_SOUND_ROUTE(3, "lspeaker",  0.37)
+	MCFG_SOUND_ROUTE(3, "rspeaker", 0.37)
 
-	MDRV_SOUND_ADD("ym2", YM2203, MASTER_CLOCK_8MHz/2)
-	MDRV_SOUND_ROUTE(0, "lspeaker",  0.13)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.13)
-	MDRV_SOUND_ROUTE(1, "lspeaker",  0.13)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.13)
-	MDRV_SOUND_ROUTE(2, "lspeaker",  0.13)
-	MDRV_SOUND_ROUTE(2, "rspeaker", 0.13)
-	MDRV_SOUND_ROUTE(3, "lspeaker",  0.37)
-	MDRV_SOUND_ROUTE(3, "rspeaker", 0.37)
-
-	MDRV_SOUND_ADD("pcm", SEGAPCM, MASTER_CLOCK_8MHz/2)
-	MDRV_SOUND_CONFIG(segapcm_interface)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("pcm", SEGAPCM, MASTER_CLOCK_8MHz)
+	MCFG_SOUND_CONFIG(segapcm_interface)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( sound_board_2151 )
+static MACHINE_CONFIG_FRAGMENT( sound_board_2203x2 )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("soundcpu", Z80, MASTER_CLOCK_8MHz/2)
-	MDRV_CPU_PROGRAM_MAP(sound_map_2151)
-	MDRV_CPU_IO_MAP(sound_portmap_2151)
+	MCFG_CPU_ADD("soundcpu", Z80, MASTER_CLOCK_8MHz/2)
+	MCFG_CPU_PROGRAM_MAP(sound_map_2151)
+	MCFG_CPU_IO_MAP(sound_portmap_2203x2)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, MASTER_CLOCK_8MHz/2)
-	MDRV_SOUND_CONFIG(ym2151_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.43)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.43)
+	MCFG_SOUND_ADD("ym1", YM2203, MASTER_CLOCK_8MHz/2)
+	MCFG_SOUND_CONFIG(ym2203_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker",  0.13)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.13)
+	MCFG_SOUND_ROUTE(1, "lspeaker",  0.13)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.13)
+	MCFG_SOUND_ROUTE(2, "lspeaker",  0.13)
+	MCFG_SOUND_ROUTE(2, "rspeaker", 0.13)
+	MCFG_SOUND_ROUTE(3, "lspeaker",  0.37)
+	MCFG_SOUND_ROUTE(3, "rspeaker", 0.37)
 
-	MDRV_SOUND_ADD("pcm", SEGAPCM, MASTER_CLOCK_8MHz/2)
-	MDRV_SOUND_CONFIG(segapcm_interface)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ym2", YM2203, MASTER_CLOCK_8MHz/2)
+	MCFG_SOUND_ROUTE(0, "lspeaker",  0.13)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.13)
+	MCFG_SOUND_ROUTE(1, "lspeaker",  0.13)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.13)
+	MCFG_SOUND_ROUTE(2, "lspeaker",  0.13)
+	MCFG_SOUND_ROUTE(2, "rspeaker", 0.13)
+	MCFG_SOUND_ROUTE(3, "lspeaker",  0.37)
+	MCFG_SOUND_ROUTE(3, "rspeaker", 0.37)
+
+	MCFG_SOUND_ADD("pcm", SEGAPCM, MASTER_CLOCK_8MHz/2)
+	MCFG_SOUND_CONFIG(segapcm_interface)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_FRAGMENT( sound_board_2151 )
+
+	/* basic machine hardware */
+	MCFG_CPU_ADD("soundcpu", Z80, MASTER_CLOCK_8MHz/2)
+	MCFG_CPU_PROGRAM_MAP(sound_map_2151)
+	MCFG_CPU_IO_MAP(sound_portmap_2151)
+
+	/* sound hardware */
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+
+	MCFG_SOUND_ADD("ymsnd", YM2151, MASTER_CLOCK_8MHz/2)
+	MCFG_SOUND_CONFIG(ym2151_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.43)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.43)
+
+	MCFG_SOUND_ADD("pcm", SEGAPCM, MASTER_CLOCK_8MHz/2)
+	MCFG_SOUND_CONFIG(segapcm_interface)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 
 
@@ -1057,62 +1053,56 @@ MACHINE_DRIVER_END
  *
  *************************************/
 
-static MACHINE_DRIVER_START( hangon )
-	MDRV_IMPORT_FROM(hangon_base)
-	MDRV_IMPORT_FROM(sound_board_2203)
+static MACHINE_CONFIG_DERIVED( hangon, hangon_base )
+	MCFG_FRAGMENT_ADD(sound_board_2203)
 
-	MDRV_SEGA16SP_ADD_HANGON("segaspr1")
-MACHINE_DRIVER_END
+	MCFG_SEGA16SP_ADD_HANGON("segaspr1")
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( shangupb )
-	MDRV_IMPORT_FROM(hangon_base)
-	MDRV_IMPORT_FROM(sound_board_2151)
+static MACHINE_CONFIG_DERIVED( shangupb, hangon_base )
+	MCFG_FRAGMENT_ADD(sound_board_2151)
 
 	/* not sure about these speeds, but at 6MHz, the road is not updated fast enough */
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_CLOCK(10000000)
-	MDRV_CPU_MODIFY("sub")
-	MDRV_CPU_CLOCK(10000000)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_CLOCK(10000000)
+	MCFG_CPU_MODIFY("sub")
+	MCFG_CPU_CLOCK(10000000)
 
-	MDRV_SEGA16SP_ADD_HANGON("segaspr1")
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( sharrier )
-	MDRV_IMPORT_FROM(sharrier_base)
-	MDRV_IMPORT_FROM(sound_board_2203)
-
-	MDRV_CPU_ADD("mcu", I8751, 8000000)
-	MDRV_CPU_IO_MAP(mcu_io_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_pulse)
-
-	MDRV_SEGA16SP_ADD_SHARRIER("segaspr1")
-MACHINE_DRIVER_END
+	MCFG_SEGA16SP_ADD_HANGON("segaspr1")
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( enduror )
-	MDRV_IMPORT_FROM(sharrier_base)
-	MDRV_IMPORT_FROM(sound_board_2151)
+static MACHINE_CONFIG_DERIVED( sharrier, sharrier_base )
+	MCFG_FRAGMENT_ADD(sound_board_2203)
 
-	MDRV_SEGA16SP_ADD_SHARRIER("segaspr1")
-MACHINE_DRIVER_END
+	MCFG_CPU_ADD("mcu", I8751, 8000000)
+	MCFG_CPU_IO_MAP(mcu_io_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_pulse)
 
-
-static MACHINE_DRIVER_START( enduror1 )
-	MDRV_IMPORT_FROM(sharrier_base)
-	MDRV_IMPORT_FROM(sound_board_2203)
-
-	MDRV_SEGA16SP_ADD_SHARRIER("segaspr1")
-MACHINE_DRIVER_END
+	MCFG_SEGA16SP_ADD_SHARRIER("segaspr1")
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( endurob2 )
-	MDRV_IMPORT_FROM(sharrier_base)
-	MDRV_IMPORT_FROM(sound_board_2203x2)
+static MACHINE_CONFIG_DERIVED( enduror, sharrier_base )
+	MCFG_FRAGMENT_ADD(sound_board_2151)
 
-	MDRV_SEGA16SP_ADD_SHARRIER("segaspr1")
-MACHINE_DRIVER_END
+	MCFG_SEGA16SP_ADD_SHARRIER("segaspr1")
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( enduror1, sharrier_base )
+	MCFG_FRAGMENT_ADD(sound_board_2203)
+
+	MCFG_SEGA16SP_ADD_SHARRIER("segaspr1")
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( endurob2, sharrier_base )
+	MCFG_FRAGMENT_ADD(sound_board_2203x2)
+
+	MCFG_SEGA16SP_ADD_SHARRIER("segaspr1")
+MACHINE_CONFIG_END
 
 
 
@@ -1850,7 +1840,7 @@ static DRIVER_INIT( hangon )
 
 static DRIVER_INIT( sharrier )
 {
-	segas1x_state *state = (segas1x_state *)machine->driver_data;
+	segas1x_state *state = machine->driver_data<segas1x_state>();
 
 	hangon_generic_init(machine);
 	state->i8751_vblank_hook = sharrier_i8751_sim;
@@ -1866,12 +1856,12 @@ static DRIVER_INIT( enduror )
 
 static DRIVER_INIT( endurobl )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
-	UINT16 *rom = (UINT16 *)memory_region(machine, "maincpu");
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	UINT16 *rom = (UINT16 *)machine->region("maincpu")->base();
 	UINT16 *decrypt = auto_alloc_array(machine, UINT16, 0x40000/2);
 
 	hangon_generic_init(machine);
-	memory_set_decrypted_region(space, 0x000000, 0x03ffff, decrypt);
+	space->set_decrypted_region(0x000000, 0x03ffff, decrypt);
 
 	memcpy(decrypt + 0x00000/2, rom + 0x30000/2, 0x10000);
 	memcpy(decrypt + 0x10000/2, rom + 0x10000/2, 0x20000);
@@ -1880,12 +1870,12 @@ static DRIVER_INIT( endurobl )
 
 static DRIVER_INIT( endurob2 )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
-	UINT16 *rom = (UINT16 *)memory_region(machine, "maincpu");
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	UINT16 *rom = (UINT16 *)machine->region("maincpu")->base();
 	UINT16 *decrypt = auto_alloc_array(machine, UINT16, 0x40000/2);
 
 	hangon_generic_init(machine);
-	memory_set_decrypted_region(space, 0x000000, 0x03ffff, decrypt);
+	space->set_decrypted_region(0x000000, 0x03ffff, decrypt);
 
 	memcpy(decrypt, rom, 0x30000);
 	/* missing data ROM */
@@ -1908,7 +1898,7 @@ static DRIVER_INIT( shangonro )
 
 GAME( 1985, hangon,    0,        hangon,   hangon,   hangon,   ROT0, "Sega",    "Hang-On (Rev A)", 0 )
 GAME( 1985, hangon1,   hangon,   hangon,   hangon,   hangon,   ROT0, "Sega",    "Hang-On", 0 )
-GAME( 1992, shangonro, shangon,  shangupb, shangonro,shangonro,ROT0, "Sega",    "Super Hang-On (Japan, FD1094 317-0038)", 0 )
+GAME( 1987, shangonro, shangon,  shangupb, shangonro,shangonro,ROT0, "Sega",    "Super Hang-On (ride-on, Japan, FD1094 317-0038)", 0 )
 GAME( 1992, shangonrb, shangon,  shangupb, shangupb, hangon,   ROT0, "bootleg", "Super Hang-On (bootleg)", 0 )
 GAME( 1985, sharrier,  0,        sharrier, sharrier, sharrier, ROT0, "Sega",    "Space Harrier (Rev A, 8751 315-5163A)", 0 )
 GAME( 1985, sharrier1, sharrier, sharrier, sharrier, sharrier, ROT0, "Sega",    "Space Harrier (8751 315-5163)", 0 )

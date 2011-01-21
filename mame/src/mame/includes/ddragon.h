@@ -5,12 +5,11 @@
 *************************************************************************/
 
 
-class ddragon_state
+class ddragon_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, ddragon_state(machine)); }
-
-	ddragon_state(running_machine &machine) { }
+	ddragon_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *        rambase;
@@ -49,11 +48,11 @@ public:
 #endif
 
 	/* devices */
-	running_device *maincpu;
-	running_device *snd_cpu;
-	running_device *sub_cpu;
-	running_device *adpcm_1;
-	running_device *adpcm_2;
+	device_t *maincpu;
+	device_t *snd_cpu;
+	device_t *sub_cpu;
+	device_t *adpcm_1;
+	device_t *adpcm_2;
 };
 
 

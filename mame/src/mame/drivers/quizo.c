@@ -27,6 +27,17 @@ Xtals 8MHz, 21.47727MHz
 #include "cpu/z80/z80.h"
 #include "sound/ay8910.h"
 
+
+class quizo_state : public driver_device
+{
+public:
+	quizo_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
+
+	UINT8 *videoram;
+};
+
+
 #define XTAL1	 8000000
 #define XTAL2	21477270
 
@@ -65,13 +76,15 @@ static PALETTE_INIT(quizo)
 
 static VIDEO_UPDATE( quizo )
 {
+	quizo_state *state = screen->machine->driver_data<quizo_state>();
+	UINT8 *videoram = state->videoram;
 	int x,y;
 	for(y=0;y<200;y++)
 	{
 		for(x=0;x<80;x++)
 		{
-			int data=screen->machine->generic.videoram.u8[y*80+x];
-			int data1=screen->machine->generic.videoram.u8[y*80+x+0x4000];
+			int data=videoram[y*80+x];
+			int data1=videoram[y*80+x+0x4000];
 			int pix;
 
 			pix=(data&1)|(((data>>4)&1)<<1)|((data1&1)<<2)|(((data1>>4)&1)<<3);
@@ -95,8 +108,10 @@ static VIDEO_UPDATE( quizo )
 
 static WRITE8_HANDLER(vram_w)
 {
+	quizo_state *state = space->machine->driver_data<quizo_state>();
+	UINT8 *videoram = state->videoram;
 	int bank=(port70&8)?1:0;
-	space->machine->generic.videoram.u8[offset+bank*0x4000]=data;
+	videoram[offset+bank*0x4000]=data;
 }
 
 static WRITE8_HANDLER(port70_w)
@@ -112,7 +127,7 @@ static WRITE8_HANDLER(port60_w)
 		data=0;
 	}
 	port60=data;
-	memory_set_bankptr(space->machine,  "bank1", &memory_region(space->machine, "user1")[rombankLookup[data]*0x4000] );
+	memory_set_bankptr(space->machine,  "bank1", &space->machine->region("user1")->base()[rombankLookup[data]*0x4000] );
 }
 
 static ADDRESS_MAP_START( memmap, ADDRESS_SPACE_PROGRAM, 8 )
@@ -183,32 +198,32 @@ static INPUT_PORTS_START( quizo )
 	PORT_DIPSETTING(    0x80, DEF_STR( On ) )
 INPUT_PORTS_END
 
-static MACHINE_DRIVER_START( quizo )
+static MACHINE_CONFIG_START( quizo, quizo_state )
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80,XTAL1/2)
-	MDRV_CPU_PROGRAM_MAP(memmap)
-	MDRV_CPU_IO_MAP(portmap)
+	MCFG_CPU_ADD("maincpu", Z80,XTAL1/2)
+	MCFG_CPU_PROGRAM_MAP(memmap)
+	MCFG_CPU_IO_MAP(portmap)
 
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(320, 200)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 320-1, 0*8, 200-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(320, 200)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 320-1, 0*8, 200-1)
 
-	MDRV_PALETTE_LENGTH(16)
-	MDRV_PALETTE_INIT(quizo)
+	MCFG_PALETTE_LENGTH(16)
+	MCFG_PALETTE_INIT(quizo)
 
-	MDRV_VIDEO_UPDATE(quizo)
+	MCFG_VIDEO_UPDATE(quizo)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("aysnd", AY8910, XTAL2/16 )
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("aysnd", AY8910, XTAL2/16 )
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 ROM_START( quizo )
@@ -244,7 +259,8 @@ ROM_END
 
 static DRIVER_INIT(quizo)
 {
-	machine->generic.videoram.u8=auto_alloc_array(machine, UINT8, 0x4000*2);
+	quizo_state *state = machine->driver_data<quizo_state>();
+	state->videoram=auto_alloc_array(machine, UINT8, 0x4000*2);
 }
 
 GAME( 1985, quizo,  0,       quizo,  quizo,  quizo, ROT0, "Seoul Coin Corp.", "Quiz Olympic (set 1)", 0 )

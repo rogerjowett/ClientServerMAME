@@ -106,7 +106,7 @@ static const char * const device_tags[NUM_TYPES] = { "ins8250", "ins8250a", "ns1
 #define COM_LOG(n,m,a) LOG(VERBOSE_COM,n,m,a)
 
 typedef struct {
-	const ins8250_interface *dev_interface;
+	const ins8250_interface *interface;
 	int	device_type;
 
 	UINT8 thr;  /* 0 -W transmitter holding register */
@@ -139,7 +139,7 @@ typedef struct {
 #define COM_INT_PENDING_MODEM_STATUS_REGISTER 0x0008
 
 
-INLINE ins8250_t *get_safe_token(running_device *device)
+INLINE ins8250_t *get_safe_token(device_t *device)
 {
 	assert( device != NULL );
 	assert( ( device->type() == INS8250 ) ||
@@ -153,7 +153,7 @@ INLINE ins8250_t *get_safe_token(running_device *device)
 
 
 /* setup iir with the priority id */
-static void ins8250_setup_iir(running_device *device)
+static void ins8250_setup_iir(device_t *device)
 {
 	ins8250_t	*ins8250 = get_safe_token(device);
 
@@ -183,7 +183,7 @@ static void ins8250_setup_iir(running_device *device)
 
 
 /* ints will continue to be set for as long as there are ints pending */
-static void ins8250_update_interrupt(running_device *device)
+static void ins8250_update_interrupt(device_t *device)
 {
 	ins8250_t	*ins8250 = get_safe_token(device);
 	int state;
@@ -212,14 +212,14 @@ static void ins8250_update_interrupt(running_device *device)
 	}
 
 	/* set or clear the int */
-	if (ins8250->dev_interface->interrupt)
-		ins8250->dev_interface->interrupt(device, state);
+	if (ins8250->interface->interrupt)
+		ins8250->interface->interrupt(device, state);
 }
 
 
 
 /* set pending bit and trigger int */
-static void ins8250_trigger_int(running_device *device, int flag)
+static void ins8250_trigger_int(device_t *device, int flag)
 {
 	ins8250_t	*ins8250 = get_safe_token(device);
 
@@ -231,7 +231,7 @@ static void ins8250_trigger_int(running_device *device, int flag)
 
 /* clear pending bit, if any ints are pending, then int will be triggered, otherwise it
 will be cleared */
-static void ins8250_clear_int(running_device *device, int flag)
+static void ins8250_clear_int(device_t *device, int flag)
 {
 	ins8250_t	*ins8250 = get_safe_token(device);
 
@@ -254,7 +254,7 @@ WRITE8_DEVICE_HANDLER( ins8250_w )
 				ins8250->dll = data;
 				tmp = ins8250->dlm * 256 + ins8250->dll;
 				COM_LOG(1,"COM_dll_w",("COM \"%s\" $%02x: [$%04x = %d baud]\n", device->tag(),
-					 data, tmp, (tmp)?(int)(ins8250->dev_interface->clockin/16/tmp):0));
+					 data, tmp, (tmp)?(int)(ins8250->interface->clockin/16/tmp):0));
 			}
 			else
 			{
@@ -268,8 +268,8 @@ WRITE8_DEVICE_HANDLER( ins8250_w )
 					ins8250_trigger_int( device, COM_INT_PENDING_RECEIVED_DATA_AVAILABLE );
 				}
 
-				if ( ins8250->dev_interface->transmit )
-					ins8250->dev_interface->transmit(device, ins8250->thr);
+				if ( ins8250->interface->transmit )
+					ins8250->interface->transmit(device, ins8250->thr);
 
 				/* writing to thr will clear the int */
 				ins8250_clear_int(device, COM_INT_PENDING_TRANSMITTER_HOLDING_REGISTER_EMPTY);
@@ -281,7 +281,7 @@ WRITE8_DEVICE_HANDLER( ins8250_w )
 				ins8250->dlm = data;
 				tmp = ins8250->dlm * 256 + ins8250->dll;
                 COM_LOG(1,"COM_dlm_w",("COM \"%s\" $%02x: [$%04x = %d baud]\n", device->tag(),
-					data, tmp, (tmp)?(int)(ins8250->dev_interface->clockin/16/tmp):0));
+					data, tmp, (tmp)?(int)(ins8250->interface->clockin/16/tmp):0));
 			}
 			else
 			{
@@ -306,8 +306,8 @@ WRITE8_DEVICE_HANDLER( ins8250_w )
 				ins8250->mcr = data & 0x1f;
 				COM_LOG(1,"COM_mcr_w",("COM \"%s\" $%02x DTR %d, RTS %d, OUT1 %d, OUT2 %d, loopback %d\n", device->tag(),
 					data, data&1, (data>>1)&1, (data>>2)&1, (data>>3)&1, (data>>4)&1));
-				if (ins8250->dev_interface->handshake_out)
-					ins8250->dev_interface->handshake_out(device,data);
+				if (ins8250->interface->handshake_out)
+					ins8250->interface->handshake_out(device,data);
 
 				if ( ins8250->mcr & 0x10 )		/* loopback test */
 				{
@@ -370,8 +370,8 @@ WRITE8_DEVICE_HANDLER( ins8250_w )
             break;
 	}
 
-	if (ins8250->dev_interface->refresh_connected)
-		ins8250->dev_interface->refresh_connected(device);
+	if (ins8250->interface->refresh_connected)
+		ins8250->interface->refresh_connected(device);
 }
 
 
@@ -473,15 +473,15 @@ READ8_DEVICE_HANDLER( ins8250_r )
             break;
 	}
 
-	if (ins8250->dev_interface->refresh_connected)
-		ins8250->dev_interface->refresh_connected(device);
+	if (ins8250->interface->refresh_connected)
+		ins8250->interface->refresh_connected(device);
 
     return data;
 }
 
 
 
-void ins8250_receive(running_device *device, int data)
+void ins8250_receive(device_t *device, int data)
 {
 	ins8250_t	*ins8250 = get_safe_token(device);
 
@@ -515,7 +515,7 @@ void ins8250_receive(running_device *device, int data)
 /**************************************************************************
  *  change the modem status register
  **************************************************************************/
-void ins8250_handshake_in(running_device *device, int new_msr)
+void ins8250_handshake_in(device_t *device, int new_msr)
 {
 	ins8250_t	*ins8250 = get_safe_token(device);
 
@@ -540,11 +540,11 @@ void ins8250_handshake_in(running_device *device, int new_msr)
 }
 
 
-static void common_start( running_device *device, int device_type )
+static void common_start( device_t *device, int device_type )
 {
 	ins8250_t	*ins8250 = get_safe_token(device);
 
-	ins8250->dev_interface = (const ins8250_interface*)device->baseconfig().static_config();
+	ins8250->interface = (const ins8250_interface*)device->baseconfig().static_config();
 	ins8250->device_type = device_type;
 }
 
@@ -598,8 +598,8 @@ static DEVICE_RESET( ins8250 )
 	ins8250->send.active=0;
 
 	/* refresh with reset state of register */
-	if (ins8250->dev_interface->refresh_connected)
-		ins8250->dev_interface->refresh_connected(device);
+	if (ins8250->interface->refresh_connected)
+		ins8250->interface->refresh_connected(device);
 }
 
 

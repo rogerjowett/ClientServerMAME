@@ -213,10 +213,10 @@ static void littlerb_recalc_regs(void)
 static void littlerb_data_write(running_machine *machine, UINT16 data, UINT16 mem_mask)
 {
 	UINT32 addr = littlerb_write_address>>4; // is this right? should we shift?
-	const address_space *vdp_space = machine->device<littlerb_vdp_device>("littlerbvdp")->space();
+	address_space *vdp_space = machine->device<littlerb_vdp_device>("littlerbvdp")->space();
 
 
-	memory_write_word_masked(vdp_space, addr*2, data, mem_mask);
+	vdp_space->write_word(addr*2, data, mem_mask);
 
 
 	// e000 / 2000 are used for palette writes, which should go to a RAMDAC, so probably mean no auto inc.
@@ -494,26 +494,26 @@ static INTERRUPT_GEN( littlerb )
 	cpu_set_input_line(device, 4, HOLD_LINE);
 }
 
-static MACHINE_DRIVER_START( littlerb )
-	MDRV_CPU_ADD("maincpu", M68000, 12000000)
-	MDRV_CPU_PROGRAM_MAP(littlerb_main)
-	MDRV_CPU_VBLANK_INT("screen", littlerb)
+static MACHINE_CONFIG_START( littlerb, driver_device )
+	MCFG_CPU_ADD("maincpu", M68000, 12000000)
+	MCFG_CPU_PROGRAM_MAP(littlerb_main)
+	MCFG_CPU_VBLANK_INT("screen", littlerb)
 
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(512, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 320-1, 0*8, 256-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(512, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 320-1, 0*8, 256-1)
 
-	MDRV_PALETTE_LENGTH(256)
+	MCFG_PALETTE_LENGTH(256)
 
-	MDRV_DEVICE_ADD("littlerbvdp", LITTLERBVDP, 0)
+	MCFG_DEVICE_ADD("littlerbvdp", LITTLERBVDP, 0)
 
-//  MDRV_PALETTE_INIT(littlerb)
-	MDRV_VIDEO_UPDATE(littlerb)
-MACHINE_DRIVER_END
+//  MCFG_PALETTE_INIT(littlerb)
+	MCFG_VIDEO_UPDATE(littlerb)
+MACHINE_CONFIG_END
 
 ROM_START( littlerb )
 	ROM_REGION( 0x100000, "maincpu", 0 ) /* 68000 Code */

@@ -34,6 +34,7 @@ Pleiads:
 #include "sound/tms36xx.h"
 #include "cpu/i8085/i8085.h"
 #include "sound/ay8910.h"
+#include "audio/pleiads.h"
 #include "includes/phoenix.h"
 
 
@@ -42,8 +43,8 @@ static ADDRESS_MAP_START( phoenix_memory_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x4000, 0x4fff) AM_READ_BANK("bank1") AM_WRITE(phoenix_videoram_w)	/* 2 pages selected by bit 0 of the video register */
 	AM_RANGE(0x5000, 0x53ff) AM_WRITE(phoenix_videoreg_w)
 	AM_RANGE(0x5800, 0x5bff) AM_WRITE(phoenix_scroll_w)
-	AM_RANGE(0x6000, 0x63ff) AM_DEVWRITE("discrete", phoenix_sound_control_a_w)
-	AM_RANGE(0x6800, 0x6bff) AM_DEVWRITE("discrete", phoenix_sound_control_b_w)
+	AM_RANGE(0x6000, 0x63ff) AM_DEVWRITE("cust", phoenix_sound_control_a_w)
+	AM_RANGE(0x6800, 0x6bff) AM_DEVWRITE("cust", phoenix_sound_control_b_w)
 	AM_RANGE(0x7000, 0x73ff) AM_READ_PORT("IN0")							/* IN0 or IN1 */
 	AM_RANGE(0x7800, 0x7bff) AM_READ_PORT("DSW0")							/* DSW */
 ADDRESS_MAP_END
@@ -53,8 +54,8 @@ static ADDRESS_MAP_START( pleiads_memory_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x4000, 0x4fff) AM_READ_BANK("bank1") AM_WRITE(phoenix_videoram_w)	/* 2 pages selected by bit 0 of the video register */
 	AM_RANGE(0x5000, 0x53ff) AM_WRITE(pleiads_videoreg_w)
 	AM_RANGE(0x5800, 0x5bff) AM_WRITE(phoenix_scroll_w)
-	AM_RANGE(0x6000, 0x63ff) AM_WRITE(pleiads_sound_control_a_w)
-	AM_RANGE(0x6800, 0x6bff) AM_WRITE(pleiads_sound_control_b_w)
+	AM_RANGE(0x6000, 0x63ff) AM_DEVWRITE("cust", pleiads_sound_control_a_w)
+	AM_RANGE(0x6800, 0x6bff) AM_DEVWRITE("cust", pleiads_sound_control_b_w)
 	AM_RANGE(0x7000, 0x73ff) AM_READ_PORT("IN0")							/* IN0 or IN1 + protection */
 	AM_RANGE(0x7800, 0x7bff) AM_READ_PORT("DSW0")							/* DSW */
 ADDRESS_MAP_END
@@ -445,70 +446,67 @@ static const ay8910_interface survival_ay8910_interface =
 
 static MACHINE_RESET( phoenix )
 {
-	memory_set_bankptr(machine, "bank1", memory_region(machine, "maincpu") + 0x4000);
+	memory_set_bankptr(machine, "bank1", machine->region("maincpu")->base() + 0x4000);
 }
 
 
-static MACHINE_DRIVER_START( phoenix )
+static MACHINE_CONFIG_START( phoenix, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", I8085A, CPU_CLOCK)	/* 2.75 MHz */
-	MDRV_CPU_PROGRAM_MAP(phoenix_memory_map)
+	MCFG_CPU_ADD("maincpu", I8085A, CPU_CLOCK)	/* 2.75 MHz */
+	MCFG_CPU_PROGRAM_MAP(phoenix_memory_map)
 
-	MDRV_MACHINE_RESET(phoenix)
+	MCFG_MACHINE_RESET(phoenix)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_RAW_PARAMS(PIXEL_CLOCK, HTOTAL, HBEND, HBSTART, VTOTAL, VBEND, VBSTART)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_RAW_PARAMS(PIXEL_CLOCK, HTOTAL, HBEND, HBSTART, VTOTAL, VBEND, VBSTART)
 
-	MDRV_GFXDECODE(phoenix)
-	MDRV_PALETTE_LENGTH(256)
+	MCFG_GFXDECODE(phoenix)
+	MCFG_PALETTE_LENGTH(256)
 
-	MDRV_PALETTE_INIT(phoenix)
-	MDRV_VIDEO_START(phoenix)
-	MDRV_VIDEO_UPDATE(phoenix)
-
-	MDRV_SOUND_START(phoenix)
+	MCFG_PALETTE_INIT(phoenix)
+	MCFG_VIDEO_START(phoenix)
+	MCFG_VIDEO_UPDATE(phoenix)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("tms",  TMS36XX, 372)
-	MDRV_SOUND_CONFIG(phoenix_tms36xx_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.5)
+	MCFG_SOUND_ADD("tms",  TMS36XX, 372)
+	MCFG_SOUND_CONFIG(phoenix_tms36xx_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.5)
 
-	MDRV_SOUND_ADD("cust", PHOENIX, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.4)
+	MCFG_SOUND_ADD("cust", PHOENIX, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.4)
 
-	MDRV_SOUND_ADD("discrete", DISCRETE, 120000)
-	MDRV_SOUND_CONFIG_DISCRETE(phoenix)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.6)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("discrete", DISCRETE, 120000)
+	MCFG_SOUND_CONFIG_DISCRETE(phoenix)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.6)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( pleiads )
+static MACHINE_CONFIG_DERIVED( pleiads, phoenix )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(phoenix)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(pleiads_memory_map)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(pleiads_memory_map)
 
 	/* video hardware */
-	MDRV_GFXDECODE(pleiads)
+	MCFG_GFXDECODE(pleiads)
 
-	MDRV_PALETTE_INIT(pleiads)
+	MCFG_PALETTE_INIT(pleiads)
 
 	/* sound hardware */
-	MDRV_SOUND_REPLACE("tms", TMS36XX, 247)
-	MDRV_SOUND_CONFIG(pleiads_tms36xx_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.75)
+	MCFG_SOUND_REPLACE("tms", TMS36XX, 247)
+	MCFG_SOUND_CONFIG(pleiads_tms36xx_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.75)
 
-	MDRV_SOUND_REPLACE("cust", PLEIADS, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
+	MCFG_SOUND_REPLACE("cust", PLEIADS, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
 
-	MDRV_DEVICE_REMOVE("discrete")
-MACHINE_DRIVER_END
+	MCFG_DEVICE_REMOVE("discrete")
+MACHINE_CONFIG_END
 
 
 /* Same as Phoenix, but uses an AY8910 and an extra visible line (column) */
@@ -521,50 +519,49 @@ static I8085_CONFIG( survival_i8085_config )
 	DEVCB_NULL							/* SOD changed callback (8085A only) */
 };
 
-static MACHINE_DRIVER_START( survival )
+static MACHINE_CONFIG_START( survival, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", I8085A, CPU_CLOCK)	/* 5.50 MHz */
-	MDRV_CPU_CONFIG(survival_i8085_config)
-	MDRV_CPU_PROGRAM_MAP(survival_memory_map)
+	MCFG_CPU_ADD("maincpu", I8085A, CPU_CLOCK)	/* 5.50 MHz */
+	MCFG_CPU_CONFIG(survival_i8085_config)
+	MCFG_CPU_PROGRAM_MAP(survival_memory_map)
 
-	MDRV_MACHINE_RESET(phoenix)
+	MCFG_MACHINE_RESET(phoenix)
 
 	/* video hardware */
 
 	/* schematics fairly identical to phoenix, however the interesting
      * page is missing
      */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_RAW_PARAMS(PIXEL_CLOCK, HTOTAL, HBEND, HBSTART, VTOTAL, VBEND, VBSTART)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_RAW_PARAMS(PIXEL_CLOCK, HTOTAL, HBEND, HBSTART, VTOTAL, VBEND, VBSTART)
 
-	MDRV_GFXDECODE(phoenix)
-	MDRV_PALETTE_LENGTH(256)
+	MCFG_GFXDECODE(phoenix)
+	MCFG_PALETTE_LENGTH(256)
 
-	MDRV_PALETTE_INIT(survival)
-	MDRV_VIDEO_START(phoenix)
-	MDRV_VIDEO_UPDATE(phoenix)
+	MCFG_PALETTE_INIT(survival)
+	MCFG_VIDEO_START(phoenix)
+	MCFG_VIDEO_UPDATE(phoenix)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
 	/* FIXME: check clock */
-	MDRV_SOUND_ADD("aysnd", AY8910, 11000000/4)
-	MDRV_SOUND_CONFIG(survival_ay8910_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("aysnd", AY8910, 11000000/4)
+	MCFG_SOUND_CONFIG(survival_ay8910_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 
 /* Uses a Z80 */
-static MACHINE_DRIVER_START( condor )
+static MACHINE_CONFIG_DERIVED( condor, phoenix )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(phoenix)
 	/* FIXME: Verify clock. This is most likely 11MHz/2 */
-	MDRV_CPU_REPLACE("maincpu", Z80, 11000000/4)	/* 2.75 MHz??? */
-	MDRV_CPU_PROGRAM_MAP(phoenix_memory_map)
-MACHINE_DRIVER_END
+	MCFG_CPU_REPLACE("maincpu", Z80, 11000000/4)	/* 2.75 MHz??? */
+	MCFG_CPU_PROGRAM_MAP(phoenix_memory_map)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************

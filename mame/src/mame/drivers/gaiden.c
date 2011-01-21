@@ -138,7 +138,7 @@ Notes:
 
 static WRITE16_HANDLER( gaiden_sound_command_w )
 {
-	gaiden_state *state = (gaiden_state *)space->machine->driver_data;
+	gaiden_state *state = space->machine->driver_data<gaiden_state>();
 
 	if (ACCESSING_BITS_0_7)
 		soundlatch_w(space, 0, data & 0xff);	/* Ninja Gaiden */
@@ -149,7 +149,7 @@ static WRITE16_HANDLER( gaiden_sound_command_w )
 
 static WRITE16_HANDLER( drgnbowl_sound_command_w )
 {
-	gaiden_state *state = (gaiden_state *)space->machine->driver_data;
+	gaiden_state *state = space->machine->driver_data<gaiden_state>();
 
 	if (ACCESSING_BITS_8_15)
 	{
@@ -166,7 +166,7 @@ static WRITE16_HANDLER( drgnbowl_sound_command_w )
 
 static WRITE16_HANDLER( wildfang_protection_w )
 {
-	gaiden_state *state = (gaiden_state *)space->machine->driver_data;
+	gaiden_state *state = space->machine->driver_data<gaiden_state>();
 
 	if (ACCESSING_BITS_8_15)
 	{
@@ -217,7 +217,7 @@ static WRITE16_HANDLER( wildfang_protection_w )
 
 static READ16_HANDLER( wildfang_protection_r )
 {
-	gaiden_state *state = (gaiden_state *)space->machine->driver_data;
+	gaiden_state *state = space->machine->driver_data<gaiden_state>();
 //  logerror("PC %06x: read prot %02x\n", cpu_get_pc(space->cpu), state->prot);
 	return state->prot;
 }
@@ -295,7 +295,7 @@ static const int jumppoints_other[0x100] =
 
 static MACHINE_RESET( raiga )
 {
-	gaiden_state *state = (gaiden_state *)machine->driver_data;
+	gaiden_state *state = machine->driver_data<gaiden_state>();
 
 	state->prot = 0;
 	state->jumpcode = 0;
@@ -315,7 +315,7 @@ static MACHINE_RESET( raiga )
 
 static MACHINE_START( raiga )
 {
-	gaiden_state *state = (gaiden_state *)machine->driver_data;
+	gaiden_state *state = machine->driver_data<gaiden_state>();
 	state->audiocpu = machine->device("audiocpu");
 
 	state_save_register_global(machine, state->prot);
@@ -336,7 +336,7 @@ static MACHINE_START( raiga )
 
 static WRITE16_HANDLER( raiga_protection_w )
 {
-	gaiden_state *state = (gaiden_state *)space->machine->driver_data;
+	gaiden_state *state = space->machine->driver_data<gaiden_state>();
 
 	if (ACCESSING_BITS_8_15)
 	{
@@ -388,7 +388,7 @@ static WRITE16_HANDLER( raiga_protection_w )
 
 static READ16_HANDLER( raiga_protection_r )
 {
-	gaiden_state *state = (gaiden_state *)space->machine->driver_data;
+	gaiden_state *state = space->machine->driver_data<gaiden_state>();
 //  logerror("PC %06x: read prot %02x\n", cpu_get_pc(space->cpu), state->prot);
 	return state->prot;
 }
@@ -442,7 +442,7 @@ static ADDRESS_MAP_START( sound_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0xdfff) AM_ROM
 	AM_RANGE(0xe000, 0xefff) AM_ROM	/* raiga only */
 	AM_RANGE(0xf000, 0xf7ff) AM_RAM
-	AM_RANGE(0xf800, 0xf800) AM_DEVREADWRITE("oki", okim6295_r, okim6295_w)
+	AM_RANGE(0xf800, 0xf800) AM_DEVREADWRITE_MODERN("oki", okim6295_device, read, write)
 	AM_RANGE(0xf810, 0xf811) AM_DEVWRITE("ym1", ym2203_w)
 	AM_RANGE(0xf820, 0xf821) AM_DEVWRITE("ym2", ym2203_w)
 	AM_RANGE(0xfc00, 0xfc00) AM_NOP /* ?? */
@@ -457,7 +457,7 @@ ADDRESS_MAP_END
 static ADDRESS_MAP_START( drgnbowl_sound_port_map, ADDRESS_SPACE_IO, 8 )
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 	AM_RANGE(0x00, 0x01) AM_DEVREADWRITE("ymsnd", ym2151_r, ym2151_w)
-	AM_RANGE(0x80, 0x80) AM_DEVREADWRITE("oki", okim6295_r, okim6295_w)
+	AM_RANGE(0x80, 0x80) AM_DEVREADWRITE_MODERN("oki", okim6295_device, read, write)
 	AM_RANGE(0xc0, 0xc0) AM_READ(soundlatch_r)
 ADDRESS_MAP_END
 
@@ -748,9 +748,9 @@ static GFXDECODE_START( drgnbowl )
 GFXDECODE_END
 
 /* handler called by the 2203 emulator when the internal timers cause an IRQ */
-static void irqhandler( running_device *device, int irq )
+static void irqhandler( device_t *device, int irq )
 {
-	gaiden_state *state = (gaiden_state *)device->machine->driver_data;
+	gaiden_state *state = device->machine->driver_data<gaiden_state>();
 	cpu_set_input_line(state->audiocpu, 0, irq ? ASSERT_LINE : CLEAR_LINE);
 }
 
@@ -764,108 +764,101 @@ static const ym2203_interface ym2203_config =
 	irqhandler
 };
 
-static MACHINE_DRIVER_START( shadoww )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(gaiden_state)
+static MACHINE_CONFIG_START( shadoww, gaiden_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 18432000/2)	/* 9.216 MHz */
-	MDRV_CPU_PROGRAM_MAP(gaiden_map)
-	MDRV_CPU_VBLANK_INT("screen", irq5_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, 18432000/2)	/* 9.216 MHz */
+	MCFG_CPU_PROGRAM_MAP(gaiden_map)
+	MCFG_CPU_VBLANK_INT("screen", irq5_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 4000000)	/* 4 MHz */
-	MDRV_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 4000000)	/* 4 MHz */
+	MCFG_CPU_PROGRAM_MAP(sound_map)
 								/* IRQs are triggered by the YM2203 */
 
-	MDRV_MACHINE_START(raiga)
-	MDRV_MACHINE_RESET(raiga)
+	MCFG_MACHINE_START(raiga)
+	MCFG_MACHINE_RESET(raiga)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(59.17)   /* verified on pcb */
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 4*8, 32*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(59.17)   /* verified on pcb */
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 4*8, 32*8-1)
 
-	MDRV_GFXDECODE(gaiden)
-	MDRV_PALETTE_LENGTH(4096)
+	MCFG_GFXDECODE(gaiden)
+	MCFG_PALETTE_LENGTH(4096)
 
-	MDRV_VIDEO_START(gaiden)
-	MDRV_VIDEO_UPDATE(gaiden)
+	MCFG_VIDEO_START(gaiden)
+	MCFG_VIDEO_UPDATE(gaiden)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ym1", YM2203, 4000000)
-	MDRV_SOUND_CONFIG(ym2203_config)
-	MDRV_SOUND_ROUTE(0, "mono", 0.15)
-	MDRV_SOUND_ROUTE(1, "mono", 0.15)
-	MDRV_SOUND_ROUTE(2, "mono", 0.15)
-	MDRV_SOUND_ROUTE(3, "mono", 0.60)
+	MCFG_SOUND_ADD("ym1", YM2203, 4000000)
+	MCFG_SOUND_CONFIG(ym2203_config)
+	MCFG_SOUND_ROUTE(0, "mono", 0.15)
+	MCFG_SOUND_ROUTE(1, "mono", 0.15)
+	MCFG_SOUND_ROUTE(2, "mono", 0.15)
+	MCFG_SOUND_ROUTE(3, "mono", 0.60)
 
-	MDRV_SOUND_ADD("ym2", YM2203, 4000000)
-	MDRV_SOUND_ROUTE(0, "mono", 0.15)
-	MDRV_SOUND_ROUTE(1, "mono", 0.15)
-	MDRV_SOUND_ROUTE(2, "mono", 0.15)
-	MDRV_SOUND_ROUTE(3, "mono", 0.60)
+	MCFG_SOUND_ADD("ym2", YM2203, 4000000)
+	MCFG_SOUND_ROUTE(0, "mono", 0.15)
+	MCFG_SOUND_ROUTE(1, "mono", 0.15)
+	MCFG_SOUND_ROUTE(2, "mono", 0.15)
+	MCFG_SOUND_ROUTE(3, "mono", 0.60)
 
-	MDRV_OKIM6295_ADD("oki", 1000000, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.20)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 1000000, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.20)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( raiga )
-	MDRV_IMPORT_FROM(shadoww)
+static MACHINE_CONFIG_DERIVED( raiga, shadoww )
 
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
 
-	MDRV_VIDEO_START(raiga)
-	MDRV_VIDEO_UPDATE(raiga)
-	MDRV_GFXDECODE(raiga)
-MACHINE_DRIVER_END
+	MCFG_VIDEO_START(raiga)
+	MCFG_VIDEO_UPDATE(raiga)
+	MCFG_GFXDECODE(raiga)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( drgnbowl )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(gaiden_state)
+static MACHINE_CONFIG_START( drgnbowl, gaiden_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 20000000/2)	/* 10 MHz */
-	MDRV_CPU_PROGRAM_MAP(drgnbowl_map)
-	MDRV_CPU_VBLANK_INT("screen", irq5_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, 20000000/2)	/* 10 MHz */
+	MCFG_CPU_PROGRAM_MAP(drgnbowl_map)
+	MCFG_CPU_VBLANK_INT("screen", irq5_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 12000000/2)	/* 6 MHz */
-	MDRV_CPU_PROGRAM_MAP(drgnbowl_sound_map)
-	MDRV_CPU_IO_MAP(drgnbowl_sound_port_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 12000000/2)	/* 6 MHz */
+	MCFG_CPU_PROGRAM_MAP(drgnbowl_sound_map)
+	MCFG_CPU_IO_MAP(drgnbowl_sound_port_map)
 
-	MDRV_MACHINE_START(raiga)
-	MDRV_MACHINE_RESET(raiga)
+	MCFG_MACHINE_START(raiga)
+	MCFG_MACHINE_RESET(raiga)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(drgnbowl)
-	MDRV_PALETTE_LENGTH(4096)
+	MCFG_GFXDECODE(drgnbowl)
+	MCFG_PALETTE_LENGTH(4096)
 
-	MDRV_VIDEO_START(drgnbowl)
-	MDRV_VIDEO_UPDATE(drgnbowl)
+	MCFG_VIDEO_START(drgnbowl)
+	MCFG_VIDEO_UPDATE(drgnbowl)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, 4000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
+	MCFG_SOUND_ADD("ymsnd", YM2151, 4000000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
 
-	MDRV_OKIM6295_ADD("oki", 1000000, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 1000000, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+MACHINE_CONFIG_END
 
 /*
 Master Ninja
@@ -946,57 +939,54 @@ static ADDRESS_MAP_START( mastninj_map, ADDRESS_SPACE_PROGRAM, 16 )
 //  AM_RANGE(0x07a808, 0x07a809) AM_WRITE(gaiden_flip_w)
 ADDRESS_MAP_END
 
-static MACHINE_DRIVER_START( mastninj )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(gaiden_state)
+static MACHINE_CONFIG_START( mastninj, gaiden_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 10000000)	/* 10 MHz? */
-	MDRV_CPU_PROGRAM_MAP(mastninj_map)
-	MDRV_CPU_VBLANK_INT("screen", irq5_line_hold)
+	MCFG_CPU_ADD("maincpu", M68000, 10000000)	/* 10 MHz? */
+	MCFG_CPU_PROGRAM_MAP(mastninj_map)
+	MCFG_CPU_VBLANK_INT("screen", irq5_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 4000000)	/* ?? MHz */
-	MDRV_CPU_PROGRAM_MAP(mastninj_sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 4000000)	/* ?? MHz */
+	MCFG_CPU_PROGRAM_MAP(mastninj_sound_map)
 								/* IRQs are triggered by the YM2203 */
 
-	MDRV_MACHINE_START(raiga)
-	MDRV_MACHINE_RESET(raiga)
+	MCFG_MACHINE_START(raiga)
+	MCFG_MACHINE_RESET(raiga)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(59.17)   /* verified on pcb */
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(59.17)   /* verified on pcb */
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(mastninj)
-	MDRV_PALETTE_LENGTH(4096)
+	MCFG_GFXDECODE(mastninj)
+	MCFG_PALETTE_LENGTH(4096)
 
-	MDRV_VIDEO_START(mastninj)
-	MDRV_VIDEO_UPDATE(gaiden)
+	MCFG_VIDEO_START(mastninj)
+	MCFG_VIDEO_UPDATE(gaiden)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ym1", YM2203, 4000000) /* ?? MHz */
-	MDRV_SOUND_CONFIG(ym2203_config)
-	MDRV_SOUND_ROUTE(0, "mono", 0.15)
-	MDRV_SOUND_ROUTE(1, "mono", 0.15)
-	MDRV_SOUND_ROUTE(2, "mono", 0.15)
-	MDRV_SOUND_ROUTE(3, "mono", 0.60)
+	MCFG_SOUND_ADD("ym1", YM2203, 4000000) /* ?? MHz */
+	MCFG_SOUND_CONFIG(ym2203_config)
+	MCFG_SOUND_ROUTE(0, "mono", 0.15)
+	MCFG_SOUND_ROUTE(1, "mono", 0.15)
+	MCFG_SOUND_ROUTE(2, "mono", 0.15)
+	MCFG_SOUND_ROUTE(3, "mono", 0.60)
 
-	MDRV_SOUND_ADD("ym2", YM2203, 4000000) /* ?? MHz */
-	MDRV_SOUND_ROUTE(0, "mono", 0.15)
-	MDRV_SOUND_ROUTE(1, "mono", 0.15)
-	MDRV_SOUND_ROUTE(2, "mono", 0.15)
-	MDRV_SOUND_ROUTE(3, "mono", 0.60)
+	MCFG_SOUND_ADD("ym2", YM2203, 4000000) /* ?? MHz */
+	MCFG_SOUND_ROUTE(0, "mono", 0.15)
+	MCFG_SOUND_ROUTE(1, "mono", 0.15)
+	MCFG_SOUND_ROUTE(2, "mono", 0.15)
+	MCFG_SOUND_ROUTE(3, "mono", 0.60)
 
 	/* no OKI on the bootleg */
-//  MDRV_OKIM6295_ADD("oki", 1000000, OKIM6295_PIN7_HIGH)
-//  MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.20)
-MACHINE_DRIVER_END
+//  MCFG_OKIM6295_ADD("oki", 1000000, OKIM6295_PIN7_HIGH)
+//  MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.20)
+MACHINE_CONFIG_END
 
 /***************************************************************************
 
@@ -1501,7 +1491,7 @@ ROM_END
 
 static DRIVER_INIT( shadoww )
 {
-	gaiden_state *state = (gaiden_state *)machine->driver_data;
+	gaiden_state *state = machine->driver_data<gaiden_state>();
 	/* sprite size Y = sprite size X */
 	state->sprite_sizey = 0;
 	state->raiga_jumppoints = jumppoints_00;
@@ -1509,7 +1499,7 @@ static DRIVER_INIT( shadoww )
 
 static DRIVER_INIT( wildfang )
 {
-	gaiden_state *state = (gaiden_state *)machine->driver_data;
+	gaiden_state *state = machine->driver_data<gaiden_state>();
 	/* sprite size Y = sprite size X */
 	state->sprite_sizey = 0;
 	state->raiga_jumppoints = jumppoints_00;
@@ -1522,7 +1512,7 @@ static DRIVER_INIT( wildfang )
 
 static DRIVER_INIT( raiga )
 {
-	gaiden_state *state = (gaiden_state *)machine->driver_data;
+	gaiden_state *state = machine->driver_data<gaiden_state>();
 	/* sprite size Y independent from sprite size X */
 	state->sprite_sizey = 2;
 	state->raiga_jumppoints = jumppoints_00;
@@ -1536,8 +1526,8 @@ static DRIVER_INIT( raiga )
 static void descramble_drgnbowl_gfx(running_machine *machine)
 {
 	int i;
-	UINT8 *ROM = memory_region(machine, "maincpu");
-	size_t size = memory_region_length(machine, "maincpu");
+	UINT8 *ROM = machine->region("maincpu")->base();
+	size_t size = machine->region("maincpu")->bytes();
 	UINT8 *buffer = auto_alloc_array(machine, UINT8, size);
 
 	memcpy(buffer, ROM, size);
@@ -1553,8 +1543,8 @@ static void descramble_drgnbowl_gfx(running_machine *machine)
 
 	auto_free(machine, buffer);
 
-	ROM = memory_region(machine, "gfx2");
-	size = memory_region_length(machine, "gfx2");
+	ROM = machine->region("gfx2")->base();
+	size = machine->region("gfx2")->bytes();
 	buffer = auto_alloc_array(machine, UINT8, size);
 
 	memcpy(buffer,ROM,size);
@@ -1574,7 +1564,7 @@ static void descramble_drgnbowl_gfx(running_machine *machine)
 
 static DRIVER_INIT( drgnbowl )
 {
-	gaiden_state *state = (gaiden_state *)machine->driver_data;
+	gaiden_state *state = machine->driver_data<gaiden_state>();
 	state->raiga_jumppoints = jumppoints_00;
 
 	descramble_drgnbowl_gfx(machine);
@@ -1624,8 +1614,8 @@ static void descramble_mastninj_gfx(running_machine *machine, UINT8* src)
 static DRIVER_INIT(mastninj)
 {
 	// rearrange the graphic roms into a format that MAME can decode
-	descramble_mastninj_gfx(machine, memory_region(machine,"gfx2"));
-	descramble_mastninj_gfx(machine, memory_region(machine,"gfx3"));
+	descramble_mastninj_gfx(machine, machine->region("gfx2")->base());
+	descramble_mastninj_gfx(machine, machine->region("gfx3")->base());
 	DRIVER_INIT_CALL(shadoww);
 }
 

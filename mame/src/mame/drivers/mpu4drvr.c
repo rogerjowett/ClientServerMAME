@@ -182,6 +182,7 @@ TODO:
 #include "sound/saa1099.h"
 #include "video/mc6845.h"
 #include "video/resnet.h"
+#include "machine/nvram.h"
 
 #ifdef MAME_DEBUG
 #define MPU4VIDVERBOSE 1
@@ -364,8 +365,8 @@ static WRITE8_DEVICE_HANDLER( vid_o1_callback )
 
 	if (data)
 	{
-		running_device *acia_0 = device->machine->device("acia6850_0");
-		running_device *acia_1 = device->machine->device("acia6850_1");
+		device_t *acia_0 = device->machine->device("acia6850_0");
+		device_t *acia_1 = device->machine->device("acia6850_1");
 		acia6850_tx_clock_in(acia_0);
 		acia6850_rx_clock_in(acia_0);
 		acia6850_tx_clock_in(acia_1);
@@ -494,66 +495,6 @@ static VIDEO_UPDATE( mpu4_vid )
 	/* we're in row table mode...thats why */
 	for(y = 0; y <= IR4_scn2674_rows_per_screen; y++)
 	{
-
-		if (y == 0)
-		{
-			scn2674_status_register |= 0x02;
-			/* Ready - this triggers for the first scanline of the screen */
-			if (scn2674_irq_mask&0x02)
-			{
-				LOGSTUFF(("SCN2674 Ready\n"));
-				scn2674_irq_state = 1;
-				scn2674_irq_register |= 0x02;
-				update_mpu68_interrupts(screen->machine);
-			}
-		}
-		/* Line 0 - this triggers for the first scanline of each row
-        Since we are doing this row by row, just call every time*/
-		scn2674_status_register |= 0x08;
-		if (scn2674_irq_mask&0x08)
-		{
-			LOGSTUFF(("SCN2674 Line Zero\n"));
-			scn2674_irq_state = 1;
-			scn2674_irq_register |= 0x08;
-			update_mpu68_interrupts(screen->machine);
-		}
-
-		if (y == IR12_scn2674_split_register_1)
-		/* Split Screen 1 */
-		{
-			if (scn2674_screen2_h & 0x40)
-			{
-				popmessage("Split screen 1 address shift required, contact MAMEDEV");
-			}
-			scn2674_status_register |= 0x04;
-			if (scn2674_irq_mask&0x04)
-			{
-				LOGSTUFF(("SCN2674 Split Screen 1\n"));
-				scn2674_irq_state = 1;
-				update_mpu68_interrupts(screen->machine);
-
-				scn2674_irq_register |= 0x04;
-			}
-		}
-
-		if (y == IR13_scn2674_split_register_2)
-		/* Split Screen 2 */
-		{
-			if (scn2674_screen2_h & 0x80)
-			{
-				popmessage("Split screen 2 address shift required, contact MAMEDEV");
-			}
-			scn2674_status_register |= 0x01;
-			if (scn2674_irq_mask&0x01)
-			{
-				LOGSTUFF(("SCN2674 Split Screen 2 irq\n"));
-				scn2674_irq_state = 1;
-				scn2674_irq_register |= 0x01;
-				update_mpu68_interrupts(screen->machine);
-			}
-
-		}
-
 		int screen2_base = (scn2674_screen2_h << 8) | scn2674_screen2_l;
 
 		UINT16 rowbase = (mpu4_vid_mainram[1+screen2_base+(y*2)]<<8)|mpu4_vid_mainram[screen2_base+(y*2)];
@@ -1077,25 +1018,7 @@ static VIDEO_START( mpu4_vid )
 	scn2675_IR_pointer = 0;
 }
 
-static INTERRUPT_GEN( mpu4_vid_irq )
-{
-	LOGSTUFF(("scn2674_irq_mask %02x\n",scn2674_irq_mask));
-	if (cpu_getiloops(device)==0) /* vbl */
-	{
-	/*  if (scn2674_display_enabled) ? */
-		{
-			if (scn2674_irq_mask&0x10)
-			{
-				LOGSTUFF(("vblank irq\n"));
-				scn2674_irq_state = 1;
-				update_mpu68_interrupts(device->machine);
 
-				scn2674_irq_register |= 0x10;
-			}
-		}
-		scn2674_status_register |= 0x10;
-	}
-}
 
 
 /****************************
@@ -1182,25 +1105,31 @@ static READ8_DEVICE_HANDLER( pia_ic5_porta_track_r )
 	/* The SWP trackball interface connects a standard trackball to the AUX1 port on the MPU4
     mainboard. As per usual, they've taken the cheap route here, reading and processing the
     raw quadrature signal from the encoder wheels for a 4 bit interface, rather than use any
-    additional hardware to simplify matters. For our purposes, two fake ports give the X and Y positions,
+    additional hardware to simplify matters. What makes matters worse is that there is a 45 degree rotation to take into account.
+    For our purposes, two fake ports give the X and Y positions,
     which are then worked back into the signal levels.
     We invert the X and Y data at source due to the use of Schmitt triggers in the interface, which
     clean up the pulses and flip the active phase.*/
 
 	LOG(("%s: IC5 PIA Read of Port A (AUX1)\n",cpuexec_describe_context(device->machine)));
 
+	static INT8 cur[2];
+
 	UINT8 data = input_port_read(device->machine, "AUX1");
 
-	UINT16 dx = input_port_read(device->machine, "TRACKX");
-	UINT16 dy = input_port_read(device->machine, "TRACKY");
+	INT8 dx = input_port_read(device->machine, "TRACKX");
+	INT8 dy = input_port_read(device->machine, "TRACKY");
+
+	cur[0] = dy + dx;
+	cur[1] = dy - dx;
 
 	UINT8 xa, xb, ya, yb;
 
 	/* generate pulses for the input port (A and B are 1 unit out of phase for direction sensing)*/
-	xa = ((dx + 1) & 3) <= 1;
-	xb = (dx & 3) <= 1;
-	ya = ((dy + 1) & 3) <= 1;
-	yb = (dy & 3) <= 1;
+	xa = ((cur[0] + 1) & 3) <= 1;
+	xb = (cur[0] & 3) <= 1;
+	ya = ((cur[1] + 1) & 3) <= 1;
+	yb = (cur[1] & 3) <= 1;
 
 	data |= (xa << 4); // XA
 	data |= (ya << 5); // YA
@@ -1377,7 +1306,7 @@ static INPUT_PORTS_START( mating )
 
 	PORT_START("BLACK2")
 	PORT_BIT(0x01, IP_ACTIVE_HIGH, IPT_OTHER) PORT_NAME("Right Yellow")
-	PORT_BIT(0x02, IP_ACTIVE_HIGH, IPT_OTHER) PORT_NAME("Right Red")
+	PORT_BIT(0x02, IP_ACTIVE_HIGH, IPT_BUTTON1) PORT_NAME("Right Red") // selects the answer
 	PORT_BIT(0x04, IP_ACTIVE_HIGH, IPT_OTHER) PORT_NAME("26")
 	PORT_BIT(0x08, IP_ACTIVE_HIGH, IPT_OTHER) PORT_NAME("Left Yellow")
 	PORT_BIT(0x10, IP_ACTIVE_HIGH, IPT_OTHER) PORT_NAME("Left Red")
@@ -1938,7 +1867,7 @@ INPUT_PORTS_END
 /* OKI M6376 (for Mating Game) FIXME */
 static READ16_DEVICE_HANDLER( oki_r )
 {
-	return mame_rand(device->machine);
+	return device->machine->rand();
 }
 
 static WRITE16_DEVICE_HANDLER( oki_w )
@@ -1947,7 +1876,7 @@ static WRITE16_DEVICE_HANDLER( oki_w )
 	// 0x12: .... ...x      OKIM6736 /ST
 }
 
-static void video_reset(running_device *device)
+static void video_reset(device_t *device)
 {
 	device->machine->device("6840ptm_68k")->reset();
 	device->machine->device("acia6850_1")->reset();
@@ -2014,7 +1943,7 @@ ADDRESS_MAP_END
 
 /* TODO: Fix up MPU4 map*/
 static ADDRESS_MAP_START( mpu4_6809_map, ADDRESS_SPACE_PROGRAM, 8 )
-	AM_RANGE(0x0000, 0x07ff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0x0000, 0x07ff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0x0800, 0x0800) AM_DEVREADWRITE("acia6850_0", acia6850_stat_r, acia6850_ctrl_w)
 	AM_RANGE(0x0801, 0x0801) AM_DEVREADWRITE("acia6850_0", acia6850_data_r, acia6850_data_w)
 	AM_RANGE(0x0880, 0x0881) AM_NOP /* Could be a UART datalogger is here. */
@@ -2106,7 +2035,7 @@ static PALETTE_INIT( dealem )
 			3,	resistances_rg,	weights_g,	1000,	0,
 			2,	resistances_b,	weights_b,	1000,	0);
 
-	len = memory_region_length(machine, "proms");
+	len = machine->region("proms")->bytes();
 	for (i = 0; i < len; i++)
 	{
 		int bit0,bit1,bit2,r,g,b;
@@ -2179,7 +2108,7 @@ static const mc6845_interface hd6845_intf =
 
 
 static ADDRESS_MAP_START( dealem_memmap, ADDRESS_SPACE_PROGRAM, 8 )
-	AM_RANGE(0x0000, 0x07ff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0x0000, 0x07ff) AM_RAM AM_SHARE("nvram")
 
 	AM_RANGE(0x0800, 0x0800) AM_DEVWRITE("crtc", mc6845_address_w)
 	AM_RANGE(0x0801, 0x0801) AM_DEVREADWRITE("crtc", mc6845_register_r, mc6845_register_w)
@@ -2199,121 +2128,222 @@ static ADDRESS_MAP_START( dealem_memmap, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x8000, 0xffff) AM_ROM	AM_WRITENOP/* 64k  paged ROM (4 pages) */
 ADDRESS_MAP_END
 
+static int rowcounter = 0;
+static int linecounter = 0;
 
-static MACHINE_DRIVER_START( mpu4_vid )
-	MDRV_CPU_ADD("maincpu", M6809, MPU4_MASTER_CLOCK/4 )
-	MDRV_CPU_PROGRAM_MAP(mpu4_6809_map)
-	MDRV_TIMER_ADD_PERIODIC("50hz",gen_50hz, HZ(100))
 
-	MDRV_NVRAM_HANDLER(generic_0fill)				/* confirm */
+static TIMER_DEVICE_CALLBACK( scanline_timer_callback )
+{
+	int current_scanline=param;
+	timer_call_after_resynch(timer.machine, NULL, 0, 0);
+
+
+	if (current_scanline==0)
+	{
+		// these will be used to track which row / line we're on eventually
+		// and used by the renderer to render the correct data
+		rowcounter = 0; linecounter = 0;
+
+	//  scn2674_status_register &= ~0x10; // clear vblank
+
+		scn2674_status_register |= 0x02;
+		/* Ready - this triggers for the first scanline of the screen */
+		if (scn2674_irq_mask&0x02)
+		{
+			LOGSTUFF(("SCN2674 Ready\n"));
+			scn2674_irq_state = 1;
+			scn2674_irq_register |= 0x02;
+			update_mpu68_interrupts(timer.machine);
+		}
+	}
+
+	// should be triggered at the start of each ROW (line zero for that row)
+	if ((current_scanline%8 == 7) && (current_scanline<296))
+	{
+		scn2674_status_register |= 0x08;
+		if (scn2674_irq_mask&0x08)
+		{
+			LOGSTUFF(("SCN2674 Line Zero\n"));
+			scn2674_irq_state = 1;
+			scn2674_irq_register |= 0x08;
+			update_mpu68_interrupts(timer.machine);
+		}
+	}
+
+	// this is ROWS not scanlines!!
+	if (current_scanline == IR12_scn2674_split_register_1*8)
+	/* Split Screen 1 */
+	{
+		if (scn2674_screen2_h & 0x40)
+		{
+			popmessage("Split screen 1 address shift required, contact MAMEDEV");
+		}
+		scn2674_status_register |= 0x04;
+		if (scn2674_irq_mask&0x04)
+		{
+			LOGSTUFF(("SCN2674 Split Screen 1\n"));
+			scn2674_irq_state = 1;
+			update_mpu68_interrupts(timer.machine);
+			timer.machine->primary_screen->update_partial(timer.machine->primary_screen->vpos());
+
+			scn2674_irq_register |= 0x04;
+		}
+	}
+
+	// this is in ROWS not scanlines!!!
+	if (current_scanline == IR13_scn2674_split_register_2*8)
+	/* Split Screen 2 */
+	{
+		if (scn2674_screen2_h & 0x80)
+		{
+			popmessage("Split screen 2 address shift required, contact MAMEDEV");
+		}
+		scn2674_status_register |= 0x01;
+		if (scn2674_irq_mask&0x01)
+		{
+			LOGSTUFF(("SCN2674 Split Screen 2 irq\n"));
+			scn2674_irq_state = 1;
+			scn2674_irq_register |= 0x01;
+			update_mpu68_interrupts(timer.machine);
+			timer.machine->primary_screen->update_partial(timer.machine->primary_screen->vpos());
+
+		}
+	}
+
+	// vblank?
+	if (current_scanline == 300)
+	{
+	/*  if (scn2674_display_enabled) ? */
+		{
+			if (scn2674_irq_mask&0x10)
+			{
+				LOGSTUFF(("vblank irq\n"));
+				scn2674_irq_state = 1;
+				update_mpu68_interrupts(timer.machine);
+
+				scn2674_irq_register |= 0x10;
+			}
+		}
+		scn2674_status_register |= 0x10;
+	}
+
+//  printf("scanline %d\n",current_scanline);
+}
+
+
+static MACHINE_CONFIG_START( mpu4_vid, driver_device )
+	MCFG_CPU_ADD("maincpu", M6809, MPU4_MASTER_CLOCK/4 )
+	MCFG_CPU_PROGRAM_MAP(mpu4_6809_map)
+	MCFG_TIMER_ADD_PERIODIC("50hz",gen_50hz, HZ(100))
+
+	MCFG_NVRAM_ADD_0FILL("nvram")				/* confirm */
 
 	/* 6840 PTM */
-	MDRV_PTM6840_ADD("6840ptm", ptm_ic2_intf)
+	MCFG_PTM6840_ADD("6840ptm", ptm_ic2_intf)
 
-	MDRV_PIA6821_ADD("pia_ic3", pia_ic3_intf)
-	MDRV_PIA6821_ADD("pia_ic4", pia_ic4_intf)
-	MDRV_PIA6821_ADD("pia_ic5", pia_ic5_intf)
-	MDRV_PIA6821_ADD("pia_ic6", pia_ic6_intf)
-	MDRV_PIA6821_ADD("pia_ic7", pia_ic7_intf)
-	MDRV_PIA6821_ADD("pia_ic8", pia_ic8_intf)
+	MCFG_PIA6821_ADD("pia_ic3", pia_ic3_intf)
+	MCFG_PIA6821_ADD("pia_ic4", pia_ic4_intf)
+	MCFG_PIA6821_ADD("pia_ic5", pia_ic5_intf)
+	MCFG_PIA6821_ADD("pia_ic6", pia_ic6_intf)
+	MCFG_PIA6821_ADD("pia_ic7", pia_ic7_intf)
+	MCFG_PIA6821_ADD("pia_ic8", pia_ic8_intf)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 64*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 63*8-1, 0*8, 37*8-1)
-	MDRV_SCREEN_REFRESH_RATE(50)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(64*8, 40*8) // note this directly affects the scanline counters used below, and thus the timing of everything
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 63*8-1, 0*8, 37*8-1)
+	MCFG_SCREEN_REFRESH_RATE(50)
 
-	MDRV_CPU_ADD("video", M68000, VIDEO_MASTER_CLOCK )
-	MDRV_CPU_PROGRAM_MAP(mpu4_68k_map)
-	MDRV_CPU_VBLANK_INT("screen", mpu4_vid_irq)
+	MCFG_CPU_ADD("video", M68000, VIDEO_MASTER_CLOCK )
+	MCFG_CPU_PROGRAM_MAP(mpu4_68k_map)
 
-	MDRV_QUANTUM_TIME(HZ(960))
+	MCFG_QUANTUM_TIME(HZ(960))
 
-	MDRV_MACHINE_START(mpu4_vid)
-	MDRV_MACHINE_RESET(mpu4_vid)
-	MDRV_VIDEO_START (mpu4_vid)
-	MDRV_VIDEO_UPDATE(mpu4_vid)
+	MCFG_MACHINE_START(mpu4_vid)
+	MCFG_MACHINE_RESET(mpu4_vid)
+	MCFG_VIDEO_START (mpu4_vid)
+	MCFG_VIDEO_UPDATE(mpu4_vid)
 
-	MDRV_PALETTE_LENGTH(16)
+	MCFG_PALETTE_LENGTH(16)
 
-	MDRV_PTM6840_ADD("6840ptm_68k", ptm_vid_intf)
+	MCFG_PTM6840_ADD("6840ptm_68k", ptm_vid_intf)
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("ay8913",AY8913, MPU4_MASTER_CLOCK/4)
-	MDRV_SOUND_CONFIG(ay8910_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("ay8913",AY8913, MPU4_MASTER_CLOCK/4)
+	MCFG_SOUND_CONFIG(ay8910_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
 	/* Present on all video cards */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
-	MDRV_SOUND_ADD("saa", SAA1099, 8000000)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.5)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.5)
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SOUND_ADD("saa", SAA1099, 8000000)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.5)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.5)
 
-	MDRV_ACIA6850_ADD("acia6850_0", m6809_acia_if)
-	MDRV_ACIA6850_ADD("acia6850_1", m68k_acia_if)
-MACHINE_DRIVER_END
+	MCFG_ACIA6850_ADD("acia6850_0", m6809_acia_if)
+	MCFG_ACIA6850_ADD("acia6850_1", m68k_acia_if)
 
-static MACHINE_DRIVER_START( crmaze )
-	MDRV_IMPORT_FROM( mpu4_vid )
-	MDRV_PIA6821_MODIFY("pia_ic5", pia_ic5t_intf)
-MACHINE_DRIVER_END
+	// for the video timing
+	MCFG_TIMER_ADD_SCANLINE("scan_timer", scanline_timer_callback, "screen", 0, 1)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( mating )
-	MDRV_IMPORT_FROM( crmaze )
+static MACHINE_CONFIG_DERIVED( crmaze, mpu4_vid )
+	MCFG_PIA6821_MODIFY("pia_ic5", pia_ic5t_intf)
+MACHINE_CONFIG_END
 
-	MDRV_SOUND_ADD("oki", OKIM6376, 64000) //?
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( mating, crmaze )
 
-static MACHINE_DRIVER_START( vgpoker )
-	MDRV_IMPORT_FROM( mpu4_vid )
-	MDRV_CPU_MODIFY("video")
-	MDRV_CPU_PROGRAM_MAP(vp_68k_map)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("oki", OKIM6376, 64000) //?
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
+
+static MACHINE_CONFIG_DERIVED( vgpoker, mpu4_vid )
+	MCFG_CPU_MODIFY("video")
+	MCFG_CPU_PROGRAM_MAP(vp_68k_map)
+MACHINE_CONFIG_END
 
 
 
 /* machine driver for Zenitone Deal 'Em board */
-static MACHINE_DRIVER_START( dealem )
-	MDRV_MACHINE_START(mpu4mod2)							/* main mpu4 board initialisation */
-	MDRV_MACHINE_RESET(mpu4_vid)
-	MDRV_CPU_ADD("maincpu", M6809, MPU4_MASTER_CLOCK/4)
-	MDRV_CPU_PROGRAM_MAP(dealem_memmap)
+static MACHINE_CONFIG_START( dealem, driver_device )
+	MCFG_MACHINE_START(mpu4mod2)							/* main mpu4 board initialisation */
+	MCFG_MACHINE_RESET(mpu4_vid)
+	MCFG_CPU_ADD("maincpu", M6809, MPU4_MASTER_CLOCK/4)
+	MCFG_CPU_PROGRAM_MAP(dealem_memmap)
 
-	MDRV_TIMER_ADD_PERIODIC("50hz",gen_50hz, HZ(100))
+	MCFG_TIMER_ADD_PERIODIC("50hz",gen_50hz, HZ(100))
 
-	MDRV_PTM6840_ADD("6840ptm", ptm_ic2_intf)
+	MCFG_PTM6840_ADD("6840ptm", ptm_ic2_intf)
 
-	MDRV_PIA6821_ADD("pia_ic3", pia_ic3_intf)
-	MDRV_PIA6821_ADD("pia_ic4", pia_ic4_intf)
-	MDRV_PIA6821_ADD("pia_ic5", pia_ic5_intf)
-	MDRV_PIA6821_ADD("pia_ic6", pia_ic6_intf)
-	MDRV_PIA6821_ADD("pia_ic7", pia_ic7_intf)
-	MDRV_PIA6821_ADD("pia_ic8", pia_ic8_intf)
+	MCFG_PIA6821_ADD("pia_ic3", pia_ic3_intf)
+	MCFG_PIA6821_ADD("pia_ic4", pia_ic4_intf)
+	MCFG_PIA6821_ADD("pia_ic5", pia_ic5_intf)
+	MCFG_PIA6821_ADD("pia_ic6", pia_ic6_intf)
+	MCFG_PIA6821_ADD("pia_ic7", pia_ic7_intf)
+	MCFG_PIA6821_ADD("pia_ic8", pia_ic8_intf)
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("ay8913",AY8913, MPU4_MASTER_CLOCK/4)
-	MDRV_SOUND_CONFIG(ay8910_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("ay8913",AY8913, MPU4_MASTER_CLOCK/4)
+	MCFG_SOUND_CONFIG(ay8910_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE((54+1)*8, (32+1)*8)					/* Taken from 6845 init, registers 00 & 04. Normally programmed with (value-1) */
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 0*8, 31*8-1)		/* Taken from 6845 init, registers 01 & 06 */
-	MDRV_SCREEN_REFRESH_RATE(56)							/* Measured accurately from the flip-flop, but 6845 handles this */
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE((54+1)*8, (32+1)*8)					/* Taken from 6845 init, registers 00 & 04. Normally programmed with (value-1) */
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 40*8-1, 0*8, 31*8-1)		/* Taken from 6845 init, registers 01 & 06 */
+	MCFG_SCREEN_REFRESH_RATE(56)							/* Measured accurately from the flip-flop, but 6845 handles this */
 
-	MDRV_GFXDECODE(dealem)
-	MDRV_VIDEO_UPDATE(dealem)
+	MCFG_GFXDECODE(dealem)
+	MCFG_VIDEO_UPDATE(dealem)
 
-	MDRV_PALETTE_LENGTH(32)
-	MDRV_PALETTE_INIT(dealem)
+	MCFG_PALETTE_LENGTH(32)
+	MCFG_PALETTE_INIT(dealem)
 
-	MDRV_MC6845_ADD("crtc", HD6845, MPU4_MASTER_CLOCK / 4 / 8, hd6845_intf)	/* HD68B45 */
-MACHINE_DRIVER_END
+	MCFG_MC6845_ADD("crtc", HD6845, MPU4_MASTER_CLOCK / 4 / 8, hd6845_intf)	/* HD68B45 */
+MACHINE_CONFIG_END
 
 
 
@@ -2556,8 +2586,8 @@ static DRIVER_INIT (crmaze3a)
 
 static DRIVER_INIT (mating)
 {
-	const address_space *space = cputag_get_address_space(machine, "video", ADDRESS_SPACE_PROGRAM);
-	running_device *device = machine->device("oki");
+	address_space *space = cputag_get_address_space(machine, "video", ADDRESS_SPACE_PROGRAM);
+	device_t *device = machine->device("oki");
 
 	/* The Mating Game has an extra 256kB RAM on the program card */
 	memory_install_ram(space, 0x600000, 0x63ffff, 0, 0, NULL);

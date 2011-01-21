@@ -28,6 +28,7 @@ To Do:
 #include "sound/ymz280b.h"
 #include "machine/eeprom.h"
 #include "machine/ticket.h"
+#include "machine/nvram.h"
 
 /***************************************************************************
 
@@ -332,7 +333,7 @@ static ADDRESS_MAP_START( gegege_mem_map, ADDRESS_SPACE_PROGRAM, 8 )
 //  AM_RANGE( 0xd001, 0xd021 ) AM_RAM
 	AM_RANGE( 0xd800, 0xdfff ) AM_RAMBANK("rambank")
 
-	AM_RANGE( 0xe000, 0xefff ) AM_RAM AM_BASE_SIZE_GENERIC(nvram)	// battery
+	AM_RANGE( 0xe000, 0xefff ) AM_RAM AM_SHARE("nvram")	// battery
 
 	AM_RANGE( 0xf000, 0xffff ) AM_RAM
 ADDRESS_MAP_END
@@ -461,36 +462,36 @@ static INTERRUPT_GEN( gegege_vblank_interrupt )
 	cpu_set_input_line_and_vector(device, 0, HOLD_LINE, 0x5a);
 }
 
-static MACHINE_DRIVER_START( gegege )
-	MDRV_CPU_ADD("maincpu", Z80, XTAL_27MHz / 4)	// ?
-	MDRV_CPU_PROGRAM_MAP(gegege_mem_map)
-	MDRV_CPU_IO_MAP(gegege_io_map)
-	MDRV_CPU_VBLANK_INT("screen", gegege_vblank_interrupt)
+static MACHINE_CONFIG_START( gegege, driver_device )
+	MCFG_CPU_ADD("maincpu", Z80, XTAL_27MHz / 4)	// ?
+	MCFG_CPU_PROGRAM_MAP(gegege_mem_map)
+	MCFG_CPU_IO_MAP(gegege_io_map)
+	MCFG_CPU_VBLANK_INT("screen", gegege_vblank_interrupt)
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
-	MDRV_EEPROM_ADD("eeprom", eeprom_intf)
+	MCFG_NVRAM_ADD_0FILL("nvram")
+	MCFG_EEPROM_ADD("eeprom", eeprom_intf)
 
-	MDRV_TICKET_DISPENSER_ADD("hopper", 200, TICKET_MOTOR_ACTIVE_LOW, TICKET_STATUS_ACTIVE_LOW )
+	MCFG_TICKET_DISPENSER_ADD("hopper", 200, TICKET_MOTOR_ACTIVE_LOW, TICKET_STATUS_ACTIVE_LOW )
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)					// ?
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(0x200, 0x200)
-	MDRV_SCREEN_VISIBLE_AREA(0,0x140-1, 0,0xf0-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)					// ?
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(0x200, 0x200)
+	MCFG_SCREEN_VISIBLE_AREA(0,0x140-1, 0,0xf0-1)
 
-	MDRV_GFXDECODE(sigmab98)
-	MDRV_PALETTE_LENGTH(0x100)
+	MCFG_GFXDECODE(sigmab98)
+	MCFG_PALETTE_LENGTH(0x100)
 
-	MDRV_VIDEO_UPDATE(sigmab98)
+	MCFG_VIDEO_UPDATE(sigmab98)
 
 	// sound hardware
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymz", YMZ280B, XTAL_27MHz / 2)	// ?
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymz", YMZ280B, XTAL_27MHz / 2)	// ?
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************
@@ -542,7 +543,7 @@ ROM_END
 
 static DRIVER_INIT( gegege )
 {
-	UINT8 *rom = memory_region(machine, "maincpu");
+	UINT8 *rom = machine->region("maincpu")->base();
 
 	// Protection?
 	rom[0xbd3] = 0x18;

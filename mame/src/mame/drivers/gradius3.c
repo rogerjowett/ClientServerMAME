@@ -30,13 +30,13 @@
 
 static READ16_HANDLER( k052109_halfword_r )
 {
-	gradius3_state *state = (gradius3_state *)space->machine->driver_data;
+	gradius3_state *state = space->machine->driver_data<gradius3_state>();
 	return k052109_r(state->k052109, offset);
 }
 
 static WRITE16_HANDLER( k052109_halfword_w )
 {
-	gradius3_state *state = (gradius3_state *)space->machine->driver_data;
+	gradius3_state *state = space->machine->driver_data<gradius3_state>();
 
 	if (ACCESSING_BITS_0_7)
 		k052109_w(state->k052109, offset, data & 0xff);
@@ -49,13 +49,13 @@ static WRITE16_HANDLER( k052109_halfword_w )
 
 static READ16_HANDLER( k051937_halfword_r )
 {
-	gradius3_state *state = (gradius3_state *)space->machine->driver_data;
+	gradius3_state *state = space->machine->driver_data<gradius3_state>();
 	return k051937_r(state->k051960, offset);
 }
 
 static WRITE16_HANDLER( k051937_halfword_w )
 {
-	gradius3_state *state = (gradius3_state *)space->machine->driver_data;
+	gradius3_state *state = space->machine->driver_data<gradius3_state>();
 
 	if (ACCESSING_BITS_0_7)
 		k051937_w(state->k051960, offset, data & 0xff);
@@ -63,20 +63,20 @@ static WRITE16_HANDLER( k051937_halfword_w )
 
 static READ16_HANDLER( k051960_halfword_r )
 {
-	gradius3_state *state = (gradius3_state *)space->machine->driver_data;
+	gradius3_state *state = space->machine->driver_data<gradius3_state>();
 	return k051960_r(state->k051960, offset);
 }
 
 static WRITE16_HANDLER( k051960_halfword_w )
 {
-	gradius3_state *state = (gradius3_state *)space->machine->driver_data;
+	gradius3_state *state = space->machine->driver_data<gradius3_state>();
 	if (ACCESSING_BITS_0_7)
 		k051960_w(state->k051960, offset, data & 0xff);
 }
 
 static WRITE16_HANDLER( cpuA_ctrl_w )
 {
-	gradius3_state *state = (gradius3_state *)space->machine->driver_data;
+	gradius3_state *state = space->machine->driver_data<gradius3_state>();
 
 	if (ACCESSING_BITS_8_15)
 	{
@@ -102,7 +102,7 @@ static WRITE16_HANDLER( cpuA_ctrl_w )
 
 static WRITE16_HANDLER( cpuB_irqenable_w )
 {
-	gradius3_state *state = (gradius3_state *)space->machine->driver_data;
+	gradius3_state *state = space->machine->driver_data<gradius3_state>();
 
 	if (ACCESSING_BITS_8_15)
 		state->irqBmask = (data >> 8) & 0x07;
@@ -110,14 +110,14 @@ static WRITE16_HANDLER( cpuB_irqenable_w )
 
 static INTERRUPT_GEN( cpuA_interrupt )
 {
-	gradius3_state *state = (gradius3_state *)device->machine->driver_data;
+	gradius3_state *state = device->machine->driver_data<gradius3_state>();
 	if (state->irqAen)
 		cpu_set_input_line(device, 2, HOLD_LINE);
 }
 
 static INTERRUPT_GEN( cpuB_interrupt )
 {
-	gradius3_state *state = (gradius3_state *)device->machine->driver_data;
+	gradius3_state *state = device->machine->driver_data<gradius3_state>();
 
 	if (cpu_getiloops(device) & 1)	/* ??? */
 	{
@@ -133,7 +133,7 @@ static INTERRUPT_GEN( cpuB_interrupt )
 
 static WRITE16_HANDLER( cpuB_irqtrigger_w )
 {
-	gradius3_state *state = (gradius3_state *)space->machine->driver_data;
+	gradius3_state *state = space->machine->driver_data<gradius3_state>();
 
 	if (state->irqBmask & 4)
 	{
@@ -152,7 +152,7 @@ static WRITE16_HANDLER( sound_command_w )
 
 static WRITE16_HANDLER( sound_irq_w )
 {
-	gradius3_state *state = (gradius3_state *)space->machine->driver_data;
+	gradius3_state *state = space->machine->driver_data<gradius3_state>();
 	cpu_set_input_line_and_vector(state->audiocpu, 0, HOLD_LINE, 0xff);
 }
 
@@ -270,7 +270,7 @@ static INPUT_PORTS_START( gradius3 )
 INPUT_PORTS_END
 
 
-static void volume_callback(running_device *device, int v)
+static void volume_callback(device_t *device, int v)
 {
 	k007232_set_volume(device, 0, (v >> 4) * 0x11, 0);
 	k007232_set_volume(device, 1, 0, (v & 0x0f) * 0x11);
@@ -301,7 +301,7 @@ static const k051960_interface gradius3_k051960_intf =
 
 static MACHINE_START( gradius3 )
 {
-	gradius3_state *state = (gradius3_state *)machine->driver_data;
+	gradius3_state *state = machine->driver_data<gradius3_state>();
 
 	state->maincpu = machine->device("maincpu");
 	state->audiocpu = machine->device("audiocpu");
@@ -317,7 +317,7 @@ static MACHINE_START( gradius3 )
 
 static MACHINE_RESET( gradius3 )
 {
-	gradius3_state *state = (gradius3_state *)machine->driver_data;
+	gradius3_state *state = machine->driver_data<gradius3_state>();
 
 	/* start with cpu B halted */
 	cputag_set_input_line(machine, "sub", INPUT_LINE_RESET, ASSERT_LINE);
@@ -327,61 +327,58 @@ static MACHINE_RESET( gradius3 )
 
 }
 
-static MACHINE_DRIVER_START( gradius3 )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(gradius3_state)
+static MACHINE_CONFIG_START( gradius3, gradius3_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68000, 10000000)	/* 10 MHz */
-	MDRV_CPU_PROGRAM_MAP(gradius3_map)
-	MDRV_CPU_VBLANK_INT("screen", cpuA_interrupt)
+	MCFG_CPU_ADD("maincpu", M68000, 10000000)	/* 10 MHz */
+	MCFG_CPU_PROGRAM_MAP(gradius3_map)
+	MCFG_CPU_VBLANK_INT("screen", cpuA_interrupt)
 
-	MDRV_CPU_ADD("sub", M68000, 10000000)	/* 10 MHz */
-	MDRV_CPU_PROGRAM_MAP(gradius3_map2)
-	MDRV_CPU_VBLANK_INT_HACK(cpuB_interrupt,2)	/* has three interrupt vectors, 1 2 and 4 */
+	MCFG_CPU_ADD("sub", M68000, 10000000)	/* 10 MHz */
+	MCFG_CPU_PROGRAM_MAP(gradius3_map2)
+	MCFG_CPU_VBLANK_INT_HACK(cpuB_interrupt,2)	/* has three interrupt vectors, 1 2 and 4 */
 								/* 4 is triggered by cpu A, the others are unknown but */
 								/* required for the game to run. */
-	MDRV_CPU_ADD("audiocpu", Z80, 3579545)
-	MDRV_CPU_PROGRAM_MAP(gradius3_s_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 3579545)
+	MCFG_CPU_PROGRAM_MAP(gradius3_s_map)
 
-	MDRV_QUANTUM_TIME(HZ(6000))
+	MCFG_QUANTUM_TIME(HZ(6000))
 
-	MDRV_MACHINE_START(gradius3)
-	MDRV_MACHINE_RESET(gradius3)
+	MCFG_MACHINE_START(gradius3)
+	MCFG_MACHINE_RESET(gradius3)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_HAS_SHADOWS)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(12*8, (64-12)*8-1, 2*8, 30*8-1 )
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(12*8, (64-12)*8-1, 2*8, 30*8-1 )
 
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(gradius3)
-	MDRV_VIDEO_UPDATE(gradius3)
+	MCFG_VIDEO_START(gradius3)
+	MCFG_VIDEO_UPDATE(gradius3)
 
-	MDRV_K052109_ADD("k052109", gradius3_k052109_intf)
-	MDRV_K051960_ADD("k051960", gradius3_k051960_intf)
+	MCFG_K052109_ADD("k052109", gradius3_k052109_intf)
+	MCFG_K051960_ADD("k051960", gradius3_k051960_intf)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymsnd", YM2151, 3579545)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("ymsnd", YM2151, 3579545)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
 
-	MDRV_SOUND_ADD("k007232", K007232, 3579545)
-	MDRV_SOUND_CONFIG(k007232_config)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 0.20)
-	MDRV_SOUND_ROUTE(0, "rspeaker", 0.20)
-	MDRV_SOUND_ROUTE(1, "lspeaker", 0.20)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 0.20)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("k007232", K007232, 3579545)
+	MCFG_SOUND_CONFIG(k007232_config)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 0.20)
+	MCFG_SOUND_ROUTE(0, "rspeaker", 0.20)
+	MCFG_SOUND_ROUTE(1, "lspeaker", 0.20)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 0.20)
+MACHINE_CONFIG_END
 
 
 

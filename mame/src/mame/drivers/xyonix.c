@@ -36,7 +36,7 @@ static WRITE8_HANDLER( xyonix_irqack_w )
 static void handle_coins(running_machine *machine, int coin)
 {
 	static const int coinage_table[4][2] = {{2,3},{2,1},{1,2},{1,1}};
-	xyonix_state *state = (xyonix_state *)machine->driver_data;
+	xyonix_state *state = machine->driver_data<xyonix_state>();
 	int tmp = 0;
 
 	//popmessage("Coin %d", state->coin);
@@ -74,7 +74,7 @@ static void handle_coins(running_machine *machine, int coin)
 
 static READ8_HANDLER ( xyonix_io_r )
 {
-	xyonix_state *state = (xyonix_state *)space->machine->driver_data;
+	xyonix_state *state = space->machine->driver_data<xyonix_state>();
 	int regPC = cpu_get_pc(space->cpu);
 
 	if (regPC == 0x27ba)
@@ -126,7 +126,7 @@ static READ8_HANDLER ( xyonix_io_r )
 
 static WRITE8_HANDLER ( xyonix_io_w )
 {
-	xyonix_state *state = (xyonix_state *)space->machine->driver_data;
+	xyonix_state *state = space->machine->driver_data<xyonix_state>();
 
 	//logerror ("xyonix_port_e0_w %02x - PC = %04x\n", data, cpu_get_pc(space->cpu));
 	state->e0_data = data;
@@ -214,41 +214,39 @@ GFXDECODE_END
 
 /* MACHINE driver *************************************************************/
 
-static MACHINE_DRIVER_START( xyonix )
-
-	MDRV_DRIVER_DATA( xyonix_state )
+static MACHINE_CONFIG_START( xyonix, xyonix_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80,16000000 / 4)		 /* 4 MHz ? */
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_IO_MAP(port_map)
-	MDRV_CPU_VBLANK_INT("screen", nmi_line_pulse)
-	MDRV_CPU_PERIODIC_INT(irq0_line_assert,4*60)	/* ?? controls music tempo */
+	MCFG_CPU_ADD("maincpu", Z80,16000000 / 4)		 /* 4 MHz ? */
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_IO_MAP(port_map)
+	MCFG_CPU_VBLANK_INT("screen", nmi_line_pulse)
+	MCFG_CPU_PERIODIC_INT(irq0_line_assert,4*60)	/* ?? controls music tempo */
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(80*4, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0, 80*4-1, 0, 28*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(80*4, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0, 80*4-1, 0, 28*8-1)
 
-	MDRV_GFXDECODE(xyonix)
-	MDRV_PALETTE_LENGTH(256)
+	MCFG_GFXDECODE(xyonix)
+	MCFG_PALETTE_LENGTH(256)
 
-	MDRV_PALETTE_INIT(xyonix)
-	MDRV_VIDEO_START(xyonix)
-	MDRV_VIDEO_UPDATE(xyonix)
+	MCFG_PALETTE_INIT(xyonix)
+	MCFG_VIDEO_START(xyonix)
+	MCFG_VIDEO_UPDATE(xyonix)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("sn1", SN76496, 16000000/4)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SOUND_ADD("sn1", SN76496, 16000000/4)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-	MDRV_SOUND_ADD("sn2", SN76496, 16000000/4)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("sn2", SN76496, 16000000/4)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 /* ROM Loading ***************************************************************/
 

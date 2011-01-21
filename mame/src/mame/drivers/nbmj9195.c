@@ -61,7 +61,7 @@ static NVRAM_HANDLER( nbmj9195 )
 
 static WRITE8_HANDLER( nbmj9195_soundbank_w )
 {
-	UINT8 *SNDROM = memory_region(space->machine, "audiocpu");
+	UINT8 *SNDROM = space->machine->region("audiocpu")->base();
 
 	memory_set_bankptr(space->machine, "bank1", &SNDROM[0x08000 + (0x8000 * (data & 0x03))]);
 }
@@ -471,7 +471,7 @@ static WRITE8_HANDLER( tmpz84c011_1_dir_pe_w )	{ pio_dir[9] = data; }
 /* CTC of main cpu, ch0 trigger is vblank */
 static INTERRUPT_GEN( ctc0_trg1 )
 {
-	running_device *ctc = device->machine->device("main_ctc");
+	device_t *ctc = device->machine->device("main_ctc");
 	z80ctc_trg1_w(ctc, 1);
 	z80ctc_trg1_w(ctc, 0);
 }
@@ -496,7 +496,7 @@ static Z80CTC_INTERFACE( ctc_intf_audio )
 
 static MACHINE_RESET( sailorws )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
 	int i;
 
 	// initialize TMPZ84C011 PIO
@@ -509,8 +509,8 @@ static MACHINE_RESET( sailorws )
 
 static DRIVER_INIT( nbmj9195 )
 {
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
-	UINT8 *ROM = memory_region(machine, "audiocpu");
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	UINT8 *ROM = machine->region("audiocpu")->base();
 
 	// sound program patch
 	ROM[0x0213] = 0x00;			// DI -> NOP
@@ -2911,340 +2911,311 @@ static const z80_daisy_config daisy_chain_sound[] =
 };
 
 
-static MACHINE_DRIVER_START( NBMJDRV1 )
+static MACHINE_CONFIG_START( NBMJDRV1, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, 12000000/2)		/* TMPZ84C011, 6.00 MHz */
-	MDRV_CPU_CONFIG(daisy_chain_main)
-	MDRV_CPU_PROGRAM_MAP(sailorws_map)
-	MDRV_CPU_IO_MAP(sailorws_io_map)
-	MDRV_CPU_VBLANK_INT("screen", ctc0_trg1)				/* vblank is connect to ctc triggfer */
+	MCFG_CPU_ADD("maincpu", Z80, 12000000/2)		/* TMPZ84C011, 6.00 MHz */
+	MCFG_CPU_CONFIG(daisy_chain_main)
+	MCFG_CPU_PROGRAM_MAP(sailorws_map)
+	MCFG_CPU_IO_MAP(sailorws_io_map)
+	MCFG_CPU_VBLANK_INT("screen", ctc0_trg1)				/* vblank is connect to ctc triggfer */
 
-	MDRV_CPU_ADD("audiocpu", Z80, 8000000)					/* TMPZ84C011, 8.00 MHz */
-	MDRV_CPU_CONFIG(daisy_chain_sound)
-	MDRV_CPU_PROGRAM_MAP(sailorws_sound_map)
-	MDRV_CPU_IO_MAP(sailorws_sound_io_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 8000000)					/* TMPZ84C011, 8.00 MHz */
+	MCFG_CPU_CONFIG(daisy_chain_sound)
+	MCFG_CPU_PROGRAM_MAP(sailorws_sound_map)
+	MCFG_CPU_IO_MAP(sailorws_sound_io_map)
 
-	MDRV_Z80CTC_ADD("main_ctc", 12000000/2 /* same as "maincpu" */, ctc_intf_main)
-	MDRV_Z80CTC_ADD("audio_ctc", 8000000 /* same as "audiocpu" */, ctc_intf_audio)
+	MCFG_Z80CTC_ADD("main_ctc", 12000000/2 /* same as "maincpu" */, ctc_intf_main)
+	MCFG_Z80CTC_ADD("audio_ctc", 8000000 /* same as "audiocpu" */, ctc_intf_audio)
 
-	MDRV_MACHINE_RESET(sailorws)
+	MCFG_MACHINE_RESET(sailorws)
 
 	/* video hardware */
-	MDRV_VIDEO_ATTRIBUTES(VIDEO_UPDATE_AFTER_VBLANK)
+	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_AFTER_VBLANK)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(1024, 512)		/* no way this is correct */
-	MDRV_SCREEN_VISIBLE_AREA(0, 640-1, 0, 240-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(1024, 512)		/* no way this is correct */
+	MCFG_SCREEN_VISIBLE_AREA(0, 640-1, 0, 240-1)
 
-	MDRV_PALETTE_LENGTH(256)
+	MCFG_PALETTE_LENGTH(256)
 
-	MDRV_VIDEO_START(nbmj9195_2layer)
-	MDRV_VIDEO_UPDATE(nbmj9195)
+	MCFG_VIDEO_START(nbmj9195_2layer)
+	MCFG_VIDEO_UPDATE(nbmj9195)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ymsnd", YM3812, 4000000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.70)
+	MCFG_SOUND_ADD("ymsnd", YM3812, 4000000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.70)
 
-	MDRV_SOUND_ADD("dac1", DAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.70)
+	MCFG_SOUND_ADD("dac1", DAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.70)
 
-	MDRV_SOUND_ADD("dac2", DAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( NBMJDRV2 )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM( NBMJDRV1 )
-
-	/* video hardware */
-	MDRV_VIDEO_START(nbmj9195_1layer)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("dac2", DAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( NBMJDRV3 )
+static MACHINE_CONFIG_DERIVED( NBMJDRV2, NBMJDRV1 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM( NBMJDRV1 )
 
 	/* video hardware */
-	MDRV_PALETTE_LENGTH(512)
+	MCFG_VIDEO_START(nbmj9195_1layer)
+MACHINE_CONFIG_END
 
-	MDRV_VIDEO_START(nbmj9195_nb22090)
-	MDRV_VIDEO_UPDATE(nbmj9195)
-MACHINE_DRIVER_END
+
+static MACHINE_CONFIG_DERIVED( NBMJDRV3, NBMJDRV1 )
+
+	/* basic machine hardware */
+
+	/* video hardware */
+	MCFG_PALETTE_LENGTH(512)
+
+	MCFG_VIDEO_START(nbmj9195_nb22090)
+	MCFG_VIDEO_UPDATE(nbmj9195)
+MACHINE_CONFIG_END
 
 
 //-------------------------------------------------------------------------
 
-static MACHINE_DRIVER_START( mjuraden )
+static MACHINE_CONFIG_DERIVED( mjuraden, NBMJDRV1 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM( NBMJDRV1 )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(mjuraden_map)
-	MDRV_CPU_IO_MAP(mjuraden_io_map)
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(mjuraden_map)
+	MCFG_CPU_IO_MAP(mjuraden_io_map)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( koinomp )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM( NBMJDRV1 )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(koinomp_map)
-	MDRV_CPU_IO_MAP(koinomp_io_map)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( patimono )
+static MACHINE_CONFIG_DERIVED( koinomp, NBMJDRV1 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM( NBMJDRV1 )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_IO_MAP(patimono_io_map)
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(koinomp_map)
+	MCFG_CPU_IO_MAP(koinomp_io_map)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( janbari )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM( NBMJDRV1 )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_IO_MAP(patimono_io_map)
-
-	MDRV_NVRAM_HANDLER(nbmj9195)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( mmehyou )
+static MACHINE_CONFIG_DERIVED( patimono, NBMJDRV1 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM( NBMJDRV1 )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(koinomp_map)
-	MDRV_CPU_IO_MAP(mmehyou_io_map)
-
-	MDRV_NVRAM_HANDLER(nbmj9195)
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_IO_MAP(patimono_io_map)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( ultramhm )
+static MACHINE_CONFIG_DERIVED( janbari, NBMJDRV1 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM( NBMJDRV1 )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(koinomp_map)
-	MDRV_CPU_IO_MAP(koinomp_io_map)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_IO_MAP(patimono_io_map)
 
-	MDRV_NVRAM_HANDLER(nbmj9195)
-MACHINE_DRIVER_END
+	MCFG_NVRAM_HANDLER(nbmj9195)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( gal10ren )
+static MACHINE_CONFIG_DERIVED( mmehyou, NBMJDRV1 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM( NBMJDRV1 )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_IO_MAP(gal10ren_io_map)
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(koinomp_map)
+	MCFG_CPU_IO_MAP(mmehyou_io_map)
+
+	MCFG_NVRAM_HANDLER(nbmj9195)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( renaiclb )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM( NBMJDRV1 )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_IO_MAP(renaiclb_io_map)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( mjlaman )
+static MACHINE_CONFIG_DERIVED( ultramhm, NBMJDRV1 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM( NBMJDRV1 )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_IO_MAP(mjlaman_io_map)
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(koinomp_map)
+	MCFG_CPU_IO_MAP(koinomp_io_map)
+
+	MCFG_NVRAM_HANDLER(nbmj9195)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( mkeibaou )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM( NBMJDRV1 )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_IO_MAP(mkeibaou_io_map)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( pachiten )
+static MACHINE_CONFIG_DERIVED( gal10ren, NBMJDRV1 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM( NBMJDRV1 )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_IO_MAP(pachiten_io_map)
-
-	MDRV_NVRAM_HANDLER(nbmj9195)
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_IO_MAP(gal10ren_io_map)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( sailorws )
+static MACHINE_CONFIG_DERIVED( renaiclb, NBMJDRV1 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM( NBMJDRV1 )
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_IO_MAP(renaiclb_io_map)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( sailorwr )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM( NBMJDRV1 )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_IO_MAP(sailorwr_io_map)
-
-	MDRV_NVRAM_HANDLER(nbmj9195)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( psailor1 )
+static MACHINE_CONFIG_DERIVED( mjlaman, NBMJDRV1 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM( NBMJDRV1 )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_IO_MAP(psailor1_io_map)
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_IO_MAP(mjlaman_io_map)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( psailor2 )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM( NBMJDRV1 )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_IO_MAP(psailor2_io_map)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( otatidai )
+static MACHINE_CONFIG_DERIVED( mkeibaou, NBMJDRV1 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM( NBMJDRV1 )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_IO_MAP(otatidai_io_map)
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_IO_MAP(mkeibaou_io_map)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( yosimoto )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM( NBMJDRV1 )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_IO_MAP(yosimoto_io_map)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( jituroku )
+static MACHINE_CONFIG_DERIVED( pachiten, NBMJDRV1 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM( NBMJDRV1 )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_IO_MAP(jituroku_io_map)
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_IO_MAP(pachiten_io_map)
+
+	MCFG_NVRAM_HANDLER(nbmj9195)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( ngpgal )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM( NBMJDRV2 )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(ngpgal_map)
-	MDRV_CPU_IO_MAP(ngpgal_io_map)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( mjgottsu )
+static MACHINE_CONFIG_DERIVED( sailorws, NBMJDRV1 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM( NBMJDRV2 )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(ngpgal_map)
-	MDRV_CPU_IO_MAP(mjgottsu_io_map)
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( bakuhatu )
+static MACHINE_CONFIG_DERIVED( sailorwr, NBMJDRV1 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM( NBMJDRV2 )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(ngpgal_map)
-	MDRV_CPU_IO_MAP(mjgottsu_io_map)
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_IO_MAP(sailorwr_io_map)
+
+	MCFG_NVRAM_HANDLER(nbmj9195)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( cmehyou )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM( NBMJDRV2 )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(ngpgal_map)
-	MDRV_CPU_IO_MAP(cmehyou_io_map)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( mjkoiura )
+static MACHINE_CONFIG_DERIVED( psailor1, NBMJDRV1 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM( NBMJDRV2 )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(mjuraden_map)
-	MDRV_CPU_IO_MAP(mjkoiura_io_map)
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_IO_MAP(psailor1_io_map)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( mkoiuraa )
+static MACHINE_CONFIG_DERIVED( psailor2, NBMJDRV1 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM( NBMJDRV2 )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(mjuraden_map)
-	MDRV_CPU_IO_MAP(mkoiuraa_io_map)
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_IO_MAP(psailor2_io_map)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( mscoutm )
+static MACHINE_CONFIG_DERIVED( otatidai, NBMJDRV1 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM( NBMJDRV3 )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(mscoutm_map)
-	MDRV_CPU_IO_MAP(mscoutm_io_map)
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_IO_MAP(otatidai_io_map)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( imekura )
+static MACHINE_CONFIG_DERIVED( yosimoto, NBMJDRV1 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM( NBMJDRV3 )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(mjegolf_map)
-	MDRV_CPU_IO_MAP(imekura_io_map)
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_IO_MAP(yosimoto_io_map)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( mjegolf )
+static MACHINE_CONFIG_DERIVED( jituroku, NBMJDRV1 )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM( NBMJDRV3 )
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(mjegolf_map)
-	MDRV_CPU_IO_MAP(mjegolf_io_map)
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_IO_MAP(jituroku_io_map)
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( ngpgal, NBMJDRV2 )
+
+	/* basic machine hardware */
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(ngpgal_map)
+	MCFG_CPU_IO_MAP(ngpgal_io_map)
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( mjgottsu, NBMJDRV2 )
+
+	/* basic machine hardware */
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(ngpgal_map)
+	MCFG_CPU_IO_MAP(mjgottsu_io_map)
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( bakuhatu, NBMJDRV2 )
+
+	/* basic machine hardware */
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(ngpgal_map)
+	MCFG_CPU_IO_MAP(mjgottsu_io_map)
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( cmehyou, NBMJDRV2 )
+
+	/* basic machine hardware */
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(ngpgal_map)
+	MCFG_CPU_IO_MAP(cmehyou_io_map)
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( mjkoiura, NBMJDRV2 )
+
+	/* basic machine hardware */
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(mjuraden_map)
+	MCFG_CPU_IO_MAP(mjkoiura_io_map)
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( mkoiuraa, NBMJDRV2 )
+
+	/* basic machine hardware */
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(mjuraden_map)
+	MCFG_CPU_IO_MAP(mkoiuraa_io_map)
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( mscoutm, NBMJDRV3 )
+
+	/* basic machine hardware */
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(mscoutm_map)
+	MCFG_CPU_IO_MAP(mscoutm_io_map)
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( imekura, NBMJDRV3 )
+
+	/* basic machine hardware */
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(mjegolf_map)
+	MCFG_CPU_IO_MAP(imekura_io_map)
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( mjegolf, NBMJDRV3 )
+
+	/* basic machine hardware */
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(mjegolf_map)
+	MCFG_CPU_IO_MAP(mjegolf_io_map)
+MACHINE_CONFIG_END
 
 
 ROM_START( mjuraden )

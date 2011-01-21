@@ -44,14 +44,10 @@ $305.b invincibility
 #include "sound/es5506.h"
 #include "includes/taito_f3.h"
 #include "audio/taito_en.h"
-
-
-VIDEO_START( galastrm );
-VIDEO_UPDATE( galastrm );
+#include "includes/galastrm.h"
 
 static UINT16 coin_word, frame_counter=0;
 static UINT32 *galastrm_ram;
-extern INT16  galastrm_tc0610_ctrl_reg[2][8];
 
 /*********************************************************************/
 
@@ -131,7 +127,7 @@ popmessage(t);
 
 			if (ACCESSING_BITS_0_7)
 			{
-				running_device *device = space->machine->device("eeprom");
+				device_t *device = space->machine->device("eeprom");
 				eeprom_set_clock_line(device, (data & 0x20) ? ASSERT_LINE : CLEAR_LINE);
 				eeprom_write_bit(device, data & 0x40);
 				eeprom_set_cs_line(device, (data & 0x10) ? CLEAR_LINE : ASSERT_LINE);
@@ -201,7 +197,7 @@ ADDRESS_MAP_END
 
 static INPUT_PORTS_START( galastrm )
 	PORT_START("IN0")
-	PORT_BIT( 0x00000001, IP_ACTIVE_HIGH, IPT_BUTTON3 ) PORT_PLAYER(1)	/* Freeze input */
+//  PORT_BIT( 0x00000001, IP_ACTIVE_HIGH, IPT_BUTTON3 ) PORT_PLAYER(1)  /* Freeze input */
 	PORT_BIT( 0x00000002, IP_ACTIVE_LOW, IPT_UNKNOWN )
 	PORT_BIT( 0x00000004, IP_ACTIVE_LOW, IPT_UNKNOWN )
 	PORT_BIT( 0x00000008, IP_ACTIVE_LOW, IPT_UNKNOWN )
@@ -316,34 +312,34 @@ static const tc0480scp_interface galastrm_tc0480scp_intf =
 	0		/* col_base */
 };
 
-static MACHINE_DRIVER_START( galastrm )
+static MACHINE_CONFIG_START( galastrm, driver_device )
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M68EC020, 16000000)	/* 16 MHz */
-	MDRV_CPU_PROGRAM_MAP(galastrm_map)
-	MDRV_CPU_VBLANK_INT("screen", galastrm_interrupt) /* VBL */
+	MCFG_CPU_ADD("maincpu", M68EC020, 16000000)	/* 16 MHz */
+	MCFG_CPU_PROGRAM_MAP(galastrm_map)
+	MCFG_CPU_VBLANK_INT("screen", galastrm_interrupt) /* VBL */
 
-	MDRV_EEPROM_ADD("eeprom", galastrm_eeprom_interface)
+	MCFG_EEPROM_ADD("eeprom", galastrm_eeprom_interface)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 50*8)
-	MDRV_SCREEN_VISIBLE_AREA(0+96, 40*8-1+96, 3*8+60, 32*8-1+60)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 50*8)
+	MCFG_SCREEN_VISIBLE_AREA(0+96, 40*8-1+96, 3*8+60, 32*8-1+60)
 
-	MDRV_GFXDECODE(galastrm)
-	MDRV_PALETTE_LENGTH(4096)
+	MCFG_GFXDECODE(galastrm)
+	MCFG_PALETTE_LENGTH(4096)
 
-	MDRV_VIDEO_START(galastrm)
-	MDRV_VIDEO_UPDATE(galastrm)
+	MCFG_VIDEO_START(galastrm)
+	MCFG_VIDEO_UPDATE(galastrm)
 
-	MDRV_TC0100SCN_ADD("tc0100scn", galastrm_tc0100scn_intf)
-	MDRV_TC0480SCP_ADD("tc0480scp", galastrm_tc0480scp_intf)
+	MCFG_TC0100SCN_ADD("tc0100scn", galastrm_tc0100scn_intf)
+	MCFG_TC0480SCP_ADD("tc0480scp", galastrm_tc0480scp_intf)
 
 	/* sound hardware */
-	MDRV_IMPORT_FROM(taito_f3_sound)
-MACHINE_DRIVER_END
+	MCFG_FRAGMENT_ADD(taito_f3_sound)
+MACHINE_CONFIG_END
 
 /***************************************************************************/
 

@@ -201,6 +201,7 @@ VBlank duration: 1/VSYNC * (16/256) = 1017.6 us
 #include "sound/dac.h"
 #include "sound/samples.h"
 #include "sound/sp0250.h"
+#include "machine/nvram.h"
 #include "streams.h"
 #include "includes/gottlieb.h"
 
@@ -225,7 +226,7 @@ VBlank duration: 1/VSYNC * (16/256) = 1017.6 us
 static UINT8 joystick_select;
 static UINT8 track[2];
 
-static running_device *laserdisc;
+static device_t *laserdisc;
 static emu_timer *laserdisc_bit_timer;
 static emu_timer *laserdisc_philips_timer;
 static UINT8 laserdisc_select;
@@ -612,7 +613,7 @@ static void audio_handle_zero_crossing(attotime zerotime, int logit)
 }
 
 
-static void laserdisc_audio_process(running_device *device, int samplerate, int samples, const INT16 *ch0, const INT16 *ch1)
+static void laserdisc_audio_process(device_t *device, int samplerate, int samples, const INT16 *ch0, const INT16 *ch1)
 {
 	int logit = LOG_AUDIO_DECODE && input_code_pressed(device->machine, KEYCODE_L);
 	attotime time_per_sample = ATTOTIME_IN_HZ(samplerate);
@@ -716,7 +717,7 @@ static ADDRESS_MAP_START( reactor_map, ADDRESS_SPACE_PROGRAM, 8 )
 	ADDRESS_MAP_GLOBAL_MASK(0xffff)
 	AM_RANGE(0x0000, 0x1fff) AM_RAM
 	AM_RANGE(0x2000, 0x20ff) AM_MIRROR(0x0f00) AM_WRITEONLY AM_BASE_GENERIC(spriteram)							/* FRSEL */
-	AM_RANGE(0x3000, 0x33ff) AM_MIRROR(0x0c00) AM_RAM_WRITE(gottlieb_videoram_w) AM_BASE_GENERIC(videoram)		/* BRSEL */
+	AM_RANGE(0x3000, 0x33ff) AM_MIRROR(0x0c00) AM_RAM_WRITE(gottlieb_videoram_w) AM_BASE_MEMBER(gottlieb_state, videoram)		/* BRSEL */
 	AM_RANGE(0x4000, 0x4fff) AM_RAM_WRITE(gottlieb_charram_w) AM_BASE(&gottlieb_charram)				/* BOJRSEL1 */
 /*  AM_RANGE(0x5000, 0x5fff) AM_WRITE() */																/* BOJRSEL2 */
 	AM_RANGE(0x6000, 0x601f) AM_MIRROR(0x0fe0) AM_WRITE(gottlieb_paletteram_w) AM_BASE_GENERIC(paletteram)		/* COLSEL */
@@ -735,11 +736,11 @@ ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( gottlieb_map, ADDRESS_SPACE_PROGRAM, 8 )
 	ADDRESS_MAP_GLOBAL_MASK(0xffff)
-	AM_RANGE(0x0000, 0x0fff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0x0000, 0x0fff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0x1000, 0x1fff) AM_RAM AM_REGION("maincpu", 0x1000)	/* or ROM */
 	AM_RANGE(0x2000, 0x2fff) AM_RAM AM_REGION("maincpu", 0x2000)	/* or ROM */
 	AM_RANGE(0x3000, 0x30ff) AM_MIRROR(0x0700) AM_WRITEONLY AM_BASE_GENERIC(spriteram)							/* FRSEL */
-	AM_RANGE(0x3800, 0x3bff) AM_MIRROR(0x0400) AM_RAM_WRITE(gottlieb_videoram_w) AM_BASE_GENERIC(videoram)		/* BRSEL */
+	AM_RANGE(0x3800, 0x3bff) AM_MIRROR(0x0400) AM_RAM_WRITE(gottlieb_videoram_w) AM_BASE_MEMBER(gottlieb_state, videoram)		/* BRSEL */
 	AM_RANGE(0x4000, 0x4fff) AM_RAM_WRITE(gottlieb_charram_w) AM_BASE(&gottlieb_charram)				/* BOJRSEL1 */
 	AM_RANGE(0x5000, 0x501f) AM_MIRROR(0x07e0) AM_WRITE(gottlieb_paletteram_w) AM_BASE_GENERIC(paletteram)		/* COLSEL */
 	AM_RANGE(0x5800, 0x5800) AM_MIRROR(0x07f8) AM_WRITE(watchdog_reset_w)
@@ -1915,62 +1916,59 @@ static const samples_interface reactor_samples_interface =
  *
  *************************************/
 
-static MACHINE_DRIVER_START( gottlieb_core )
+static MACHINE_CONFIG_START( gottlieb_core, gottlieb_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", I8088, CPU_CLOCK/3)
-	MDRV_CPU_PROGRAM_MAP(gottlieb_map)
-	MDRV_CPU_VBLANK_INT("screen", gottlieb_interrupt)
+	MCFG_CPU_ADD("maincpu", I8088, CPU_CLOCK/3)
+	MCFG_CPU_PROGRAM_MAP(gottlieb_map)
+	MCFG_CPU_VBLANK_INT("screen", gottlieb_interrupt)
 
-	MDRV_MACHINE_START(gottlieb)
-	MDRV_MACHINE_RESET(gottlieb)
-	MDRV_NVRAM_HANDLER(generic_1fill)
-	MDRV_WATCHDOG_VBLANK_INIT(16)
+	MCFG_MACHINE_START(gottlieb)
+	MCFG_MACHINE_RESET(gottlieb)
+	MCFG_NVRAM_ADD_1FILL("nvram")
+	MCFG_WATCHDOG_VBLANK_INIT(16)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_RAW_PARAMS(SYSTEM_CLOCK/4, GOTTLIEB_VIDEO_HCOUNT, 0, GOTTLIEB_VIDEO_HBLANK, GOTTLIEB_VIDEO_VCOUNT, 0, GOTTLIEB_VIDEO_VBLANK)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_RAW_PARAMS(SYSTEM_CLOCK/4, GOTTLIEB_VIDEO_HCOUNT, 0, GOTTLIEB_VIDEO_HBLANK, GOTTLIEB_VIDEO_VCOUNT, 0, GOTTLIEB_VIDEO_VBLANK)
 
-	MDRV_GFXDECODE(gfxdecode)
-	MDRV_PALETTE_LENGTH(16)
+	MCFG_GFXDECODE(gfxdecode)
+	MCFG_PALETTE_LENGTH(16)
 
-	MDRV_VIDEO_START(gottlieb)
-	MDRV_VIDEO_UPDATE(gottlieb)
+	MCFG_VIDEO_START(gottlieb)
+	MCFG_VIDEO_UPDATE(gottlieb)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-MACHINE_DRIVER_END
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( gottlieb1 )
-	MDRV_IMPORT_FROM(gottlieb_core)
-	MDRV_IMPORT_FROM(gottlieb_soundrev1)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( gottlieb1, gottlieb_core )
+	MCFG_FRAGMENT_ADD(gottlieb_soundrev1)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( gottlieb2 )
-	MDRV_IMPORT_FROM(gottlieb_core)
-	MDRV_IMPORT_FROM(gottlieb_soundrev2)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( gottlieb2, gottlieb_core )
+	MCFG_FRAGMENT_ADD(gottlieb_soundrev2)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( g2laser )
-	MDRV_IMPORT_FROM(gottlieb_core)
-	MDRV_IMPORT_FROM(gottlieb_soundrev2)
+static MACHINE_CONFIG_DERIVED( g2laser, gottlieb_core )
+	MCFG_FRAGMENT_ADD(gottlieb_soundrev2)
 
-	MDRV_LASERDISC_ADD("laserdisc", PIONEER_PR8210, "screen", "ldsound")
-	MDRV_LASERDISC_AUDIO(laserdisc_audio_process)
-	MDRV_LASERDISC_OVERLAY(gottlieb, GOTTLIEB_VIDEO_HCOUNT, GOTTLIEB_VIDEO_VCOUNT, BITMAP_FORMAT_INDEXED16)
-	MDRV_LASERDISC_OVERLAY_CLIP(0, GOTTLIEB_VIDEO_HBLANK-1, 0, GOTTLIEB_VIDEO_VBLANK-8)
+	MCFG_LASERDISC_ADD("laserdisc", PIONEER_PR8210, "screen", "ldsound")
+	MCFG_LASERDISC_AUDIO(laserdisc_audio_process)
+	MCFG_LASERDISC_OVERLAY(gottlieb, GOTTLIEB_VIDEO_HCOUNT, GOTTLIEB_VIDEO_VCOUNT, BITMAP_FORMAT_INDEXED16)
+	MCFG_LASERDISC_OVERLAY_CLIP(0, GOTTLIEB_VIDEO_HBLANK-1, 0, GOTTLIEB_VIDEO_VBLANK-8)
 
-	MDRV_DEVICE_REMOVE("screen")
-	MDRV_LASERDISC_SCREEN_ADD_NTSC("screen", BITMAP_FORMAT_INDEXED16)
+	MCFG_DEVICE_REMOVE("screen")
+	MCFG_LASERDISC_SCREEN_ADD_NTSC("screen", BITMAP_FORMAT_INDEXED16)
 
-	MDRV_SOUND_ADD("ldsound", LASERDISC, 0)
-	MDRV_SOUND_ROUTE(0, "mono", 1.0)
+	MCFG_SOUND_ADD("ldsound", LASERDISC_SOUND, 0)
+	MCFG_SOUND_ROUTE(0, "mono", 1.0)
 	/* right channel is processed as data */
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
 
 
@@ -1980,47 +1978,43 @@ MACHINE_DRIVER_END
  *
  *************************************/
 
-static MACHINE_DRIVER_START( reactor )
-	MDRV_IMPORT_FROM(gottlieb1)
+static MACHINE_CONFIG_DERIVED( reactor, gottlieb1 )
 
 	/* basic machine hardware */
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(reactor_map)
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(reactor_map)
 
-	MDRV_NVRAM_HANDLER(0)
+	MCFG_DEVICE_REMOVE("nvram")
 
 	/* sound hardware */
-	MDRV_SOUND_ADD("samples", SAMPLES, 0)
-	MDRV_SOUND_CONFIG(reactor_samples_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("samples", SAMPLES, 0)
+	MCFG_SOUND_CONFIG(reactor_samples_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( qbert )
-	MDRV_IMPORT_FROM(gottlieb1)
+static MACHINE_CONFIG_DERIVED( qbert, gottlieb1 )
 
 	/* video hardware */
-	MDRV_SOUND_ADD("samples", SAMPLES, 0)
-	MDRV_SOUND_CONFIG(qbert_samples_interface)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("samples", SAMPLES, 0)
+	MCFG_SOUND_CONFIG(qbert_samples_interface)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( screwloo )
-	MDRV_IMPORT_FROM(gottlieb2)
+static MACHINE_CONFIG_DERIVED( screwloo, gottlieb2 )
 
-	MDRV_VIDEO_START(screwloo)
-MACHINE_DRIVER_END
+	MCFG_VIDEO_START(screwloo)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( cobram3 )
-	MDRV_IMPORT_FROM(g2laser)
+static MACHINE_CONFIG_DERIVED( cobram3, g2laser )
 
 	/* sound hardware */
-	MDRV_SOUND_MODIFY("dac1")
-	MDRV_SOUND_ROUTES_RESET()
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
-MACHINE_DRIVER_END
+	MCFG_SOUND_MODIFY("dac1")
+	MCFG_SOUND_ROUTES_RESET()
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
+MACHINE_CONFIG_END
 
 
 

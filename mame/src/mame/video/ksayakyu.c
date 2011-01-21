@@ -4,7 +4,7 @@
 
 WRITE8_HANDLER(ksayakyu_videoram_w)
 {
-	ksayakyu_state *state = (ksayakyu_state *)space->machine->driver_data;
+	ksayakyu_state *state = space->machine->driver_data<ksayakyu_state>();
 	state->videoram[offset]=data;
 	tilemap_mark_tile_dirty(state->textmap, offset >> 1);
 }
@@ -20,7 +20,7 @@ WRITE8_HANDLER(ksayakyu_videoctrl_w)
         xxx      - scroll offset
 
      */
-	ksayakyu_state *state = (ksayakyu_state *)space->machine->driver_data;
+	ksayakyu_state *state = space->machine->driver_data<ksayakyu_state>();
 	state->video_ctrl = data;
 
 	state->flipscreen = data & 4;
@@ -34,7 +34,7 @@ WRITE8_HANDLER(ksayakyu_videoctrl_w)
 
 PALETTE_INIT( ksayakyu )
 {
-	const UINT8 *prom = memory_region(machine, "proms");
+	const UINT8 *prom = machine->region("proms")->base();
 	int r, g, b, i;
 
 	for (i = 0; i < 0x100; i++)
@@ -49,8 +49,8 @@ PALETTE_INIT( ksayakyu )
 
 static TILE_GET_INFO( get_ksayakyu_tile_info )
 {
-	int code = memory_region(machine, "user1")[tile_index];
-	int attr = memory_region(machine, "user1")[tile_index + 0x2000];
+	int code = machine->region("user1")->base()[tile_index];
+	int attr = machine->region("user1")->base()[tile_index + 0x2000];
 	code += (attr & 3) << 8;
 	SET_TILE_INFO(1, code, ((attr >> 2) & 0x0f) * 2, (attr & 0x80) ? TILE_FLIPX : 0);
 }
@@ -62,7 +62,7 @@ xy-- ---- flip bits
 */
 static TILE_GET_INFO( get_text_tile_info )
 {
-	ksayakyu_state *state = (ksayakyu_state *)machine->driver_data;
+	ksayakyu_state *state = machine->driver_data<ksayakyu_state>();
 	int code = state->videoram[tile_index * 2 + 1];
 	int attr = state->videoram[tile_index * 2];
 	int flags = ((attr & 0x80) ? TILE_FLIPX : 0) | ((attr & 0x40) ? TILE_FLIPY : 0);
@@ -83,7 +83,7 @@ static TILE_GET_INFO( get_text_tile_info )
 
 static void draw_sprites( running_machine *machine, bitmap_t *bitmap, const rectangle *cliprect )
 {
-	ksayakyu_state *state = (ksayakyu_state *)machine->driver_data;
+	ksayakyu_state *state = machine->driver_data<ksayakyu_state>();
 	const UINT8 *source = state->spriteram + state->spriteram_size - 4;
 	const UINT8 *finish = state->spriteram;
 
@@ -118,7 +118,7 @@ static void draw_sprites( running_machine *machine, bitmap_t *bitmap, const rect
 
 VIDEO_START(ksayakyu)
 {
-	ksayakyu_state *state = (ksayakyu_state *)machine->driver_data;
+	ksayakyu_state *state = machine->driver_data<ksayakyu_state>();
 	state->tilemap = tilemap_create(machine, get_ksayakyu_tile_info, tilemap_scan_rows, 8, 8, 32, 32 * 8);
 	state->textmap = tilemap_create(machine, get_text_tile_info, tilemap_scan_rows, 8, 8, 32, 32);
 	tilemap_set_transparent_pen(state->textmap, 0);
@@ -126,7 +126,7 @@ VIDEO_START(ksayakyu)
 
 VIDEO_UPDATE(ksayakyu)
 {
-	ksayakyu_state *state = (ksayakyu_state *)screen->machine->driver_data;
+	ksayakyu_state *state = screen->machine->driver_data<ksayakyu_state>();
 
 	bitmap_fill(bitmap, cliprect, 0);
 

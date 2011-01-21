@@ -77,6 +77,7 @@
 
 #include "emu.h"
 #include "video/s2636.h"
+#include "sound/s2636.h"
 
 /*************************************
  *
@@ -113,7 +114,7 @@ struct _s2636_state
  *
  *************************************/
 
-INLINE s2636_state *get_safe_token( running_device *device )
+INLINE s2636_state *get_safe_token( device_t *device )
 {
 	assert(device != NULL);
 	assert(device->type() == S2636);
@@ -121,7 +122,7 @@ INLINE s2636_state *get_safe_token( running_device *device )
 	return (s2636_state *)downcast<legacy_device_base *>(device)->token();
 }
 
-INLINE const s2636_interface *get_interface( running_device *device )
+INLINE const s2636_interface *get_interface( device_t *device )
 {
 	assert(device != NULL);
 	assert((device->type() == S2636));
@@ -189,7 +190,7 @@ static void draw_sprite( UINT8 *gfx, int color, int y, int x, int expand, int or
  *
  *************************************/
 
-static int check_collision( running_device *device, int spriteno1, int spriteno2, const rectangle *cliprect )
+static int check_collision( device_t *device, int spriteno1, int spriteno2, const rectangle *cliprect )
 {
 	s2636_state *s2636 = get_safe_token(device);
 	int checksum = 0;
@@ -253,7 +254,7 @@ static int check_collision( running_device *device, int spriteno1, int spriteno2
  *
  *************************************/
 
-bitmap_t *s2636_update( running_device *device, const rectangle *cliprect )
+bitmap_t *s2636_update( device_t *device, const rectangle *cliprect )
 {
 	s2636_state *s2636 = get_safe_token(device);
 	UINT8 collision = 0;
@@ -318,6 +319,15 @@ WRITE8_DEVICE_HANDLER( s2636_work_ram_w )
 
 	assert(offset < s2636->work_ram_size);
 
+	if ( offset == 0xc7 )
+	{
+		const s2636_interface *intf = get_interface(device);
+		if ( intf->sound && *intf->sound )
+		{
+			s2636_soundport_w(device->machine->device(intf->sound), 0, data);
+		}
+	}
+
 	s2636->work_ram[offset] = data;
 }
 
@@ -349,7 +359,7 @@ static DEVICE_START( s2636 )
 	s2636->x_offset = intf->x_offset;
 	s2636->y_offset = intf->y_offset;
 
-	s2636->work_ram = auto_alloc_array(device->machine, UINT8, intf->work_ram_size);
+	s2636->work_ram = auto_alloc_array_clear(device->machine, UINT8, intf->work_ram_size);
 	s2636->bitmap = auto_bitmap_alloc(device->machine, width, height, BITMAP_FORMAT_INDEXED16);
 	s2636->collision_bitmap = auto_bitmap_alloc(device->machine, width, height, BITMAP_FORMAT_INDEXED16);
 

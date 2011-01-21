@@ -289,7 +289,7 @@ static CUSTOM_INPUT( hopper_r )
 
 static READ8_HANDLER( exp_rom_r )
 {
-	UINT8 *rom = memory_region(space->machine, "maincpu");
+	UINT8 *rom = space->machine->region("maincpu")->base();
 	return rom[offset+0x10000];
 }
 
@@ -922,7 +922,7 @@ static ADDRESS_MAP_START( number10_io_map, ADDRESS_SPACE_IO, 8 )
 	AM_RANGE(0x5091, 0x5091) AM_READ(custom_io_r) AM_WRITE( igs_lamps_w )			/* Keyboard */
 	AM_RANGE(0x50a0, 0x50a0) AM_READ_PORT("BUTTONS2")
 	/* Sound synthesys has been patched out, replaced by ADPCM samples */
-	AM_RANGE(0x50b0, 0x50b0) AM_DEVREADWRITE( "oki", okim6295_r, okim6295_w )
+	AM_RANGE(0x50b0, 0x50b0) AM_DEVREADWRITE_MODERN("oki", okim6295_device, read, write)
 	AM_RANGE(0x50c0, 0x50c0) AM_READ(igs_irqack_r) AM_WRITE(igs_irqack_w)
 	AM_RANGE(0x7000, 0x77ff) AM_RAM_WRITE( fg_tile_w )  AM_BASE( &fg_tile_ram )
 	AM_RANGE(0x7800, 0x7fff) AM_RAM_WRITE( fg_color_w ) AM_BASE( &fg_color_ram )
@@ -944,7 +944,7 @@ static ADDRESS_MAP_START( cpokerpk_io_map, ADDRESS_SPACE_IO, 8 )
 	AM_RANGE(0x5091, 0x5091) AM_READ(custom_io_r) AM_WRITE( igs_lamps_w )			/* Keyboard */
 	AM_RANGE(0x50a0, 0x50a0) AM_READ_PORT("BUTTONS2")
 	/* Sound synthesys has been patched out, replaced by ADPCM samples */
-	AM_RANGE(0x50b0, 0x50b0) AM_DEVREADWRITE( "oki", okim6295_r, okim6295_w )
+	AM_RANGE(0x50b0, 0x50b0) AM_DEVREADWRITE_MODERN("oki", okim6295_device, read, write)
 	AM_RANGE(0x50c0, 0x50c0) AM_READ(igs_irqack_r) AM_WRITE(igs_irqack_w)
 	AM_RANGE(0x7000, 0x77ff) AM_RAM_WRITE( fg_tile_w )  AM_BASE( &fg_tile_ram )
 	AM_RANGE(0x7800, 0x7fff) AM_RAM_WRITE( fg_color_w ) AM_BASE( &fg_color_ram )
@@ -1556,83 +1556,71 @@ static GFXDECODE_START( cpokerpk )
 	GFXDECODE_ENTRY( "gfx2", 0x00000, charlayout2,  0, 1 )
 GFXDECODE_END
 
-static MACHINE_DRIVER_START( igspoker )
+static MACHINE_CONFIG_START( igspoker, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu",Z80, 3579545)
-	MDRV_CPU_PROGRAM_MAP(igspoker_prg_map)
-	MDRV_CPU_IO_MAP(igspoker_io_map)
-	MDRV_CPU_VBLANK_INT_HACK(igs_interrupt,8)
+	MCFG_CPU_ADD("maincpu",Z80, 3579545)
+	MCFG_CPU_PROGRAM_MAP(igspoker_prg_map)
+	MCFG_CPU_IO_MAP(igspoker_io_map)
+	MCFG_CPU_VBLANK_INT_HACK(igs_interrupt,8)
 
-	MDRV_MACHINE_RESET(igs)
+	MCFG_MACHINE_RESET(igs)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(57)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 64*8-1, 0, 32*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(57)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 64*8-1, 0, 32*8-1)
 
-	MDRV_GFXDECODE(igspoker)
-	MDRV_PALETTE_LENGTH(2048)
+	MCFG_GFXDECODE(igspoker)
+	MCFG_PALETTE_LENGTH(2048)
 
-	MDRV_VIDEO_START(igs_video)
-	MDRV_VIDEO_UPDATE(igs_video)
+	MCFG_VIDEO_START(igs_video)
+	MCFG_VIDEO_UPDATE(igs_video)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_SOUND_ADD("ymsnd", YM2413, 3579545)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("ymsnd", YM2413, 3579545)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( csk227it )
+static MACHINE_CONFIG_DERIVED( csk227it, igspoker )
 
-	MDRV_IMPORT_FROM(igspoker)
+MACHINE_CONFIG_END
 
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( csk234it, igspoker )
 
-static MACHINE_DRIVER_START( csk234it )
+MACHINE_CONFIG_END
 
-	MDRV_IMPORT_FROM(igspoker)
+static MACHINE_CONFIG_DERIVED( igs_ncs, igspoker )
 
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( igs_ncs )
+static MACHINE_CONFIG_DERIVED( number10, igspoker )
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_IO_MAP(number10_io_map)
 
-	MDRV_IMPORT_FROM(igspoker)
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_VIDEO_START(cpokerpk)
+	MCFG_VIDEO_UPDATE(cpokerpk)
 
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", XTAL_12MHz / 12, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( number10 )
-
-	MDRV_IMPORT_FROM(igspoker)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_IO_MAP(number10_io_map)
-
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_VIDEO_START(cpokerpk)
-	MDRV_VIDEO_UPDATE(cpokerpk)
-
-	MDRV_OKIM6295_ADD("oki", XTAL_12MHz / 12, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
-
-static MACHINE_DRIVER_START( cpokerpk )
-
-	MDRV_IMPORT_FROM(number10)
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_IO_MAP(cpokerpk_io_map)
-	MDRV_GFXDECODE(cpokerpk)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_DERIVED( cpokerpk, number10 )
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_IO_MAP(cpokerpk_io_map)
+	MCFG_GFXDECODE(cpokerpk)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( pktetris )
+static MACHINE_CONFIG_DERIVED( pktetris, igspoker )
 
-	MDRV_IMPORT_FROM(igspoker)
-
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
 
 
@@ -1732,7 +1720,7 @@ ROM_END
 static DRIVER_INIT( cpoker )
 {
 	int A;
-	UINT8 *rom = memory_region(machine, "maincpu");
+	UINT8 *rom = machine->region("maincpu")->base();
 
 
 	for (A = 0;A < 0x10000;A++)
@@ -1746,7 +1734,7 @@ static DRIVER_INIT( cpoker )
 
 static DRIVER_INIT( cpokert )
 {
-	UINT8 *rom = memory_region(machine, "maincpu");
+	UINT8 *rom = machine->region("maincpu")->base();
 	int i;
 
 	/* decrypt the program ROM */
@@ -1776,7 +1764,7 @@ static DRIVER_INIT( cpokert )
 static DRIVER_INIT( cska )
 {
 	int A;
-	UINT8 *rom = memory_region(machine, "maincpu");
+	UINT8 *rom = machine->region("maincpu")->base();
 
 
 	for (A = 0;A < 0x10000;A++)
@@ -1793,7 +1781,7 @@ static DRIVER_INIT( cska )
 static DRIVER_INIT( igs_ncs )
 {
 	int A;
-	UINT8 *rom = memory_region(machine, "maincpu");
+	UINT8 *rom = machine->region("maincpu")->base();
 
 
 	for (A = 0;A < 0x10000;A++)
@@ -1910,7 +1898,7 @@ Clocks
 
 static DRIVER_INIT( igs_ncs2 )
 {
-	UINT8 *src = (UINT8 *) (memory_region(machine, "maincpu"));
+	UINT8 *src = (UINT8 *) (machine->region("maincpu")->base());
 	int i;
 
 	for(i = 0; i < 0x10000; i++)
@@ -1987,8 +1975,8 @@ static DRIVER_INIT( chleague )
 	int length;
 	UINT8 *rom;
 
-	rom = memory_region(machine, "maincpu");
-	length = memory_region_length(machine, "maincpu");
+	rom = machine->region("maincpu")->base();
+	length = machine->region("maincpu")->bytes();
 	for (A = 0;A < length;A++)
 	{
 		if ((A & 0x09C0) == 0x0880) rom[A] ^= 0x20;
@@ -2051,8 +2039,8 @@ static DRIVER_INIT( number10 )
 	UINT8 *tmp;
 	UINT8 *rom;
 
-	rom = memory_region(machine, "maincpu");
-	length = memory_region_length(machine, "maincpu");
+	rom = machine->region("maincpu")->base();
+	length = machine->region("maincpu")->bytes();
 	for (A = 0;A < length;A++)
 	{
 		if ((A & 0x09C0) == 0x0880) rom[A] ^= 0x20;
@@ -2081,8 +2069,8 @@ static DRIVER_INIT( number10 )
 	rom[0xeed] = 0xc3;
 
 	/* Descramble graphic */
-	rom = memory_region(machine, "gfx1");
-	length = memory_region_length(machine, "gfx1");
+	rom = machine->region("gfx1")->base();
+	length = machine->region("gfx1")->bytes();
 	tmp = auto_alloc_array(machine, UINT8, length);
 	memcpy(tmp,rom,length);
 	for (A = 0;A < length;A++)
@@ -2130,7 +2118,7 @@ ROM_END
 static DRIVER_INIT( cpokerpk )
 {
 	int A;
-	UINT8 *rom = memory_region(machine, "maincpu");
+	UINT8 *rom = machine->region("maincpu")->base();
 
 	for (A=0x0714; A < 0xF000; A+=0x1000)
 		rom[A] ^= 0x20;
@@ -2184,7 +2172,7 @@ ROM_END
 static DRIVER_INIT( pktet346 )
 {
 	int A;
-	UINT8 *rom = memory_region(machine, "maincpu");
+	UINT8 *rom = machine->region("maincpu")->base();
 
 
 	for (A = 0;A < 0x10000;A++)

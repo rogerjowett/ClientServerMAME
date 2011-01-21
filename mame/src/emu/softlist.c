@@ -513,7 +513,7 @@ static void start_handler(void *data, const char *tagname, const char **attribut
 				{
 					if ( swlist->softinfo )
 					{
-						UINT32 length = strtol( str_size, NULL, 10 );
+						UINT32 length = strtol( str_size, NULL, 0 );
 						char *s = (char *)pool_malloc_lib(swlist->pool, ( strlen( str_name ) + 1 ) * sizeof(char) );
 
 						if ( !s )
@@ -607,8 +607,8 @@ static void start_handler(void *data, const char *tagname, const char **attribut
 				{
 					if ( str_size && str_offset )
 					{
-						UINT32 length = strtol( str_size, NULL, 10 );
-						UINT32 offset = strtol( str_offset, NULL, 16 );
+						UINT32 length = strtol( str_size, NULL, 0 );
+						UINT32 offset = strtol( str_offset, NULL, 0 );
 
 						if ( str_loadflag && !strcmp(str_loadflag, "reload") )
 						{
@@ -1455,7 +1455,7 @@ void ui_image_menu_software(running_machine *machine, ui_menu *menu, void *param
 
 	if (event != NULL && event->iptkey == IPT_UI_SELECT)
 	{
-		ui_menu *child_menu = ui_menu_alloc(machine, render_container_get_ui(), ui_mess_menu_software_list, NULL);
+		ui_menu *child_menu = ui_menu_alloc(machine, &machine->render().ui_container(), ui_mess_menu_software_list, NULL);
 		software_menu_state *child_menustate = (software_menu_state *)ui_menu_alloc_state(child_menu, sizeof(*child_menustate), NULL);
 		child_menustate->list_name = (char *)event->itemref;
 		child_menustate->image = image;

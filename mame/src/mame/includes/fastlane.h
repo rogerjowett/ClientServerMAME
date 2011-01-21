@@ -4,12 +4,11 @@
 
 *************************************************************************/
 
-class fastlane_state
+class fastlane_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, fastlane_state(machine)); }
-
-	fastlane_state(running_machine &machine) { }
+	fastlane_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *    videoram1;
@@ -23,8 +22,8 @@ public:
 	rectangle  clip0, clip1;
 
 	/* devices */
-	running_device *konami2;
-	running_device *k007121;
+	device_t *konami2;
+	device_t *k007121;
 };
 
 

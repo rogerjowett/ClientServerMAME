@@ -29,7 +29,7 @@ TODO:
 
 static WRITE8_HANDLER( laserbat_videoram_w )
 {
-	laserbat_state *state = (laserbat_state *)space->machine->driver_data;
+	laserbat_state *state = space->machine->driver_data<laserbat_state>();
 
 	if (state->video_page == 0)
 	{
@@ -45,7 +45,7 @@ static WRITE8_HANDLER( laserbat_videoram_w )
 
 static WRITE8_HANDLER( video_extra_w )
 {
-	laserbat_state *state = (laserbat_state *)space->machine->driver_data;
+	laserbat_state *state = space->machine->driver_data<laserbat_state>();
 
 	state->video_page = (data & 0x10) >> 4;
 	state->sprite_enable = (data & 1) ^ 1;
@@ -55,7 +55,7 @@ static WRITE8_HANDLER( video_extra_w )
 
 static WRITE8_HANDLER( sprite_x_y_w )
 {
-	laserbat_state *state = (laserbat_state *)space->machine->driver_data;
+	laserbat_state *state = space->machine->driver_data<laserbat_state>();
 
 	if (offset == 0)
 		state->sprite_x = 256 - data;
@@ -65,7 +65,7 @@ static WRITE8_HANDLER( sprite_x_y_w )
 
 static WRITE8_HANDLER( laserbat_input_mux_w )
 {
-	laserbat_state *state = (laserbat_state *)space->machine->driver_data;
+	laserbat_state *state = space->machine->driver_data<laserbat_state>();
 
 	state->input_mux = (data & 0x30) >> 4;
 
@@ -79,7 +79,7 @@ static WRITE8_HANDLER( laserbat_input_mux_w )
 
 static READ8_HANDLER( laserbat_input_r )
 {
-	laserbat_state *state = (laserbat_state *)space->machine->driver_data;
+	laserbat_state *state = space->machine->driver_data<laserbat_state>();
 	static const char *const portnames[] = { "IN0", "IN1", "IN2", "IN3" };
 
 	return input_port_read(space->machine, portnames[state->input_mux]);
@@ -487,7 +487,7 @@ GFXDECODE_END
 
 static TILE_GET_INFO( get_tile_info )
 {
-	laserbat_state *state = (laserbat_state *)machine->driver_data;
+	laserbat_state *state = machine->driver_data<laserbat_state>();
 
 	// wrong color index!
 	SET_TILE_INFO(0, state->videoram[tile_index], state->colorram[tile_index] & 0x7f, 0);
@@ -495,7 +495,7 @@ static TILE_GET_INFO( get_tile_info )
 
 static VIDEO_START( laserbat )
 {
-	laserbat_state *state = (laserbat_state *)machine->driver_data;
+	laserbat_state *state = machine->driver_data<laserbat_state>();
 
 	state->bg_tilemap = tilemap_create(machine, get_tile_info, tilemap_scan_rows, 8, 8, 32, 32);
 
@@ -508,7 +508,7 @@ static VIDEO_START( laserbat )
 
 static VIDEO_UPDATE( laserbat )
 {
-	laserbat_state *state = (laserbat_state *)screen->machine->driver_data;
+	laserbat_state *state = screen->machine->driver_data<laserbat_state>();
 	int y;
 	bitmap_t *s2636_1_bitmap;
 	bitmap_t *s2636_2_bitmap;
@@ -586,32 +586,32 @@ static const sn76477_interface laserbat_sn76477_interface =
 
 static WRITE_LINE_DEVICE_HANDLER( zaccaria_irq0a )
 {
-	laserbat_state *laserbat = (laserbat_state *)device->machine->driver_data;
+	laserbat_state *laserbat = device->machine->driver_data<laserbat_state>();
 	cpu_set_input_line(laserbat->audiocpu, INPUT_LINE_NMI, state ? ASSERT_LINE : CLEAR_LINE);
 }
 
 static WRITE_LINE_DEVICE_HANDLER( zaccaria_irq0b )
 {
-	laserbat_state *laserbat = (laserbat_state *)device->machine->driver_data;
+	laserbat_state *laserbat = device->machine->driver_data<laserbat_state>();
 	cpu_set_input_line(laserbat->audiocpu, 0, state ? ASSERT_LINE : CLEAR_LINE);
 }
 
 static READ8_DEVICE_HANDLER( zaccaria_port0a_r )
 {
-	laserbat_state *state = (laserbat_state *)device->machine->driver_data;
-	running_device *ay = (state->active_8910 == 0) ? state->ay1 : state->ay2;
+	laserbat_state *state = device->machine->driver_data<laserbat_state>();
+	device_t *ay = (state->active_8910 == 0) ? state->ay1 : state->ay2;
 	return ay8910_r(ay, 0);
 }
 
 static WRITE8_DEVICE_HANDLER( zaccaria_port0a_w )
 {
-	laserbat_state *state = (laserbat_state *)device->machine->driver_data;
+	laserbat_state *state = device->machine->driver_data<laserbat_state>();
 	state->port0a = data;
 }
 
 static WRITE8_DEVICE_HANDLER( zaccaria_port0b_w )
 {
-	laserbat_state *state = (laserbat_state *)device->machine->driver_data;
+	laserbat_state *state = device->machine->driver_data<laserbat_state>();
 	/* bit 1 goes to 8910 #0 BDIR pin  */
 	if ((state->last_port0b & 0x02) == 0x02 && (data & 0x02) == 0x00)
 	{
@@ -674,7 +674,7 @@ static INTERRUPT_GEN( laserbat_interrupt )
 
 static INTERRUPT_GEN( zaccaria_cb1_toggle )
 {
-	laserbat_state *state = (laserbat_state *)device->machine->driver_data;
+	laserbat_state *state = device->machine->driver_data<laserbat_state>();
 
 	pia6821_cb1_w(state->pia, state->cb1_toggle & 1);
 	state->cb1_toggle ^= 1;
@@ -685,26 +685,29 @@ static const s2636_interface s2636_1_config =
 {
 	"screen",
 	0x100,
-	0, -19
+	0, -19,
+	NULL
 };
 
 static const s2636_interface s2636_2_config =
 {
 	"screen",
 	0x100,
-	0, -19
+	0, -19,
+	NULL
 };
 
 static const s2636_interface s2636_3_config =
 {
 	"screen",
 	0x100,
-	0, -19
+	0, -19,
+	NULL
 };
 
 static MACHINE_START( laserbat )
 {
-	laserbat_state *state = (laserbat_state *)machine->driver_data;
+	laserbat_state *state = machine->driver_data<laserbat_state>();
 
 	state->audiocpu = machine->device("audiocpu");
 	state->s2636_1 = machine->device("s2636_1");
@@ -741,7 +744,7 @@ static MACHINE_START( laserbat )
 
 static MACHINE_RESET( laserbat )
 {
-	laserbat_state *state = (laserbat_state *)machine->driver_data;
+	laserbat_state *state = machine->driver_data<laserbat_state>();
 
 	state->video_page = 0;
 	state->input_mux = 0;
@@ -765,99 +768,93 @@ static MACHINE_RESET( laserbat )
 	state->bit14 = 0;
 }
 
-static MACHINE_DRIVER_START( laserbat )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(laserbat_state)
+static MACHINE_CONFIG_START( laserbat, laserbat_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", S2650, 14318180/4) // ???
-	MDRV_CPU_PROGRAM_MAP(laserbat_map)
-	MDRV_CPU_IO_MAP(laserbat_io_map)
-	MDRV_CPU_VBLANK_INT("screen", laserbat_interrupt)
+	MCFG_CPU_ADD("maincpu", S2650, 14318180/4) // ???
+	MCFG_CPU_PROGRAM_MAP(laserbat_map)
+	MCFG_CPU_IO_MAP(laserbat_io_map)
+	MCFG_CPU_VBLANK_INT("screen", laserbat_interrupt)
 
-	MDRV_MACHINE_START(laserbat)
-	MDRV_MACHINE_RESET(laserbat)
+	MCFG_MACHINE_START(laserbat)
+	MCFG_MACHINE_RESET(laserbat)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(50)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(256, 256)
-	MDRV_SCREEN_VISIBLE_AREA(1*8, 29*8-1, 2*8, 32*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(50)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(256, 256)
+	MCFG_SCREEN_VISIBLE_AREA(1*8, 29*8-1, 2*8, 32*8-1)
 
-	MDRV_GFXDECODE(laserbat)
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_GFXDECODE(laserbat)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_S2636_ADD("s2636_1", s2636_1_config)
-	MDRV_S2636_ADD("s2636_2", s2636_2_config)
-	MDRV_S2636_ADD("s2636_3", s2636_3_config)
+	MCFG_S2636_ADD("s2636_1", s2636_1_config)
+	MCFG_S2636_ADD("s2636_2", s2636_2_config)
+	MCFG_S2636_ADD("s2636_3", s2636_3_config)
 
-	MDRV_VIDEO_START(laserbat)
-	MDRV_VIDEO_UPDATE(laserbat)
+	MCFG_VIDEO_START(laserbat)
+	MCFG_VIDEO_UPDATE(laserbat)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("snsnd", SN76477, 0) // output not connected
-	MDRV_SOUND_CONFIG(laserbat_sn76477_interface)
+	MCFG_SOUND_ADD("snsnd", SN76477, 0) // output not connected
+	MCFG_SOUND_CONFIG(laserbat_sn76477_interface)
 
-	MDRV_SOUND_ADD("tms1", TMS3615, 4000000/8/2) // 250 kHz, from second chip's clock out
-	MDRV_SOUND_ROUTE(TMS3615_FOOTAGE_8, "mono", 1.0)
+	MCFG_SOUND_ADD("tms1", TMS3615, 4000000/8/2) // 250 kHz, from second chip's clock out
+	MCFG_SOUND_ROUTE(TMS3615_FOOTAGE_8, "mono", 1.0)
 
-	MDRV_SOUND_ADD("tms2", TMS3615, 4000000/8) // 500 kHz
-	MDRV_SOUND_ROUTE(TMS3615_FOOTAGE_8, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("tms2", TMS3615, 4000000/8) // 500 kHz
+	MCFG_SOUND_ROUTE(TMS3615_FOOTAGE_8, "mono", 1.0)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( catnmous )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(laserbat_state)
+static MACHINE_CONFIG_START( catnmous, laserbat_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", S2650, 14318000/4)	/* ? */
-	MDRV_CPU_PROGRAM_MAP(laserbat_map)
-	MDRV_CPU_IO_MAP(catnmous_io_map)
-	MDRV_CPU_VBLANK_INT("screen", laserbat_interrupt)
+	MCFG_CPU_ADD("maincpu", S2650, 14318000/4)	/* ? */
+	MCFG_CPU_PROGRAM_MAP(laserbat_map)
+	MCFG_CPU_IO_MAP(catnmous_io_map)
+	MCFG_CPU_VBLANK_INT("screen", laserbat_interrupt)
 
-	MDRV_CPU_ADD("audiocpu", M6802,3580000) /* ? */
-	MDRV_CPU_PROGRAM_MAP(catnmous_sound_map)
-	MDRV_CPU_PERIODIC_INT(zaccaria_cb1_toggle, (double)3580000/4096)
+	MCFG_CPU_ADD("audiocpu", M6802,3580000) /* ? */
+	MCFG_CPU_PROGRAM_MAP(catnmous_sound_map)
+	MCFG_CPU_PERIODIC_INT(zaccaria_cb1_toggle, (double)3580000/4096)
 
-	MDRV_PIA6821_ADD("pia", pia_intf)
+	MCFG_PIA6821_ADD("pia", pia_intf)
 
-	MDRV_MACHINE_START(laserbat)
-	MDRV_MACHINE_RESET(laserbat)
+	MCFG_MACHINE_START(laserbat)
+	MCFG_MACHINE_RESET(laserbat)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(256, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 32*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(256, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 32*8-1)
 
-	MDRV_GFXDECODE(laserbat)
-	MDRV_PALETTE_LENGTH(1024)
+	MCFG_GFXDECODE(laserbat)
+	MCFG_PALETTE_LENGTH(1024)
 
-	MDRV_S2636_ADD("s2636_1", s2636_1_config)
-	MDRV_S2636_ADD("s2636_2", s2636_2_config)
-	MDRV_S2636_ADD("s2636_3", s2636_3_config)
+	MCFG_S2636_ADD("s2636_1", s2636_1_config)
+	MCFG_S2636_ADD("s2636_2", s2636_2_config)
+	MCFG_S2636_ADD("s2636_3", s2636_3_config)
 
-	MDRV_VIDEO_START(laserbat)
-	MDRV_VIDEO_UPDATE(laserbat)
+	MCFG_VIDEO_START(laserbat)
+	MCFG_VIDEO_UPDATE(laserbat)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ay1", AY8910, 3580000/2) // ?
-	MDRV_SOUND_CONFIG(ay8910_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SOUND_ADD("ay1", AY8910, 3580000/2) // ?
+	MCFG_SOUND_CONFIG(ay8910_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-	MDRV_SOUND_ADD("ay2", AY8910, 3580000/2) // ?
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ay2", AY8910, 3580000/2) // ?
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 /*

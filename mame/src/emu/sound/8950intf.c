@@ -30,14 +30,14 @@ struct _y8950_state
 	emu_timer *		timer[2];
 	void *			chip;
 	const y8950_interface *intf;
-	running_device *device;
+	device_t *device;
 };
 
 
-INLINE y8950_state *get_safe_token(running_device *device)
+INLINE y8950_state *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
-	assert(device->type() == SOUND_Y8950);
+	assert(device->type() == Y8950);
 	return (y8950_state *)downcast<legacy_device_base *>(device)->token();
 }
 

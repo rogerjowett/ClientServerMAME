@@ -22,11 +22,10 @@
  *
  *************************************/
 
-UINT8 *tempest_colorram;
-UINT8 *mhavoc_colorram;
-UINT16 *quantum_colorram;
+UINT8 *avgdvg_vectorram;
+size_t avgdvg_vectorram_size;
 
-UINT16 *quantum_vectorram;
+UINT8 *avgdvg_colorram;
 
 
 
@@ -229,7 +228,7 @@ static void dvg_data(vgdata *vg)
 	/*
      * DVG uses low bit of state for address
      */
-	vg->data = vectorram[(vg->pc << 1) | (vg->state_latch & 1)];
+	vg->data = avgdvg_vectorram[(vg->pc << 1) | (vg->state_latch & 1)];
 }
 
 static UINT8 dvg_state_addr(vgdata *vg)
@@ -464,17 +463,17 @@ static int dvg_latch0(vgdata *vg)
 
 static void avg_data(vgdata *vg)
 {
-	vg->data = vectorram[vg->pc ^ 1];
+	vg->data = avgdvg_vectorram[vg->pc ^ 1];
 }
 
 static void starwars_data(vgdata *vg)
 {
-	vg->data = vectorram[vg->pc];
+	vg->data = avgdvg_vectorram[vg->pc];
 }
 
 static void quantum_data(vgdata *vg)
 {
-	vg->data = quantum_vectorram[vg->pc >> 1];
+	vg->data = ((UINT16 *)avgdvg_vectorram)[vg->pc >> 1];
 }
 
 static void mhavoc_data(vgdata *vg)
@@ -483,12 +482,12 @@ static void mhavoc_data(vgdata *vg)
 
 	if (vg->pc & 0x2000)
 	{
-		bank = &memory_region(vg->machine, "alpha")[0x18000];
+		bank = &vg->machine->region("alpha")->base()[0x18000];
 		vg->data = bank[(vg->map << 13) | ((vg->pc ^ 1) & 0x1fff)];
 	}
 	else
 	{
-		vg->data = vectorram[vg->pc ^ 1];
+		vg->data = avgdvg_vectorram[vg->pc ^ 1];
 	}
 }
 
@@ -812,7 +811,7 @@ static int mhavoc_strobe2(vgdata *vg)
 					| ((vg->dvy >> 1) & 2)
 					| ((vg->dvy << 1) & 4)
 					| ((vg->dvy << 2) & 8)
-					| ((mame_rand(vg->machine) & 0x7) << 4);
+					| ((vg->machine->rand() & 0x7) << 4);
 			}
 			else
 			{
@@ -962,7 +961,7 @@ static int tempest_strobe3(vgdata *vg)
 
 	if ((vg->op & 5) == 0)
 	{
-		data = tempest_colorram[vg->color];
+		data = avgdvg_colorram[vg->color];
 		bit3 = (~data >> 3) & 1;
 		bit2 = (~data >> 2) & 1;
 		bit1 = (~data >> 1) & 1;
@@ -1015,7 +1014,7 @@ static int mhavoc_strobe3(vgdata *vg)
 			{
 				vg->xpos += dx/2;
 				vg->ypos -= dy/2;
-				data = mhavoc_colorram[0xf +
+				data = avgdvg_colorram[0xf +
 									   (((vg->spkl_shift & 1) << 3)
 										| (vg->spkl_shift & 4)
 										| ((vg->spkl_shift & 0x10) >> 3)
@@ -1043,7 +1042,7 @@ static int mhavoc_strobe3(vgdata *vg)
 		{
 			vg->xpos += (dx * cycles) >> 4;
 			vg->ypos -= (dy * cycles) >> 4;
-			data = mhavoc_colorram[vg->color];
+			data = avgdvg_colorram[vg->color];
 
 			bit3 = (~data >> 3) & 1;
 			bit2 = (~data >> 2) & 1;
@@ -1094,7 +1093,7 @@ static int quantum_strobe3(vgdata *vg)
 
 	if ((vg->op & 5) == 0)
 	{
-		data = quantum_colorram[vg->color];
+		data = ((UINT16 *)avgdvg_colorram)[vg->color];
 		bit3 = (~data >> 3) & 1;
 		bit2 = (~data >> 2) & 1;
 		bit1 = (~data >> 1) & 1;
@@ -1205,7 +1204,7 @@ static TIMER_CALLBACK( vg_set_halt_callback )
 static TIMER_CALLBACK( run_state_machine )
 {
 	int cycles = 0;
-	UINT8 *state_prom = memory_region(machine, "user1");
+	UINT8 *state_prom = machine->region("user1")->base();
 
 	while (cycles < VGSLICE)
 	{
@@ -1485,7 +1484,7 @@ static void register_state (running_machine *machine)
 
 	state_save_register_item(machine, "AVG", NULL, 0, flip_x);
 	state_save_register_item(machine, "AVG", NULL, 0, flip_y);
-
+	state_save_register_item_pointer(machine, "AVG", NULL, 0, avgdvg_vectorram, avgdvg_vectorram_size);
 }
 
 static VIDEO_START( avg_common )
@@ -1536,8 +1535,6 @@ VIDEO_START( dvg )
 
 	register_state (machine);
 
-	state_save_register_item_pointer(machine, "AVG", NULL, 0, vectorram, vectorram_size);
-
 	VIDEO_START_CALL(vector);
 }
 
@@ -1545,8 +1542,6 @@ VIDEO_START( avg )
 {
 	vgc = &avg_default;
 	VIDEO_START_CALL(avg_common);
-
-	state_save_register_item_pointer(machine, "AVG", NULL, 0, vectorram, vectorram_size);
 }
 
 VIDEO_START( avg_starwars )
@@ -1559,24 +1554,18 @@ VIDEO_START( avg_tempest )
 {
 	vgc = &avg_tempest;
 	VIDEO_START_CALL(avg_common);
-
-	state_save_register_item_pointer(machine, "AVG", NULL, 0, vectorram, vectorram_size);
 }
 
 VIDEO_START( avg_mhavoc )
 {
 	vgc = &avg_mhavoc;
 	VIDEO_START_CALL(avg_common);
-
-	state_save_register_item_pointer(machine, "AVG", NULL, 0, vectorram, vectorram_size);
 }
 
 VIDEO_START( avg_bzone )
 {
 	vgc = &avg_bzone;
 	VIDEO_START_CALL(avg_common);
-
-	state_save_register_item_pointer(machine, "AVG", NULL, 0, vectorram, vectorram_size);
 }
 
 VIDEO_START( avg_quantum )

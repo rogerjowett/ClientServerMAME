@@ -3,6 +3,7 @@
 /* see drivers/tbowl.c for more info */
 
 #include "emu.h"
+#include "includes/tbowl.h"
 
 static tilemap_t *tx_tilemap, *bg_tilemap, *bg2_tilemap;
 UINT8 *tbowl_txvideoram, *tbowl_bgvideoram, *tbowl_bg2videoram;
@@ -212,8 +213,8 @@ VIDEO_START( tbowl )
 
 VIDEO_UPDATE( tbowl )
 {
-	running_device *left_screen  = screen->machine->device("lscreen");
-	running_device *right_screen = screen->machine->device("rscreen");
+	device_t *left_screen  = screen->machine->device("lscreen");
+	device_t *right_screen = screen->machine->device("rscreen");
 
 	if (screen == left_screen)
 	{

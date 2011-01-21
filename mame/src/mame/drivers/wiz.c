@@ -162,23 +162,7 @@ Stephh's notes (based on the games Z80 code and some tests) :
 #include "deprecat.h"
 #include "sound/ay8910.h"
 #include "sound/discrete.h"
-
-extern UINT8 *wiz_videoram2;
-extern UINT8 *wiz_colorram2;
-extern UINT8 *wiz_attributesram;
-extern UINT8 *wiz_attributesram2;
-extern UINT8 *wiz_sprite_bank;
-
-WRITE8_HANDLER( wiz_char_bank_select_w );
-WRITE8_HANDLER( wiz_palettebank_w );
-WRITE8_HANDLER( wiz_bgcolor_w );
-WRITE8_HANDLER( wiz_flipx_w );
-WRITE8_HANDLER( wiz_flipy_w );
-VIDEO_START( wiz );
-PALETTE_INIT( wiz );
-VIDEO_UPDATE( wiz );
-VIDEO_UPDATE( stinger );
-VIDEO_UPDATE( kungfut );
+#include "includes/wiz.h"
 
 #define STINGER_SHOT_EN1	NODE_01
 #define STINGER_SHOT_EN2	NODE_02
@@ -189,7 +173,7 @@ static int dsc0, dsc1;
 
 static WRITE8_HANDLER( sound_command_w )
 {
-	running_device *discrete = space->machine->device("discrete");
+	device_t *discrete = space->machine->device("discrete");
 
 	switch (offset)
 	{
@@ -238,7 +222,7 @@ static ADDRESS_MAP_START( main_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0xd800, 0xd83f) AM_BASE(&wiz_attributesram2)
 	AM_RANGE(0xd840, 0xd85f) AM_BASE_GENERIC(spriteram2) AM_SIZE_GENERIC(spriteram)
 	AM_RANGE(0xd000, 0xd85f) AM_RAM
-	AM_RANGE(0xe000, 0xe3ff) AM_BASE_GENERIC(videoram) AM_SIZE_GENERIC(videoram)	/* Fallthrough */
+	AM_RANGE(0xe000, 0xe3ff) AM_BASE_MEMBER(wiz_state, videoram)	/* Fallthrough */
 	AM_RANGE(0xe400, 0xe7ff) AM_RAM
 	AM_RANGE(0xe800, 0xe83f) AM_BASE(&wiz_attributesram)
 	AM_RANGE(0xe840, 0xe85f) AM_BASE_GENERIC(spriteram)
@@ -695,97 +679,94 @@ static MACHINE_RESET( wiz )
 	dsc0 = dsc1 = 1;
 }
 
-static MACHINE_DRIVER_START( wiz )
+static MACHINE_CONFIG_START( wiz, wiz_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, 18432000/6)	/* 3.072 MHz ??? */
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_VBLANK_INT("screen", nmi_line_pulse)
+	MCFG_CPU_ADD("maincpu", Z80, 18432000/6)	/* 3.072 MHz ??? */
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_VBLANK_INT("screen", nmi_line_pulse)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 14318000/8)	/* ? */
-	MDRV_CPU_PROGRAM_MAP(sound_map)
-	MDRV_CPU_VBLANK_INT_HACK(nmi_line_pulse,4)	/* ??? */
+	MCFG_CPU_ADD("audiocpu", Z80, 14318000/8)	/* ? */
+	MCFG_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_VBLANK_INT_HACK(nmi_line_pulse,4)	/* ??? */
 
-	MDRV_MACHINE_RESET( wiz )
+	MCFG_MACHINE_RESET( wiz )
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */	/* frames per second, vblank duration */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */	/* frames per second, vblank duration */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(wiz)
-	MDRV_PALETTE_LENGTH(256)
+	MCFG_GFXDECODE(wiz)
+	MCFG_PALETTE_LENGTH(256)
 
-	MDRV_PALETTE_INIT(wiz)
-	MDRV_VIDEO_START(wiz)
-	MDRV_VIDEO_UPDATE(wiz)
+	MCFG_PALETTE_INIT(wiz)
+	MCFG_VIDEO_START(wiz)
+	MCFG_VIDEO_UPDATE(wiz)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("8910.1", AY8910, 18432000/12)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.10)
+	MCFG_SOUND_ADD("8910.1", AY8910, 18432000/12)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.10)
 
-	MDRV_SOUND_ADD("8910.2", AY8910, 18432000/12)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.10)
+	MCFG_SOUND_ADD("8910.2", AY8910, 18432000/12)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.10)
 
-	MDRV_SOUND_ADD("8910.3", AY8910, 18432000/12)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.10)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("8910.3", AY8910, 18432000/12)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.10)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( stinger )
+static MACHINE_CONFIG_DERIVED( stinger, wiz )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(wiz)
 
-	MDRV_CPU_MODIFY("audiocpu")
-	MDRV_CPU_PROGRAM_MAP(stinger_sound_map)
+	MCFG_CPU_MODIFY("audiocpu")
+	MCFG_CPU_PROGRAM_MAP(stinger_sound_map)
 
 	/* video hardware */
-	MDRV_GFXDECODE(stinger)
-	MDRV_VIDEO_UPDATE(stinger)
+	MCFG_GFXDECODE(stinger)
+	MCFG_VIDEO_UPDATE(stinger)
 
 	/* sound hardware */
-	MDRV_SOUND_MODIFY("8910.1")
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.12)
+	MCFG_SOUND_MODIFY("8910.1")
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.12)
 
-	MDRV_SOUND_MODIFY("8910.2")
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.12)
+	MCFG_SOUND_MODIFY("8910.2")
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.12)
 
-	MDRV_DEVICE_REMOVE("8910.3")
+	MCFG_DEVICE_REMOVE("8910.3")
 
-	MDRV_SOUND_ADD("discrete", DISCRETE, 0)
-	MDRV_SOUND_CONFIG_DISCRETE(stinger)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
-
-
-static MACHINE_DRIVER_START( scion )
-
-	/* basic machine hardware */
-	MDRV_IMPORT_FROM(stinger)
-
-	/* video hardware */
-	MDRV_SCREEN_MODIFY("screen")
-	MDRV_SCREEN_VISIBLE_AREA(2*8, 32*8-1, 2*8, 30*8-1)
-
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("discrete", DISCRETE, 0)
+	MCFG_SOUND_CONFIG_DISCRETE(stinger)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( kungfut )
+static MACHINE_CONFIG_DERIVED( scion, stinger )
 
 	/* basic machine hardware */
-	MDRV_IMPORT_FROM(wiz)
 
 	/* video hardware */
-	MDRV_GFXDECODE(stinger)
-	MDRV_VIDEO_UPDATE(kungfut)
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_VISIBLE_AREA(2*8, 32*8-1, 2*8, 30*8-1)
 
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
+
+
+static MACHINE_CONFIG_DERIVED( kungfut, wiz )
+
+	/* basic machine hardware */
+
+	/* video hardware */
+	MCFG_GFXDECODE(stinger)
+	MCFG_VIDEO_UPDATE(kungfut)
+
+MACHINE_CONFIG_END
 
 
 
@@ -1049,14 +1030,14 @@ static DRIVER_INIT( stinger )
 		{ 5,3,7, 0x80 },
 		{ 5,7,3, 0x28 }
 	};
-	const address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
-	UINT8 *rom = memory_region(machine, "maincpu");
-	int size = memory_region_length(machine, "maincpu");
+	address_space *space = cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM);
+	UINT8 *rom = machine->region("maincpu")->base();
+	int size = machine->region("maincpu")->bytes();
 	UINT8 *decrypt = auto_alloc_array(machine, UINT8, size);
 	int A;
 	const UINT8 *tbl;
 
-	memory_set_decrypted_region(space, 0x0000, 0xffff, decrypt);
+	space->set_decrypted_region(0x0000, 0xffff, decrypt);
 
 	for (A = 0x0000;A < 0x10000;A++)
 	{

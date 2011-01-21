@@ -117,7 +117,7 @@ static void set_irq_line(h6280_Regs* cpustate, int irqline, int state);
 /* include the macros */
 #include "h6280ops.h"
 
-INLINE h6280_Regs *get_safe_token(running_device *device)
+INLINE h6280_Regs *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
 	assert(device->type() == H6280);
@@ -162,6 +162,7 @@ static CPU_INIT( h6280 )
 	cpustate->irq_callback = irqcallback;
 	cpustate->device = device;
 	cpustate->program = device->space(AS_PROGRAM);
+	cpustate->direct = &cpustate->program->direct();
 	cpustate->io = device->space(AS_IO);
 }
 
@@ -178,6 +179,7 @@ static CPU_RESET( h6280 )
 	cpustate->irq_callback = save_irqcallback;
 	cpustate->device = device;
 	cpustate->program = device->space(AS_PROGRAM);
+	cpustate->direct = &cpustate->program->direct();
 	cpustate->io = device->space(AS_IO);
 
 	/* set I and B flags */
@@ -325,14 +327,14 @@ READ8_HANDLER( h6280_timer_r )
 {
 	/* only returns countdown */
 	h6280_Regs *cpustate = get_safe_token(space->cpu);
-	return ((cpustate->timer_value/1024)&0x7F)|(cpustate->io_buffer&0x80);
+	return ((cpustate->timer_value >> 10)&0x7F)|(cpustate->io_buffer&0x80);
 }
 
 WRITE8_HANDLER( h6280_timer_w )
 {
 	h6280_Regs *cpustate = get_safe_token(space->cpu);
 	cpustate->io_buffer=data;
-	switch (offset) {
+	switch (offset & 1) {
 		case 0: /* Counter preload */
 			cpustate->timer_load=cpustate->timer_value=((data&127)+1)*1024;
 			return;
@@ -357,12 +359,12 @@ static CPU_TRANSLATE( h6280 )
 	return TRUE;
 }
 
-UINT8 h6280io_get_buffer(running_device *device)
+UINT8 h6280io_get_buffer(device_t *device)
 {
 	h6280_Regs* cpustate = get_safe_token(device);
 	return cpustate->io_buffer;
 }
-void h6280io_set_buffer(running_device *device, UINT8 data)
+void h6280io_set_buffer(device_t *device, UINT8 data)
 {
 	h6280_Regs* cpustate = get_safe_token(device);
 	cpustate->io_buffer=data;

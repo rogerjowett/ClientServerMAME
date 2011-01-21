@@ -4,12 +4,11 @@
 
 *************************************************************************/
 
-class circusc_state
+class circusc_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, circusc_state(machine)); }
-
-	circusc_state(running_machine &machine) { }
+	circusc_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT8 *        videoram;
@@ -28,10 +27,10 @@ public:
 
 	/* devices */
 	cpu_device *audiocpu;
-	running_device *sn1;
-	running_device *sn2;
-	running_device *dac;
-	running_device *discrete;
+	device_t *sn1;
+	device_t *sn2;
+	device_t *dac;
+	device_t *discrete;
 };
 
 

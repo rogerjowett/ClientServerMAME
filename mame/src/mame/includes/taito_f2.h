@@ -10,13 +10,12 @@ struct f2_tempsprite
 	int primask;
 };
 
-class taitof2_state
+class taitof2_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, taitof2_state(machine)); }
-
-	taitof2_state(running_machine &machine)
-		: oki(machine.device<okim6295_device>("oki")) { }
+	taitof2_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config),
+		  oki(*this, "oki") { }
 
 	/* memory pointers */
 	UINT16 *        sprite_extension;
@@ -67,16 +66,16 @@ public:
 	INT32           oki_bank;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *audiocpu;
-	okim6295_device *oki;
-	running_device *tc0100scn;
-	running_device *tc0100scn_1;
-	running_device *tc0100scn_2;
-	running_device *tc0360pri;
-	running_device *tc0280grd;
-	running_device *tc0430grw;
-	running_device *tc0480scp;
+	device_t *maincpu;
+	device_t *audiocpu;
+	optional_device<okim6295_device> oki;
+	device_t *tc0100scn;
+	device_t *tc0100scn_1;
+	device_t *tc0100scn_2;
+	device_t *tc0360pri;
+	device_t *tc0280grd;
+	device_t *tc0430grw;
+	device_t *tc0480scp;
 };
 
 /*----------- defined in video/taito_f2.c -----------*/

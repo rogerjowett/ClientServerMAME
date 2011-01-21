@@ -1,7 +1,5 @@
 #include "emu.h"
-
-/*defined in drivers/darkmist.c */
-extern int darkmist_hw;
+#include "includes/darkmist.h"
 
 
 UINT8 *darkmist_scroll;
@@ -20,8 +18,8 @@ static TILE_GET_INFO( get_bgtile_info )
 {
 	int code,attr,pal;
 
-	code=memory_region(machine, "user1")[tile_index]; /* TTTTTTTT */
-	attr=memory_region(machine, "user2")[tile_index]; /* -PPP--TT - FIXED BITS (0xxx00xx) */
+	code=machine->region("user1")->base()[tile_index]; /* TTTTTTTT */
+	attr=machine->region("user2")->base()[tile_index]; /* -PPP--TT - FIXED BITS (0xxx00xx) */
 	code+=(attr&3)<<8;
 	pal=(attr>>4);
 
@@ -36,8 +34,8 @@ static TILE_GET_INFO( get_fgtile_info )
 {
 	int code,attr,pal;
 
-	code=memory_region(machine, "user3")[tile_index]; /* TTTTTTTT */
-	attr=memory_region(machine, "user4")[tile_index]; /* -PPP--TT - FIXED BITS (0xxx00xx) */
+	code=machine->region("user3")->base()[tile_index]; /* TTTTTTTT */
+	attr=machine->region("user4")->base()[tile_index]; /* -PPP--TT - FIXED BITS (0xxx00xx) */
 	pal=attr>>4;
 
 	code+=(attr&3)<<8;
@@ -55,10 +53,12 @@ static TILE_GET_INFO( get_fgtile_info )
 
 static TILE_GET_INFO( get_txttile_info )
 {
+	darkmist_state *state = machine->driver_data<darkmist_state>();
+	UINT8 *videoram = state->videoram;
 	int code,attr,pal;
 
-	code=machine->generic.videoram.u8[tile_index];
-	attr=machine->generic.videoram.u8[tile_index+0x400];
+	code=videoram[tile_index];
+	attr=videoram[tile_index+0x400];
 	pal=(attr>>1);
 
 	code+=(attr&1)<<8;
@@ -177,7 +177,7 @@ VIDEO_UPDATE( darkmist)
 			palette=((spriteram[i+1])>>1)&0xf;
 
 			if(spriteram[i+1]&0x1)
-				palette=mame_rand(screen->machine)&15;
+				palette=screen->machine->rand()&15;
 
 			palette+=32;
 

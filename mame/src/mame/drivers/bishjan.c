@@ -37,6 +37,7 @@ To do:
 #include "cpu/i86/i86.h"
 #include "sound/okim6295.h"
 #include "sound/3812intf.h"
+#include "machine/nvram.h"
 
 /***************************************************************************
                               Tilemaps Access
@@ -324,9 +325,9 @@ static WRITE16_HANDLER( bishjan_sel_w )
 static READ16_HANDLER( bishjan_serial_r )
 {
 	return
-		(mame_rand(space->machine) & 0x9800)	|	// bit 7 - serial communication
+		(space->machine->rand() & 0x9800)	|	// bit 7 - serial communication
 		(((bishjan_sel==0x12) ? 0x40:0x00) << 8) |
-//      (mame_rand() & 0xff);
+//      (machine->rand() & 0xff);
 //      (((space->machine->primary_screen->frame_number()%60)==0)?0x18:0x00);
 		0x18;
 }
@@ -368,7 +369,7 @@ static ADDRESS_MAP_START( bishjan_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE( 0x000000, 0x07ffff ) AM_ROM AM_REGION("maincpu", 0)
 	AM_RANGE( 0x080000, 0x0fffff ) AM_ROM AM_REGION("maincpu", 0)
 
-	AM_RANGE( 0x200000, 0x207fff ) AM_RAM AM_BASE_SIZE_GENERIC(nvram)	// battery
+	AM_RANGE( 0x200000, 0x207fff ) AM_RAM AM_SHARE("nvram")	// battery
 
 
 	// read lo (2)   (only half tilemap?)
@@ -492,7 +493,7 @@ static MACHINE_RESET( saklove )
 }
 
 static ADDRESS_MAP_START( saklove_map, ADDRESS_SPACE_PROGRAM, 8 )
-	AM_RANGE(0x00000, 0x07fff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)	// battery
+	AM_RANGE(0x00000, 0x07fff) AM_RAM AM_SHARE("nvram")	// battery
 
 	// read lo (2)   (only half tilemap?)
 	AM_RANGE(0x12000, 0x12fff) AM_READWRITE( bishjan_videoram_2_lo_r, bishjan_videoram_2_lo_w )
@@ -517,7 +518,7 @@ static ADDRESS_MAP_START( saklove_map, ADDRESS_SPACE_PROGRAM, 8 )
 ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( saklove_io, ADDRESS_SPACE_IO, 8 )
-	AM_RANGE(0x0020, 0x0020) AM_DEVREADWRITE( "oki", okim6295_r, okim6295_w )
+	AM_RANGE(0x0020, 0x0020) AM_DEVREADWRITE_MODERN("oki", okim6295_device, read, write)
 	AM_RANGE(0x0040, 0x0041) AM_DEVWRITE( "ymsnd", ym3812_w )
 
 	AM_RANGE(0x0060, 0x0062) AM_WRITE( colordac_w )
@@ -769,7 +770,7 @@ static INPUT_PORTS_START( saklove )
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_UNKNOWN  )
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN  )
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_START1   ) PORT_NAME("Play")
-	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_BUTTON5  ) PORT_NAME("Big? / Small?")
+	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_BUTTON5  ) PORT_NAME("Big or Small 1")
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_BUTTON4  ) PORT_NAME("Bet Amount")	// 1-5-10
 
 	PORT_START("IN B")
@@ -777,7 +778,7 @@ static INPUT_PORTS_START( saklove )
 	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_MAHJONG_DOUBLE_UP )	// top 10? / double up?
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN  )	// used?
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_UNKNOWN  )
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_BUTTON6  ) PORT_NAME("Big? / Small?")	// plays sample or advances music in system test / big or small?
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_BUTTON6  ) PORT_NAME("Big or Small 2")	// plays sample or advances music in system test / big or small?
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN  )	// used?
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_COIN1    )
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_UNKNOWN  )	// used?
@@ -825,26 +826,26 @@ static INTERRUPT_GEN( bishjan_interrupt )
 	}
 }
 
-static MACHINE_DRIVER_START( bishjan )
-	MDRV_CPU_ADD("maincpu", H83044, XTAL_44_1MHz / 3)
-	MDRV_CPU_PROGRAM_MAP( bishjan_map)
-	MDRV_CPU_VBLANK_INT_HACK(bishjan_interrupt,2)
+static MACHINE_CONFIG_START( bishjan, driver_device )
+	MCFG_CPU_ADD("maincpu", H83044, XTAL_44_1MHz / 3)
+	MCFG_CPU_PROGRAM_MAP( bishjan_map)
+	MCFG_CPU_VBLANK_INT_HACK(bishjan_interrupt,2)
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE( 512, 256 )
-	MDRV_SCREEN_VISIBLE_AREA( 0, 512-1, 0, 256-16-1 )
-	MDRV_SCREEN_REFRESH_RATE( 60 )
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE( 512, 256 )
+	MCFG_SCREEN_VISIBLE_AREA( 0, 512-1, 0, 256-16-1 )
+	MCFG_SCREEN_REFRESH_RATE( 60 )
 
-	MDRV_GFXDECODE(bishjan)
-	MDRV_PALETTE_LENGTH( 256 )
+	MCFG_GFXDECODE(bishjan)
+	MCFG_PALETTE_LENGTH( 256 )
 
-	MDRV_VIDEO_START( bishjan )
-	MDRV_VIDEO_UPDATE( bishjan )
-MACHINE_DRIVER_END
+	MCFG_VIDEO_START( bishjan )
+	MCFG_VIDEO_UPDATE( bishjan )
+MACHINE_CONFIG_END
 
 /***************************************************************************
                           Sakura Love - Ying Hua Lian
@@ -856,37 +857,37 @@ static INTERRUPT_GEN( saklove_interrupt )
 		cpu_set_input_line_and_vector(device,0,HOLD_LINE,0x4c/4);
 }
 
-static MACHINE_DRIVER_START( saklove )
-	MDRV_CPU_ADD("maincpu", I80188, XTAL_20MHz )	// !! AMD AM188-EM !!
-	MDRV_CPU_PROGRAM_MAP( saklove_map)
-	MDRV_CPU_IO_MAP( saklove_io)
-	MDRV_CPU_VBLANK_INT( "screen", saklove_interrupt )
+static MACHINE_CONFIG_START( saklove, driver_device )
+	MCFG_CPU_ADD("maincpu", I80188, XTAL_20MHz )	// !! AMD AM188-EM !!
+	MCFG_CPU_PROGRAM_MAP( saklove_map)
+	MCFG_CPU_IO_MAP( saklove_io)
+	MCFG_CPU_VBLANK_INT( "screen", saklove_interrupt )
 
-	MDRV_MACHINE_RESET(saklove)
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_MACHINE_RESET(saklove)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE( 512, 256 )
-	MDRV_SCREEN_VISIBLE_AREA( 0, 512-1, 0, 256-16-1 )
-	MDRV_SCREEN_REFRESH_RATE( 58.7270 )
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE( 512, 256 )
+	MCFG_SCREEN_VISIBLE_AREA( 0, 512-1, 0, 256-16-1 )
+	MCFG_SCREEN_REFRESH_RATE( 58.7270 )
 
-	MDRV_GFXDECODE(bishjan)
-	MDRV_PALETTE_LENGTH( 256 )
+	MCFG_GFXDECODE(bishjan)
+	MCFG_PALETTE_LENGTH( 256 )
 
-	MDRV_VIDEO_START( bishjan )
-	MDRV_VIDEO_UPDATE( bishjan )
+	MCFG_VIDEO_START( bishjan )
+	MCFG_VIDEO_UPDATE( bishjan )
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_OKIM6295_ADD("oki", XTAL_8_4672MHz / 8, OKIM6295_PIN7_HIGH)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
+	MCFG_OKIM6295_ADD("oki", XTAL_8_4672MHz / 8, OKIM6295_PIN7_HIGH)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
 
-	MDRV_SOUND_ADD("ymsnd", YM3812, XTAL_12MHz / 4)	// ? chip and clock unknown
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ymsnd", YM3812, XTAL_12MHz / 4)	// ? chip and clock unknown
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
+MACHINE_CONFIG_END
 
 
 /***************************************************************************
@@ -955,7 +956,7 @@ ROM_END
 
 static DRIVER_INIT(bishjan)
 {
-	UINT16 *rom = (UINT16*)memory_region(machine, "maincpu");
+	UINT16 *rom = (UINT16*)machine->region("maincpu")->base();
 
 	// check
 	rom[0x042EA/2] = 0x4008;
@@ -1013,7 +1014,7 @@ ROM_END
 
 static DRIVER_INIT(saklove)
 {
-	UINT8 *rom = memory_region(machine, "maincpu");
+	UINT8 *rom = machine->region("maincpu")->base();
 
 	// patch protection test (it always enters test mode on boot otherwise)
 	rom[0x0e029] = 0xeb;

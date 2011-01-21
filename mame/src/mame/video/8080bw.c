@@ -15,7 +15,7 @@
 
 MACHINE_START( extra_8080bw_vh )
 {
-	mw8080bw_state *state = (mw8080bw_state *)machine->driver_data;
+	mw8080bw_state *state = machine->driver_data<mw8080bw_state>();
 
 	state_save_register_global(machine, state->c8080bw_flip_screen);
 	state_save_register_global(machine, state->color_map);
@@ -65,7 +65,7 @@ static void cosmo_get_pens( pen_t *pens )
 
 INLINE void set_pixel( running_machine *machine, bitmap_t *bitmap, UINT8 y, UINT8 x, pen_t *pens, UINT8 color )
 {
-	mw8080bw_state *state = (mw8080bw_state *)machine->driver_data;
+	mw8080bw_state *state = machine->driver_data<mw8080bw_state>();
 
 	if (y >= MW8080BW_VCOUNTER_START_NO_VBLANK)
 	{
@@ -94,7 +94,7 @@ INLINE void set_8_pixels( running_machine *machine, bitmap_t *bitmap, UINT8 y, U
 /* this is needed as this driver doesn't emulate the shift register like mw8080bw does */
 static void clear_extra_columns( running_machine *machine, bitmap_t *bitmap, pen_t *pens, UINT8 color )
 {
-	mw8080bw_state *state = (mw8080bw_state *)machine->driver_data;
+	mw8080bw_state *state = machine->driver_data<mw8080bw_state>();
 	UINT8 x;
 
 	for (x = 0; x < 4; x++)
@@ -114,7 +114,7 @@ static void clear_extra_columns( running_machine *machine, bitmap_t *bitmap, pen
 
 VIDEO_UPDATE( invadpt2 )
 {
-	mw8080bw_state *state = (mw8080bw_state *)screen->machine->driver_data;
+	mw8080bw_state *state = screen->machine->driver_data<mw8080bw_state>();
 	pen_t pens[NUM_PENS];
 	offs_t offs;
 	UINT8 *prom;
@@ -122,7 +122,7 @@ VIDEO_UPDATE( invadpt2 )
 
 	invadpt2_get_pens(pens);
 
-	prom = memory_region(screen->machine, "proms");
+	prom = screen->machine->region("proms")->base();
 	color_map_base = state->color_map ? &prom[0x0400] : &prom[0x0000];
 
 	for (offs = 0; offs < state->main_ram_size; offs++)
@@ -146,7 +146,7 @@ VIDEO_UPDATE( invadpt2 )
 
 VIDEO_UPDATE( ballbomb )
 {
-	mw8080bw_state *state = (mw8080bw_state *)screen->machine->driver_data;
+	mw8080bw_state *state = screen->machine->driver_data<mw8080bw_state>();
 	pen_t pens[NUM_PENS];
 	offs_t offs;
 	UINT8 *color_map_base;
@@ -154,7 +154,7 @@ VIDEO_UPDATE( ballbomb )
 
 	invadpt2_get_pens(pens);
 
-	prom = memory_region(screen->machine, "proms");
+	prom = screen->machine->region("proms")->base();
 	color_map_base = state->color_map ? &prom[0x0400] : &prom[0x0000];
 
 	for (offs = 0; offs < state->main_ram_size; offs++)
@@ -179,14 +179,14 @@ VIDEO_UPDATE( ballbomb )
 
 VIDEO_UPDATE( schaser )
 {
-	mw8080bw_state *state = (mw8080bw_state *)screen->machine->driver_data;
+	mw8080bw_state *state = screen->machine->driver_data<mw8080bw_state>();
 	pen_t pens[NUM_PENS];
 	offs_t offs;
 	UINT8 *background_map_base;
 
 	invadpt2_get_pens(pens);
 
-	background_map_base = memory_region(screen->machine, "proms");
+	background_map_base = screen->machine->region("proms")->base();
 
 	for (offs = 0; offs < state->main_ram_size; offs++)
 	{
@@ -220,7 +220,7 @@ VIDEO_UPDATE( schaser )
 
 VIDEO_UPDATE( schasercv )
 {
-	mw8080bw_state *state = (mw8080bw_state *)screen->machine->driver_data;
+	mw8080bw_state *state = screen->machine->driver_data<mw8080bw_state>();
 	pen_t pens[NUM_PENS];
 	offs_t offs;
 
@@ -246,7 +246,7 @@ VIDEO_UPDATE( schasercv )
 
 VIDEO_UPDATE( rollingc )
 {
-	mw8080bw_state *state = (mw8080bw_state *)screen->machine->driver_data;
+	mw8080bw_state *state = screen->machine->driver_data<mw8080bw_state>();
 	pen_t pens[NUM_PENS];
 	offs_t offs;
 
@@ -271,7 +271,7 @@ VIDEO_UPDATE( rollingc )
 
 VIDEO_UPDATE( polaris )
 {
-	mw8080bw_state *state = (mw8080bw_state *)screen->machine->driver_data;
+	mw8080bw_state *state = screen->machine->driver_data<mw8080bw_state>();
 	pen_t pens[NUM_PENS];
 	offs_t offs;
 	UINT8 *color_map_base;
@@ -279,8 +279,8 @@ VIDEO_UPDATE( polaris )
 
 	invadpt2_get_pens(pens);
 
-	color_map_base = memory_region(screen->machine, "proms");
-	cloud_gfx = memory_region(screen->machine, "user1");
+	color_map_base = screen->machine->region("proms")->base();
+	cloud_gfx = screen->machine->region("user1")->base();
 
 	for (offs = 0; offs < state->main_ram_size; offs++)
 	{
@@ -343,7 +343,7 @@ VIDEO_UPDATE( polaris )
 
 VIDEO_UPDATE( lupin3 )
 {
-	mw8080bw_state *state = (mw8080bw_state *)screen->machine->driver_data;
+	mw8080bw_state *state = screen->machine->driver_data<mw8080bw_state>();
 	pen_t pens[NUM_PENS];
 	offs_t offs;
 
@@ -368,7 +368,7 @@ VIDEO_UPDATE( lupin3 )
 
 VIDEO_UPDATE( cosmo )
 {
-	mw8080bw_state *state = (mw8080bw_state *)screen->machine->driver_data;
+	mw8080bw_state *state = screen->machine->driver_data<mw8080bw_state>();
 	pen_t pens[NUM_PENS];
 	offs_t offs;
 
@@ -395,7 +395,7 @@ VIDEO_UPDATE( cosmo )
 
 VIDEO_UPDATE( indianbt )
 {
-	mw8080bw_state *state = (mw8080bw_state *)screen->machine->driver_data;
+	mw8080bw_state *state = screen->machine->driver_data<mw8080bw_state>();
 	pen_t pens[NUM_PENS];
 	offs_t offs;
 	UINT8 *color_map_base;
@@ -403,7 +403,7 @@ VIDEO_UPDATE( indianbt )
 
 	cosmo_get_pens(pens);
 
-	prom = memory_region(screen->machine, "proms");
+	prom = screen->machine->region("proms")->base();
 	color_map_base = state->color_map ? &prom[0x0400] : &prom[0x0000];
 
 	for (offs = 0; offs < state->main_ram_size; offs++)
@@ -427,7 +427,7 @@ VIDEO_UPDATE( indianbt )
 
 VIDEO_UPDATE( shuttlei )
 {
-	mw8080bw_state *state = (mw8080bw_state *)screen->machine->driver_data;
+	mw8080bw_state *state = screen->machine->driver_data<mw8080bw_state>();
 	pen_t pens[2] = { RGB_BLACK, RGB_WHITE };
 	offs_t offs;
 
@@ -458,7 +458,7 @@ VIDEO_UPDATE( shuttlei )
 
 VIDEO_UPDATE( sflush )
 {
-	mw8080bw_state *state = (mw8080bw_state *)screen->machine->driver_data;
+	mw8080bw_state *state = screen->machine->driver_data<mw8080bw_state>();
 	pen_t pens[NUM_PENS];
 	offs_t offs;
 

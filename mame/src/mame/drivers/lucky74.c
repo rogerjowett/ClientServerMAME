@@ -672,17 +672,9 @@
 #include "sound/sn76496.h"
 #include "sound/msm5205.h"
 #include "machine/8255ppi.h"
+#include "machine/nvram.h"
 #include "lucky74.lh"
-
-/* from video hardware */
-extern UINT8 *lucky74_fg_videoram, *lucky74_fg_colorram, *lucky74_bg_videoram, *lucky74_bg_colorram;
-WRITE8_HANDLER( lucky74_fg_videoram_w );
-WRITE8_HANDLER( lucky74_fg_colorram_w );
-WRITE8_HANDLER( lucky74_bg_videoram_w );
-WRITE8_HANDLER( lucky74_bg_colorram_w );
-PALETTE_INIT( lucky74 );
-VIDEO_START( lucky74 );
-VIDEO_UPDATE( lucky74 );
+#include "includes/lucky74.h"
 
 static UINT8 ym2149_portb;
 static UINT8 usart_8251;
@@ -820,7 +812,7 @@ static INTERRUPT_GEN( nmi_interrupt )
 
 static ADDRESS_MAP_START( lucky74_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0xbfff) AM_ROM
-	AM_RANGE(0xc000, 0xcfff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)	/* NVRAM */
+	AM_RANGE(0xc000, 0xcfff) AM_RAM AM_SHARE("nvram")	/* NVRAM */
 	AM_RANGE(0xd000, 0xd7ff) AM_RAM_WRITE(lucky74_fg_videoram_w) AM_BASE(&lucky74_fg_videoram)				/* VRAM1-1 */
 	AM_RANGE(0xd800, 0xdfff) AM_RAM_WRITE(lucky74_fg_colorram_w) AM_BASE(&lucky74_fg_colorram)				/* VRAM1-2 */
 	AM_RANGE(0xe000, 0xe7ff) AM_RAM_WRITE(lucky74_bg_videoram_w) AM_BASE(&lucky74_bg_videoram)				/* VRAM2-1 */
@@ -1122,7 +1114,7 @@ static SOUND_START( lucky74 )
 	lucky74_adpcm_busy_line = 0x01;	/* free and ready */
 }
 
-static void lucky74_adpcm_int(running_device *device)
+static void lucky74_adpcm_int(device_t *device)
 {
 	if (lucky74_adpcm_reg[05] == 0x01)	/* register 0x05 (bit 0 activated), trigger the sample */
 	{
@@ -1144,7 +1136,7 @@ static void lucky74_adpcm_int(running_device *device)
 		if (lucky74_adpcm_data == -1)
 		{
 			/* transferring 1st nibble */
-			lucky74_adpcm_data = memory_region(device->machine, "adpcm")[lucky74_adpcm_pos];
+			lucky74_adpcm_data = device->machine->region("adpcm")->base()[lucky74_adpcm_pos];
 			lucky74_adpcm_pos = (lucky74_adpcm_pos + 1) & 0xffff;
 			msm5205_data_w(device, lucky74_adpcm_data >> 4);
 
@@ -1238,61 +1230,61 @@ static const msm5205_interface msm5205_config =
 *    Machine Drivers     *
 *************************/
 
-static MACHINE_DRIVER_START( lucky74 )
+static MACHINE_CONFIG_START( lucky74, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, C_06B49P_CLKOUT_03)	/* 3 MHz. */
-	MDRV_CPU_PROGRAM_MAP(lucky74_map)
-	MDRV_CPU_IO_MAP(lucky74_portmap)
-	MDRV_CPU_VBLANK_INT("screen", nmi_interrupt)	/* 60 Hz. measured */
+	MCFG_CPU_ADD("maincpu", Z80, C_06B49P_CLKOUT_03)	/* 3 MHz. */
+	MCFG_CPU_PROGRAM_MAP(lucky74_map)
+	MCFG_CPU_IO_MAP(lucky74_portmap)
+	MCFG_CPU_VBLANK_INT("screen", nmi_interrupt)	/* 60 Hz. measured */
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
-	MDRV_SOUND_START(lucky74)
+	MCFG_SOUND_START(lucky74)
 
 	/* 2x 82c255 (4x 8255) */
-	MDRV_PPI8255_ADD( "ppi8255_0", ppi8255_intf[0] )
-	MDRV_PPI8255_ADD( "ppi8255_1", ppi8255_intf[1] )
-	MDRV_PPI8255_ADD( "ppi8255_2", ppi8255_intf[2] )
-	MDRV_PPI8255_ADD( "ppi8255_3", ppi8255_intf[3] )
+	MCFG_PPI8255_ADD( "ppi8255_0", ppi8255_intf[0] )
+	MCFG_PPI8255_ADD( "ppi8255_1", ppi8255_intf[1] )
+	MCFG_PPI8255_ADD( "ppi8255_2", ppi8255_intf[2] )
+	MCFG_PPI8255_ADD( "ppi8255_3", ppi8255_intf[3] )
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 64*8-1, 1*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 64*8-1, 1*8, 30*8-1)
 
-	MDRV_GFXDECODE(lucky74)
+	MCFG_GFXDECODE(lucky74)
 
-	MDRV_PALETTE_INIT(lucky74)
-	MDRV_PALETTE_LENGTH(512)
+	MCFG_PALETTE_INIT(lucky74)
+	MCFG_PALETTE_LENGTH(512)
 
-	MDRV_VIDEO_START(lucky74)
-	MDRV_VIDEO_UPDATE(lucky74)
+	MCFG_VIDEO_START(lucky74)
+	MCFG_VIDEO_UPDATE(lucky74)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("sn1", SN76489, C_06B49P_CLKOUT_03)	/* 3 MHz. */
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
+	MCFG_SOUND_ADD("sn1", SN76489, C_06B49P_CLKOUT_03)	/* 3 MHz. */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
 
-	MDRV_SOUND_ADD("sn2", SN76489, C_06B49P_CLKOUT_03)	/* 3 MHz. */
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
+	MCFG_SOUND_ADD("sn2", SN76489, C_06B49P_CLKOUT_03)	/* 3 MHz. */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
 
-	MDRV_SOUND_ADD("sn3", SN76489, C_06B49P_CLKOUT_03)	/* 3 MHz. */
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
+	MCFG_SOUND_ADD("sn3", SN76489, C_06B49P_CLKOUT_03)	/* 3 MHz. */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
 
-	MDRV_SOUND_ADD("aysnd", AY8910, C_06B49P_CLKOUT_04)	/* 1.5 MHz. */
-	MDRV_SOUND_CONFIG(ay8910_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.00)			/* not routed to audio hardware */
+	MCFG_SOUND_ADD("aysnd", AY8910, C_06B49P_CLKOUT_04)	/* 1.5 MHz. */
+	MCFG_SOUND_CONFIG(ay8910_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.00)			/* not routed to audio hardware */
 
-	MDRV_SOUND_ADD("msm", MSM5205, C_06B49P_CLKOUT_06)	/* 375 kHz. */
-	MDRV_SOUND_CONFIG(msm5205_config)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.70)
+	MCFG_SOUND_ADD("msm", MSM5205, C_06B49P_CLKOUT_06)	/* 375 kHz. */
+	MCFG_SOUND_CONFIG(msm5205_config)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.70)
 
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
 
 /*************************

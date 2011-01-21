@@ -16,12 +16,11 @@
 #define SPRITE_PRI(n) (((state->vidregs[2] << (4*n)) & 0xf0000000 ) >> 28)
 
 
-class psikyosh_state
+class psikyosh_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, psikyosh_state(machine)); }
-
-	psikyosh_state(running_machine &machine) { }
+	psikyosh_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 	UINT32 *       bgram;
@@ -41,7 +40,7 @@ public:
 	UINT32         sample_offs;	// only used if ROMTEST = 1
 
 	/* devices */
-	running_device *maincpu;
+	device_t *maincpu;
 };
 
 /*----------- defined in video/psikyosh.c -----------*/

@@ -87,12 +87,11 @@ PROM  : Type MB7051
 #include "sound/ay8910.h"
 #include "video/resnet.h"
 
-class shougi_state
+class shougi_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, shougi_state(machine)); }
-
-	shougi_state(running_machine &machine) { }
+	shougi_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	UINT8 *videoram;
 	int nmi_enabled;
@@ -163,7 +162,7 @@ static PALETTE_INIT( shougi )
 
 static VIDEO_UPDATE( shougi )
 {
-	shougi_state *state = (shougi_state *)screen->machine->driver_data;
+	shougi_state *state = screen->machine->driver_data<shougi_state>();
 	int offs;
 
 	for (offs = 0;offs <0x4000; offs++)
@@ -246,7 +245,7 @@ static WRITE8_HANDLER( shougi_mcu_halt_on_w )
 
 static WRITE8_HANDLER( nmi_disable_and_clear_line_w )
 {
-	shougi_state *state = (shougi_state *)space->machine->driver_data;
+	shougi_state *state = space->machine->driver_data<shougi_state>();
 
 	state->nmi_enabled = 0; /* disable NMIs */
 
@@ -257,14 +256,14 @@ static WRITE8_HANDLER( nmi_disable_and_clear_line_w )
 
 static WRITE8_HANDLER( nmi_enable_w )
 {
-	shougi_state *state = (shougi_state *)space->machine->driver_data;
+	shougi_state *state = space->machine->driver_data<shougi_state>();
 
 	state->nmi_enabled = 1; /* enable NMIs */
 }
 
 static INTERRUPT_GEN( shougi_vblank_nmi )
 {
-	shougi_state *state = (shougi_state *)device->machine->driver_data;
+	shougi_state *state = device->machine->driver_data<shougi_state>();
 
 	if ( state->nmi_enabled == 1 )
 	{
@@ -306,7 +305,7 @@ ADDRESS_MAP_END
 /* sub */
 static READ8_HANDLER ( dummy_r )
 {
-	shougi_state *state = (shougi_state *)space->machine->driver_data;
+	shougi_state *state = space->machine->driver_data<shougi_state>();
 	state->r ^= 1;
 
 	if(state->r)
@@ -391,45 +390,43 @@ INPUT_PORTS_END
 
 
 
-static MACHINE_DRIVER_START( shougi )
+static MACHINE_CONFIG_START( shougi, shougi_state )
 
-	MDRV_DRIVER_DATA( shougi_state )
+	MCFG_CPU_ADD("maincpu", Z80,10000000/4)
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_VBLANK_INT("screen", shougi_vblank_nmi)
 
-	MDRV_CPU_ADD("maincpu", Z80,10000000/4)
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_VBLANK_INT("screen", shougi_vblank_nmi)
-
-	MDRV_CPU_ADD("sub", Z80,10000000/4)
-	MDRV_CPU_PROGRAM_MAP(sub_map)
-	MDRV_CPU_IO_MAP(readport_sub)
+	MCFG_CPU_ADD("sub", Z80,10000000/4)
+	MCFG_CPU_PROGRAM_MAP(sub_map)
+	MCFG_CPU_IO_MAP(readport_sub)
 	/* NMIs triggered in shougi_vblank_nmi() */
 
 	/* MCU */
-	MDRV_CPU_ADD("mcu", ALPHA8201, 10000000/4/8)
-	MDRV_CPU_PROGRAM_MAP(mcu_map)
+	MCFG_CPU_ADD("mcu", ALPHA8201, 10000000/4/8)
+	MCFG_CPU_PROGRAM_MAP(mcu_map)
 
-	MDRV_QUANTUM_TIME(HZ(600))
-	MDRV_WATCHDOG_VBLANK_INIT(16)	// assuming it's the same as champbas
+	MCFG_QUANTUM_TIME(HZ(600))
+	MCFG_WATCHDOG_VBLANK_INIT(16)	// assuming it's the same as champbas
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(256, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 255, 0, 255)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(256, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 255, 0, 255)
 
-	MDRV_PALETTE_LENGTH(32)
+	MCFG_PALETTE_LENGTH(32)
 
-	MDRV_PALETTE_INIT(shougi)
-	MDRV_VIDEO_UPDATE(shougi)
+	MCFG_PALETTE_INIT(shougi)
+	MCFG_VIDEO_UPDATE(shougi)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("aysnd", AY8910, 10000000/8)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("aysnd", AY8910, 10000000/8)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
+MACHINE_CONFIG_END
 
 
 

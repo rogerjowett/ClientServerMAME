@@ -20,7 +20,7 @@ To enter service mode, keep 1&2 pressed on reset
 
 static READ8_DEVICE_HANDLER( megazone_port_a_r )
 {
-	megazone_state *state = (megazone_state *)device->machine->driver_data;
+	megazone_state *state = device->machine->driver_data<megazone_state>();
 	int clock, timer;
 
 
@@ -58,13 +58,13 @@ static WRITE8_DEVICE_HANDLER( megazone_port_b_w )
 
 static WRITE8_HANDLER( megazone_i8039_irq_w )
 {
-	megazone_state *state = (megazone_state *)space->machine->driver_data;
+	megazone_state *state = space->machine->driver_data<megazone_state>();
 	cpu_set_input_line(state->daccpu, 0, ASSERT_LINE);
 }
 
 static WRITE8_HANDLER( i8039_irqen_and_status_w )
 {
-	megazone_state *state = (megazone_state *)space->machine->driver_data;
+	megazone_state *state = space->machine->driver_data<megazone_state>();
 
 	if ((data & 0x80) == 0)
 		cpu_set_input_line(state->daccpu, 0, CLEAR_LINE);
@@ -226,7 +226,7 @@ static const ay8910_interface ay8910_config =
 
 static MACHINE_START( megazone )
 {
-	megazone_state *state = (megazone_state *)machine->driver_data;
+	megazone_state *state = machine->driver_data<megazone_state>();
 
 	state->maincpu = machine->device<cpu_device>("maincpu");
 	state->audiocpu = machine->device<cpu_device>("audiocpu");
@@ -238,69 +238,66 @@ static MACHINE_START( megazone )
 
 static MACHINE_RESET( megazone )
 {
-	megazone_state *state = (megazone_state *)machine->driver_data;
+	megazone_state *state = machine->driver_data<megazone_state>();
 
 	state->flipscreen = 0;
 	state->i8039_status = 0;
 }
 
-static MACHINE_DRIVER_START( megazone )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(megazone_state)
+static MACHINE_CONFIG_START( megazone, megazone_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6809, 18432000/9)        /* 2 MHz */
-	MDRV_CPU_PROGRAM_MAP(megazone_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", M6809, 18432000/9)        /* 2 MHz */
+	MCFG_CPU_PROGRAM_MAP(megazone_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80,18432000/6)     /* Z80 Clock is derived from the H1 signal */
-	MDRV_CPU_PROGRAM_MAP(megazone_sound_map)
-	MDRV_CPU_IO_MAP(megazone_sound_io_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("audiocpu", Z80,18432000/6)     /* Z80 Clock is derived from the H1 signal */
+	MCFG_CPU_PROGRAM_MAP(megazone_sound_map)
+	MCFG_CPU_IO_MAP(megazone_sound_io_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("daccpu", I8039,14318000/2)	/* 1/2 14MHz crystal */
-	MDRV_CPU_PROGRAM_MAP(megazone_i8039_map)
-	MDRV_CPU_IO_MAP(megazone_i8039_io_map)
+	MCFG_CPU_ADD("daccpu", I8039,14318000/2)	/* 1/2 14MHz crystal */
+	MCFG_CPU_PROGRAM_MAP(megazone_i8039_map)
+	MCFG_CPU_IO_MAP(megazone_i8039_io_map)
 
-	MDRV_QUANTUM_TIME(HZ(900))
-	MDRV_MACHINE_START(megazone)
-	MDRV_MACHINE_RESET(megazone)
+	MCFG_QUANTUM_TIME(HZ(900))
+	MCFG_MACHINE_START(megazone)
+	MCFG_MACHINE_RESET(megazone)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(36*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 36*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(36*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 36*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(megazone)
-	MDRV_PALETTE_LENGTH(16*16+16*16)
+	MCFG_GFXDECODE(megazone)
+	MCFG_PALETTE_LENGTH(16*16+16*16)
 
-	MDRV_PALETTE_INIT(megazone)
-	MDRV_VIDEO_START(megazone)
-	MDRV_VIDEO_UPDATE(megazone)
+	MCFG_PALETTE_INIT(megazone)
+	MCFG_VIDEO_START(megazone)
+	MCFG_VIDEO_UPDATE(megazone)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("aysnd", AY8910, 14318000/8)
-	MDRV_SOUND_CONFIG(ay8910_config)
-	MDRV_SOUND_ROUTE(0, "filter.0.0", 0.30)
-	MDRV_SOUND_ROUTE(1, "filter.0.1", 0.30)
-	MDRV_SOUND_ROUTE(2, "filter.0.2", 0.30)
+	MCFG_SOUND_ADD("aysnd", AY8910, 14318000/8)
+	MCFG_SOUND_CONFIG(ay8910_config)
+	MCFG_SOUND_ROUTE(0, "filter.0.0", 0.30)
+	MCFG_SOUND_ROUTE(1, "filter.0.1", 0.30)
+	MCFG_SOUND_ROUTE(2, "filter.0.2", 0.30)
 
-	MDRV_SOUND_ADD("dac", DAC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_SOUND_ADD("dac", DAC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MDRV_SOUND_ADD("filter.0.0", FILTER_RC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-	MDRV_SOUND_ADD("filter.0.1", FILTER_RC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-	MDRV_SOUND_ADD("filter.0.2", FILTER_RC, 0)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("filter.0.0", FILTER_RC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SOUND_ADD("filter.0.1", FILTER_RC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SOUND_ADD("filter.0.2", FILTER_RC, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 

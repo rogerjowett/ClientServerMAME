@@ -36,7 +36,7 @@ inputs + notes by stephh
 
 static INPUT_CHANGED( coin_inserted )
 {
-	fcombat_state *state = (fcombat_state *)field->port->machine->driver_data;
+	fcombat_state *state = field->port->machine->driver_data<fcombat_state>();
 
 	/* coin insertion causes an NMI */
 	cpu_set_input_line(state->maincpu, INPUT_LINE_NMI, newval ? CLEAR_LINE : ASSERT_LINE);
@@ -61,7 +61,7 @@ static READ8_HANDLER( fcombat_protection_r )
 
 static READ8_HANDLER( fcombat_port01_r )
 {
-	fcombat_state *state = (fcombat_state *)space->machine->driver_data;
+	fcombat_state *state = space->machine->driver_data<fcombat_state>();
 	/* the cocktail flip bit muxes between ports 0 and 1 */
 	return state->cocktail_flip ? input_port_read(space->machine, "IN1") : input_port_read(space->machine, "IN0");
 }
@@ -71,19 +71,19 @@ static READ8_HANDLER( fcombat_port01_r )
 
 static WRITE8_HANDLER(e900_w)
 {
-	fcombat_state *state = (fcombat_state *)space->machine->driver_data;
+	fcombat_state *state = space->machine->driver_data<fcombat_state>();
 	state->fcombat_sh = data;
 }
 
 static WRITE8_HANDLER(ea00_w)
 {
-	fcombat_state *state = (fcombat_state *)space->machine->driver_data;
+	fcombat_state *state = space->machine->driver_data<fcombat_state>();
 	state->fcombat_sv = (state->fcombat_sv & 0xff00) | data;
 }
 
 static WRITE8_HANDLER(eb00_w)
 {
-	fcombat_state *state = (fcombat_state *)space->machine->driver_data;
+	fcombat_state *state = space->machine->driver_data<fcombat_state>();
 	state->fcombat_sv = (state->fcombat_sv & 0xff) | (data << 8);
 }
 
@@ -92,23 +92,23 @@ static WRITE8_HANDLER(eb00_w)
 
 static WRITE8_HANDLER(ec00_w)
 {
-	fcombat_state *state = (fcombat_state *)space->machine->driver_data;
+	fcombat_state *state = space->machine->driver_data<fcombat_state>();
 	state->tx = data;
 }
 
 static WRITE8_HANDLER(ed00_w)
 {
-	fcombat_state *state = (fcombat_state *)space->machine->driver_data;
+	fcombat_state *state = space->machine->driver_data<fcombat_state>();
 	state->ty = data;
 }
 
 static READ8_HANDLER(e300_r)
 {
-	fcombat_state *state = (fcombat_state *)space->machine->driver_data;
+	fcombat_state *state = space->machine->driver_data<fcombat_state>();
 	int wx = (state->tx + state->fcombat_sh) / 16;
 	int wy = (state->ty * 2 + state->fcombat_sv) / 16;
 
-	return memory_region(space->machine, "user2")[wx * 32 * 16 + wy];
+	return space->machine->region("user2")->base()[wx * 32 * 16 + wy];
 }
 
 static WRITE8_HANDLER(ee00_w)
@@ -267,7 +267,7 @@ GFXDECODE_END
 
 static MACHINE_START( fcombat )
 {
-	fcombat_state *state = (fcombat_state *)machine->driver_data;
+	fcombat_state *state = machine->driver_data<fcombat_state>();
 
 	state->maincpu = machine->device("maincpu");
 
@@ -283,7 +283,7 @@ static MACHINE_START( fcombat )
 
 static MACHINE_RESET( fcombat )
 {
-	fcombat_state *state = (fcombat_state *)machine->driver_data;
+	fcombat_state *state = machine->driver_data<fcombat_state>();
 
 	state->cocktail_flip = 0;
 	state->char_palette = 0;
@@ -295,45 +295,42 @@ static MACHINE_RESET( fcombat )
 	state->ty = 0;
 }
 
-static MACHINE_DRIVER_START( fcombat )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(fcombat_state)
+static MACHINE_CONFIG_START( fcombat, fcombat_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, 10000000/3)
-	MDRV_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_ADD("maincpu", Z80, 10000000/3)
+	MCFG_CPU_PROGRAM_MAP(main_map)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 10000000/3)
-	MDRV_CPU_PROGRAM_MAP(audio_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 10000000/3)
+	MCFG_CPU_PROGRAM_MAP(audio_map)
 
-	MDRV_MACHINE_START(fcombat)
-	MDRV_MACHINE_RESET(fcombat)
+	MCFG_MACHINE_START(fcombat)
+	MCFG_MACHINE_RESET(fcombat)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_RAW_PARAMS(FCOMBAT_PIXEL_CLOCK, FCOMBAT_HTOTAL, FCOMBAT_HBEND, FCOMBAT_HBSTART, FCOMBAT_VTOTAL, FCOMBAT_VBEND, FCOMBAT_VBSTART)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_RAW_PARAMS(FCOMBAT_PIXEL_CLOCK, FCOMBAT_HTOTAL, FCOMBAT_HBEND, FCOMBAT_HBSTART, FCOMBAT_VTOTAL, FCOMBAT_VBEND, FCOMBAT_VBSTART)
 
-	MDRV_GFXDECODE(fcombat)
-	MDRV_PALETTE_LENGTH(256*3)
+	MCFG_GFXDECODE(fcombat)
+	MCFG_PALETTE_LENGTH(256*3)
 
-	MDRV_PALETTE_INIT(fcombat)
-	MDRV_VIDEO_START(fcombat)
-	MDRV_VIDEO_UPDATE(fcombat)
+	MCFG_PALETTE_INIT(fcombat)
+	MCFG_VIDEO_START(fcombat)
+	MCFG_VIDEO_UPDATE(fcombat)
 
 	/* audio hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ay1", AY8910, 1500000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.12)
+	MCFG_SOUND_ADD("ay1", AY8910, 1500000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.12)
 
-	MDRV_SOUND_ADD("ay2", AY8910, 1500000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.12)
+	MCFG_SOUND_ADD("ay2", AY8910, 1500000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.12)
 
-	MDRV_SOUND_ADD("ay3", AY8910, 1500000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.12)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ay3", AY8910, 1500000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.12)
+MACHINE_CONFIG_END
 
 /*************************************
  *
@@ -351,8 +348,8 @@ static DRIVER_INIT( fcombat )
 
 	/* make a temporary copy of the character data */
 	src = temp;
-	dst = memory_region(machine, "gfx1");
-	length = memory_region_length(machine, "gfx1");
+	dst = machine->region("gfx1")->base();
+	length = machine->region("gfx1")->bytes();
 	memcpy(src, dst, length);
 
 	/* decode the characters */
@@ -369,8 +366,8 @@ static DRIVER_INIT( fcombat )
 
 	/* make a temporary copy of the sprite data */
 	src = temp;
-	dst = memory_region(machine, "gfx2");
-	length = memory_region_length(machine, "gfx2");
+	dst = machine->region("gfx2")->base();
+	length = machine->region("gfx2")->bytes();
 	memcpy(src, dst, length);
 
 	/* decode the sprites */
@@ -390,8 +387,8 @@ static DRIVER_INIT( fcombat )
 
 	/* make a temporary copy of the character data */
 	src = temp;
-	dst = memory_region(machine, "gfx3");
-	length = memory_region_length(machine, "gfx3");
+	dst = machine->region("gfx3")->base();
+	length = machine->region("gfx3")->bytes();
 	memcpy(src, dst, length);
 
 	/* decode the characters */
@@ -409,8 +406,8 @@ static DRIVER_INIT( fcombat )
 	}
 
 	src = temp;
-	dst = memory_region(machine, "user1");
-	length = memory_region_length(machine, "user1");
+	dst = machine->region("user1")->base();
+	length = machine->region("user1")->bytes();
 	memcpy(src, dst, length);
 
 	for (oldaddr = 0; oldaddr < 32; oldaddr++)
@@ -421,8 +418,8 @@ static DRIVER_INIT( fcombat )
 
 
 	src = temp;
-	dst = memory_region(machine, "user2");
-	length = memory_region_length(machine, "user2");
+	dst = machine->region("user2")->base();
+	length = machine->region("user2")->bytes();
 	memcpy(src, dst, length);
 
 	for (oldaddr = 0; oldaddr < 32; oldaddr++)

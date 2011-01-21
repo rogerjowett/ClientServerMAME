@@ -59,7 +59,7 @@ To enter service mode, keep 1&2 pressed on reset
 
 static MACHINE_START( circusc )
 {
-	circusc_state *state = (circusc_state *)machine->driver_data;
+	circusc_state *state = machine->driver_data<circusc_state>();
 
 	state->audiocpu = machine->device<cpu_device>("audiocpu");
 	state->sn1 = machine->device("sn1");
@@ -72,7 +72,7 @@ static MACHINE_START( circusc )
 
 static MACHINE_RESET( circusc )
 {
-	circusc_state *state = (circusc_state *)machine->driver_data;
+	circusc_state *state = machine->driver_data<circusc_state>();
 	state->sn_latch = 0;
 }
 
@@ -89,7 +89,7 @@ static READ8_HANDLER( circusc_sh_timer_r )
      * Can be shortened to:
      */
 
-	circusc_state *state = (circusc_state *)space->machine->driver_data;
+	circusc_state *state = space->machine->driver_data<circusc_state>();
 	int clock;
 
 	clock = state->audiocpu->total_cycles() >> 9;
@@ -99,7 +99,7 @@ static READ8_HANDLER( circusc_sh_timer_r )
 
 static WRITE8_HANDLER( circusc_sh_irqtrigger_w )
 {
-	circusc_state *state = (circusc_state *)space->machine->driver_data;
+	circusc_state *state = space->machine->driver_data<circusc_state>();
 	cpu_set_input_line_and_vector(state->audiocpu, 0, HOLD_LINE, 0xff);
 }
 
@@ -110,7 +110,7 @@ static WRITE8_HANDLER( circusc_coin_counter_w )
 
 static WRITE8_HANDLER(circusc_sound_w)
 {
-	circusc_state *state = (circusc_state *)space->machine->driver_data;
+	circusc_state *state = space->machine->driver_data<circusc_state>();
 
 	switch (offset & 7)
 	{
@@ -331,56 +331,53 @@ static DISCRETE_SOUND_START( circusc )
 
 DISCRETE_SOUND_END
 
-static MACHINE_DRIVER_START( circusc )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(circusc_state)
+static MACHINE_CONFIG_START( circusc, circusc_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6809, 2048000)        /* 2 MHz */
-	MDRV_CPU_PROGRAM_MAP(circusc_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
-	MDRV_WATCHDOG_VBLANK_INIT(8)
+	MCFG_CPU_ADD("maincpu", M6809, 2048000)        /* 2 MHz */
+	MCFG_CPU_PROGRAM_MAP(circusc_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_WATCHDOG_VBLANK_INIT(8)
 
-	MDRV_CPU_ADD("audiocpu", Z80,14318180/4)     /* Z80 Clock is derived from a 14.31818 MHz crystal */
-	MDRV_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80,14318180/4)     /* Z80 Clock is derived from a 14.31818 MHz crystal */
+	MCFG_CPU_PROGRAM_MAP(sound_map)
 
-	MDRV_MACHINE_START(circusc)
-	MDRV_MACHINE_RESET(circusc)
+	MCFG_MACHINE_START(circusc)
+	MCFG_MACHINE_RESET(circusc)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(circusc)
-	MDRV_PALETTE_LENGTH(16*16+16*16)
+	MCFG_GFXDECODE(circusc)
+	MCFG_PALETTE_LENGTH(16*16+16*16)
 
-	MDRV_PALETTE_INIT(circusc)
-	MDRV_VIDEO_START(circusc)
-	MDRV_VIDEO_UPDATE(circusc)
+	MCFG_PALETTE_INIT(circusc)
+	MCFG_VIDEO_START(circusc)
+	MCFG_VIDEO_UPDATE(circusc)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("sn1", SN76496, 14318180/8)
-	MDRV_SOUND_ROUTE_EX(0, "fltdisc", 1.0, 0)
+	MCFG_SOUND_ADD("sn1", SN76496, 14318180/8)
+	MCFG_SOUND_ROUTE_EX(0, "fltdisc", 1.0, 0)
 
-	MDRV_SOUND_ADD("sn2", SN76496, 14318180/8)
-	MDRV_SOUND_ROUTE_EX(0, "fltdisc", 1.0, 1)
+	MCFG_SOUND_ADD("sn2", SN76496, 14318180/8)
+	MCFG_SOUND_ROUTE_EX(0, "fltdisc", 1.0, 1)
 
-	MDRV_SOUND_ADD("dac", DAC, 0)
-	MDRV_SOUND_ROUTE_EX(0, "fltdisc", 1.0, 2)
+	MCFG_SOUND_ADD("dac", DAC, 0)
+	MCFG_SOUND_ROUTE_EX(0, "fltdisc", 1.0, 2)
 
-	MDRV_SOUND_ADD("fltdisc", DISCRETE, 0)
+	MCFG_SOUND_ADD("fltdisc", DISCRETE, 0)
 
-	MDRV_SOUND_CONFIG_DISCRETE(circusc)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+	MCFG_SOUND_CONFIG_DISCRETE(circusc)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
 
 

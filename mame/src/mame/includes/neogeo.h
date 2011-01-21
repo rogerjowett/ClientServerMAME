@@ -28,12 +28,11 @@
 
 
 
-class neogeo_state
+class neogeo_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, neogeo_state(machine)); }
-
-	neogeo_state(running_machine &machine) { }
+	neogeo_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	/* memory pointers */
 //  UINT8      *memcard_data;   // this currently uses generic handlers
@@ -106,19 +105,19 @@ public:
 	int        fixed_layer_bank_type;
 
 	/* devices */
-	running_device *maincpu;
-	running_device *audiocpu;
-	running_device *upd4990a;
+	device_t *maincpu;
+	device_t *audiocpu;
+	device_t *upd4990a;
 };
 
 
 /*----------- defined in drivers/neogeo.c -----------*/
 
 void neogeo_set_display_position_interrupt_control(running_machine *machine, UINT16 data);
-void neogeo_set_display_counter_msb(const address_space *space, UINT16 data);
-void neogeo_set_display_counter_lsb(const address_space *space, UINT16 data);
+void neogeo_set_display_counter_msb(address_space *space, UINT16 data);
+void neogeo_set_display_counter_lsb(address_space *space, UINT16 data);
 void neogeo_acknowledge_interrupt(running_machine *machine, UINT16 data);
-void neogeo_set_main_cpu_bank_address(const address_space *space, UINT32 bank_address);
+void neogeo_set_main_cpu_bank_address(address_space *space, UINT32 bank_address);
 READ16_HANDLER( neogeo_unmapped_r );
 
 

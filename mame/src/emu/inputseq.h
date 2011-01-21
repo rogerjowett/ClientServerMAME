@@ -18,7 +18,6 @@
 #ifndef __INPUTSEQ_H__
 #define __INPUTSEQ_H__
 
-
 /***************************************************************************
     CONSTANTS
 ***************************************************************************/
@@ -74,7 +73,8 @@ struct _input_seq
 int input_seq_pressed_raw(running_machine *machine, const input_seq *seq);
 
 /* return TRUE if the given switch sequence has been pressed */
-int input_seq_pressed(running_machine *machine, const input_seq *seq);
+typedef struct _input_field_config input_field_config;
+int input_seq_pressed(running_machine *machine,const input_field_config* field, int seqtype);
 
 /* return the value of an axis sequence */
 INT32 input_seq_axis_value(running_machine *machine, const input_seq *seq, input_item_class *itemclass_ptr);

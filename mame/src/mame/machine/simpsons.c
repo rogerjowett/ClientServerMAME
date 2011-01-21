@@ -13,7 +13,7 @@
 
 WRITE8_HANDLER( simpsons_eeprom_w )
 {
-	simpsons_state *state = (simpsons_state *)space->machine->driver_data;
+	simpsons_state *state = space->machine->driver_data<simpsons_state>();
 
 	if (data == 0xff)
 		return;
@@ -34,7 +34,7 @@ WRITE8_HANDLER( simpsons_eeprom_w )
 
 WRITE8_HANDLER( simpsons_coin_counter_w )
 {
-	simpsons_state *state = (simpsons_state *)space->machine->driver_data;
+	simpsons_state *state = space->machine->driver_data<simpsons_state>();
 
 	/* bit 0,1 coin counters */
 	coin_counter_w(space->machine, 0, data & 0x01);
@@ -49,7 +49,7 @@ WRITE8_HANDLER( simpsons_coin_counter_w )
 
 READ8_HANDLER( simpsons_sound_interrupt_r )
 {
-	simpsons_state *state = (simpsons_state *)space->machine->driver_data;
+	simpsons_state *state = space->machine->driver_data<simpsons_state>();
 	cpu_set_input_line_and_vector(state->audiocpu, 0, HOLD_LINE, 0xff );
 	return 0x00;
 }
@@ -73,14 +73,14 @@ static KONAMI_SETLINES_CALLBACK( simpsons_banking )
 
 static STATE_POSTLOAD( simpsons_postload )
 {
-	simpsons_state *state = (simpsons_state *)machine->driver_data;
+	simpsons_state *state = machine->driver_data<simpsons_state>();
 
 	simpsons_video_banking(machine, state->video_bank);
 }
 
 MACHINE_START( simpsons )
 {
-	simpsons_state *state = (simpsons_state *)machine->driver_data;
+	simpsons_state *state = machine->driver_data<simpsons_state>();
 
 	machine->generic.paletteram.u8 = auto_alloc_array_clear(machine, UINT8, 0x1000);
 	state->xtraram = auto_alloc_array_clear(machine, UINT8, 0x1000);
@@ -106,7 +106,7 @@ MACHINE_START( simpsons )
 
 MACHINE_RESET( simpsons )
 {
-	simpsons_state *state = (simpsons_state *)machine->driver_data;
+	simpsons_state *state = machine->driver_data<simpsons_state>();
 	int i;
 
 	konami_configure_set_lines(machine->device("maincpu"), simpsons_banking);
@@ -122,11 +122,11 @@ MACHINE_RESET( simpsons )
 	state->video_bank = 0;
 
 	/* init the default banks */
-	memory_configure_bank(machine, "bank1", 0, 64, memory_region(machine, "maincpu") + 0x10000, 0x2000);
+	memory_configure_bank(machine, "bank1", 0, 64, machine->region("maincpu")->base() + 0x10000, 0x2000);
 	memory_set_bank(machine, "bank1", 0);
 
-	memory_configure_bank(machine, "bank2", 0, 2, memory_region(machine, "audiocpu") + 0x10000, 0);
-	memory_configure_bank(machine, "bank2", 2, 6, memory_region(machine, "audiocpu") + 0x10000, 0x4000);
+	memory_configure_bank(machine, "bank2", 0, 2, machine->region("audiocpu")->base() + 0x10000, 0);
+	memory_configure_bank(machine, "bank2", 2, 6, machine->region("audiocpu")->base() + 0x10000, 0x4000);
 	memory_set_bank(machine, "bank2", 0);
 
 	simpsons_video_banking(machine, 0);

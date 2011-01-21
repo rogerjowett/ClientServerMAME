@@ -52,7 +52,7 @@ static ADDRESS_MAP_START( gumbo_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x1b0000, 0x1b03ff) AM_RAM_WRITE(paletteram16_xRRRRRGGGGGBBBBB_word_w) AM_BASE_GENERIC(paletteram)
 	AM_RANGE(0x1c0100, 0x1c0101) AM_READ_PORT("P1_P2")
 	AM_RANGE(0x1c0200, 0x1c0201) AM_READ_PORT("DSW")
-	AM_RANGE(0x1c0300, 0x1c0301) AM_DEVREADWRITE8("oki", okim6295_r, okim6295_w, 0x00ff)
+	AM_RANGE(0x1c0300, 0x1c0301) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0x00ff)
 	AM_RANGE(0x1e0000, 0x1e0fff) AM_RAM_WRITE(gumbo_bg_videoram_w) AM_BASE_MEMBER(gumbo_state, bg_videoram) // bg tilemap
 	AM_RANGE(0x1f0000, 0x1f3fff) AM_RAM_WRITE(gumbo_fg_videoram_w) AM_BASE_MEMBER(gumbo_state, fg_videoram) // fg tilemap
 ADDRESS_MAP_END
@@ -66,7 +66,7 @@ static ADDRESS_MAP_START( mspuzzle_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x1a0000, 0x1a03ff) AM_RAM_WRITE(paletteram16_xRRRRRGGGGGBBBBB_word_w) AM_BASE_GENERIC(paletteram)
 	AM_RANGE(0x1b0100, 0x1b0101) AM_READ_PORT("P1_P2")
 	AM_RANGE(0x1b0200, 0x1b0201) AM_READ_PORT("DSW")
-	AM_RANGE(0x1b0300, 0x1b0301) AM_DEVREADWRITE8("oki", okim6295_r, okim6295_w, 0x00ff)
+	AM_RANGE(0x1b0300, 0x1b0301) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0x00ff)
 	AM_RANGE(0x1c0000, 0x1c1fff) AM_RAM_WRITE(gumbo_bg_videoram_w) AM_BASE_MEMBER(gumbo_state, bg_videoram) // bg tilemap
 ADDRESS_MAP_END
 
@@ -76,7 +76,7 @@ static ADDRESS_MAP_START( dblpoint_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x1b0000, 0x1b03ff) AM_WRITE(paletteram16_xRRRRRGGGGGBBBBB_word_w) AM_BASE_GENERIC(paletteram)
 	AM_RANGE(0x1c0100, 0x1c0101) AM_READ_PORT("P1_P2")
 	AM_RANGE(0x1c0200, 0x1c0201) AM_READ_PORT("DSW")
-	AM_RANGE(0x1c0300, 0x1c0301) AM_DEVREADWRITE8("oki", okim6295_r, okim6295_w, 0x00ff)
+	AM_RANGE(0x1c0300, 0x1c0301) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0x00ff)
 	AM_RANGE(0x1e0000, 0x1e3fff) AM_RAM_WRITE(gumbo_fg_videoram_w) AM_BASE_MEMBER(gumbo_state, fg_videoram) // fg tilemap
 	AM_RANGE(0x1f0000, 0x1f0fff) AM_RAM_WRITE(gumbo_bg_videoram_w) AM_BASE_MEMBER(gumbo_state, bg_videoram) // bg tilemap
 ADDRESS_MAP_END
@@ -227,47 +227,44 @@ static GFXDECODE_START( gumbo )
 GFXDECODE_END
 
 
-static MACHINE_DRIVER_START( gumbo )
-	MDRV_DRIVER_DATA(gumbo_state)
+static MACHINE_CONFIG_START( gumbo, gumbo_state )
 
-	MDRV_CPU_ADD("maincpu", M68000, 14318180 /2)	 // or 10mhz? ?
-	MDRV_CPU_PROGRAM_MAP(gumbo_map)
-	MDRV_CPU_VBLANK_INT("screen", irq1_line_hold) // all the same
+	MCFG_CPU_ADD("maincpu", M68000, 14318180 /2)	 // or 10mhz? ?
+	MCFG_CPU_PROGRAM_MAP(gumbo_map)
+	MCFG_CPU_VBLANK_INT("screen", irq1_line_hold) // all the same
 
-	MDRV_GFXDECODE(gumbo)
+	MCFG_GFXDECODE(gumbo)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(8*8, 48*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(8*8, 48*8-1, 2*8, 30*8-1)
 
-	MDRV_PALETTE_LENGTH(0x200)
+	MCFG_PALETTE_LENGTH(0x200)
 
-	MDRV_VIDEO_START(gumbo)
-	MDRV_VIDEO_UPDATE(gumbo)
+	MCFG_VIDEO_START(gumbo)
+	MCFG_VIDEO_UPDATE(gumbo)
 
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_OKIM6295_ADD("oki", 1122000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.47)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.47)
-MACHINE_DRIVER_END
+	MCFG_OKIM6295_ADD("oki", 1122000, OKIM6295_PIN7_HIGH) // clock frequency & pin 7 not verified
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "lspeaker", 0.47)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 0.47)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( mspuzzle )
-	MDRV_IMPORT_FROM(gumbo)
+static MACHINE_CONFIG_DERIVED( mspuzzle, gumbo )
 
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(mspuzzle_map)
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(mspuzzle_map)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START( dblpoint )
-	MDRV_IMPORT_FROM(gumbo)
+static MACHINE_CONFIG_DERIVED( dblpoint, gumbo )
 
-	MDRV_CPU_MODIFY("maincpu")
-	MDRV_CPU_PROGRAM_MAP(dblpoint_map)
-MACHINE_DRIVER_END
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(dblpoint_map)
+MACHINE_CONFIG_END
 
 ROM_START( gumbo )
 	ROM_REGION( 0x40000, "maincpu", 0 ) /* 68000 Code */

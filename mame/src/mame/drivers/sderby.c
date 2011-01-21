@@ -62,6 +62,7 @@
 #include "cpu/m68000/m68000.h"
 #include "sound/okim6295.h"
 #include "includes/sderby.h"
+#include "machine/nvram.h"
 
 #include "sderby.lh"
 #include "spacewin.lh"
@@ -134,7 +135,7 @@ static READ16_HANDLER( rprot_r )
    If someone more skilled in 68K code can help to trace it,
    searching for an accurated response, I'll appreciate.
 */
-	return mame_rand(space->machine) & 0x1f;
+	return space->machine->rand() & 0x1f;
 }
 
 static WRITE16_HANDLER( rprot_w )
@@ -284,10 +285,10 @@ static ADDRESS_MAP_START( sderby_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x200000, 0x200fff) AM_RAM AM_BASE_MEMBER(sderby_state,spriteram) AM_SIZE_MEMBER(sderby_state,spriteram_size)
 	AM_RANGE(0x308000, 0x30800d) AM_READ(sderby_input_r)
 	AM_RANGE(0x308008, 0x308009) AM_WRITE(sderby_out_w)	/* output port */
-	AM_RANGE(0x30800e, 0x30800f) AM_DEVREADWRITE8("oki", okim6295_r, okim6295_w, 0x00ff)
+	AM_RANGE(0x30800e, 0x30800f) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0x00ff)
 	AM_RANGE(0x380000, 0x380fff) AM_WRITE(paletteram16_RRRRRGGGGGBBBBBx_word_w) AM_BASE_GENERIC(paletteram)
 	AM_RANGE(0x500000, 0x500001) AM_WRITENOP	/* unknown... write 0x01 in game, and 0x00 on reset */
-	AM_RANGE(0xd00000, 0xd007ff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0xd00000, 0xd007ff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0xffc000, 0xffffff) AM_RAM
 ADDRESS_MAP_END
 
@@ -303,12 +304,12 @@ static ADDRESS_MAP_START( spacewin_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0x300000, 0x300001) AM_WRITENOP	/* unknown... write 0x01 in game, and 0x00 on reset */
 	AM_RANGE(0x308000, 0x30800d) AM_READ(sderby_input_r)
 	AM_RANGE(0x308008, 0x308009) AM_WRITE(scmatto_out_w)	/* output port */
-	AM_RANGE(0x30800e, 0x30800f) AM_DEVREADWRITE8("oki", okim6295_r, okim6295_w, 0x00ff)
+	AM_RANGE(0x30800e, 0x30800f) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0x00ff)
 	AM_RANGE(0x380000, 0x380fff) AM_WRITE(paletteram16_RRRRRGGGGGBBBBBx_word_w) AM_BASE_GENERIC(paletteram)
 	AM_RANGE(0xd00000, 0xd001ff) AM_RAM
 	AM_RANGE(0x800000, 0x800fff) AM_RAM AM_BASE_MEMBER(sderby_state,spriteram) AM_SIZE_MEMBER(sderby_state,spriteram_size)
 	AM_RANGE(0x801000, 0x80100d) AM_WRITENOP	/* unknown */
-	AM_RANGE(0x8f0000, 0x8f07ff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)	/* 16K Dallas DS1220Y-200 NVRAM */
+	AM_RANGE(0x8f0000, 0x8f07ff) AM_RAM AM_SHARE("nvram")	/* 16K Dallas DS1220Y-200 NVRAM */
 	AM_RANGE(0x8fc000, 0x8fffff) AM_RAM
 ADDRESS_MAP_END
 
@@ -323,12 +324,12 @@ static ADDRESS_MAP_START( roulette_map, ADDRESS_SPACE_PROGRAM, 16 )
 
 	AM_RANGE(0x708000, 0x708009) AM_READ(roulette_input_r)
 	AM_RANGE(0x708006, 0x708007) AM_WRITE(roulette_out_w)
-	AM_RANGE(0x70800a, 0x70800b) AM_DEVREADWRITE8("oki", okim6295_r, okim6295_w, 0x00ff)
+	AM_RANGE(0x70800a, 0x70800b) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0x00ff)
 	AM_RANGE(0x70800c, 0x70800d) AM_WRITENOP	/* watchdog?? (0x0003) */
 	AM_RANGE(0x70800e, 0x70800f) AM_READWRITE(rprot_r, rprot_w)	/* MCU communication */
 	AM_RANGE(0x780000, 0x780fff) AM_WRITE(paletteram16_RRRRRGGGGGBBBBBx_word_w) AM_BASE_GENERIC(paletteram)
 
-	AM_RANGE(0xff0000, 0xff07ff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0xff0000, 0xff07ff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0xffc000, 0xffffff) AM_RAM
 ADDRESS_MAP_END
 
@@ -453,86 +454,80 @@ GFXDECODE_END
 *      Machine Drivers      *
 ****************************/
 
-static MACHINE_DRIVER_START( sderby )
+static MACHINE_CONFIG_START( sderby, sderby_state )
 
-	MDRV_DRIVER_DATA( sderby_state )
+	MCFG_CPU_ADD("maincpu", M68000, 12000000)
+	MCFG_CPU_PROGRAM_MAP(sderby_map)
+	MCFG_CPU_VBLANK_INT("screen", irq2_line_hold)
 
-	MDRV_CPU_ADD("maincpu", M68000, 12000000)
-	MDRV_CPU_PROGRAM_MAP(sderby_map)
-	MDRV_CPU_VBLANK_INT("screen", irq2_line_hold)
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 64*8)
+	MCFG_SCREEN_VISIBLE_AREA(4*8, 44*8-1, 3*8, 33*8-1)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 64*8)
-	MDRV_SCREEN_VISIBLE_AREA(4*8, 44*8-1, 3*8, 33*8-1)
+	MCFG_GFXDECODE(sderby)
+	MCFG_PALETTE_LENGTH(0x1000)
+	MCFG_VIDEO_START(sderby)
+	MCFG_VIDEO_UPDATE(sderby)
 
-	MDRV_GFXDECODE(sderby)
-	MDRV_PALETTE_LENGTH(0x1000)
-	MDRV_VIDEO_START(sderby)
-	MDRV_VIDEO_UPDATE(sderby)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) /* clock frequency & pin 7 not verified */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) /* clock frequency & pin 7 not verified */
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+static MACHINE_CONFIG_START( spacewin, sderby_state )
 
-static MACHINE_DRIVER_START( spacewin )
+	MCFG_CPU_ADD("maincpu", M68000, 12000000)
+	MCFG_CPU_PROGRAM_MAP(spacewin_map)
+	MCFG_CPU_VBLANK_INT("screen", irq2_line_hold)
 
-	MDRV_DRIVER_DATA( sderby_state )
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
-	MDRV_CPU_ADD("maincpu", M68000, 12000000)
-	MDRV_CPU_PROGRAM_MAP(spacewin_map)
-	MDRV_CPU_VBLANK_INT("screen", irq2_line_hold)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 64*8)
+	MCFG_SCREEN_VISIBLE_AREA(4*8, 44*8-1, 3*8, 33*8-1)
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_GFXDECODE(sderby)
+	MCFG_PALETTE_LENGTH(0x1000)
+	MCFG_VIDEO_START(sderby)
+	MCFG_VIDEO_UPDATE(pmroulet)
 
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 64*8)
-	MDRV_SCREEN_VISIBLE_AREA(4*8, 44*8-1, 3*8, 33*8-1)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) /* clock frequency & pin 7 not verified */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
-	MDRV_GFXDECODE(sderby)
-	MDRV_PALETTE_LENGTH(0x1000)
-	MDRV_VIDEO_START(sderby)
-	MDRV_VIDEO_UPDATE(pmroulet)
+static MACHINE_CONFIG_START( pmroulet, sderby_state )
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) /* clock frequency & pin 7 not verified */
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_CPU_ADD("maincpu", M68000, 12000000)
+	MCFG_CPU_PROGRAM_MAP(roulette_map)
+	MCFG_CPU_VBLANK_INT("screen", irq2_line_hold)
 
-static MACHINE_DRIVER_START( pmroulet )
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
-	MDRV_DRIVER_DATA( sderby_state )
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(64*8, 64*8)
+	MCFG_SCREEN_VISIBLE_AREA(4*8, 44*8-1, 3*8, 33*8-1)
 
-	MDRV_CPU_ADD("maincpu", M68000, 12000000)
-	MDRV_CPU_PROGRAM_MAP(roulette_map)
-	MDRV_CPU_VBLANK_INT("screen", irq2_line_hold)
+	MCFG_GFXDECODE(sderby)
+	MCFG_PALETTE_LENGTH(0x1000)
+	MCFG_VIDEO_START(sderby)
+	MCFG_VIDEO_UPDATE(pmroulet)
 
-	MDRV_NVRAM_HANDLER(generic_0fill)
-
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(64*8, 64*8)
-	MDRV_SCREEN_VISIBLE_AREA(4*8, 44*8-1, 3*8, 33*8-1)
-
-	MDRV_GFXDECODE(sderby)
-	MDRV_PALETTE_LENGTH(0x1000)
-	MDRV_VIDEO_START(sderby)
-	MDRV_VIDEO_UPDATE(pmroulet)
-
-	MDRV_SPEAKER_STANDARD_MONO("mono")
-	MDRV_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) /* clock frequency & pin 7 not verified */
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_OKIM6295_ADD("oki", 1056000, OKIM6295_PIN7_HIGH) /* clock frequency & pin 7 not verified */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+MACHINE_CONFIG_END
 
 
 /****************************

@@ -13,7 +13,7 @@ Atari Drag Race Driver
 
 static TIMER_DEVICE_CALLBACK( dragrace_frame_callback )
 {
-	dragrace_state *state = (dragrace_state *)timer.machine->driver_data;
+	dragrace_state *state = timer.machine->driver_data<dragrace_state>();
 	int i;
 	static const char *const portnames[] = { "P1", "P2" };
 
@@ -36,7 +36,7 @@ static TIMER_DEVICE_CALLBACK( dragrace_frame_callback )
 
 static void dragrace_update_misc_flags( running_machine *machine )
 {
-	dragrace_state *state = (dragrace_state *)machine->driver_data;
+	dragrace_state *state = machine->driver_data<dragrace_state>();
 	/* 0x0900 = set 3SPEED1         0x00000001
      * 0x0901 = set 4SPEED1         0x00000002
      * 0x0902 = set 5SPEED1         0x00000004
@@ -90,7 +90,7 @@ static void dragrace_update_misc_flags( running_machine *machine )
 
 static WRITE8_HANDLER( dragrace_misc_w )
 {
-	dragrace_state *state = (dragrace_state *)space->machine->driver_data;
+	dragrace_state *state = space->machine->driver_data<dragrace_state>();
 
 	/* Set/clear individual bit */
 	UINT32 mask = 1 << offset;
@@ -104,7 +104,7 @@ static WRITE8_HANDLER( dragrace_misc_w )
 
 static WRITE8_HANDLER( dragrace_misc_clear_w )
 {
-	dragrace_state *state = (dragrace_state *)space->machine->driver_data;
+	dragrace_state *state = space->machine->driver_data<dragrace_state>();
 
 	/* Clear 8 bits */
 	UINT32 mask = 0xff << (((offset >> 3) & 0x03) * 8);
@@ -115,7 +115,7 @@ static WRITE8_HANDLER( dragrace_misc_clear_w )
 
 static READ8_HANDLER( dragrace_input_r )
 {
-	dragrace_state *state = (dragrace_state *)space->machine->driver_data;
+	dragrace_state *state = space->machine->driver_data<dragrace_state>();
 	int val = input_port_read(space->machine, "IN2");
 	static const char *const portnames[] = { "IN0", "IN1" };
 
@@ -316,7 +316,7 @@ static PALETTE_INIT( dragrace )
 
 static MACHINE_START( dragrace )
 {
-	dragrace_state *state = (dragrace_state *)machine->driver_data;
+	dragrace_state *state = machine->driver_data<dragrace_state>();
 
 	state->discrete = machine->device("discrete");
 
@@ -326,50 +326,47 @@ static MACHINE_START( dragrace )
 
 static MACHINE_RESET( dragrace )
 {
-	dragrace_state *state = (dragrace_state *)machine->driver_data;
+	dragrace_state *state = machine->driver_data<dragrace_state>();
 
 	state->misc_flags = 0;
 	state->gear[0] = 0;
 	state->gear[1] = 0;
 }
 
-static MACHINE_DRIVER_START( dragrace )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(dragrace_state)
+static MACHINE_CONFIG_START( dragrace, dragrace_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6800, 12096000 / 12)
-	MDRV_CPU_PROGRAM_MAP(dragrace_map)
-	MDRV_CPU_VBLANK_INT_HACK(irq0_line_hold, 4)
-	MDRV_WATCHDOG_VBLANK_INIT(8)
+	MCFG_CPU_ADD("maincpu", M6800, 12096000 / 12)
+	MCFG_CPU_PROGRAM_MAP(dragrace_map)
+	MCFG_CPU_VBLANK_INT_HACK(irq0_line_hold, 4)
+	MCFG_WATCHDOG_VBLANK_INIT(8)
 
-	MDRV_MACHINE_START(dragrace)
-	MDRV_MACHINE_RESET(dragrace)
+	MCFG_MACHINE_START(dragrace)
+	MCFG_MACHINE_RESET(dragrace)
 
-	MDRV_TIMER_ADD_PERIODIC("frame_timer", dragrace_frame_callback, HZ(60))
+	MCFG_TIMER_ADD_PERIODIC("frame_timer", dragrace_frame_callback, HZ(60))
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(256, 262)
-	MDRV_SCREEN_VISIBLE_AREA(0, 255, 0, 239)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(256, 262)
+	MCFG_SCREEN_VISIBLE_AREA(0, 255, 0, 239)
 
-	MDRV_GFXDECODE(dragrace)
-	MDRV_PALETTE_LENGTH(16)
-	MDRV_PALETTE_INIT(dragrace)
-	MDRV_VIDEO_START(dragrace)
-	MDRV_VIDEO_UPDATE(dragrace)
+	MCFG_GFXDECODE(dragrace)
+	MCFG_PALETTE_LENGTH(16)
+	MCFG_PALETTE_INIT(dragrace)
+	MCFG_VIDEO_START(dragrace)
+	MCFG_VIDEO_UPDATE(dragrace)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("discrete", DISCRETE, 0)
-	MDRV_SOUND_CONFIG_DISCRETE(dragrace)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("discrete", DISCRETE, 0)
+	MCFG_SOUND_CONFIG_DISCRETE(dragrace)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
 
 ROM_START( dragrace )

@@ -8,6 +8,7 @@
 
 #include "emu.h"
 #include "includes/nb1413m3.h"
+#include "includes/nbmj8900.h"
 
 
 static int nbmj8900_scrolly;
@@ -168,12 +169,12 @@ WRITE8_HANDLER( nbmj8900_romsel_w )
 {
 	nbmj8900_gfxrom = (data & 0x0f);
 
-	if ((0x20000 * nbmj8900_gfxrom) > (memory_region_length(space->machine, "gfx") - 1))
+	if ((0x20000 * nbmj8900_gfxrom) > (space->machine->region("gfx")->bytes() - 1))
 	{
 #ifdef MAME_DEBUG
 		popmessage("GFXROM BANK OVER!!");
 #endif
-		nbmj8900_gfxrom &= (memory_region_length(space->machine, "gfx") / 0x20000 - 1);
+		nbmj8900_gfxrom &= (space->machine->region("gfx")->bytes() / 0x20000 - 1);
 	}
 }
 
@@ -229,7 +230,7 @@ static TIMER_CALLBACK( blitter_timer_callback )
 
 static void nbmj8900_gfxdraw(running_machine *machine)
 {
-	unsigned char *GFX = memory_region(machine, "gfx");
+	unsigned char *GFX = machine->region("gfx")->base();
 
 	int x, y;
 	int dx1, dx2, dy1, dy2;
@@ -273,12 +274,12 @@ static void nbmj8900_gfxdraw(running_machine *machine)
 	{
 		for (x = startx, ctrx = sizex; ctrx >= 0; x += skipx, ctrx--)
 		{
-			if ((gfxaddr > (memory_region_length(machine, "gfx") - 1)))
+			if ((gfxaddr > (machine->region("gfx")->bytes() - 1)))
 			{
 #ifdef MAME_DEBUG
 				popmessage("GFXROM ADDRESS OVER!!");
 #endif
-				gfxaddr &= (memory_region_length(machine, "gfx") - 1);
+				gfxaddr &= (machine->region("gfx")->bytes() - 1);
 			}
 
 			color = GFX[gfxaddr++];

@@ -12,12 +12,11 @@
 #define VGB_MONITOR_DISPLAY			0
 #define DRMATH_MONITOR_DISPLAY		0
 
-class micro3d_state
+class micro3d_state : public driver_device
 {
 public:
-	static void *alloc(running_machine &machine) { return auto_alloc_clear(&machine, micro3d_state(machine)); }
-
-	micro3d_state(running_machine &machine) { }
+	micro3d_state(running_machine &machine, const driver_device_config_base &config)
+		: driver_device(machine, config) { }
 
 	struct
 	{
@@ -57,7 +56,7 @@ public:
 	} mc68901;
 
 	UINT16				*shared_ram;
-	running_device		*duart68681;
+	device_t		*duart68681;
 	UINT8				m68681_tx0;
 
 	/* Sound */
@@ -117,11 +116,9 @@ typedef struct _micro3d_vtx_
 	INT32 x, y, z;
 } micro3d_vtx;
 
-/*----------- defined in drivers/micro3d.c -----------*/
-extern UINT16 *micro3d_sprite_vram;
-void m68901_int_gen(running_machine *machine, int source);
 
 /*----------- defined in machine/micro3d.c -----------*/
+
 READ16_HANDLER( micro3d_mc68901_r );
 WRITE16_HANDLER( micro3d_mc68901_w );
 
@@ -157,16 +154,18 @@ WRITE32_HANDLER( micro3d_mac1_w );
 WRITE32_HANDLER( micro3d_mac2_w );
 READ32_HANDLER( micro3d_mac2_r );
 
-void micro3d_duart_irq_handler(running_device *device, UINT8 vector);
-UINT8 micro3d_duart_input_r(running_device *device);
-void micro3d_duart_output_w(running_device *device, UINT8 data);
-void micro3d_duart_tx(running_device *device, int channel, UINT8 data);
+void micro3d_duart_irq_handler(device_t *device, UINT8 vector);
+UINT8 micro3d_duart_input_r(device_t *device);
+void micro3d_duart_output_w(device_t *device, UINT8 data);
+void micro3d_duart_tx(device_t *device, int channel, UINT8 data);
 
 MACHINE_RESET( micro3d );
 DRIVER_INIT( micro3d );
 DRIVER_INIT( botssa );
 
+
 /*----------- defined in audio/micro3d.c -----------*/
+
 WRITE8_DEVICE_HANDLER( micro3d_upd7759_w );
 WRITE8_HANDLER( micro3d_snd_dac_a );
 WRITE8_HANDLER( micro3d_snd_dac_b );
@@ -177,12 +176,13 @@ void micro3d_noise_sh_w(running_machine *machine, UINT8 data);
 
 DECLARE_LEGACY_SOUND_DEVICE(MICRO3D, micro3d_sound);
 
+
 /*----------- defined in video/micro3d.c -----------*/
+
 VIDEO_START( micro3d );
-VIDEO_UPDATE( micro3d );
 VIDEO_RESET( micro3d );
 
-void micro3d_tms_interrupt(running_device *device, int state);
+void micro3d_tms_interrupt(device_t *device, int state);
 void micro3d_scanline_update(screen_device &screen, bitmap_t *bitmap, int scanline, const tms34010_display_params *params);
 
 WRITE16_HANDLER( micro3d_clut_w );

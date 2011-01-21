@@ -135,6 +135,8 @@ static UINT8 extend_board_irq_active;
 
 static emu_timer *keyboard_timer;
 
+static fujitsu_29f016a_device *flash[3];
+
 static GCU_REGS gcu[2];
 
 static VIDEO_START(firebeat)
@@ -709,19 +711,19 @@ static READ32_HANDLER(flashram_r)
 	UINT32 r = 0;
 	if (ACCESSING_BITS_24_31)
 	{
-		r |= (intelflash_read(0, (offset*4)+0) & 0xff) << 24;
+		r |= (flash[0]->read((offset*4)+0) & 0xff) << 24;
 	}
 	if (ACCESSING_BITS_16_23)
 	{
-		r |= (intelflash_read(0, (offset*4)+1) & 0xff) << 16;
+		r |= (flash[0]->read((offset*4)+1) & 0xff) << 16;
 	}
 	if (ACCESSING_BITS_8_15)
 	{
-		r |= (intelflash_read(0, (offset*4)+2) & 0xff) << 8;
+		r |= (flash[0]->read((offset*4)+2) & 0xff) << 8;
 	}
 	if (ACCESSING_BITS_0_7)
 	{
-		r |= (intelflash_read(0, (offset*4)+3) & 0xff) << 0;
+		r |= (flash[0]->read((offset*4)+3) & 0xff) << 0;
 	}
 	return r;
 }
@@ -730,85 +732,85 @@ static WRITE32_HANDLER(flashram_w)
 {
 	if (ACCESSING_BITS_24_31)
 	{
-		intelflash_write(0, (offset*4)+0, (data >> 24) & 0xff);
+		flash[0]->write((offset*4)+0, (data >> 24) & 0xff);
 	}
 	if (ACCESSING_BITS_16_23)
 	{
-		intelflash_write(0, (offset*4)+1, (data >> 16) & 0xff);
+		flash[0]->write((offset*4)+1, (data >> 16) & 0xff);
 	}
 	if (ACCESSING_BITS_8_15)
 	{
-		intelflash_write(0, (offset*4)+2, (data >> 8) & 0xff);
+		flash[0]->write((offset*4)+2, (data >> 8) & 0xff);
 	}
 	if (ACCESSING_BITS_0_7)
 	{
-		intelflash_write(0, (offset*4)+3, (data >> 0) & 0xff);
+		flash[0]->write((offset*4)+3, (data >> 0) & 0xff);
 	}
 }
 
 static READ32_HANDLER(soundflash_r)
 {
 	UINT32 r = 0;
-	int chip;
+	fujitsu_29f016a_device *chip;
 	if (offset >= 0 && offset < 0x200000/4)
 	{
-		chip = 1;
+		chip = flash[1];
 	}
 	else
 	{
-		chip = 2;
+		chip = flash[2];
 	}
 
 	offset &= 0x7ffff;
 
 	if (ACCESSING_BITS_24_31)
 	{
-		r |= (intelflash_read(chip, (offset*4)+0) & 0xff) << 24;
+		r |= (chip->read((offset*4)+0) & 0xff) << 24;
 	}
 	if (ACCESSING_BITS_16_23)
 	{
-		r |= (intelflash_read(chip, (offset*4)+1) & 0xff) << 16;
+		r |= (chip->read((offset*4)+1) & 0xff) << 16;
 	}
 	if (ACCESSING_BITS_8_15)
 	{
-		r |= (intelflash_read(chip, (offset*4)+2) & 0xff) << 8;
+		r |= (chip->read((offset*4)+2) & 0xff) << 8;
 	}
 	if (ACCESSING_BITS_0_7)
 	{
-		r |= (intelflash_read(chip, (offset*4)+3) & 0xff) << 0;
+		r |= (chip->read((offset*4)+3) & 0xff) << 0;
 	}
 	return r;
 }
 
 static WRITE32_HANDLER(soundflash_w)
 {
-	int chip;
+	fujitsu_29f016a_device *chip;
 	if (offset >= 0 && offset < 0x200000/4)
 	{
-		chip = 1;
+		chip = flash[1];
 	}
 	else
 	{
-		chip = 2;
+		chip = flash[2];
 	}
 
 	offset &= 0x7ffff;
 
 	if (ACCESSING_BITS_24_31)
 	{
-		intelflash_write(chip, (offset*4)+0, (data >> 24) & 0xff);
+		chip->write((offset*4)+0, (data >> 24) & 0xff);
 	}
 	if (ACCESSING_BITS_16_23)
 	{
-		intelflash_write(chip, (offset*4)+1, (data >> 16) & 0xff);
+		chip->write((offset*4)+1, (data >> 16) & 0xff);
 	}
 	if (ACCESSING_BITS_8_15)
 	{
-		intelflash_write(chip, (offset*4)+2, (data >> 8) & 0xff);
+		chip->write((offset*4)+2, (data >> 8) & 0xff);
 	}
 	if (ACCESSING_BITS_0_7)
 	{
-		intelflash_write(chip, (offset*4)+3, (data >> 0) & 0xff);
+		chip->write((offset*4)+3, (data >> 0) & 0xff);
 	}
 }
 
@@ -1687,6 +1689,10 @@ static MACHINE_START( firebeat )
 
 	/* configure fast RAM regions for DRC */
 	ppcdrc_add_fastram(machine->device("maincpu"), 0x00000000, 0x01ffffff, FALSE, work_ram);
+
+	flash[0] = machine->device<fujitsu_29f016a_device>("flash0");
+	flash[1] = machine->device<fujitsu_29f016a_device>("flash1");
+	flash[2] = machine->device<fujitsu_29f016a_device>("flash2");
 }
 
 static ADDRESS_MAP_START( firebeat_map, ADDRESS_SPACE_PROGRAM, 32 )
@@ -1724,16 +1730,16 @@ static READ8_DEVICE_HANDLER( soundram_r )
 {
 	if (offset >= 0 && offset < 0x200000)
 	{
-		return intelflash_read(1, offset & 0x1fffff);
+		return flash[1]->read(offset & 0x1fffff);
 	}
 	else if (offset >= 0x200000 && offset < 0x400000)
 	{
-		return intelflash_read(2, offset & 0x1fffff);
+		return flash[2]->read(offset & 0x1fffff);
 	}
 	return 0;
 }
 
-static void sound_irq_callback(running_device *device, int state)
+static void sound_irq_callback(device_t *device, int state)
 {
 }
 
@@ -1742,13 +1748,6 @@ static const ymz280b_interface ymz280b_intf =
 	sound_irq_callback,			// irq
 	DEVCB_HANDLER(soundram_r)
 };
-
-static NVRAM_HANDLER(firebeat)
-{
-	nvram_handler_intelflash(machine, 0, file, read_or_write);
-	nvram_handler_intelflash(machine, 1, file, read_or_write);
-	nvram_handler_intelflash(machine, 2, file, read_or_write);
-}
 
 static INPUT_PORTS_START(ppp)
 	PORT_START("IN0")
@@ -1800,7 +1799,7 @@ static INPUT_PORTS_START(kbm)
 	PORT_BIT( 0xff, IP_ACTIVE_LOW, IPT_UNKNOWN )	/* Dip switches */
 
 	PORT_START("WHEEL_P1")			// Keyboard modulation wheel (P1)
-	PORT_BIT( 0xff, 0x80, IPT_PADDLE_V ) PORT_MINMAX(0xff, 0x00) PORT_SENSITIVITY(30) PORT_KEYDELTA(10)
+	PORT_BIT( 0xff, 0x80, IPT_PADDLE ) PORT_MINMAX(0xff, 0x00) PORT_SENSITIVITY(30) PORT_KEYDELTA(10)
 
 	PORT_START("WHEEL_P2")			// Keyboard modulation wheel (P2)
 	PORT_BIT( 0xff, 0x80, IPT_PADDLE_V ) PORT_MINMAX(0xff, 0x00) PORT_SENSITIVITY(30) PORT_KEYDELTA(10)
@@ -1900,113 +1899,118 @@ static MACHINE_RESET( firebeat )
 {
 	void *cd;
 	int i;
-	UINT8 *sound = memory_region(machine, "ymz");
+	UINT8 *sound = machine->region("ymz")->base();
 
 	for (i=0; i < 0x200000; i++)
 	{
-		sound[i] = intelflash_read(1, i);
-		sound[i+0x200000] = intelflash_read(2, i);
+		sound[i] = flash[1]->read(i);
+		sound[i+0x200000] = flash[2]->read(i);
 	}
 
 	SCSIGetDevice( atapi_device_data[1], &cd );
 	cdda_set_cdrom(machine->device("cdda"), cd);
 }
 
-static MACHINE_DRIVER_START(firebeat)
+static MACHINE_CONFIG_START( firebeat, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", PPC403GCX, 66000000)
-	MDRV_CPU_PROGRAM_MAP(firebeat_map)
-	MDRV_CPU_VBLANK_INT("screen", firebeat_interrupt)
+	MCFG_CPU_ADD("maincpu", PPC403GCX, 66000000)
+	MCFG_CPU_PROGRAM_MAP(firebeat_map)
+	MCFG_CPU_VBLANK_INT("screen", firebeat_interrupt)
 
-	MDRV_MACHINE_START(firebeat)
-	MDRV_MACHINE_RESET(firebeat)
-	MDRV_NVRAM_HANDLER(firebeat)
+	MCFG_MACHINE_START(firebeat)
+	MCFG_MACHINE_RESET(firebeat)
 
-	MDRV_RTC65271_ADD("rtc", NULL)
+	MCFG_RTC65271_ADD("rtc", NULL)
+
+	MCFG_FUJITSU_29F016A_ADD("flash0")
+	MCFG_FUJITSU_29F016A_ADD("flash1")
+	MCFG_FUJITSU_29F016A_ADD("flash2")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(640, 480)
-	MDRV_SCREEN_VISIBLE_AREA(0, 639, 0, 479)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(640, 480)
+	MCFG_SCREEN_VISIBLE_AREA(0, 639, 0, 479)
 
-	MDRV_PALETTE_LENGTH(32768)
+	MCFG_PALETTE_LENGTH(32768)
 
-	MDRV_PALETTE_INIT(RRRRR_GGGGG_BBBBB)
-	MDRV_VIDEO_START(firebeat)
-	MDRV_VIDEO_UPDATE(firebeat)
+	MCFG_PALETTE_INIT(RRRRR_GGGGG_BBBBB)
+	MCFG_VIDEO_START(firebeat)
+	MCFG_VIDEO_UPDATE(firebeat)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymz", YMZ280B, 16934400)
-	MDRV_SOUND_CONFIG(ymz280b_intf)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("ymz", YMZ280B, 16934400)
+	MCFG_SOUND_CONFIG(ymz280b_intf)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
 
-	MDRV_SOUND_ADD("cdda", CDDA, 0)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("cdda", CDDA, 0)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
 
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START(firebeat2)
+static MACHINE_CONFIG_START( firebeat2, driver_device )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", PPC403GCX, 66000000)
-	MDRV_CPU_PROGRAM_MAP(firebeat_map)
-	MDRV_CPU_VBLANK_INT("lscreen", firebeat_interrupt)
+	MCFG_CPU_ADD("maincpu", PPC403GCX, 66000000)
+	MCFG_CPU_PROGRAM_MAP(firebeat_map)
+	MCFG_CPU_VBLANK_INT("lscreen", firebeat_interrupt)
 
-	MDRV_MACHINE_RESET(firebeat)
-	MDRV_NVRAM_HANDLER(firebeat)
+	MCFG_MACHINE_START(firebeat)
+	MCFG_MACHINE_RESET(firebeat)
 
-	MDRV_RTC65271_ADD("rtc", NULL)
+	MCFG_RTC65271_ADD("rtc", NULL)
+
+	MCFG_FUJITSU_29F016A_ADD("flash0")
+	MCFG_FUJITSU_29F016A_ADD("flash1")
+	MCFG_FUJITSU_29F016A_ADD("flash2")
 
 	/* video hardware */
-	MDRV_PALETTE_LENGTH(32768)
-	MDRV_PALETTE_INIT(RRRRR_GGGGG_BBBBB)
+	MCFG_PALETTE_LENGTH(32768)
+	MCFG_PALETTE_INIT(RRRRR_GGGGG_BBBBB)
 
-	MDRV_SCREEN_ADD("lscreen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_SIZE(640, 480)
-	MDRV_SCREEN_VISIBLE_AREA(0, 639, 0, 479)
+	MCFG_SCREEN_ADD("lscreen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_SIZE(640, 480)
+	MCFG_SCREEN_VISIBLE_AREA(0, 639, 0, 479)
 
-	MDRV_SCREEN_ADD("rscreen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_SIZE(640, 480)
-	MDRV_SCREEN_VISIBLE_AREA(0, 639, 0, 479)
+	MCFG_SCREEN_ADD("rscreen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_SIZE(640, 480)
+	MCFG_SCREEN_VISIBLE_AREA(0, 639, 0, 479)
 
-	MDRV_VIDEO_START(firebeat)
-	MDRV_VIDEO_UPDATE(firebeat)
+	MCFG_VIDEO_START(firebeat)
+	MCFG_VIDEO_UPDATE(firebeat)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
+	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MDRV_SOUND_ADD("ymz", YMZ280B, 16934400)
-	MDRV_SOUND_CONFIG(ymz280b_intf)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
+	MCFG_SOUND_ADD("ymz", YMZ280B, 16934400)
+	MCFG_SOUND_CONFIG(ymz280b_intf)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
 
-	MDRV_SOUND_ADD("cdda", CDDA, 0)
-	MDRV_SOUND_ROUTE(0, "lspeaker", 1.0)
-	MDRV_SOUND_ROUTE(1, "rspeaker", 1.0)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("cdda", CDDA, 0)
+	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "rspeaker", 1.0)
+MACHINE_CONFIG_END
 
-static MACHINE_DRIVER_START(firebeat_spu)
+static MACHINE_CONFIG_DERIVED( firebeat_spu, firebeat )
 
-	MDRV_IMPORT_FROM(firebeat)
+	MCFG_CPU_ADD("audiocpu", M68000, 16000000)
+	MCFG_CPU_PROGRAM_MAP(spu_map)
 
-	MDRV_CPU_ADD("audiocpu", M68000, 16000000)
-	MDRV_CPU_PROGRAM_MAP(spu_map)
-
-MACHINE_DRIVER_END
+MACHINE_CONFIG_END
 
 /*****************************************************************************/
 /* Security dongle is a Dallas DS1411 RS232 Adapter with a DS1991 Multikey iButton */
@@ -2153,7 +2157,7 @@ static int ibutton_w(UINT8 data)
 	return r;
 }
 
-static void security_w(running_device *device, UINT8 data)
+static void security_w(device_t *device, UINT8 data)
 {
 	int r = ibutton_w(data);
 	if (r >= 0)
@@ -2175,12 +2179,9 @@ static void init_lights(running_machine *machine, write32_space_func out1, write
 
 static void init_firebeat(running_machine *machine)
 {
-	UINT8 *rom = memory_region(machine, "user2");
+	UINT8 *rom = machine->region("user2")->base();
 
 	atapi_init(machine);
-	intelflash_init(machine, 0, FLASH_FUJITSU_29F016A, NULL);
-	intelflash_init(machine, 1, FLASH_FUJITSU_29F016A, NULL);
-	intelflash_init(machine, 2, FLASH_FUJITSU_29F016A, NULL);
 
 	pc16552d_init(machine, 0, 19660800, comm_uart_irq_callback, 0);		// Network UART
 	pc16552d_init(machine, 1, 24000000, midi_uart_irq_callback, 0);		// MIDI UART

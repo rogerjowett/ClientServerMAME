@@ -52,6 +52,7 @@ DD10 DD14  DD18     H5            DD21
 #include "emu.h"
 #include "cpu/z80/z80.h"
 #include "sound/ay8910.h"
+#include "machine/nvram.h"
 #include "video/resnet.h"
 
 static UINT8* dderby_vidchars;
@@ -105,7 +106,7 @@ static WRITE8_HANDLER( output_w )
 
 static ADDRESS_MAP_START( memmap, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x5fff) AM_ROM
-	AM_RANGE(0x8000, 0x8fff) AM_RAM AM_BASE_SIZE_GENERIC(nvram)
+	AM_RANGE(0x8000, 0x8fff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0xc000, 0xc007) AM_READ(input_r)
 	AM_RANGE(0xc000, 0xc007) AM_WRITE(output_w)
 	AM_RANGE(0xc802, 0xc802) AM_READ_PORT("DSW1")
@@ -179,10 +180,10 @@ static INPUT_PORTS_START( dderby )
 	PORT_BIT( 0xf5, IP_ACTIVE_LOW, IPT_UNUSED )
 
 	PORT_START("DSW1")
-	PORT_DIPNAME( 0x01, 0x01, " Unknown 1")
+	PORT_DIPNAME( 0x01, 0x01, " Unknown 1-1")
 	PORT_DIPSETTING(    0x01, DEF_STR( Off ) )
 	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
-	PORT_DIPNAME( 0x08, 0x08, " Unknown 2" )
+	PORT_DIPNAME( 0x08, 0x08, " Unknown 1-2" )
 	PORT_DIPSETTING(    0x08, DEF_STR( Off ) )
 	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
 	PORT_DIPNAME( 0x06, 0x00, "Max Prize" )
@@ -209,25 +210,25 @@ static INPUT_PORTS_START( dderby )
 	PORT_DIPNAME( 0x01, 0x01, "Show Results")
 	PORT_DIPSETTING(    0x01, "Last Race" )
 	PORT_DIPSETTING(    0x00, "Last 6 Races" )
-	PORT_DIPNAME( 0x02, 0x02, " Unknown 2" )
+	PORT_DIPNAME( 0x02, 0x02, " Unknown 2-2" )
 	PORT_DIPSETTING(    0x02, DEF_STR( Off ) )
 	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
-	PORT_DIPNAME( 0x04, 0x04, " Unknown 3" )
+	PORT_DIPNAME( 0x04, 0x04, " Unknown 2-3" )
 	PORT_DIPSETTING(    0x04, DEF_STR( Off ) )
 	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
-	PORT_DIPNAME( 0x08, 0x08, " Unknown 4" )
+	PORT_DIPNAME( 0x08, 0x08, " Unknown 2-4" )
 	PORT_DIPSETTING(    0x08, DEF_STR( Off ) )
 	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
-	PORT_DIPNAME( 0x10, 0x10, " Unknown 5")
+	PORT_DIPNAME( 0x10, 0x10, " Unknown 2-5")
 	PORT_DIPSETTING(    0x10, DEF_STR( Off ) )
 	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
-	PORT_DIPNAME( 0x20, 0x20, " Unknown 6" )
+	PORT_DIPNAME( 0x20, 0x20, " Unknown 2-6" )
 	PORT_DIPSETTING(    0x20, DEF_STR( Off ) )
 	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
-	PORT_DIPNAME( 0x40, 0x40, " Unknown 7" )
+	PORT_DIPNAME( 0x40, 0x40, " Unknown 2-7" )
 	PORT_DIPSETTING(    0x40, DEF_STR( Off ) )
 	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
-	PORT_DIPNAME( 0x80, 0x80, " Unknown 8" )
+	PORT_DIPNAME( 0x80, 0x80, " Unknown 2-8" )
 	PORT_DIPSETTING(    0x80, DEF_STR( Off ) )
 	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
 INPUT_PORTS_END
@@ -248,13 +249,13 @@ static INPUT_PORTS_START( dderbya )
 	PORT_DIPSETTING(    0x08, "80%" )
 	PORT_DIPSETTING(    0x10, "84%" )
 	PORT_DIPSETTING(    0x18, "88%" )
-	PORT_DIPNAME( 0x20, 0x20, " Unknown 2" )
+	PORT_DIPNAME( 0x20, 0x20, " Unknown 1-2" )
 	PORT_DIPSETTING(    0x20, DEF_STR( Off ) )
 	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
-	PORT_DIPNAME( 0x40, 0x40, " Unknown 3" )
+	PORT_DIPNAME( 0x40, 0x40, " Unknown 1-3" )
 	PORT_DIPSETTING(    0x40, DEF_STR( Off ) )
 	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
-	PORT_DIPNAME( 0x80, 0x80, " Unknown 4" )
+	PORT_DIPNAME( 0x80, 0x80, " Unknown 1-4" )
 	PORT_DIPSETTING(    0x80, DEF_STR( Off ) )
 	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
 INPUT_PORTS_END
@@ -318,7 +319,7 @@ static TILE_GET_INFO( get_dmndrby_tile_info )
 
 static VIDEO_START(dderby)
 {
-	racetrack_tilemap_rom = memory_region(machine,"user1");
+	racetrack_tilemap_rom = machine->region("user1")->base();
 	racetrack_tilemap = tilemap_create(machine,get_dmndrby_tile_info,tilemap_scan_rows,16,16, 16, 512);
 	tilemap_mark_all_tiles_dirty(racetrack_tilemap);
 
@@ -465,7 +466,7 @@ static PALETTE_INIT( dmnderby )
 	}
 
 	/* color_prom now points to the beginning of the lookup table */
-	color_prom = memory_region(machine,"proms2");
+	color_prom = machine->region("proms2")->base();
 
 	/* normal tiles use colors 0-15 */
 	for (i = 0x000; i < 0x300; i++)
@@ -486,39 +487,39 @@ static INTERRUPT_GEN( dderby_timer_irq )
 	cputag_set_input_line_and_vector(device->machine, "maincpu", 0, HOLD_LINE, 0xcf); /* RST 08h */
 }
 
-static MACHINE_DRIVER_START( dderby )
+static MACHINE_CONFIG_START( dderby, driver_device )
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80,4000000)		 /* ? MHz */
-	MDRV_CPU_PROGRAM_MAP(memmap)
-	MDRV_CPU_VBLANK_INT("screen", dderby_irq)
-	MDRV_CPU_PERIODIC_INT(dderby_timer_irq, 244/2)
+	MCFG_CPU_ADD("maincpu", Z80,4000000)		 /* ? MHz */
+	MCFG_CPU_PROGRAM_MAP(memmap)
+	MCFG_CPU_VBLANK_INT("screen", dderby_irq)
+	MCFG_CPU_PERIODIC_INT(dderby_timer_irq, 244/2)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 4000000)	/* verified on schematics */
-	MDRV_CPU_PROGRAM_MAP(dderby_sound_map)
+	MCFG_CPU_ADD("audiocpu", Z80, 4000000)	/* verified on schematics */
+	MCFG_CPU_PROGRAM_MAP(dderby_sound_map)
 
-	MDRV_QUANTUM_TIME(HZ(6000))
-	MDRV_NVRAM_HANDLER(generic_0fill)
+	MCFG_QUANTUM_TIME(HZ(6000))
+	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(256, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 256-1, 16, 256-16-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(256, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 256-1, 16, 256-16-1)
 
-	MDRV_GFXDECODE(dmndrby)
-	MDRV_PALETTE_LENGTH(0x300)
-	MDRV_PALETTE_INIT(dmnderby)
+	MCFG_GFXDECODE(dmndrby)
+	MCFG_PALETTE_LENGTH(0x300)
+	MCFG_PALETTE_INIT(dmnderby)
 
-	MDRV_VIDEO_START(dderby)
-	MDRV_VIDEO_UPDATE(dderby)
+	MCFG_VIDEO_START(dderby)
+	MCFG_VIDEO_UPDATE(dderby)
 
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ay1", AY8910, 1789750) // frequency guessed
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.35)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ay1", AY8910, 1789750) // frequency guessed
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.35)
+MACHINE_CONFIG_END
 
 
 ROM_START( dmndrby )

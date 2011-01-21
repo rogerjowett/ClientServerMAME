@@ -60,19 +60,19 @@
 
 static WRITE8_DEVICE_HANDLER( dipsw_w )
 {
-	blueprnt_state *state = (blueprnt_state *)device->machine->driver_data;
+	blueprnt_state *state = device->machine->driver_data<blueprnt_state>();
 	state->dipsw = data;
 }
 
 static READ8_HANDLER( blueprnt_sh_dipsw_r )
 {
-	blueprnt_state *state = (blueprnt_state *)space->machine->driver_data;
+	blueprnt_state *state = space->machine->driver_data<blueprnt_state>();
 	return state->dipsw;
 }
 
 static WRITE8_HANDLER( blueprnt_sound_command_w )
 {
-	blueprnt_state *state = (blueprnt_state *)space->machine->driver_data;
+	blueprnt_state *state = space->machine->driver_data<blueprnt_state>();
 	soundlatch_w(space, offset, data);
 	cpu_set_input_line(state->audiocpu, INPUT_LINE_NMI, PULSE_LINE);
 }
@@ -281,7 +281,7 @@ static const ay8910_interface ay8910_interface_2 =
 
 static MACHINE_START( blueprnt )
 {
-	blueprnt_state *state = (blueprnt_state *)machine->driver_data;
+	blueprnt_state *state = machine->driver_data<blueprnt_state>();
 
 	state->audiocpu = machine->device("audiocpu");
 
@@ -290,57 +290,54 @@ static MACHINE_START( blueprnt )
 
 static MACHINE_RESET( blueprnt )
 {
-	blueprnt_state *state = (blueprnt_state *)machine->driver_data;
+	blueprnt_state *state = machine->driver_data<blueprnt_state>();
 
 	state->gfx_bank = 0;
 	state->dipsw = 0;
 }
 
 
-static MACHINE_DRIVER_START( blueprnt )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(blueprnt_state)
+static MACHINE_CONFIG_START( blueprnt, blueprnt_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", Z80, 7000000/2)	// 3.5 MHz
-	MDRV_CPU_PROGRAM_MAP(blueprnt_map)
-	MDRV_CPU_VBLANK_INT("screen", irq0_line_hold)
+	MCFG_CPU_ADD("maincpu", Z80, 7000000/2)	// 3.5 MHz
+	MCFG_CPU_PROGRAM_MAP(blueprnt_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
 
-	MDRV_CPU_ADD("audiocpu", Z80, 10000000/2/2/2)	// 1.25 MHz (2H)
-	MDRV_CPU_PROGRAM_MAP(sound_map)
-	MDRV_CPU_VBLANK_INT_HACK(irq0_line_hold, 4)	// IRQs connected to 32V
+	MCFG_CPU_ADD("audiocpu", Z80, 10000000/2/2/2)	// 1.25 MHz (2H)
+	MCFG_CPU_PROGRAM_MAP(sound_map)
+	MCFG_CPU_VBLANK_INT_HACK(irq0_line_hold, 4)	// IRQs connected to 32V
 									// NMIs are caused by the main CPU
 
-	MDRV_MACHINE_START(blueprnt)
-	MDRV_MACHINE_RESET(blueprnt)
+	MCFG_MACHINE_START(blueprnt)
+	MCFG_MACHINE_RESET(blueprnt)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
 
-	MDRV_GFXDECODE(blueprnt)
-	MDRV_PALETTE_LENGTH(128*4+8)
+	MCFG_GFXDECODE(blueprnt)
+	MCFG_PALETTE_LENGTH(128*4+8)
 
-	MDRV_PALETTE_INIT(blueprnt)
-	MDRV_VIDEO_START(blueprnt)
-	MDRV_VIDEO_UPDATE(blueprnt)
+	MCFG_PALETTE_INIT(blueprnt)
+	MCFG_VIDEO_START(blueprnt)
+	MCFG_VIDEO_UPDATE(blueprnt)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ay1", AY8910, 10000000/2/2/2)
-	MDRV_SOUND_CONFIG(ay8910_interface_1)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+	MCFG_SOUND_ADD("ay1", AY8910, 10000000/2/2/2)
+	MCFG_SOUND_CONFIG(ay8910_interface_1)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
-	MDRV_SOUND_ADD("ay2", AY8910, 10000000/2/2/2/2)
-	MDRV_SOUND_CONFIG(ay8910_interface_2)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ay2", AY8910, 10000000/2/2/2/2)
+	MCFG_SOUND_CONFIG(ay8910_interface_2)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+MACHINE_CONFIG_END
 
 
 /*************************************

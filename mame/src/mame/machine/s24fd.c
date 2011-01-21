@@ -55,7 +55,7 @@ static void s24_fd1094_setstate_and_decrypt(running_machine *machine, int state)
 		{
 			/* copy cached state */
 			s24_fd1094_userregion = s24_fd1094_cacheregion[i];
-			memory_set_decrypted_region(cputag_get_address_space(machine, "sub", ADDRESS_SPACE_PROGRAM), 0, s24_fd1094_cpuregionsize - 1, s24_fd1094_userregion);
+			machine->device<cpu_device>("sub")->space(AS_PROGRAM)->set_decrypted_region(0, s24_fd1094_cpuregionsize - 1, s24_fd1094_userregion);
 			m68k_set_encrypted_opcode_range(machine->device("sub"), 0, s24_fd1094_cpuregionsize);
 
 			return;
@@ -76,7 +76,7 @@ static void s24_fd1094_setstate_and_decrypt(running_machine *machine, int state)
 
 	/* copy newly decrypted data to user region */
 	s24_fd1094_userregion = s24_fd1094_cacheregion[fd1094_current_cacheposition];
-	memory_set_decrypted_region(cputag_get_address_space(machine, "sub", ADDRESS_SPACE_PROGRAM), 0, s24_fd1094_cpuregionsize - 1, s24_fd1094_userregion);
+	machine->device<cpu_device>("sub")->space(AS_PROGRAM)->set_decrypted_region(0, s24_fd1094_cpuregionsize - 1, s24_fd1094_userregion);
 	m68k_set_encrypted_opcode_range(machine->device("sub"), 0, s24_fd1094_cpuregionsize);
 
 	fd1094_current_cacheposition++;
@@ -89,7 +89,7 @@ static void s24_fd1094_setstate_and_decrypt(running_machine *machine, int state)
 }
 
 /* Callback for CMP.L instructions (state change) */
-static void s24_fd1094_cmp_callback(running_device *device, UINT32 val, UINT8 reg)
+static void s24_fd1094_cmp_callback(device_t *device, UINT32 val, UINT8 reg)
 {
 	if (reg == 0 && (val & 0x0000ffff) == 0x0000ffff) // ?
 	{
@@ -104,7 +104,7 @@ static IRQ_CALLBACK(s24_fd1094_int_callback)
 	return (0x60+irqline*4)/4; // vector address
 }
 
-static void s24_fd1094_rte_callback (running_device *device)
+static void s24_fd1094_rte_callback (device_t *device)
 {
 	s24_fd1094_setstate_and_decrypt(device->machine, FD1094_STATE_RTE);
 }
@@ -158,7 +158,7 @@ void s24_fd1094_driver_init(running_machine *machine)
 
 	s24_fd1094_cpuregion = (UINT16*)s24_mainram1;
 	s24_fd1094_cpuregionsize = 0x40000;
-	s24_fd1094_key = memory_region(machine, "fd1094key");
+	s24_fd1094_key = machine->region("fd1094key")->base();
 
 	/* punt if no key; this allows us to be called even for non-s24_fd1094 games */
 	if (!s24_fd1094_key)

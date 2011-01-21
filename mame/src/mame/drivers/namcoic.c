@@ -1091,7 +1091,7 @@ roz_get_info( running_machine *machine, tile_data *tileinfo, int tile_index, int
 		break;
 	}
 	SET_TILE_INFO( mRozGfxBank,mangle,0/*color*/,0/*flag*/ );
-	tileinfo->mask_data = 32*tile + (UINT8 *)memory_region( machine, mRozMaskRegion );
+	tileinfo->mask_data = 32*tile + (UINT8 *)machine->region( mRozMaskRegion )->base();
 } /* roz_get_info */
 
 static
@@ -1527,7 +1527,7 @@ static const gfx_layout RoadTileLayout =
 	ROAD_TILE_SIZE,	ROAD_TILE_SIZE,
 	ROAD_TILE_COUNT_MAX,
 	2,
-	{ NATIVE_ENDIAN_VALUE_LE_BE(0,8), NATIVE_ENDIAN_VALUE_LE_BE(8,0) },
+	{ NATIVE_ENDIAN_VALUE_LE_BE(8,0), NATIVE_ENDIAN_VALUE_LE_BE(0,8) },
 	{/* x offset */
 		0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,
 		0x10,0x11,0x12,0x13,0x14,0x15,0x16,0x17
@@ -1601,7 +1601,7 @@ namco_road_set_transparent_color(pen_t pen)
 void
 namco_road_draw(running_machine *machine, bitmap_t *bitmap, const rectangle *cliprect, int pri )
 {
-	const UINT8 *clut = (const UINT8 *)memory_region(machine, "user3");
+	const UINT8 *clut = (const UINT8 *)machine->region("user3")->base();
 	bitmap_t *pSourceBitmap;
 	unsigned yscroll;
 	int i;
@@ -1659,7 +1659,8 @@ namco_road_draw(running_machine *machine, bitmap_t *bitmap, const rectangle *cli
 						while( numpixels-- > 0 )
 						{
 							int pen = pSourceGfx[sourcex>>16];
-							if (pen != mRoadTransparentColor)
+
+							if(colortable_entry_get_value(machine->colortable, pen) != mRoadTransparentColor)
 							{
 								if( clut )
 								{

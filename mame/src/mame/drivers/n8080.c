@@ -19,19 +19,19 @@
 
 static WRITE8_HANDLER( n8080_shift_bits_w )
 {
-	n8080_state *state = (n8080_state *)space->machine->driver_data;
+	n8080_state *state = space->machine->driver_data<n8080_state>();
 	state->shift_bits = data & 7;
 }
 static WRITE8_HANDLER( n8080_shift_data_w )
 {
-	n8080_state *state = (n8080_state *)space->machine->driver_data;
+	n8080_state *state = space->machine->driver_data<n8080_state>();
 	state->shift_data = (state->shift_data >> 8) | (data << 8);
 }
 
 
 static READ8_HANDLER( n8080_shift_r )
 {
-	n8080_state *state = (n8080_state *)space->machine->driver_data;
+	n8080_state *state = space->machine->driver_data<n8080_state>();
 	return state->shift_data >> (8 - state->shift_bits);
 }
 
@@ -393,7 +393,7 @@ INPUT_PORTS_END
 
 static TIMER_DEVICE_CALLBACK( rst1_tick )
 {
-	n8080_state *n8080 = (n8080_state *)timer.machine->driver_data;
+	n8080_state *n8080 = timer.machine->driver_data<n8080_state>();
 	int state = n8080->inte ? ASSERT_LINE : CLEAR_LINE;
 
 	/* V7 = 1, V6 = 0 */
@@ -402,7 +402,7 @@ static TIMER_DEVICE_CALLBACK( rst1_tick )
 
 static TIMER_DEVICE_CALLBACK( rst2_tick )
 {
-	n8080_state *n8080 = (n8080_state *)timer.machine->driver_data;
+	n8080_state *n8080 = timer.machine->driver_data<n8080_state>();
 	int state = n8080->inte ? ASSERT_LINE : CLEAR_LINE;
 
 	/* vblank */
@@ -411,7 +411,7 @@ static TIMER_DEVICE_CALLBACK( rst2_tick )
 
 static WRITE_LINE_DEVICE_HANDLER( n8080_inte_callback )
 {
-	n8080_state *n8080 = (n8080_state *)device->machine->driver_data;
+	n8080_state *n8080 = device->machine->driver_data<n8080_state>();
 	n8080->inte = state;
 }
 
@@ -434,7 +434,7 @@ static I8085_CONFIG( n8080_cpu_config )
 
 static MACHINE_START( n8080 )
 {
-	n8080_state *state = (n8080_state *)machine->driver_data;
+	n8080_state *state = machine->driver_data<n8080_state>();
 
 	state->maincpu = machine->device("maincpu");
 
@@ -464,7 +464,7 @@ static MACHINE_START( helifire )
 
 static MACHINE_RESET( n8080 )
 {
-	n8080_state *state = (n8080_state *)machine->driver_data;
+	n8080_state *state = machine->driver_data<n8080_state>();
 
 	state->shift_data = 0;
 	state->shift_bits = 0;
@@ -473,7 +473,7 @@ static MACHINE_RESET( n8080 )
 
 static MACHINE_RESET( spacefev )
 {
-	n8080_state *state = (n8080_state *)machine->driver_data;
+	n8080_state *state = machine->driver_data<n8080_state>();
 
 	MACHINE_RESET_CALL(n8080);
 	MACHINE_RESET_CALL(spacefev_sound);
@@ -484,7 +484,7 @@ static MACHINE_RESET( spacefev )
 
 static MACHINE_RESET( sheriff )
 {
-	n8080_state *state = (n8080_state *)machine->driver_data;
+	n8080_state *state = machine->driver_data<n8080_state>();
 
 	MACHINE_RESET_CALL(n8080);
 	MACHINE_RESET_CALL(sheriff_sound);
@@ -495,7 +495,7 @@ static MACHINE_RESET( sheriff )
 
 static MACHINE_RESET( helifire )
 {
-	n8080_state *state = (n8080_state *)machine->driver_data;
+	n8080_state *state = machine->driver_data<n8080_state>();
 
 	MACHINE_RESET_CALL(n8080);
 	MACHINE_RESET_CALL(helifire_sound);
@@ -506,107 +506,98 @@ static MACHINE_RESET( helifire )
 }
 
 
-static MACHINE_DRIVER_START( spacefev )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(n8080_state)
+static MACHINE_CONFIG_START( spacefev, n8080_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", I8080, MASTER_CLOCK / 10)
-	MDRV_CPU_CONFIG(n8080_cpu_config)
-	MDRV_CPU_PROGRAM_MAP(main_cpu_map)
-	MDRV_CPU_IO_MAP(main_io_map)
+	MCFG_CPU_ADD("maincpu", I8080, MASTER_CLOCK / 10)
+	MCFG_CPU_CONFIG(n8080_cpu_config)
+	MCFG_CPU_PROGRAM_MAP(main_cpu_map)
+	MCFG_CPU_IO_MAP(main_io_map)
 
-	MDRV_MACHINE_START(spacefev)
-	MDRV_MACHINE_RESET(spacefev)
+	MCFG_MACHINE_START(spacefev)
+	MCFG_MACHINE_RESET(spacefev)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(256, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 255, 16, 239)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(256, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 255, 16, 239)
 
-	MDRV_PALETTE_LENGTH(8)
-	MDRV_PALETTE_INIT(n8080)
-	MDRV_VIDEO_START(spacefev)
-	MDRV_VIDEO_UPDATE(spacefev)
+	MCFG_PALETTE_LENGTH(8)
+	MCFG_PALETTE_INIT(n8080)
+	MCFG_VIDEO_START(spacefev)
+	MCFG_VIDEO_UPDATE(spacefev)
 
-	MDRV_TIMER_ADD_SCANLINE("rst1", rst1_tick, "screen", 128, 256)
-	MDRV_TIMER_ADD_SCANLINE("rst2", rst2_tick, "screen", 240, 256)
+	MCFG_TIMER_ADD_SCANLINE("rst1", rst1_tick, "screen", 128, 256)
+	MCFG_TIMER_ADD_SCANLINE("rst2", rst2_tick, "screen", 240, 256)
 
 	/* sound hardware */
-	MDRV_IMPORT_FROM( spacefev_sound )
-MACHINE_DRIVER_END
+	MCFG_FRAGMENT_ADD( spacefev_sound )
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( sheriff )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(n8080_state)
+static MACHINE_CONFIG_START( sheriff, n8080_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", I8080, MASTER_CLOCK / 10)
-	MDRV_CPU_CONFIG(n8080_cpu_config)
-	MDRV_CPU_PROGRAM_MAP(main_cpu_map)
-	MDRV_CPU_IO_MAP(main_io_map)
+	MCFG_CPU_ADD("maincpu", I8080, MASTER_CLOCK / 10)
+	MCFG_CPU_CONFIG(n8080_cpu_config)
+	MCFG_CPU_PROGRAM_MAP(main_cpu_map)
+	MCFG_CPU_IO_MAP(main_io_map)
 
-	MDRV_MACHINE_START(sheriff)
-	MDRV_MACHINE_RESET(sheriff)
+	MCFG_MACHINE_START(sheriff)
+	MCFG_MACHINE_RESET(sheriff)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(256, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 255, 16, 239)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(256, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 255, 16, 239)
 
-	MDRV_PALETTE_LENGTH(8)
-	MDRV_PALETTE_INIT(n8080)
-	MDRV_VIDEO_START(sheriff)
-	MDRV_VIDEO_UPDATE(sheriff)
+	MCFG_PALETTE_LENGTH(8)
+	MCFG_PALETTE_INIT(n8080)
+	MCFG_VIDEO_START(sheriff)
+	MCFG_VIDEO_UPDATE(sheriff)
 
-	MDRV_TIMER_ADD_SCANLINE("rst1", rst1_tick, "screen", 128, 256)
-	MDRV_TIMER_ADD_SCANLINE("rst2", rst2_tick, "screen", 240, 256)
+	MCFG_TIMER_ADD_SCANLINE("rst1", rst1_tick, "screen", 128, 256)
+	MCFG_TIMER_ADD_SCANLINE("rst2", rst2_tick, "screen", 240, 256)
 
 	/* sound hardware */
-	MDRV_IMPORT_FROM( sheriff_sound )
-MACHINE_DRIVER_END
+	MCFG_FRAGMENT_ADD( sheriff_sound )
+MACHINE_CONFIG_END
 
 
-static MACHINE_DRIVER_START( helifire )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(n8080_state)
+static MACHINE_CONFIG_START( helifire, n8080_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", I8080, MASTER_CLOCK / 10)
-	MDRV_CPU_CONFIG(n8080_cpu_config)
-	MDRV_CPU_PROGRAM_MAP(helifire_main_cpu_map)
-	MDRV_CPU_IO_MAP(main_io_map)
+	MCFG_CPU_ADD("maincpu", I8080, MASTER_CLOCK / 10)
+	MCFG_CPU_CONFIG(n8080_cpu_config)
+	MCFG_CPU_PROGRAM_MAP(helifire_main_cpu_map)
+	MCFG_CPU_IO_MAP(main_io_map)
 
-	MDRV_MACHINE_START(helifire)
-	MDRV_MACHINE_RESET(helifire)
+	MCFG_MACHINE_START(helifire)
+	MCFG_MACHINE_RESET(helifire)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(256, 256)
-	MDRV_SCREEN_VISIBLE_AREA(0, 255, 16, 239)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(256, 256)
+	MCFG_SCREEN_VISIBLE_AREA(0, 255, 16, 239)
 
-	MDRV_PALETTE_LENGTH(8 + 0x400)
-	MDRV_PALETTE_INIT(helifire)
-	MDRV_VIDEO_START(helifire)
-	MDRV_VIDEO_UPDATE(helifire)
-	MDRV_VIDEO_EOF(helifire)
+	MCFG_PALETTE_LENGTH(8 + 0x400)
+	MCFG_PALETTE_INIT(helifire)
+	MCFG_VIDEO_START(helifire)
+	MCFG_VIDEO_UPDATE(helifire)
+	MCFG_VIDEO_EOF(helifire)
 
-	MDRV_TIMER_ADD_SCANLINE("rst1", rst1_tick, "screen", 128, 256)
-	MDRV_TIMER_ADD_SCANLINE("rst2", rst2_tick, "screen", 240, 256)
+	MCFG_TIMER_ADD_SCANLINE("rst1", rst1_tick, "screen", 128, 256)
+	MCFG_TIMER_ADD_SCANLINE("rst2", rst2_tick, "screen", 240, 256)
 
 	/* sound hardware */
-	MDRV_IMPORT_FROM( helifire_sound )
-MACHINE_DRIVER_END
+	MCFG_FRAGMENT_ADD( helifire_sound )
+MACHINE_CONFIG_END
 
 
 /*

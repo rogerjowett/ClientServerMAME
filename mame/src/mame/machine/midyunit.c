@@ -95,7 +95,7 @@ WRITE16_HANDLER( midyunit_cmos_enable_w )
 		{
 			if (data == 0x500)
 			{
-				prot_result = memory_read_word(space, TOBYTE(0x10a4390)) << 4;
+				prot_result = space->read_word(TOBYTE(0x10a4390)) << 4;
 				logerror("  desired result = %04X\n", prot_result);
 			}
 		}
@@ -213,41 +213,41 @@ static WRITE16_HANDLER( term2_sound_w )
 
 static WRITE16_HANDLER( term2_hack_w )
 {
-    if (offset == 0 && cpu_get_pc(space->cpu) == 0xffce6520)
-    {
-        t2_hack_mem[offset] = 0;
-        return;
-    }
+	if (offset == 1 && cpu_get_pc(space->cpu) == 0xffce6520)
+	{
+		t2_hack_mem[offset] = 0;
+		return;
+	}
 	COMBINE_DATA(&t2_hack_mem[offset]);
 }
 
 static WRITE16_HANDLER( term2la3_hack_w )
 {
-    if (offset == 0 && cpu_get_pc(space->cpu) == 0xffce5230)
-    {
-        t2_hack_mem[offset] = 0;
-        return;
-    }
+	if (offset == 0 && cpu_get_pc(space->cpu) == 0xffce5230)
+	{
+		t2_hack_mem[offset] = 0;
+		return;
+	}
 	COMBINE_DATA(&t2_hack_mem[offset]);
 }
 
 static WRITE16_HANDLER( term2la2_hack_w )
 {
-    if (offset == 0 && cpu_get_pc(space->cpu) == 0xffce4b80)
-    {
-        t2_hack_mem[offset] = 0;
-        return;
-    }
+	if (offset == 0 && cpu_get_pc(space->cpu) == 0xffce4b80)
+	{
+		t2_hack_mem[offset] = 0;
+		return;
+	}
 	COMBINE_DATA(&t2_hack_mem[offset]);
 }
 
 static WRITE16_HANDLER( term2la1_hack_w )
 {
-    if (offset == 0 && cpu_get_pc(space->cpu) == 0xffce33f0)
-    {
-        t2_hack_mem[offset] = 0;
-        return;
-    }
+	if (offset == 0 && cpu_get_pc(space->cpu) == 0xffce33f0)
+	{
+		t2_hack_mem[offset] = 0;
+		return;
+	}
 	COMBINE_DATA(&t2_hack_mem[offset]);
 }
 
@@ -278,7 +278,7 @@ static void init_generic(running_machine *machine, int bpp, int sound, int prot_
 	int i;
 
 	/* load graphics ROMs */
-	base = memory_region(machine, "gfx1");
+	base = machine->region("gfx1")->base();
 	switch (bpp)
 	{
 		case 4:
@@ -327,7 +327,7 @@ static void init_generic(running_machine *machine, int bpp, int sound, int prot_
 		case SOUND_CVSD_SMALL:
 			williams_cvsd_init(machine);
 			memory_install_write8_handler(cputag_get_address_space(machine, "cvsdcpu", ADDRESS_SPACE_PROGRAM), prot_start, prot_end, 0, 0, cvsd_protection_w);
-			cvsd_protection_base = memory_region(machine, "cvsdcpu") + 0x10000 + (prot_start - 0x8000);
+			cvsd_protection_base = machine->region("cvsdcpu")->base() + 0x10000 + (prot_start - 0x8000);
 			break;
 
 		case SOUND_CVSD:
@@ -504,7 +504,7 @@ static READ16_HANDLER( mkturbo_prot_r )
 {
 	/* the security GAL overlays a counter of some sort at 0xfffff400 in ROM space.
      * A startup protection check expects to read back two different values in succession */
-	return mame_rand(space->machine);
+	return space->machine->rand();
 }
 
 DRIVER_INIT( mkyturbo )

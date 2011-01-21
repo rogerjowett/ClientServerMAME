@@ -23,7 +23,7 @@
 static MACHINE_START( empty )
 {
 	/* force the UI to show the game select screen */
-	ui_menu_force_game_select(machine, render_container_get_ui());
+	ui_menu_force_game_select(machine, &machine->render().ui_container());
 }
 
 
@@ -34,17 +34,17 @@ static MACHINE_START( empty )
  *
  *************************************/
 
-static MACHINE_DRIVER_START( empty )
+static MACHINE_CONFIG_START( empty, driver_device )
 
-	MDRV_MACHINE_START(empty)
+	MCFG_MACHINE_START(empty)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
-	MDRV_SCREEN_SIZE(640,480)
-	MDRV_SCREEN_VISIBLE_AREA(0,639, 0,479)
-	MDRV_SCREEN_REFRESH_RATE(30)
-MACHINE_DRIVER_END
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
+	MCFG_SCREEN_SIZE(640,480)
+	MCFG_SCREEN_VISIBLE_AREA(0,639, 0,479)
+	MCFG_SCREEN_REFRESH_RATE(30)
+MACHINE_CONFIG_END
 
 
 

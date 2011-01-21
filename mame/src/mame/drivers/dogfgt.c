@@ -16,20 +16,20 @@ driver by Nicola Salmoria
 
 static READ8_HANDLER( sharedram_r )
 {
-	dogfgt_state *state = (dogfgt_state *)space->machine->driver_data;
+	dogfgt_state *state = space->machine->driver_data<dogfgt_state>();
 	return state->sharedram[offset];
 }
 
 static WRITE8_HANDLER( sharedram_w )
 {
-	dogfgt_state *state = (dogfgt_state *)space->machine->driver_data;
+	dogfgt_state *state = space->machine->driver_data<dogfgt_state>();
 	state->sharedram[offset] = data;
 }
 
 
 static WRITE8_HANDLER( subirqtrigger_w )
 {
-	dogfgt_state *state = (dogfgt_state *)space->machine->driver_data;
+	dogfgt_state *state = space->machine->driver_data<dogfgt_state>();
 	/* bit 0 used but unknown */
 	if (data & 0x04)
 		cpu_set_input_line(state->subcpu, 0, ASSERT_LINE);
@@ -37,19 +37,19 @@ static WRITE8_HANDLER( subirqtrigger_w )
 
 static WRITE8_HANDLER( sub_irqack_w )
 {
-	dogfgt_state *state = (dogfgt_state *)space->machine->driver_data;
+	dogfgt_state *state = space->machine->driver_data<dogfgt_state>();
 	cpu_set_input_line(state->subcpu, 0, CLEAR_LINE);
 }
 
 static WRITE8_HANDLER( dogfgt_soundlatch_w )
 {
-	dogfgt_state *state = (dogfgt_state *)space->machine->driver_data;
+	dogfgt_state *state = space->machine->driver_data<dogfgt_state>();
 	state->soundlatch = data;
 }
 
 static WRITE8_HANDLER( dogfgt_soundcontrol_w )
 {
-	dogfgt_state *state = (dogfgt_state *)space->machine->driver_data;
+	dogfgt_state *state = space->machine->driver_data<dogfgt_state>();
 
 	/* bit 5 goes to 8910 #0 BDIR pin  */
 	if ((state->last_snd_ctrl & 0x20) == 0x20 && (data & 0x20) == 0x00)
@@ -215,7 +215,7 @@ GFXDECODE_END
 
 static MACHINE_START( dogfgt )
 {
-	dogfgt_state *state = (dogfgt_state *)machine->driver_data;
+	dogfgt_state *state = machine->driver_data<dogfgt_state>();
 
 	state->subcpu = machine->device("sub");
 
@@ -231,7 +231,7 @@ static MACHINE_START( dogfgt )
 
 static MACHINE_RESET( dogfgt )
 {
-	dogfgt_state *state = (dogfgt_state *)machine->driver_data;
+	dogfgt_state *state = machine->driver_data<dogfgt_state>();
 	int i;
 
 	state->bm_plane = 0;
@@ -246,48 +246,45 @@ static MACHINE_RESET( dogfgt )
 }
 
 
-static MACHINE_DRIVER_START( dogfgt )
-
-	/* driver data */
-	MDRV_DRIVER_DATA(dogfgt_state)
+static MACHINE_CONFIG_START( dogfgt, dogfgt_state )
 
 	/* basic machine hardware */
-	MDRV_CPU_ADD("maincpu", M6502, 1500000)	/* 1.5 MHz ???? */
-	MDRV_CPU_PROGRAM_MAP(main_map)
-	MDRV_CPU_VBLANK_INT_HACK(irq0_line_hold,16)	/* ? controls music tempo */
+	MCFG_CPU_ADD("maincpu", M6502, 1500000)	/* 1.5 MHz ???? */
+	MCFG_CPU_PROGRAM_MAP(main_map)
+	MCFG_CPU_VBLANK_INT_HACK(irq0_line_hold,16)	/* ? controls music tempo */
 
-	MDRV_CPU_ADD("sub", M6502, 1500000)	/* 1.5 MHz ???? */
-	MDRV_CPU_PROGRAM_MAP(sub_map)
+	MCFG_CPU_ADD("sub", M6502, 1500000)	/* 1.5 MHz ???? */
+	MCFG_CPU_PROGRAM_MAP(sub_map)
 
-	MDRV_QUANTUM_TIME(HZ(6000))
+	MCFG_QUANTUM_TIME(HZ(6000))
 
-	MDRV_MACHINE_START(dogfgt)
-	MDRV_MACHINE_RESET(dogfgt)
+	MCFG_MACHINE_START(dogfgt)
+	MCFG_MACHINE_RESET(dogfgt)
 
 	/* video hardware */
-	MDRV_SCREEN_ADD("screen", RASTER)
-	MDRV_SCREEN_REFRESH_RATE(60)
-	MDRV_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
-	MDRV_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-	MDRV_SCREEN_SIZE(32*8, 32*8)
-	MDRV_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 1*8, 31*8-1)
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500) /* not accurate */)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(32*8, 32*8)
+	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 1*8, 31*8-1)
 
-	MDRV_GFXDECODE(dogfgt)
-	MDRV_PALETTE_LENGTH(16+64)
+	MCFG_GFXDECODE(dogfgt)
+	MCFG_PALETTE_LENGTH(16+64)
 
-	MDRV_PALETTE_INIT(dogfgt)
-	MDRV_VIDEO_START(dogfgt)
-	MDRV_VIDEO_UPDATE(dogfgt)
+	MCFG_PALETTE_INIT(dogfgt)
+	MCFG_VIDEO_START(dogfgt)
+	MCFG_VIDEO_UPDATE(dogfgt)
 
 	/* sound hardware */
-	MDRV_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MDRV_SOUND_ADD("ay1", AY8910, 1500000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
+	MCFG_SOUND_ADD("ay1", AY8910, 1500000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
 
-	MDRV_SOUND_ADD("ay2", AY8910, 1500000)
-	MDRV_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
-MACHINE_DRIVER_END
+	MCFG_SOUND_ADD("ay2", AY8910, 1500000)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
+MACHINE_CONFIG_END
 
 
 
