@@ -137,13 +137,13 @@ WRITE16_HANDLER( K055550_word_w )
 				else
 					if (dy < 0) i = 0x80;
 				else
-					i = space->machine->rand() & 0xff; // vector direction indeterminate
+					i = space->machine().rand() & 0xff; // vector direction indeterminate
 
 				prot_data[0x10] = i;
 			break;
 
 			default:
-//              logerror("%06x: unknown K055550 command %02x\n", cpu_get_pc(space->cpu), data);
+//              logerror("%06x: unknown K055550 command %02x\n", cpu_get_pc(&space->device()), data);
 			break;
 		}
 	}
@@ -260,7 +260,7 @@ static const UINT8 ptable[7][8] =
 	{0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x10}
 };
 
-	INT32 data1, data2, i, j, vpos, hpos, voffs, hoffs, vcorr, hcorr, vmask, hmask, magicid;
+	INT32 data1, data2, i, j, vpos, hpos, voffs, hoffs, vcorr, hcorr, vmask, magicid;
 	UINT32 *src, *srcend, *obj, *objend;
 	UINT16 *dst;
 	const UINT8  *zcode, *pcode;
@@ -347,7 +347,7 @@ if((data1=obj[0])&0x80000000)\
 		// I can't make out anything meaningful.
 		magicid = srcbase[0x71f0/4];
 
-		hmask = vmask = 0x3ff;
+		vmask = 0x3ff;
 		if (magicid != 0x11010111)
 		{
 			switch (magicid)
@@ -439,10 +439,10 @@ if((data1=obj[0])&0x80000000)\
 
 static UINT32 fantjour_dma[8];
 
-void fantjour_dma_install(running_machine *machine)
+void fantjour_dma_install(running_machine &machine)
 {
 	state_save_register_global_array(machine, fantjour_dma);
-	memory_install_write32_handler(cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM), 0xdb0000, 0xdb001f, 0, 0, fantjour_dma_w);
+	machine.device("maincpu")->memory().space(AS_PROGRAM)->install_legacy_write_handler(0xdb0000, 0xdb001f, FUNC(fantjour_dma_w));
 	memset(fantjour_dma, 0, sizeof(fantjour_dma));
 }
 

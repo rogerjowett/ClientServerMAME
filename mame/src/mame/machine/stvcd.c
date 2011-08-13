@@ -2,7 +2,7 @@
 
   machine/stvcd.c - Sega Saturn and ST-V CD-ROM handling
 
-  Rewritten (again) 2007 by R. Belmont.
+  Another tilt at the windmill in 2011 by R. Belmont.
 
   Status: All known discs at least load their executable, and many load
           some data files successfully, but there are other problems.
@@ -22,11 +22,10 @@
 ***************************************************************************/
 
 #include "emu.h"
-#ifdef MESS
-#include "devices/chd_cd.h"
-#endif
+#include "imagedev/chd_cd.h"
 #include "cdrom.h"
 #include "stvcd.h"
+#include "sound/cdda.h"
 
 // super-verbose
 #if 0
@@ -43,7 +42,8 @@ static void cd_playdata(void);
 
 #define MAX_FILTERS	(24)
 #define MAX_BLOCKS	(200)
-#define MAX_DIR_SIZE	(16384)
+#define MAX_DIR_SIZE	(128*1024)
+#define CD_SPEED 75*1 /* TODO: should be x2 */
 
 typedef struct
 {
@@ -114,7 +114,6 @@ static blockT curblock;
 
 static UINT8 tocbuf[102*4];
 static UINT8 finfbuf[256];
-static UINT8 onesectorstored;
 
 static INT32 sectlenin, sectlenout;
 
@@ -137,10 +136,11 @@ static UINT32 in_buffer = 0;	// amount of data in the buffer
 static int oddframe = 0;
 static UINT32 fadstoplay = 0;
 static int buffull, sectorstore, freeblocks;
+static int cur_track;
 
 // iso9660 utilities
-static void read_new_dir(running_machine *machine, UINT32 fileno);
-static void make_dir_current(running_machine *machine, UINT32 fad);
+static void read_new_dir(running_machine &machine, UINT32 fileno);
+static void make_dir_current(running_machine &machine, UINT32 fad);
 
 static direntryT curroot;		// root entry of current filesystem
 static direntryT *curdir;		// current directory
@@ -194,15 +194,22 @@ TIMER_DEVICE_CALLBACK( stv_sector_cb )
 
 	cd_stat |= CD_STAT_PERI;
 	cr1 = cd_stat;
-	cr2 = 0x4101;
+	if (cur_track == 0xff)
+	{
+		cr2 = 0xffff;
+	}
+	else
+	{
+		cr2 = cdrom_get_adr_control(cdrom, cur_track)<<8 | cur_track;
+	}
 	cr3 = (cd_curfad>>16)&0xff;
-	cr4 = cd_curfad;
+	cr4 = cd_curfad&0xffff;
 
-	timer.adjust(ATTOTIME_IN_HZ(150));
+	timer.adjust(attotime::from_hz(CD_SPEED));
 }
 
 // global functions
-void stvcd_reset(running_machine *machine)
+void stvcd_reset(running_machine &machine)
 {
 	INT32 i, j;
 
@@ -213,6 +220,7 @@ void stvcd_reset(running_machine *machine)
 	cr3 = ('L'<<8) | 'O';
 	cr4 = ('C'<<8) | 'K';
 	cd_stat = CD_STAT_PAUSE;
+	cur_track = 0xff;
 
 	if (curdir != (direntryT *)NULL)
 		auto_free(machine, curdir);
@@ -258,10 +266,12 @@ void stvcd_reset(running_machine *machine)
 	}
 
 	#ifdef MESS
-	cdrom = mess_cd_get_cdrom_file(machine->device( "cdrom" ));
+	cdrom = machine.device<cdrom_image_device>("cdrom")->get_cdrom_file();
 	#else
 	cdrom = cdrom_open(get_disk_handle(machine, "cdrom"));
 	#endif
+
+	cdda_set_cdrom( machine.device("cdda"), cdrom );
 
 	if (cdrom)
 	{
@@ -273,8 +283,8 @@ void stvcd_reset(running_machine *machine)
 		cd_stat = CD_STAT_OPEN;
 	}
 
-	sector_timer = machine->device<timer_device>("sector_timer");
-	sector_timer->adjust(ATTOTIME_IN_HZ(150));	// 150 sectors / second = 300kBytes/second
+	sector_timer = machine.device<timer_device>("sector_timer");
+	sector_timer->adjust(attotime::from_hz(CD_SPEED));	// 150 sectors / second = 300kBytes/second
 }
 
 static blockT *cd_alloc_block(UINT8 *blknum)
@@ -311,6 +321,9 @@ static void cd_free_block(blockT *blktofree)
 
 	CDROM_LOG(("cd_free_block: %x\n", (UINT32)(FPTR)blktofree))
 
+	if(blktofree == NULL)
+		return;
+
 	for (i = 0; i < 200; i++)
 	{
 		if (&blocks[i] == blktofree)
@@ -330,7 +343,7 @@ static void cd_getsectoroffsetnum(UINT32 bufnum, UINT32 *sectoffs, UINT32 *sectn
 	if (*sectoffs == 0xffff)
 	{
 		// last sector
-		CDROM_LOG(("CD: Don't know how to handle offset ffff\n"))
+		printf("CD: Don't know how to handle offset ffff\n");
 	}
 	else if (*sectnum == 0xffff)
 	{
@@ -379,7 +392,7 @@ static UINT16 cd_readWord(UINT32 addr)
 
 			hirqreg = rv;
 
-//          CDROM_LOG(("%s:RW HIRQ: %04x\n", cpuexec_describe_context(Machine), rv))
+//          CDROM_LOG(("RW HIRQ: %04x\n", rv))
 
 			return rv;
 
@@ -414,6 +427,7 @@ static UINT16 cd_readWord(UINT32 addr)
 			{
 				case XFERTYPE_TOC:
 					rv = tocbuf[xfercount]<<8 | tocbuf[xfercount+1];
+
 					xfercount += 2;
 					xferdnum += 2;
 
@@ -436,16 +450,20 @@ static UINT16 cd_readWord(UINT32 addr)
 					}
 					break;
 
+				case XFERTYPE_FILEINFO_254:
+					CDROM_LOG(("STVCD: Unhandled xfer type 254\n"))
+					break;
+
 				default:
 					CDROM_LOG(("STVCD: Unhandled xfer type %d\n", (int)xfertype))
-					rv = 0xffff;
+					rv = 0;
 					break;
 			}
 
 			return rv;
 
 		default:
-			CDROM_LOG(("%s:CD: RW %08x\n", cpuexec_describe_context(machine), addr))
+			CDROM_LOG(("CD: RW %08x\n", addr))
 			return 0xffff;
 	}
 
@@ -519,12 +537,20 @@ static UINT32 cd_readLong(UINT32 addr)
 			return rv;
 
 		default:
-			CDROM_LOG(("%s:CD: RL %08x\n", cpuexec_describe_context(machine), addr))
+			CDROM_LOG(("CD: RL %08x\n", addr))
 			return 0xffff;
 	}
 }
 
-static void cd_writeWord(running_machine *machine, UINT32 addr, UINT16 data)
+static void cr_standard_return(UINT16 cur_status)
+{
+	cr1 = cur_status | 0x00; //options << 4 | repeat & 0xf
+	cr2 = (cur_track == 0xff) ? 0xffff : (cdrom_get_adr_control(cdrom, cur_track)<<8 | cur_track);
+	cr3 = (0x01<<8) | (cd_curfad>>16); //index & 0xff00
+	cr4 = cd_curfad;
+}
+
+static void cd_writeWord(running_machine &machine, UINT32 addr, UINT16 data)
 {
 	UINT32 temp;
 
@@ -532,7 +558,7 @@ static void cd_writeWord(running_machine *machine, UINT32 addr, UINT16 data)
 	{
 	case 0x0008:
 	case 0x000a:
-//              CDROM_LOG(("%s:WW HIRQ: %04x & %04x => %04x\n", cpuexec_describe_context(machine), hirqreg, data, hirqreg & data))
+//              CDROM_LOG(("%s:WW HIRQ: %04x & %04x => %04x\n", machine.describe_context(), hirqreg, data, hirqreg & data))
 		hirqreg &= data;
 		return;
 	case 0x000c:
@@ -560,7 +586,8 @@ static void cd_writeWord(running_machine *machine, UINT32 addr, UINT16 data)
 	case 0x0026:
 //              CDROM_LOG(("WW CR4: %04x\n", data))
 		cr4 = data;
-//      CDROM_LOG(("CD: command exec %02x %02x %02x %02x %02x (stat %04x)\n", hirqreg, cr1, cr2, cr3, cr4, cd_stat))
+		if(cr1 != 0 && ((cr1 & 0xff00) != 0x5100) && 1)
+    		printf("CD: command exec %02x %02x %02x %02x %02x (stat %04x)\n", hirqreg, cr1, cr2, cr3, cr4, cd_stat);
 
 		if (!cdrom)
 		{
@@ -569,25 +596,21 @@ static void cd_writeWord(running_machine *machine, UINT32 addr, UINT16 data)
 			cr2 = 0xffff;
 			cr3 = 0xffff;
 			cr4 = 0xffff;
+			hirqreg |= CMOK;
 			return;
 		}
 
 		switch (cr1 & 0xff00)
 		{
 		case 0x0000:
-			CDROM_LOG(("%s:CD: Get Status\n", cpuexec_describe_context(machine)))
-
-			// values taken from a US saturn with a disc in and the lid closed
+			//CDROM_LOG(("%s:CD: Get Status\n", machine.describe_context()))
 			hirqreg |= CMOK;
-			cr1 = cd_stat;
-			cr2 = 0x4101;
-			cr3 = 0x100 | (cd_curfad>>16);
-			cr4 = cd_curfad;
-			CDROM_LOG(("   = %04x %04x %04x %04x %04x\n", hirqreg, cr1, cr2, cr3, cr4))
+			cr_standard_return(cd_stat);
+			//CDROM_LOG(("   = %04x %04x %04x %04x %04x\n", hirqreg, cr1, cr2, cr3, cr4))
 			break;
 
 		case 0x0100:
-			CDROM_LOG(("%s:CD: Get Hardware Info\n", cpuexec_describe_context(machine)))
+			CDROM_LOG(("%s:CD: Get Hardware Info\n", machine.describe_context()))
 			hirqreg |= CMOK;
 			cr1 = cd_stat;
 			cr2 = 0x0201;
@@ -595,10 +618,11 @@ static void cd_writeWord(running_machine *machine, UINT32 addr, UINT16 data)
 			cr4 = 0x0400;
 			break;
 
-		case 0x200:	// Get TOC
-			CDROM_LOG(("%s:CD: Get TOC\n", cpuexec_describe_context(machine)))
+		case 0x0200:	// Get TOC
+			CDROM_LOG(("%s:CD: Get TOC\n", machine.describe_context()))
 			cd_readTOC();
 			cd_stat = CD_STAT_TRANS|CD_STAT_PAUSE;
+			cr1 = cd_stat;
 			cr2 = 102*2;	// TOC length in words (102 entries @ 2 words/4bytes each)
 			cr3 = 0;
 			cr4 = 0;
@@ -610,18 +634,16 @@ static void cd_writeWord(running_machine *machine, UINT32 addr, UINT16 data)
 		            	// bios is interested in returns in cr3 and cr4
 						// cr3 should be data track #
 						// cr4 must be > 1 and < 100 or bios gets angry.
-			CDROM_LOG(("%s:CD: Get Session Info\n", cpuexec_describe_context(machine)))
+			CDROM_LOG(("%s:CD: Get Session Info\n", machine.describe_context()))
 			cd_readTOC();
 			switch (cr1 & 0xff)
 			{
 				case 0:	// get total session info / disc end
-					cr2 = 0;
 					cr3 = 0x0100 | tocbuf[(101*4)+1];
 					cr4 = tocbuf[(101*4)+2]<<8 | tocbuf[(101*4)+3];
 					break;
 
 				case 1:	// get total session info / disc start
-					cr2 = 0;
 					cr3 = 0x0100;	// sessions in high byte, session start in lower
 					cr4 = 0;
 					break;
@@ -631,34 +653,36 @@ static void cd_writeWord(running_machine *machine, UINT32 addr, UINT16 data)
 					break;
 			}
 			cd_stat = CD_STAT_PAUSE;
-			cr1 = cd_stat << 8;
+			cr1 = cd_stat;
+			cr2 = 0;
 			hirqreg |= (CMOK);
 			break;
 
-		case 0x400:	// initialize CD system
+		case 0x0400:	// initialize CD system
 				// CR1 & 1 = reset software
 				// CR1 & 2 = decode RW subcode
 				// CR1 & 4 = don't confirm mode 2 subheader
 				// CR1 & 8 = retry reading mode 2 sectors
 				// CR1 & 10 = force single-speed
-			CDROM_LOG(("%s:CD: Initialize CD system\n", cpuexec_describe_context(machine)))
-			hirqreg |= (CMOK|DRDY|ESEL);
+			CDROM_LOG(("%s:CD: Initialize CD system\n", machine.describe_context()))
+			hirqreg &= 0xffe5;
+			hirqreg |= (CMOK|ESEL);
 			cd_stat = CD_STAT_PAUSE;
 			cd_curfad = 150;
 			in_buffer = 0;
 			buffull = 0;
-			cr2 = 0x4101;
-			cr3 = 0x100 | ((cd_curfad>>16)&0xff);
-			cr4 = cd_curfad;
+			cr_standard_return(cd_stat);
 			break;
 
-		case 0x0600:	// end data transfer
+		case 0x0600:	// end data transfer (TODO: needs to be worked on!)
 				// returns # of bytes transfered (24 bits) in
 				// low byte of cr1 (MSB) and cr2 (middle byte, LSB)
-			CDROM_LOG(("%s:CD: End data transfer (%d bytes xfer'd)\n", cpuexec_describe_context(machine), xferdnum))
+			CDROM_LOG(("%s:CD: End data transfer (%d bytes xfer'd)\n", machine.describe_context(), xferdnum))
 
 			// clear the "transfer" flag
 			cd_stat &= ~CD_STAT_TRANS;
+			// hack for the bootloader (TODO: Falcom Classics doesn't want this!)
+			cd_stat |= CD_STAT_PERI;
 
 			if (xferdnum)
 			{
@@ -706,7 +730,7 @@ static void cd_writeWord(running_machine *machine, UINT32 addr, UINT16 data)
 
 						if (freeblocks == 200)
 						{
-							onesectorstored = 0;
+							sectorstore = 0;
 						}
 
 						hirqreg |= EHST;
@@ -717,11 +741,6 @@ static void cd_writeWord(running_machine *machine, UINT32 addr, UINT16 data)
 					break;
 			}
 
-
-			// hack for the bootloader
-			cd_stat |= CD_STAT_PERI;
-			cr1 = cd_stat;
-
 			// and kick the CD if there's more to read
 			cd_playdata();
 
@@ -731,33 +750,46 @@ static void cd_writeWord(running_machine *machine, UINT32 addr, UINT16 data)
 			CDROM_LOG(("   = %04x %04x %04x %04x %04x\n", hirqreg, cr1, cr2, cr3, cr4))
 			break;
 
-		case 0x1000: // Play Disk.  FAD is in lowest 7 bits of cr1 and all of cr2.
-			CDROM_LOG(("%s:CD: Play Disk\n",   cpuexec_describe_context(machine)))
-			cd_stat = CD_STAT_PLAY; //|0x80;    // set "cd-rom" bit?
-			cd_curfad = ((cr1&0xff)<<16) | cr2;
-			fadstoplay = ((cr3&0xff)<<16) | cr4;
+		case 0x1000: // Play Disc.  FAD is in lowest 7 bits of cr1 and all of cr2.
+			CDROM_LOG(("%s:CD: Play Disc\n",   machine.describe_context()))
+			cd_stat = CD_STAT_PLAY;
 
-			if (cd_curfad & 0x800000)
+			if (!(cr3 & 0x8000))	// preserve current position if bit 7 set
 			{
-				if (cd_curfad != 0xffffff)
+				cd_curfad = ((cr1&0xff)<<16) | cr2;
+				fadstoplay = ((cr3&0xff)<<16) | cr4;
+
+				if (cd_curfad & 0x800000)
 				{
-					// fad mode
-					cd_curfad &= 0xfffff;
-					fadstoplay &= 0xfffff;
+					if (cd_curfad != 0xffffff)
+					{
+						// fad mode
+						cd_curfad &= 0xfffff;
+						fadstoplay &= 0xfffff;
+					}
+
+					printf("fad mode\n");
+					cur_track = cdrom_get_track(cdrom, cd_curfad-150);
+				}
+				else
+				{
+					// track mode
+					cur_track = cd_curfad>>8;
+					printf("track mode %d\n",cur_track);
+					cd_curfad = cdrom_get_track_start(cdrom, cur_track-1);
+					fadstoplay = cdrom_get_track_start(cdrom, cur_track) - cd_curfad;
 				}
 			}
-			else
+			else	// play until the end of the disc
 			{
-				// track mode
-				mame_printf_error("CD: Play Disk track mode, not yet implemented\n");
+				fadstoplay = (cdrom_get_track_start(cdrom, 0xaa)) - cd_curfad;
+				printf("track mode %08x %08x\n",cd_curfad,fadstoplay);
 			}
 
-			CDROM_LOG(("CD: Play Disk: start %x length %x\n", cd_curfad, fadstoplay))
+			CDROM_LOG(("CD: Play Disc: start %x length %x\n", cd_curfad, fadstoplay))
 
-			cr2 = 0x4101;	// ctrl/adr in hi byte, track # in low byte
-			cr3 = (0x100) | ((cd_curfad>>16)&0xff);	// index of subcode in hi byte, frame address
-			cr4 = cd_curfad & 0xffff;
-			hirqreg |= (CMOK|DRDY);
+			cr_standard_return(cd_stat);
+			hirqreg |= (CMOK);
 			oddframe = 0;
 			in_buffer = 0;
 
@@ -765,26 +797,38 @@ static void cd_writeWord(running_machine *machine, UINT32 addr, UINT16 data)
 
 			// and do the disc I/O
 			// make sure it doesn't come in too early
-			sector_timer->reset();
-			sector_timer->adjust(ATTOTIME_IN_HZ(150));	// 150 sectors / second = 300kBytes/second
+			if (cdrom_get_track_type(cdrom, cur_track-1) == CD_TRACK_AUDIO)
+			{
+				cdda_pause_audio( machine.device( "cdda" ), 0 );
+				cdda_start_audio( machine.device( "cdda" ), cd_curfad, fadstoplay  );
+			}
+			else
+				cdda_stop_audio( machine.device( "cdda" ) ); //stop any pending CD-DA
+
+			//else
+			//{
+			//  sector_timer->reset();
+			//  sector_timer->adjust(attotime::from_hz(CD_SPEED));  // 150 sectors / second = 300kBytes/second
+			//}
 			break;
 
-		case 0x1100: // disk seek
-			CDROM_LOG(("%s:CD: Disk seek\n",   cpuexec_describe_context(machine)))
+		case 0x1100: // disc seek
+			CDROM_LOG(("%s:CD: Disc seek\n",   machine.describe_context()))
+			//printf("%08x %08x %08x %08x\n",cr1,cr2,cr3,cr4);
 			if (cr1 & 0x80)
 			{
-				temp = (cr1&0x7f)<<16;	// get FAD to seek to
+				temp = (cr1&0xff)<<16;	// get FAD to seek to
 				temp |= cr2;
+
+				//cd_curfad = temp;
 
 				if (temp == 0xffffff)
 				{
 					cd_stat = CD_STAT_PAUSE;
+					cdda_pause_audio( machine.device( "cdda" ), 1 );
 				}
 				else
-				{
-					CDROM_LOG(("CD: not clear how to handle FAD seek\n"))
-					cd_curfad = temp;
-				}
+					printf("disc seek with params %04x %04x\n",cr1,cr2); //Area 51 sets this up
 			}
 			else
 			{
@@ -792,22 +836,54 @@ static void cd_writeWord(running_machine *machine, UINT32 addr, UINT16 data)
 				if (cr2 >> 8)
 				{
 					cd_stat = CD_STAT_PAUSE;
+					cur_track = cr2>>8;;
+					cd_curfad = cdrom_get_track_start(cdrom, cur_track-1);
+					cdda_pause_audio( machine.device( "cdda" ), 1 );
 					// (index is cr2 low byte)
 				}
-				else
+				else // error!
 				{
 					cd_stat = CD_STAT_STANDBY;
 					cd_curfad = 0xffffffff;
+					cur_track = 0xff;
+					cdda_stop_audio( machine.device( "cdda" ) ); //stop any pending CD-DA
 				}
 			}
 
 
 			hirqreg |= CMOK;
-			cr1 = cd_stat;
-			cr2 = 0x4101;
-			cr3 = (cd_curfad>>16)&0xff;
-			cr4 = cd_curfad;
+			cr_standard_return(cd_stat);
 			break;
+
+		case 0x1200: // FFWD / REW
+			//cr1 bit 0 determines if this is a Fast Forward (0) or a Rewind (1) command
+			// ...
+			break;
+
+		case 0x2000: // Get SubCode Q / RW Channel
+			switch(cr1 & 0xff)
+			{
+				case 0: // Get Q
+					cr1 = cd_stat | 0;
+					cr2 = 5;
+					cr3 = 0;
+					cr4 = 0;
+
+					// ...
+					break;
+
+				case 1: // Get RW
+					cr1 = cd_stat | 0;
+					cr2 = 12;
+					cr3 = 0;
+					cr4 = 0;
+
+					// ...
+					break;
+			}
+			hirqreg |= CMOK|DRDY;
+			break;
+
 
 		case 0x3000:	// Set CD Device connection
 			{
@@ -816,7 +892,7 @@ static void cd_writeWord(running_machine *machine, UINT32 addr, UINT16 data)
 				// get operation
 				parm = cr3>>8;
 
-				CDROM_LOG(("%s:CD: Set CD Device Connection filter # %x\n",   cpuexec_describe_context(machine), parm))
+				CDROM_LOG(("%s:CD: Set CD Device Connection filter # %x\n",   machine.describe_context(), parm))
 
 				cddevicenum = parm;
 
@@ -833,7 +909,16 @@ static void cd_writeWord(running_machine *machine, UINT32 addr, UINT16 data)
 				}
 
 				hirqreg |= (CMOK|ESEL);
+				cr_standard_return(cd_stat);
 			}
+			break;
+
+		case 0x3200:	// Last Buffer Destination
+			cr1 = cd_stat | 0;
+			cr2 = 0;
+			cr3 = lastbuf << 8;
+			cr4 = 0;
+			hirqreg |= (CMOK);
 			break;
 
 		case 0x4000:	// Set Filter Range
@@ -842,23 +927,22 @@ static void cd_writeWord(running_machine *machine, UINT32 addr, UINT16 data)
 			{
 				UINT8 fnum = (cr3>>8)&0xff;
 
-				CDROM_LOG(("%s:CD: Set Filter Range\n",   cpuexec_describe_context(machine)))
+				CDROM_LOG(("%s:CD: Set Filter Range\n",   machine.describe_context()))
 
 				filters[fnum].fad = ((cr1 & 0xff)<<16) | cr2;
 				filters[fnum].range = ((cr3 & 0xff)<<16) | cr4;
 
-				hirqreg |= (CMOK|ESEL|DRDY);
-				cr2 = 0x4101;	// ctrl/adr in hi byte, track # in low byte
-				cr3 = 0x0100|((cd_curfad>>16)&0xff);
-				cr4 = (cd_curfad & 0xffff);
+				hirqreg |= (CMOK|ESEL);
+				cr_standard_return(cd_stat);
 			}
 			break;
 
 		case 0x4200:	// Set Filter Subheader conditions
+		case 0x4300:    // (mirror for Astal)
 			{
 				UINT8 fnum = (cr3>>8)&0xff;
 
-				CDROM_LOG(("%s:CD: Set Filter Subheader conditions %x => chan %x masks %x fid %x vals %x\n", cpuexec_describe_context(machine), fnum, cr1&0xff, cr2, cr3&0xff, cr4))
+				CDROM_LOG(("%s:CD: Set Filter Subheader conditions %x => chan %x masks %x fid %x vals %x\n", machine.describe_context(), fnum, cr1&0xff, cr2, cr3&0xff, cr4))
 
 				filters[fnum].chan = cr1 & 0xff;
 				filters[fnum].smmask = (cr2>>8)&0xff;
@@ -868,13 +952,13 @@ static void cd_writeWord(running_machine *machine, UINT32 addr, UINT16 data)
 				filters[fnum].cival = cr4&0xff;
 
 				hirqreg |= (CMOK|ESEL);
-				cr2 = 0x4101;	// ctrl/adr in hi byte, track # in low byte
-				cr3 = 0x0100|((cd_curfad>>16)&0xff);
-				cr4 = (cd_curfad & 0xffff);
+				cr_standard_return(cd_stat);
 			}
 			break;
 
+
 		case 0x4400:	// Set Filter Mode
+		case 0x4500:    // (mirror for Astal)
 			{
 				UINT8 fnum = (cr3>>8)&0xff;
 				UINT8 mode = (cr1 & 0xff);
@@ -889,11 +973,9 @@ static void cd_writeWord(running_machine *machine, UINT32 addr, UINT16 data)
 					filters[fnum].mode = mode;
 				}
 
-				CDROM_LOG(("%s:CD: Set Filter Mode filt %x mode %x\n", cpuexec_describe_context(machine), fnum, mode))
-				hirqreg |= (CMOK|ESEL|DRDY);
-				cr2 = 0x4101;	// ctrl/adr in hi byte, track # in low byte
-				cr3 = 0x0100|((cd_curfad>>16)&0xff);
-				cr4 = (cd_curfad & 0xffff);
+				CDROM_LOG(("%s:CD: Set Filter Mode filt %x mode %x\n", machine.describe_context(), fnum, mode))
+				hirqreg |= (CMOK|ESEL);
+				cr_standard_return(cd_stat);
 			}
 			break;
 
@@ -901,7 +983,7 @@ static void cd_writeWord(running_machine *machine, UINT32 addr, UINT16 data)
 			{
 				UINT8 fnum = (cr3>>8)&0xff;
 
-				CDROM_LOG(("%s:CD: Set Filter Connection %x => mode %x parm %04x\n", cpuexec_describe_context(machine), fnum, cr1 & 0xf, cr2))
+				CDROM_LOG(("%s:CD: Set Filter Connection %x => mode %x parm %04x\n", machine.describe_context(), fnum, cr1 & 0xf, cr2))
 
 				// set true condition?
 				if (cr1 & 1)
@@ -914,35 +996,63 @@ static void cd_writeWord(running_machine *machine, UINT32 addr, UINT16 data)
 				}
 
 				hirqreg |= (CMOK|ESEL);
-				cr2 = 0x4101;	// ctrl/adr in hi byte, track # in low byte
-				cr3 = 0x0100|((cd_curfad>>16)&0xff);
-				cr4 = (cd_curfad & 0xffff);
+				cr_standard_return(cd_stat);
 			}
 			break;
 
 		case 0x4800:	// Reset Selector
-			CDROM_LOG(("%s:CD: Reset Selector\n",   cpuexec_describe_context(machine)))
-			hirqreg |= (CMOK|ESEL|DRDY);
-			cr2 = 0x4101;	// ctrl/adr in hi byte, track # in low byte
-			cr3 = 0x0100|((cd_curfad>>16)&0xff);
-			cr4 = (cd_curfad & 0xffff);
+			CDROM_LOG(("%s:CD: Reset Selector\n",   machine.describe_context()))
+
+			if((cr1 & 0xff) == 0x00)
+			{
+				UINT8 bufnum = cr3>>8;
+				int i;
+
+				if(bufnum < MAX_FILTERS)
+				{
+					for (i = 0; i < MAX_BLOCKS; i++)
+					{
+						cd_free_block(partitions[bufnum].blocks[i]);
+						partitions[bufnum].blocks[i] = (blockT *)NULL;
+						partitions[bufnum].bnum[i] = 0xff;
+					}
+
+					partitions[bufnum].size = -1;
+					partitions[bufnum].numblks = 0;
+				}
+
+				// TODO: buffer full flag
+
+				if (freeblocks == 200) { sectorstore = 0; }
+
+				hirqreg |= (CMOK|ESEL);
+				cr_standard_return(cd_stat);
+				return;
+			}
+
+			// ...
+			hirqreg |= (CMOK|ESEL);
+			cr_standard_return(cd_stat);
 			break;
 
 		case 0x5000:	// get Buffer Size
 			cr1 = cd_stat;
-			cr2 = freeblocks;
-			if (cr2 > 200) cr2 = 200;	// ???
-
+			cr2 = (freeblocks > 200) ? 200 : freeblocks;
 			cr3 = 0x1800;
 			cr4 = 200;
-			CDROM_LOG(("%s:CD: Get Buffer Size = %d\n", cr2, cpuexec_describe_context(machine)))
-			hirqreg |= (CMOK|ESEL|DRDY);	// DRDY is probably wrong
+			CDROM_LOG(("CD: Get Buffer Size = %d\n", cr2))
+			hirqreg |= (CMOK);
 			break;
 
 		case 0x5100:	// get # sectors used in a buffer
 			{
 				UINT32 bufnum = cr3>>8;
 
+				CDROM_LOG(("%s:CD: Get Sector Number (bufno %d) = %d blocks\n",   machine.describe_context(), bufnum, cr4))
+				cr1 = cd_stat;
+				cr2 = 0;
+				cr3 = 0;
+				/* TODO: Akumajou Dracula X reads 0 there, why? */
 				// is the partition empty?
 				if (partitions[bufnum].size == -1)
 				{
@@ -952,22 +1062,17 @@ static void cd_writeWord(running_machine *machine, UINT32 addr, UINT16 data)
 				{
 					cr4 = partitions[bufnum].numblks;
 				}
-
-				CDROM_LOG(("%s:CD: Get Sector Number (bufno %d) = %d blocks\n",   cpuexec_describe_context(machine), bufnum, cr4))
-
-				cr2 = 0;
-				cr3 = 0;
 				hirqreg |= (CMOK|DRDY);
 			}
 			break;
 
-		case 0x5200:	// calculate acutal size
+		case 0x5200:	// calculate actual size
 			{
 				UINT32 bufnum = cr3>>8;
 				UINT32 sectoffs = cr2;
 				UINT32 numsect = cr4;
 
-				CDROM_LOG(("%s:CD: Calculate actual size: buf %x offs %x numsect %x\n", cpuexec_describe_context(machine), bufnum, sectoffs, numsect))
+				CDROM_LOG(("%s:CD: Calculate actual size: buf %x offs %x numsect %x\n", machine.describe_context(), bufnum, sectoffs, numsect))
 
 				calcsize = 0;
 				if (partitions[bufnum].size != -1)
@@ -984,15 +1089,12 @@ static void cd_writeWord(running_machine *machine, UINT32 addr, UINT16 data)
 				}
 
 				hirqreg |= (CMOK|ESEL);
-				cr1 = cd_stat;
-				cr2 = 0x4101;	// CTRL/track
-				cr3 = (cd_curfad>>16)&0xff;
-				cr4 = (cd_curfad & 0xffff);
+				cr_standard_return(cd_stat);
 			}
 			break;
 
 		case 0x5300:	// get actual block size
-			CDROM_LOG(("%s:CD: Get actual block size\n", cpuexec_describe_context(machine)))
+			CDROM_LOG(("%s:CD: Get actual block size\n", machine.describe_context()))
 			hirqreg |= (CMOK|ESEL);
 			cr1 = cd_stat | ((calcsize>>16)&0xff);
 			cr2 = (calcsize & 0xffff);
@@ -1000,9 +1102,31 @@ static void cd_writeWord(running_machine *machine, UINT32 addr, UINT16 data)
 			cr4 = 0;
 			break;
 
+		case 0x5400:    // get sector info
+			{
+				UINT32 sectoffs = cr2 & 0xff;
+				UINT32 bufnum = cr3>>8;
+
+				if (bufnum >= MAX_FILTERS || !partitions[bufnum].blocks[sectoffs])
+				{
+					cr1 |= CD_STAT_REJECT & 0xff00;
+					hirqreg |= (CMOK|ESEL);
+					printf("Get sector info reject\n");
+				}
+				else
+				{
+					cr1 = cd_stat | ((partitions[bufnum].blocks[sectoffs]->FAD >> 16) & 0xff);
+					cr2 = partitions[bufnum].blocks[sectoffs]->FAD & 0xffff;
+					cr3 = ((partitions[bufnum].blocks[sectoffs]->fnum & 0xff) << 8) | (partitions[bufnum].blocks[sectoffs]->chan & 0xff);
+					cr4 = ((partitions[bufnum].blocks[sectoffs]->subm & 0xff) << 8) | (partitions[bufnum].blocks[sectoffs]->cinf & 0xff);
+					hirqreg |= (CMOK|ESEL);
+				}
+			}
+			break;
+
 		case 0x6000:	// set sector length
-			CDROM_LOG(("%s:CD: Set sector length\n",   cpuexec_describe_context(machine)))
-			hirqreg |= (CMOK|ESEL|EFLS|SCDQ|DRDY);
+			CDROM_LOG(("%s:CD: Set sector length\n",   machine.describe_context()))
+			hirqreg |= (CMOK|ESEL);
 
 			switch (cr1 & 0xff)
 			{
@@ -1043,20 +1167,22 @@ static void cd_writeWord(running_machine *machine, UINT32 addr, UINT16 data)
 				UINT32 sectofs = cr2;
 				UINT32 bufnum = cr3>>8;
 
-				CDROM_LOG(("%s:CD: Get sector data (SN %d SO %d BN %d)\n",   cpuexec_describe_context(machine), sectnum, sectofs, bufnum))
+				CDROM_LOG(("%s:CD: Get sector data (SN %d SO %d BN %d)\n",   machine.describe_context(), sectnum, sectofs, bufnum))
 
 				if (bufnum >= MAX_FILTERS)
 				{
-					CDROM_LOG(("CD: invalid buffer number\n"));
-					cd_stat = 0xff;	// ERROR
+					printf("CD: invalid buffer number\n");
+					/* TODO: why this is happening? */
+					cr_standard_return(CD_STAT_REJECT);
 					hirqreg |= (CMOK|EHST);
 					return;
 				}
 
 				if (partitions[bufnum].numblks == 0)
 				{
-					CDROM_LOG(("CD: buffer is empty\n"))
-					cd_stat = 0xff;	// ERROR
+					printf("CD: buffer is empty\n");
+					/* TODO: why this is happening? */
+					cr_standard_return(CD_STAT_REJECT);
 					hirqreg |= (CMOK|EHST);
 					return;
 				}
@@ -1072,6 +1198,7 @@ static void cd_writeWord(running_machine *machine, UINT32 addr, UINT16 data)
 				transpart = &partitions[bufnum];
 
 				cd_stat |= CD_STAT_TRANS;
+				cr_standard_return(cd_stat);
 				hirqreg |= (CMOK|EHST|DRDY);
 			}
 			break;
@@ -1083,26 +1210,29 @@ static void cd_writeWord(running_machine *machine, UINT32 addr, UINT16 data)
 				UINT32 bufnum = cr3>>8;
 				INT32 i;
 
-				CDROM_LOG(("%s:CD: Delete sector data (SN %d SO %d BN %d)\n",   cpuexec_describe_context(machine), sectnum, sectofs, bufnum))
+				CDROM_LOG(("%s:CD: Delete sector data (SN %d SO %d BN %d)\n",   machine.describe_context(), sectnum, sectofs, bufnum))
 
 				if (bufnum >= MAX_FILTERS)
 				{
-					CDROM_LOG(("CD: invalid buffer number\n"))
-					cd_stat = 0xff;	// ERROR
+					printf("CD: invalid buffer number\n");
+					/* TODO: why this is happening? */
+					cr_standard_return(CD_STAT_REJECT);
 					hirqreg |= (CMOK|EHST);
 					return;
 				}
 
 				if (partitions[bufnum].numblks == 0)
 				{
-					CDROM_LOG(("CD: buffer is empty\n"))
-					cd_stat = 0xff;	// ERROR
+					printf("CD: buffer is empty\n");
+					/* TODO: why this is happening? */
+					cr_standard_return(CD_STAT_REJECT);
 					hirqreg |= (CMOK|EHST);
 					return;
 				}
 
 				cd_getsectoroffsetnum(bufnum, &sectofs, &sectnum);
 
+				/* TODO: Cyber Doll crashes here with sectnum == 8*/
 				for (i = sectofs; i < (sectofs + sectnum); i++)
 				{
 					partitions[bufnum].size -= partitions[bufnum].blocks[i]->size;
@@ -1116,6 +1246,7 @@ static void cd_writeWord(running_machine *machine, UINT32 addr, UINT16 data)
 				partitions[bufnum].numblks -= sectnum;
 
 				cd_stat &= ~CD_STAT_TRANS;
+				cr_standard_return(cd_stat);
 				hirqreg |= (CMOK|EHST);
 			}
 			break;
@@ -1126,20 +1257,22 @@ static void cd_writeWord(running_machine *machine, UINT32 addr, UINT16 data)
 				UINT32 sectofs = cr2;
 				UINT32 bufnum = cr3>>8;
 
-				CDROM_LOG(("%s:CD: Get and delete sector data (SN %d SO %d BN %d)\n",   cpuexec_describe_context(machine), sectnum, sectofs, bufnum))
+				CDROM_LOG(("%s:CD: Get and delete sector data (SN %d SO %d BN %d)\n",   machine.describe_context(), sectnum, sectofs, bufnum))
 
 				if (bufnum >= MAX_FILTERS)
 				{
-					CDROM_LOG(("CD: invalid buffer number\n"))
-					cd_stat = 0xff;	// ERROR
+					printf("CD: invalid buffer number\n");
+					/* TODO: why this is happening? */
+					cr_standard_return(CD_STAT_REJECT);
 					hirqreg |= (CMOK|EHST);
 					return;
 				}
 
 				if (partitions[bufnum].numblks == 0)
 				{
-					CDROM_LOG(("CD: buffer is empty\n"))
-					cd_stat = 0xff;	// ERROR
+					printf("CD: buffer is empty\n");
+					/* TODO: why this is happening? */
+					cr_standard_return(CD_STAT_REJECT);
 					hirqreg |= (CMOK|EHST);
 					return;
 				}
@@ -1155,51 +1288,80 @@ static void cd_writeWord(running_machine *machine, UINT32 addr, UINT16 data)
 				transpart = &partitions[bufnum];
 
 				cd_stat &= ~CD_STAT_TRANS;
+				cr_standard_return(cd_stat);
 				hirqreg |= (CMOK|EHST|DRDY);
 			}
 			break;
 
+		case 0x6400:    // put sector data
+			/* TODO: Dungeon Master Nexus trips this */
+			// ...
+			hirqreg |= (CMOK|EHST);
+			break;
+
 		case 0x6700:	// get copy error
-			CDROM_LOG(("%s:CD: Get copy error\n",   cpuexec_describe_context(machine)))
-			hirqreg |= (CMOK|ESEL|EFLS|SCDQ|DRDY);
+			CDROM_LOG(("%s:CD: Get copy error\n",   machine.describe_context()))
+			cr1 = cd_stat;
+			cr2 = 0;
+			cr3 = 0;
+			cr4 = 0;
+			hirqreg |= (CMOK);
 			break;
 
 		case 0x7000:	// change directory
-			CDROM_LOG(("%s:CD: Change Directory\n",   cpuexec_describe_context(machine)))
+			CDROM_LOG(("%s:CD: Change Directory\n",   machine.describe_context()))
 			hirqreg |= (CMOK|EFLS);
 
 			temp = (cr3&0xff)<<16;
 			temp |= cr4;
+			#if 0
+			if(temp == 0xfffff8) /* TODO: Falcom Classics */
+				temp = 0;
+			#endif
 			read_new_dir(machine, temp);
+			cr_standard_return(cd_stat);
 			break;
 
 		case 0x7100:	// Read directory entry
-			CDROM_LOG(("%s:CD: Read Directory Entry\n",   cpuexec_describe_context(machine)))
-			hirqreg |= (CMOK|DRDY);
+			CDROM_LOG(("%s:CD: Read Directory Entry\n",   machine.describe_context()))
+			hirqreg |= (CMOK|EFLS);
 
-			temp = (cr3&0xff)<<16;
-			temp |= cr4;
-			cr2 = 0x4101;	// CTRL/track
-			cr3 = (curdir[temp].firstfad>>16)&0xff;
-			cr4 = (curdir[temp].firstfad&0xffff);
+			// TODO!
+			popmessage("X");
+
+			//temp = (cr3&0xff)<<16;
+			//temp |= cr4;
+			#if 0
+			if(temp == 0xfffff8) /* TODO: Falcom Classics */
+				temp = 0;
+			#endif
+			//cr2 = 0x4101; // CTRL/track
+			//cr3 = (curdir[temp].firstfad>>16)&0xff;
+			//cr4 = (curdir[temp].firstfad&0xffff);
+			cr_standard_return(cd_stat);
 			break;
 
 		case 0x7200:	// Get file system scope
-			CDROM_LOG(("%s:CD: Get file system scope(PC=%x)\n",   cpuexec_describe_context(machine)))
-			hirqreg |= (CMOK|DRDY);
+			CDROM_LOG(("CD: Get file system scope\n"))
+			hirqreg |= (CMOK|EFLS);
 			cr2 = numfiles;	// # of files in directory
 			cr3 = 0x0100;	// report directory held
 			cr4 = firstfile;	// first file id
 			break;
 
 		case 0x7300:	// Get File Info
-			CDROM_LOG(("%s:CD: Get File Info\n",   cpuexec_describe_context(machine)))
+			CDROM_LOG(("%s:CD: Get File Info\n",   machine.describe_context()))
 			cd_stat |= CD_STAT_TRANS;
 			cd_stat &= 0xff00;		// clear top byte of return value
 			hirqreg |= (CMOK|DRDY);
 
 			temp = (cr3&0xff)<<16;
 			temp |= cr4;
+
+			#if 0
+			if(temp == 0xfffff8) /* TODO: Falcom Classics */
+				temp = 0;
+			#endif
 
 			if (temp == 0xffffff)	// special
 			{
@@ -1247,12 +1409,13 @@ static void cd_writeWord(running_machine *machine, UINT32 addr, UINT16 data)
 			break;
 
 		case 0x7400:	// Read File
-			CDROM_LOG(("%s:CD: Read File\n",   cpuexec_describe_context(machine)))
+			CDROM_LOG(("%s:CD: Read File\n",   machine.describe_context()))
 			temp = (cr3&0xff)<<16;
 			temp |= cr4;
 
 			cd_stat = CD_STAT_PLAY|0x80;	// set "cd-rom" bit
-			cr2 = 0x4101;	// CTRL/track
+			cur_track = cdrom_get_track(cdrom, curdir[temp].firstfad-150);
+			cr2 = cdrom_get_adr_control(cdrom, cur_track)<<8 | cur_track;
 			cr3 = (curdir[temp].firstfad>>16)&0xff;
 			cr4 = (curdir[temp].firstfad&0xffff);
 
@@ -1274,18 +1437,22 @@ static void cd_writeWord(running_machine *machine, UINT32 addr, UINT16 data)
 			playtype = 1;
 
 			// and do the disc I/O
-//          sector_timer->adjust(ATTOTIME_IN_HZ(150));  // 150 sectors / second = 300kBytes/second
+//          sector_timer->adjust(attotime::from_hz(CD_SPEED));  // 150 sectors / second = 300kBytes/second
 			break;
 
 		case 0x7500:
-			CDROM_LOG(("%s:CD: Abort File\n",   cpuexec_describe_context(machine)))
+			CDROM_LOG(("%s:CD: Abort File\n",   machine.describe_context()))
 			// bios expects "2bc" mask to work against this
-			hirqreg |= (CMOK|EFLS|EHST|ESEL|DCHG|PEND|BFUL|CSCT|DRDY);
-			cd_stat = CD_STAT_PERI|CD_STAT_PAUSE;	// force to pause
+			hirqreg |= (CMOK|EFLS);
+			sectorstore = 0;
+			xfertype32 = XFERTYPE32_INVALID;
+			xferdnum = 0;
+			cd_stat = CD_STAT_PAUSE;	// force to pause
+			cr1 = cd_stat;
 			break;
 
 		case 0xe000:	// appears to be copy protection check.  needs only to return OK.
-			CDROM_LOG(("%s:CD: Verify copy protection\n",   cpuexec_describe_context(machine)))
+			CDROM_LOG(("%s:CD: Verify copy protection\n",   machine.describe_context()))
 			cd_stat = CD_STAT_PAUSE;
 			cr1 = cd_stat;	// necessary to pass
 			cr2 = 0x4;
@@ -1295,7 +1462,7 @@ static void cd_writeWord(running_machine *machine, UINT32 addr, UINT16 data)
 			break;
 
 		case 0xe100:	// get disc region
-			CDROM_LOG(("%s:CD: Get disc region\n",   cpuexec_describe_context(machine)))
+			CDROM_LOG(("%s:CD: Get disc region\n",   machine.describe_context()))
 			cd_stat = CD_STAT_PAUSE;
 			cr1 = cd_stat;	// necessary to pass
 			cr2 = 0x4;		// (must return this value to pass bios checks)
@@ -1303,14 +1470,14 @@ static void cd_writeWord(running_machine *machine, UINT32 addr, UINT16 data)
 			break;
 
 		default:
-			CDROM_LOG(("%s:CD: Unknown command %04x\n", cr1,   cpuexec_describe_context(machine)))
+			CDROM_LOG(("CD: Unknown command %04x\n", cr1))
 			hirqreg |= (CMOK);
 			break;
 		}
 //      CDROM_LOG(("ret: %04x %04x %04x %04x %04x\n", hirqreg, cr1, cr2, cr3, cr4))
 		break;
 	default:
-		CDROM_LOG(("%s:CD: WW %08x %04x\n", addr, data, cpuexec_describe_context(machine)))
+		CDROM_LOG(("CD: WW %08x %04x\n", addr, data))
 		break;
 	}
 }
@@ -1385,7 +1552,7 @@ WRITE32_HANDLER( stvcd_w )
 		case 0x90022:
 		case 0x90024:
 		case 0x90026:
-			cd_writeWord(space->machine, offset, data>>16);
+			cd_writeWord(space->machine(), offset, data>>16);
 			break;
 
 		default:
@@ -1395,7 +1562,7 @@ WRITE32_HANDLER( stvcd_w )
 }
 
 // iso9660 parsing
-static void read_new_dir(running_machine *machine, UINT32 fileno)
+static void read_new_dir(running_machine &machine, UINT32 fileno)
 {
 	int foundpd, i;
 	UINT32 cfad, dirfad;
@@ -1473,13 +1640,14 @@ static void read_new_dir(running_machine *machine, UINT32 fileno)
 }
 
 // makes the directory pointed to by FAD current
-static void make_dir_current(running_machine *machine, UINT32 fad)
+static void make_dir_current(running_machine &machine, UINT32 fad)
 {
 	int i;
 	UINT32 nextent, numentries;
-	UINT8 sect[MAX_DIR_SIZE];
+	UINT8 *sect;
 	direntryT *curentry;
 
+	sect = (UINT8 *)malloc(MAX_DIR_SIZE);
 	memset(sect, 0, MAX_DIR_SIZE);
 	for (i = 0; i < (curroot.length/2048); i++)
 	{
@@ -1536,13 +1704,15 @@ static void make_dir_current(running_machine *machine, UINT32 fad)
 			i = numfiles;
 		}
 	}
+
+	free(sect);
 }
 
 void stvcd_exit(running_machine& machine)
 {
 	if (curdir != (direntryT *)NULL)
 	{
-		auto_free(&machine, curdir);
+		auto_free(machine, curdir);
 		curdir = (direntryT *)NULL;
 	}
 
@@ -1557,7 +1727,7 @@ void stvcd_exit(running_machine& machine)
 
 static void cd_readTOC(void)
 {
-	int i, ntrks, /*toclen, */tocptr, fad;
+	int i, ntrks, tocptr, fad;
 
 	xfertype = XFERTYPE_TOC;
 	xfercount = 0;
@@ -1570,8 +1740,6 @@ static void cd_readTOC(void)
 	{
 		ntrks = 0;
 	}
-
-	//toclen = (4 * ntrks); // toclen header entry
 
 	// data format for Saturn TOC:
 	// no header.
@@ -1591,19 +1759,25 @@ static void cd_readTOC(void)
 		{
 			tocbuf[tocptr] = cdrom_get_adr_control(cdrom, i)<<4 | 0x01;
 		}
+		else
+		{
+			tocbuf[tocptr] = 0xff;
+		}
 
 		if (cdrom)
 		{
 			fad = cdrom_get_track_start(cdrom, i) + 150;
+
+			tocbuf[tocptr+1] = (fad>>16)&0xff;
+			tocbuf[tocptr+2] = (fad>>8)&0xff;
+			tocbuf[tocptr+3] = fad&0xff;
 		}
 		else
 		{
-			fad = 150;
+			tocbuf[tocptr+1] = 0xff;
+			tocbuf[tocptr+2] = 0xff;
+			tocbuf[tocptr+3] = 0xff;
 		}
-
-		tocbuf[tocptr+1] = (fad>>16)&0xff;
-		tocbuf[tocptr+2] = (fad>>8)&0xff;
-		tocbuf[tocptr+3] = fad&0xff;
 
 		tocptr += 4;
 	}
@@ -1783,8 +1957,19 @@ static partitionT *cd_read_filtered_sector(INT32 fad)
 		// find out the track's type
 		trktype = cdrom_get_track_type(cdrom, cdrom_get_track(cdrom, fad-150));
 
-		// now get a raw 2352 byte sector
-		cdrom_read_data(cdrom, fad-150, curblock.data, CD_TRACK_RAW_DONTCARE);
+		// now get a raw 2352 byte sector - if it's mode 1, get mode1_raw
+		if ((trktype == CD_TRACK_MODE1) || (trktype == CD_TRACK_MODE1_RAW))
+		{
+			cdrom_read_data(cdrom, fad-150, curblock.data, CD_TRACK_MODE1_RAW);
+		}
+		else if (trktype != CD_TRACK_AUDIO)	// if not audio it must be mode 2 so get mode2_raw
+		{
+			cdrom_read_data(cdrom, fad-150, curblock.data, CD_TRACK_MODE2_RAW);
+		}
+		else
+		{
+			cdrom_read_data(cdrom, fad-150, curblock.data, CD_TRACK_AUDIO);
+		}
 		cr3 = 0x100 | (fad>>16);	// update cr3/4 with the current fad
 		cr4 = fad;
 		curblock.size = sectlenin;
@@ -1818,14 +2003,14 @@ static void cd_playdata(void)
 	{
 		if (fadstoplay)
 		{
-        		logerror("STVCD: Reading FAD %d\n", cd_curfad);
+    		logerror("STVCD: Reading FAD %d\n", cd_curfad);
 
 			if (cdrom)
 			{
-				//partitionT *playpart;
+				if(cdrom_get_track_type(cdrom, cdrom_get_track(cdrom, cd_curfad)) != CD_TRACK_AUDIO)
+					cd_read_filtered_sector(cd_curfad);
 
-				/*playpart = */cd_read_filtered_sector(cd_curfad);
-
+				//popmessage("%08x %08x",cd_curfad,fadstoplay);
 				cd_curfad++;
 				fadstoplay--;
 

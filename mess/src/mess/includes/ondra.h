@@ -10,12 +10,12 @@
 class ondra_state : public driver_device
 {
 public:
-	ondra_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	ondra_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
-	UINT8 video_enable;
-	UINT8 bank1_status;
-	UINT8 bank2_status;
+	UINT8 m_video_enable;
+	UINT8 m_bank1_status;
+	UINT8 m_bank2_status;
 };
 
 
@@ -30,6 +30,6 @@ extern WRITE8_HANDLER( ondra_port_0a_w );
 /*----------- defined in video/ondra.c -----------*/
 
 extern VIDEO_START( ondra );
-extern VIDEO_UPDATE( ondra );
+extern SCREEN_UPDATE( ondra );
 
 #endif

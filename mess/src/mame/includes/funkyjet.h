@@ -7,24 +7,24 @@
 class funkyjet_state : public driver_device
 {
 public:
-	funkyjet_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	funkyjet_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 	/* memory pointers */
-	UINT16 *  pf1_rowscroll;
-	UINT16 *  pf2_rowscroll;
-	UINT16 *  spriteram;
-//  UINT16 *  paletteram;    // currently this uses generic palette handling (in deco16ic.c)
-	size_t    spriteram_size;
+	UINT16 *  m_pf1_rowscroll;
+	UINT16 *  m_pf2_rowscroll;
+	UINT16 *  m_spriteram;
+//  UINT16 *  paletteram;    // currently this uses generic palette handling (in decocomn.c)
+	size_t    m_spriteram_size;
 
 	/* devices */
-	device_t *maincpu;
-	device_t *audiocpu;
-	device_t *deco16ic;
+	device_t *m_maincpu;
+	device_t *m_audiocpu;
+	device_t *m_deco_tilegen1;
 };
 
 
 
 /*----------- defined in video/funkyjet.c -----------*/
 
-VIDEO_UPDATE( funkyjet );
+SCREEN_UPDATE( funkyjet );

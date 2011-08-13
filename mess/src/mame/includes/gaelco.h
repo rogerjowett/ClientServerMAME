@@ -7,21 +7,21 @@
 class gaelco_state : public driver_device
 {
 public:
-	gaelco_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	gaelco_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 	/* memory pointers */
-	UINT16 *     videoram;
-	UINT16 *     spriteram;
-	UINT16 *     vregs;
-	UINT16 *     screen;
+	UINT16 *     m_videoram;
+	UINT16 *     m_spriteram;
+	UINT16 *     m_vregs;
+	UINT16 *     m_screen;
 //  UINT16 *     paletteram;    // currently this uses generic palette handling
 
 	/* video-related */
-	tilemap_t      *tilemap[2];
+	tilemap_t      *m_tilemap[2];
 
 	/* devices */
-	device_t *audiocpu;
+	device_t *m_audiocpu;
 };
 
 
@@ -33,5 +33,5 @@ WRITE16_HANDLER( gaelco_vram_w );
 VIDEO_START( bigkarnk );
 VIDEO_START( maniacsq );
 
-VIDEO_UPDATE( bigkarnk );
-VIDEO_UPDATE( maniacsq );
+SCREEN_UPDATE( bigkarnk );
+SCREEN_UPDATE( maniacsq );

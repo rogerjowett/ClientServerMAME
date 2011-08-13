@@ -47,8 +47,24 @@
 
 
 //**************************************************************************
+//  DEBUGGING
+//**************************************************************************
+
+// set to 1 to track memory allocated by emualloc.h itself as well
+#define TRACK_SELF_MEMORY		(0)
+
+
+
+//**************************************************************************
 //  MACROS
 //**************************************************************************
+
+// self-allocation helpers
+#if TRACK_SELF_MEMORY
+#define EMUALLOC_SELF_NEW new(__FILE__, __LINE__)
+#else
+#define EMUALLOC_SELF_NEW new
+#endif
 
 // pool allocation helpers
 #define pool_alloc(_pool, _type)					(_pool).add_object(new(__FILE__, __LINE__) _type)
@@ -67,139 +83,18 @@
 
 
 //**************************************************************************
-//  TYPE DEFINITIONS
-//**************************************************************************
-
-// zeromem_t is a dummy class used to tell new to zero memory after allocation
-class zeromem_t { };
-
-
-// resource_pool_item is a base class for items that are tracked by a resource pool
-class resource_pool_item
-{
-private:
-	resource_pool_item(const resource_pool_item &);
-	resource_pool_item &operator=(const resource_pool_item &);
-
-public:
-	resource_pool_item(void *ptr, size_t size)
-		: m_next(NULL),
-		  m_ordered_next(NULL),
-		  m_ordered_prev(NULL),
-		  m_ptr(ptr),
-		  m_size(size),
-		  m_id(~(UINT64)0) { }
-	virtual ~resource_pool_item() { }
-
-	resource_pool_item *	m_next;
-	resource_pool_item *	m_ordered_next;
-	resource_pool_item *	m_ordered_prev;
-	void *					m_ptr;
-	size_t					m_size;
-	UINT64					m_id;
-};
-
-
-// a resource_pool_object is a simple object wrapper for the templatized type
-template<class T> class resource_pool_object : public resource_pool_item
-{
-private:
-	resource_pool_object<T>(const resource_pool_object<T> &);
-	resource_pool_object<T> &operator=(const resource_pool_object<T> &);
-
-public:
-	resource_pool_object(T *object)
-		: resource_pool_item(reinterpret_cast<void *>(object), sizeof(T)),
-		  m_object(object) { }
-	virtual ~resource_pool_object() { delete m_object; }
-
-private:
-	T *						m_object;
-};
-
-
-// a resource_pool_array is a simple object wrapper for an allocated array of
-// the templatized type
-template<class T> class resource_pool_array : public resource_pool_item
-{
-private:
-	resource_pool_array<T>(const resource_pool_array<T> &);
-	resource_pool_array<T> &operator=(const resource_pool_array<T> &);
-
-public:
-	resource_pool_array(T *array, int count)
-		: resource_pool_item(reinterpret_cast<void *>(array), sizeof(T) * count),
-		  m_array(array),
-		  m_count(count) { }
-	virtual ~resource_pool_array() { delete[] m_array; }
-
-private:
-	T *						m_array;
-	int 					m_count;
-};
-
-
-// a resource pool tracks items and frees them upon reset or destruction
-class resource_pool
-{
-private:
-	resource_pool(const resource_pool &);
-	resource_pool &operator=(const resource_pool &);
-
-public:
-	resource_pool();
-	~resource_pool();
-
-	void add(resource_pool_item &item);
-	void remove(resource_pool_item &item) { remove(item.m_ptr); }
-	void remove(void *ptr);
-	void remove(const void *ptr) { remove(const_cast<void *>(ptr)); }
-	resource_pool_item *find(void *ptr);
-	bool contains(void *ptrstart, void *ptrend);
-	void clear();
-
-	template<class T> T *add_object(T* object)
-    { 
-        add(*new(__FILE__, __LINE__) resource_pool_object<T>(object)); 
-        return object; 
-    }
-
-	template<class T> T *add_array(T* array, int count) { add(*new(__FILE__, __LINE__) resource_pool_array<T>(array, count)); return array; }
-
-private:
-	static const int		k_hash_prime = 193;
-
-	osd_lock *				m_listlock;
-	resource_pool_item *	m_hash[k_hash_prime];
-	resource_pool_item *	m_ordered_head;
-	resource_pool_item *	m_ordered_tail;
-};
-
-
-
-//**************************************************************************
-//  GLOBAL VARIABLES
-//**************************************************************************
-
-// global resource pool
-extern resource_pool global_resource_pool;
-
-// dummy objects to pass to the specialized new variants
-extern const zeromem_t zeromem;
-
-
-
-//**************************************************************************
 //  FUNCTION PROTOTYPES
 //**************************************************************************
 
 // allocate memory with file and line number information
 void *malloc_file_line(size_t size, const char *file, int line);
+void *malloc_array_file_line(size_t size, const char *file, int line);
 
 // free memory with file and line number information
 void free_file_line(void *memory, const char *file, int line);
 
 // called from the exit path of any code that wants to check for unfreed memory
+void track_memory(bool track);
 void dump_unfreed_mem();
 
 
@@ -208,7 +103,9 @@ void dump_unfreed_mem();
 //  INLINE FUNCTIONS
 //**************************************************************************
 
-#if 0
+// zeromem_t is a dummy class used to tell new to zero memory after allocation
+class zeromem_t { };
+
 
 // standard new/delete operators (try to avoid using)
 ATTR_FORCE_INLINE inline void *operator new(std::size_t size) throw (std::bad_alloc)
@@ -216,14 +113,16 @@ ATTR_FORCE_INLINE inline void *operator new(std::size_t size) throw (std::bad_al
 	void *result = malloc_file_line(size, NULL, 0);
 	if (result == NULL)
 		throw std::bad_alloc();
+	memset(result, 0, size); //JJG: ALWAYS ZERO MEMORY
 	return result;
 }
 
 ATTR_FORCE_INLINE inline void *operator new[](std::size_t size) throw (std::bad_alloc)
 {
-	void *result = malloc_file_line(size, NULL, 0);
+	void *result = malloc_array_file_line(size, NULL, 0);
 	if (result == NULL)
 		throw std::bad_alloc();
+	memset(result, 0, size); //JJG: ALWAYS ZERO MEMORY
 	return result;
 }
 
@@ -239,8 +138,6 @@ ATTR_FORCE_INLINE inline void operator delete[](void *ptr) throw()
 		free_file_line(ptr, NULL, 0);
 }
 
-#endif
-
 
 // file/line new/delete operators
 ATTR_FORCE_INLINE inline void *operator new(std::size_t size, const char *file, int line) throw (std::bad_alloc)
@@ -248,14 +145,16 @@ ATTR_FORCE_INLINE inline void *operator new(std::size_t size, const char *file, 
 	void *result = malloc_file_line(size, file, line);
 	if (result == NULL)
 		throw std::bad_alloc();
+	memset(result, 0, size); //JJG: ALWAYS ZERO MEMORY
 	return result;
 }
 
 ATTR_FORCE_INLINE inline void *operator new[](std::size_t size, const char *file, int line) throw (std::bad_alloc)
 {
-	void *result = malloc_file_line(size, file, line);
+	void *result = malloc_array_file_line(size, file, line);
 	if (result == NULL)
 		throw std::bad_alloc();
+	memset(result, 0, size); //JJG: ALWAYS ZERO MEMORY
 	return result;
 }
 
@@ -284,7 +183,7 @@ ATTR_FORCE_INLINE inline void *operator new(std::size_t size, const char *file, 
 
 ATTR_FORCE_INLINE inline void *operator new[](std::size_t size, const char *file, int line, const zeromem_t &) throw (std::bad_alloc)
 {
-	void *result = malloc_file_line(size, file, line);
+	void *result = malloc_array_file_line(size, file, line);
 	if (result == NULL)
 		throw std::bad_alloc();
 	memset(result, 0, size);
@@ -306,10 +205,122 @@ ATTR_FORCE_INLINE inline void operator delete[](void *ptr, const char *file, int
 
 
 //**************************************************************************
-//  ADDDITIONAL MACROS
+//  TYPE DEFINITIONS
 //**************************************************************************
 
-#if 0
+// resource_pool_item is a base class for items that are tracked by a resource pool
+class resource_pool_item
+{
+private:
+	resource_pool_item(const resource_pool_item &);
+	resource_pool_item &operator=(const resource_pool_item &);
+
+public:
+	resource_pool_item(void *ptr, size_t size)
+		: m_next(NULL),
+		  m_ordered_next(NULL),
+		  m_ordered_prev(NULL),
+		  m_ptr(ptr),
+		  m_size(size),
+		  m_id(~(UINT64)0) { }
+	virtual ~resource_pool_item() { }
+
+	resource_pool_item *	m_next;
+	resource_pool_item *	m_ordered_next;
+	resource_pool_item *	m_ordered_prev;
+	void *					m_ptr;
+	size_t					m_size;
+	UINT64					m_id;
+};
+
+
+// a resource_pool_object is a simple object wrapper for the templatized type
+template<class _ObjectClass>
+class resource_pool_object : public resource_pool_item
+{
+private:
+	resource_pool_object<_ObjectClass>(const resource_pool_object<_ObjectClass> &);
+	resource_pool_object<_ObjectClass> &operator=(const resource_pool_object<_ObjectClass> &);
+
+public:
+	resource_pool_object(_ObjectClass *object)
+		: resource_pool_item(reinterpret_cast<void *>(object), sizeof(_ObjectClass)),
+		  m_object(object) { }
+	virtual ~resource_pool_object() { delete m_object; }
+
+private:
+	_ObjectClass *			m_object;
+};
+
+
+// a resource_pool_array is a simple object wrapper for an allocated array of
+// the templatized type
+template<class _ObjectClass> class resource_pool_array : public resource_pool_item
+{
+private:
+	resource_pool_array<_ObjectClass>(const resource_pool_array<_ObjectClass> &);
+	resource_pool_array<_ObjectClass> &operator=(const resource_pool_array<_ObjectClass> &);
+
+public:
+	resource_pool_array(_ObjectClass *array, int count)
+		: resource_pool_item(reinterpret_cast<void *>(array), sizeof(_ObjectClass) * count),
+		  m_array(array),
+		  m_count(count) { }
+	virtual ~resource_pool_array() { delete[] m_array; }
+
+private:
+	_ObjectClass *			m_array;
+	int 					m_count;
+};
+
+
+// a resource pool tracks items and frees them upon reset or destruction
+class resource_pool
+{
+private:
+	resource_pool(const resource_pool &);
+	resource_pool &operator=(const resource_pool &);
+
+public:
+	resource_pool(int hash_size = 193);
+	~resource_pool();
+
+	void add(resource_pool_item &item);
+	void remove(resource_pool_item &item) { remove(item.m_ptr); }
+	void remove(void *ptr);
+	void remove(const void *ptr) { remove(const_cast<void *>(ptr)); }
+	resource_pool_item *find(void *ptr);
+	bool contains(void *ptrstart, void *ptrend);
+	void clear();
+
+	template<class _ObjectClass> _ObjectClass *add_object(_ObjectClass* object) { add(*EMUALLOC_SELF_NEW resource_pool_object<_ObjectClass>(object)); return object; }
+	template<class _ObjectClass> _ObjectClass *add_array(_ObjectClass* array, int count) { add(*EMUALLOC_SELF_NEW resource_pool_array<_ObjectClass>(array, count)); return array; }
+
+private:
+	int						m_hash_size;
+	osd_lock *				m_listlock;
+	resource_pool_item **	m_hash;
+	resource_pool_item *	m_ordered_head;
+	resource_pool_item *	m_ordered_tail;
+};
+
+
+
+//**************************************************************************
+//  GLOBAL VARIABLES
+//**************************************************************************
+
+// global resource pool
+extern resource_pool global_resource_pool;
+
+// dummy objects to pass to the specialized new variants
+extern const zeromem_t zeromem;
+
+
+
+//**************************************************************************
+//  ADDDITIONAL MACROS
+//**************************************************************************
 
 // re-route classic malloc-style allocations
 #undef malloc
@@ -317,7 +328,7 @@ ATTR_FORCE_INLINE inline void operator delete[](void *ptr, const char *file, int
 #undef realloc
 #undef free
 
-#define malloc(x)		malloc_file_line(x, __FILE__, __LINE__)
+#define malloc(x)		malloc_array_file_line(x, __FILE__, __LINE__)
 #define calloc(x,y)		__error_use_auto_alloc_clear_or_global_alloc_clear_instead__
 #define realloc(x,y)	__error_realloc_is_dangerous__
 #define free(x)			free_file_line(x, __FILE__, __LINE__)
@@ -325,6 +336,5 @@ ATTR_FORCE_INLINE inline void operator delete[](void *ptr, const char *file, int
 // disable direct deletion
 #define delete			__error_use_pool_free_mechanisms__
 
-#endif
 
 #endif	/* __EMUALLOC_H__ */

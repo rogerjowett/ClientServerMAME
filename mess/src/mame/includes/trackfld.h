@@ -8,23 +8,25 @@
 class trackfld_state : public driver_device
 {
 public:
-	trackfld_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	trackfld_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 	/* memory pointers */
-	UINT8 *  videoram;
-	UINT8 *  colorram;
-	UINT8 *  scroll;
-	UINT8 *  scroll2;
-	UINT8 *  spriteram;
-	UINT8 *  spriteram2;
-	size_t   spriteram_size;
+	UINT8 *  m_videoram;
+	UINT8 *  m_colorram;
+	UINT8 *  m_scroll;
+	UINT8 *  m_scroll2;
+	UINT8 *  m_spriteram;
+	UINT8 *  m_spriteram2;
+	size_t   m_spriteram_size;
 
 	/* video-related */
-	tilemap_t  *bg_tilemap;
-	int      bg_bank, sprite_bank1, sprite_bank2;
-	int      old_gfx_bank;					// needed by atlantol
-	int		 sprites_gfx_banked;
+	tilemap_t  *m_bg_tilemap;
+	int      m_bg_bank;
+	int      m_sprite_bank1;
+	int      m_sprite_bank2;
+	int      m_old_gfx_bank;					// needed by atlantol
+	int		 m_sprites_gfx_banked;
 };
 
 
@@ -37,6 +39,6 @@ WRITE8_HANDLER( atlantol_gfxbank_w );
 
 PALETTE_INIT( trackfld );
 VIDEO_START( trackfld );
-VIDEO_UPDATE( trackfld );
+SCREEN_UPDATE( trackfld );
 VIDEO_START( atlantol );
 

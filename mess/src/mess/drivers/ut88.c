@@ -13,7 +13,7 @@
 #include "sound/dac.h"
 #include "sound/wave.h"
 #include "includes/ut88.h"
-#include "devices/cassette.h"
+#include "imagedev/cassette.h"
 #include "formats/rk_cas.h"
 #include "ut88mini.lh"
 
@@ -22,29 +22,29 @@ static GFXDECODE_START( ut88 )
 GFXDECODE_END
 
 /* Address maps */
-static ADDRESS_MAP_START(ut88mini_mem, ADDRESS_SPACE_PROGRAM, 8)
+static ADDRESS_MAP_START(ut88mini_mem, AS_PROGRAM, 8)
 	ADDRESS_MAP_UNMAP_HIGH
     AM_RANGE( 0x0000, 0x03ff ) AM_ROM  // System ROM
     AM_RANGE( 0xc000, 0xc3ff ) AM_RAM  // RAM
     AM_RANGE( 0x9000, 0x9fff ) AM_WRITE(ut88mini_write_led) // 7seg LED
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START(ut88_mem, ADDRESS_SPACE_PROGRAM, 8)
+static ADDRESS_MAP_START(ut88_mem, AS_PROGRAM, 8)
 	AM_RANGE( 0x0000, 0x07ff ) AM_RAMBANK("bank1") // First bank
     AM_RANGE( 0x0800, 0xdfff ) AM_RAM  // RAM
     AM_RANGE( 0xe000, 0xe7ff ) AM_RAM  // Video RAM (not used)
-    AM_RANGE( 0xe800, 0xefff ) AM_RAM  AM_BASE_MEMBER(ut88_state, video_ram) // Video RAM
+    AM_RANGE( 0xe800, 0xefff ) AM_RAM  AM_BASE_MEMBER(ut88_state, m_video_ram) // Video RAM
     AM_RANGE( 0xf400, 0xf7ff ) AM_RAM  // System RAM
     AM_RANGE( 0xf800, 0xffff ) AM_ROM  // System ROM
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( ut88mini_io , ADDRESS_SPACE_IO, 8)
+static ADDRESS_MAP_START( ut88mini_io , AS_IO, 8)
 	AM_RANGE( 0xA0, 0xA0) AM_READ ( ut88mini_keyboard_r )
 	AM_RANGE( 0xA1, 0xA1) AM_READ ( ut88_tape_r )
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( ut88_io , ADDRESS_SPACE_IO, 8)
-	AM_RANGE( 0x04, 0x07) AM_DEVREADWRITE ( "ppi8255", ut88_keyboard_r, ut88_keyboard_w )
+static ADDRESS_MAP_START( ut88_io , AS_IO, 8)
+	AM_RANGE( 0x04, 0x07) AM_READWRITE ( ut88_keyboard_r, ut88_keyboard_w )
 	AM_RANGE( 0xA1, 0xA1) AM_READWRITE ( ut88_tape_r,	  ut88_sound_w	  )
 ADDRESS_MAP_END
 
@@ -166,11 +166,12 @@ static INPUT_PORTS_START( ut88mini )
 	PORT_BIT(0x80, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("Backspace") PORT_CODE(KEYCODE_BACKSPACE) PORT_CHAR(8)
 INPUT_PORTS_END
 
-static const cassette_config ut88_cassette_config =
+static const cassette_interface ut88_cassette_interface =
 {
 	rku_cassette_formats,
 	NULL,
 	(cassette_state)(CASSETTE_STOPPED | CASSETTE_SPEAKER_ENABLED | CASSETTE_MOTOR_ENABLED),
+	NULL,
 	NULL
 };
 
@@ -191,21 +192,22 @@ static MACHINE_CONFIG_START( ut88, ut88_state )
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(64*8, 28*8)
 	MCFG_SCREEN_VISIBLE_AREA(0, 64*8-1, 0, 28*8-1)
+    MCFG_SCREEN_UPDATE(ut88)
+
 	MCFG_PALETTE_LENGTH(2)
 	MCFG_PALETTE_INIT(black_and_white)
 	MCFG_GFXDECODE( ut88 )
 
     MCFG_VIDEO_START(ut88)
-    MCFG_VIDEO_UPDATE(ut88)
 
     /* audio hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 	MCFG_SOUND_ADD("dac", DAC, 0)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
-	MCFG_SOUND_WAVE_ADD("wave", "cassette")
-	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
+	MCFG_SOUND_WAVE_ADD(WAVE_TAG, CASSETTE_TAG)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
-	MCFG_CASSETTE_ADD( "cassette", ut88_cassette_config )
+	MCFG_CASSETTE_ADD( CASSETTE_TAG, ut88_cassette_interface )
 MACHINE_CONFIG_END
 
 static MACHINE_CONFIG_START( ut88mini, ut88_state )
@@ -219,7 +221,7 @@ static MACHINE_CONFIG_START( ut88mini, ut88_state )
 	/* video hardware */
 	MCFG_DEFAULT_LAYOUT(layout_ut88mini)
 
-	MCFG_CASSETTE_ADD( "cassette", ut88_cassette_config )
+	MCFG_CASSETTE_ADD( CASSETTE_TAG, ut88_cassette_interface )
 MACHINE_CONFIG_END
 
 /* ROM definition */

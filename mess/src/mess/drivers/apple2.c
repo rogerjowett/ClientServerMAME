@@ -180,13 +180,15 @@ Apple 3.5 and Apple 5.25 drives - up to three devices
 
 ***************************************************************************/
 
+#define ADDRESS_MAP_MODERN
+
 #include "emu.h"
 #include "cpu/m6502/m6502.h"
 #include "cpu/z80/z80.h"
 #include "deprecat.h"
 #include "devices/appldriv.h"
-#include "devices/flopdrv.h"
-#include "devices/cassette.h"
+#include "imagedev/flopdrv.h"
+#include "imagedev/cassette.h"
 #include "formats/ap2_dsk.h"
 #include "includes/apple2.h"
 #include "machine/ay3600.h"
@@ -197,10 +199,10 @@ Apple 3.5 and Apple 5.25 drives - up to three devices
 //#include "machine/a2z80.h"
 #include "sound/ay8910.h"
 #include "sound/speaker.h"
-#include "devices/messram.h"
+#include "machine/ram.h"
 #include "machine/a2cffa.h"
 #include "machine/idectrl.h"
-#include "devices/harddriv.h"
+#include "imagedev/harddriv.h"
 
 
 /***************************************************************************
@@ -220,7 +222,7 @@ Apple 3.5 and Apple 5.25 drives - up to three devices
     ADDRESS MAP
 ***************************************************************************/
 
-static ADDRESS_MAP_START( apple2_map, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( apple2_map, AS_PROGRAM, 8, apple2_state )
 	/* nothing in the address map - everything is added dynamically */
 ADDRESS_MAP_END
 
@@ -271,42 +273,42 @@ static INPUT_PORTS_START( apple2_joystick )
     PORT_BIT( 0x40, IP_ACTIVE_HIGH, IPT_BUTTON1)  PORT_PLAYER(2)			PORT_CODE(JOYCODE_BUTTON1)
 INPUT_PORTS_END
 
-static INPUT_PORTS_START( apple2_paddle )
-	PORT_START("paddle_0")
-	PORT_BIT( 0xff, 0x80, IPT_PADDLE) PORT_NAME("P1 Paddle 0")
-	PORT_SENSITIVITY(PADDLE_SENSITIVITY)
-	PORT_KEYDELTA(PADDLE_DELTA)
-	PORT_CENTERDELTA(PADDLE_AUTOCENTER)
-	PORT_MINMAX(0,0xff) PORT_PLAYER(1)
-	PORT_CODE_DEC(KEYCODE_4_PAD)	PORT_CODE_INC(KEYCODE_6_PAD)
-	PORT_CODE_DEC(JOYCODE_X_LEFT_SWITCH)	PORT_CODE_INC(JOYCODE_X_RIGHT_SWITCH)
+/*static INPUT_PORTS_START( apple2_paddle )
+    PORT_START("paddle_0")
+    PORT_BIT( 0xff, 0x80, IPT_PADDLE) PORT_NAME("P1 Paddle 0")
+    PORT_SENSITIVITY(PADDLE_SENSITIVITY)
+    PORT_KEYDELTA(PADDLE_DELTA)
+    PORT_CENTERDELTA(PADDLE_AUTOCENTER)
+    PORT_MINMAX(0,0xff) PORT_PLAYER(1)
+    PORT_CODE_DEC(KEYCODE_4_PAD)    PORT_CODE_INC(KEYCODE_6_PAD)
+    PORT_CODE_DEC(JOYCODE_X_LEFT_SWITCH)    PORT_CODE_INC(JOYCODE_X_RIGHT_SWITCH)
 
-	PORT_START("paddle_1")
-	PORT_BIT( 0xff, 0x80, IPT_PADDLE) PORT_NAME("P1 Paddle 1")
-	PORT_SENSITIVITY(PADDLE_SENSITIVITY)
-	PORT_KEYDELTA(PADDLE_DELTA)
-	PORT_CENTERDELTA(PADDLE_AUTOCENTER)
-	PORT_MINMAX(0,0xff) PORT_PLAYER(1)
-	PORT_CODE_DEC(KEYCODE_8_PAD)	PORT_CODE_INC(KEYCODE_2_PAD)
-	PORT_CODE_DEC(JOYCODE_Y_UP_SWITCH)		PORT_CODE_INC(JOYCODE_Y_DOWN_SWITCH)
+    PORT_START("paddle_1")
+    PORT_BIT( 0xff, 0x80, IPT_PADDLE) PORT_NAME("P1 Paddle 1")
+    PORT_SENSITIVITY(PADDLE_SENSITIVITY)
+    PORT_KEYDELTA(PADDLE_DELTA)
+    PORT_CENTERDELTA(PADDLE_AUTOCENTER)
+    PORT_MINMAX(0,0xff) PORT_PLAYER(1)
+    PORT_CODE_DEC(KEYCODE_8_PAD)    PORT_CODE_INC(KEYCODE_2_PAD)
+    PORT_CODE_DEC(JOYCODE_Y_UP_SWITCH)      PORT_CODE_INC(JOYCODE_Y_DOWN_SWITCH)
 
-	PORT_START("paddle_2")
-	PORT_BIT( 0xff, 0x80, IPT_PADDLE) PORT_NAME("P2 Paddle 0")
-	PORT_SENSITIVITY(PADDLE_SENSITIVITY)
-	PORT_KEYDELTA(PADDLE_DELTA)
-	PORT_CENTERDELTA(PADDLE_AUTOCENTER)
-	PORT_MINMAX(0,0xff) PORT_PLAYER(2)
-	PORT_CODE_DEC(JOYCODE_X_LEFT_SWITCH)	PORT_CODE_INC(JOYCODE_X_RIGHT_SWITCH)
+    PORT_START("paddle_2")
+    PORT_BIT( 0xff, 0x80, IPT_PADDLE) PORT_NAME("P2 Paddle 0")
+    PORT_SENSITIVITY(PADDLE_SENSITIVITY)
+    PORT_KEYDELTA(PADDLE_DELTA)
+    PORT_CENTERDELTA(PADDLE_AUTOCENTER)
+    PORT_MINMAX(0,0xff) PORT_PLAYER(2)
+    PORT_CODE_DEC(JOYCODE_X_LEFT_SWITCH)    PORT_CODE_INC(JOYCODE_X_RIGHT_SWITCH)
 
-	PORT_START("paddle_3")
-	PORT_BIT( 0xff, 0x80, IPT_PADDLE) PORT_NAME("P2 Paddle 1")
-	PORT_SENSITIVITY(PADDLE_SENSITIVITY)
-	PORT_KEYDELTA(PADDLE_DELTA)
-	PORT_CENTERDELTA(PADDLE_AUTOCENTER)
-	PORT_MINMAX(0,0xff) PORT_PLAYER(2)
-	PORT_CODE_DEC(JOYCODE_Y_UP_SWITCH)		PORT_CODE_INC(JOYCODE_Y_DOWN_SWITCH)
+    PORT_START("paddle_3")
+    PORT_BIT( 0xff, 0x80, IPT_PADDLE) PORT_NAME("P2 Paddle 1")
+    PORT_SENSITIVITY(PADDLE_SENSITIVITY)
+    PORT_KEYDELTA(PADDLE_DELTA)
+    PORT_CENTERDELTA(PADDLE_AUTOCENTER)
+    PORT_MINMAX(0,0xff) PORT_PLAYER(2)
+    PORT_CODE_DEC(JOYCODE_Y_UP_SWITCH)      PORT_CODE_INC(JOYCODE_Y_DOWN_SWITCH)
 INPUT_PORTS_END
-
+*/
 static INPUT_PORTS_START( apple2_gameport )
 	PORT_INCLUDE( apple2_joystick )
 	//PORT_INCLUDE( apple2_paddle )
@@ -563,27 +565,7 @@ static const ay8910_interface apple2_ay8910_interface =
 	DEVCB_NULL
 };
 
-#ifdef UNUSED_FUNCTION
-static void apple2_floppy_getinfo(const mess_device_class *devclass, UINT32 state, union devinfo *info)
-{
-    switch(state)
-    {
-        case MESS_DEVINFO_INT_APPLE525_SPINFRACT_DIVIDEND:  info->i = 15; break;
-        case MESS_DEVINFO_INT_APPLE525_SPINFRACT_DIVISOR:   info->i = 16; break;
-
-        case MESS_DEVINFO_STR_NAME+0:                       strcpy(info->s = device_temp_str(), "slot6disk1"); break;
-        case MESS_DEVINFO_STR_NAME+1:                       strcpy(info->s = device_temp_str(), "slot6disk2"); break;
-        case MESS_DEVINFO_STR_SHORT_NAME+0:                 strcpy(info->s = device_temp_str(), "s6d1"); break;
-        case MESS_DEVINFO_STR_SHORT_NAME+1:                 strcpy(info->s = device_temp_str(), "s6d2"); break;
-        case MESS_DEVINFO_STR_DESCRIPTION+0:                    strcpy(info->s = device_temp_str(), "Slot 6 Disk #1"); break;
-        case MESS_DEVINFO_STR_DESCRIPTION+1:                    strcpy(info->s = device_temp_str(), "Slot 6 Disk #2"); break;
-
-        default:                                        apple525_device_getinfo(devclass, state, info); break;
-    }
-}
-#endif
-
-static const floppy_config apple2_floppy_config =
+static const floppy_interface apple2_floppy_interface =
 {
 	DEVCB_NULL,
 	DEVCB_NULL,
@@ -592,23 +574,25 @@ static const floppy_config apple2_floppy_config =
 	DEVCB_NULL,
 	FLOPPY_STANDARD_5_25_DSHD,
 	FLOPPY_OPTIONS_NAME(apple2),
+	"floppy_5_25",
 	NULL
 };
 
-static const cassette_config apple2_cassette_config =
+static const cassette_interface apple2_cassette_interface =
 {
 	cassette_default_formats,
 	NULL,
 	(cassette_state)(CASSETTE_STOPPED),
+	NULL,
 	NULL
 };
 
-static MACHINE_CONFIG_START( apple2_common, driver_device )
+static MACHINE_CONFIG_START( apple2_common, apple2_state )
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M6502, 1021800)		/* close to actual CPU frequency of 1.020484 MHz */
 	MCFG_CPU_PROGRAM_MAP(apple2_map)
 	MCFG_CPU_VBLANK_INT_HACK(apple2_interrupt, 192/8)
-	MCFG_QUANTUM_TIME(HZ(60))
+	MCFG_QUANTUM_TIME(attotime::from_hz(60))
 
 	MCFG_MACHINE_START( apple2 )
 
@@ -618,11 +602,12 @@ static MACHINE_CONFIG_START( apple2_common, driver_device )
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(280*2, 192)
 	MCFG_SCREEN_VISIBLE_AREA(0, (280*2)-1,0,192-1)
+	MCFG_SCREEN_UPDATE(apple2)
+
 	MCFG_PALETTE_LENGTH(ARRAY_LENGTH(apple2_palette))
 	MCFG_PALETTE_INIT(apple2)
 
 	MCFG_VIDEO_START(apple2)
-	MCFG_VIDEO_UPDATE(apple2)
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
@@ -645,33 +630,35 @@ static MACHINE_CONFIG_START( apple2_common, driver_device )
 	MCFG_APPLE2_SLOT_ADD(4, "mockingboard", mockingboard_r, mockingboard_w, 0, 0, 0, 0)
 	MCFG_APPLE2_SLOT_ADD(6, "fdc", applefdc_r, applefdc_w, 0, 0, 0, 0)
 
-	MCFG_FLOPPY_APPLE_2_DRIVES_ADD(apple2_floppy_config,15,16)
+	MCFG_FLOPPY_APPLE_2_DRIVES_ADD(apple2_floppy_interface,15,16)
+
+	MCFG_SOFTWARE_LIST_ADD("flop525_list","apple2")
 MACHINE_CONFIG_END
 
 static MACHINE_CONFIG_DERIVED( apple2, apple2_common )
 	/* internal ram */
-	MCFG_RAM_ADD("messram")
+	MCFG_RAM_ADD(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("64K")
 	MCFG_RAM_EXTRA_OPTIONS("4K,8K,12K,16K,20K,24K,32K,36K,48K")
 	MCFG_RAM_DEFAULT_VALUE(0x00)
 	/* At the moment the RAM bank $C000-$FFFF is available only if you choose   */
 	/* default configuration: on real machine is present also in configurations */
 	/* with less memory, provided that the language card is installed           */
-	MCFG_CASSETTE_ADD( "cassette", apple2_cassette_config )
+	MCFG_CASSETTE_ADD( CASSETTE_TAG, apple2_cassette_interface )
 MACHINE_CONFIG_END
 
 static MACHINE_CONFIG_DERIVED( apple2p, apple2_common )
 	MCFG_VIDEO_START(apple2p)
 
 	/* internal ram */
-	MCFG_RAM_ADD("messram")
+	MCFG_RAM_ADD(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("64K")
 	MCFG_RAM_EXTRA_OPTIONS("16K,32K,48K")
 	MCFG_RAM_DEFAULT_VALUE(0x00)
 	/* At the moment the RAM bank $C000-$FFFF is available only if you choose   */
 	/* default configuration: on real machine is present also in configurations */
 	/* with less memory, provided that the language card is installed           */
-	MCFG_CASSETTE_ADD( "cassette", apple2_cassette_config )
+	MCFG_CASSETTE_ADD( CASSETTE_TAG, apple2_cassette_interface )
 MACHINE_CONFIG_END
 
 ROM_START(las3000)
@@ -686,11 +673,11 @@ ROM_END
 static MACHINE_CONFIG_DERIVED( apple2e, apple2_common )
 	MCFG_VIDEO_START(apple2e)
 	/* internal ram */
-	MCFG_RAM_ADD("messram")
+	MCFG_RAM_ADD(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("128K")
 	MCFG_RAM_EXTRA_OPTIONS("64K")
 	MCFG_RAM_DEFAULT_VALUE(0x00)
-	MCFG_CASSETTE_ADD( "cassette", apple2_cassette_config )
+	MCFG_CASSETTE_ADD( CASSETTE_TAG, apple2_cassette_interface )
 MACHINE_CONFIG_END
 #if 0
 MACHINE_CONFIG_DERIVED( apple2e_z80, apple2_common )
@@ -705,7 +692,7 @@ MACHINE_CONFIG_DERIVED( apple2e_z80, apple2_common )
 	MCFG_QUANTUM_PERFECT_CPU("maincpu")
 
 	/* internal ram */
-	MCFG_RAM_ADD("messram")
+	MCFG_RAM_ADD(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("128K")
 	MCFG_RAM_EXTRA_OPTIONS("64K")
 	MCFG_RAM_DEFAULT_VALUE(0x00)
@@ -714,7 +701,7 @@ MACHINE_CONFIG_END
 static MACHINE_CONFIG_DERIVED( mprof3, apple2e )
 
 	/* internal ram */
-	MCFG_RAM_MODIFY("messram")
+	MCFG_RAM_MODIFY(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("128K")
 MACHINE_CONFIG_END
 
@@ -878,6 +865,13 @@ ROM_START(apple2e)
 	ROM_LOAD ( "342-0135-b.64", 0x0000, 0x2000, CRC(e248835e) SHA1(523838c19c79f481fa02df56856da1ec3816d16e))
 	ROM_LOAD ( "342-0134-a.64", 0x2000, 0x2000, CRC(fc3d59d8) SHA1(8895a4b703f2184b673078f411f4089889b61c54))
 	ROM_LOAD ( "341-0027-a.p5", 0x4500, 0x0100, CRC(ce7144f6) SHA1(d4181c9f046aafc3fb326b381baac809d9e38d16)) /* Disk II ROM - DOS 3.3 version */
+
+	ROM_REGION( 0x800, "keyboard", ROMREGION_ERASE00 )
+//  ROM_LOAD_OPTIONAL( "341-0132-a.e12", 0x000, 0x800, CRC(7ded1ac6) SHA1(69f45cd487e8210e37c839df78a0b8930a3a6ac1) ) // 1982 US-DE
+//  ROM_LOAD_OPTIONAL( "341-0150-a.e12", 0x000, 0x800, CRC(66ffacd7) SHA1(47bb9608be38ff75429a989b930a93b47099648e) ) // 1982 US-UK
+//  ROM_LOAD_OPTIONAL( "341-0151-a.e12", 0x000, 0x800, CRC(64574bb4) SHA1(c44809bbb017bfe3c07dc99e87a3a9fa7b9741c3) ) // 1982 US-DE
+//  ROM_LOAD_OPTIONAL( "342-0132-b.e12", 0x000, 0x800, CRC(ecfceb45) SHA1(c2f249589ee02121c27336af022bbca0cc9b2245) ) // 1982 US-Dvorak
+//  ROM_LOAD( "342-0132-c.e12", 0x000, 0x800, CRC(e47045f4) SHA1(12a2e718f5f4acd69b6c33a45a4a940b1440a481) ) // 1983 US-Dvorak
 ROM_END
 
 ROM_START(apple2ez)
@@ -909,12 +903,15 @@ ROM_START(apple2ee)
 	ROM_LOAD ( "342-0265-a.chr", 0x1000, 0x1000,CRC(2651014d) SHA1(b2b5d87f52693817fc747df087a4aa1ddcdb1f10))
 
 	ROM_REGION(0x4700,"maincpu",0)
-	ROM_LOAD ( "342-0304-a.64", 0x0000, 0x2000, CRC(443aa7c4) SHA1(3aecc56a26134df51e65e17f33ae80c1f1ac93e6))
-	ROM_LOAD ( "342-0303-a.64", 0x2000, 0x2000, CRC(95e10034) SHA1(afb09bb96038232dc757d40c0605623cae38088e))
+	ROM_LOAD ( "342-0304-a.e10", 0x0000, 0x2000, CRC(443aa7c4) SHA1(3aecc56a26134df51e65e17f33ae80c1f1ac93e6)) /* PCB: "CD ROM // 342-0304", 2364 mask rom */
+	ROM_LOAD ( "342-0303-a.e8", 0x2000, 0x2000, CRC(95e10034) SHA1(afb09bb96038232dc757d40c0605623cae38088e)) /* PCB: "EF ROM // 342-0303", 2364 mask rom */
 	ROM_LOAD ( "341-0027-a.p5", 0x4500, 0x0100, CRC(ce7144f6) SHA1(d4181c9f046aafc3fb326b381baac809d9e38d16)) /* Disk II ROM - DOS 3.3 version */
 
 	ROM_REGION(0x1000, "cffa", 0)
-        ROM_LOAD( "cffa20eec02.bin", 0x000000, 0x001000, CRC(fb3726f8) SHA1(080ff88f19de22328e162954ee2b51ee65f9d5cd) )
+    ROM_LOAD( "cffa20eec02.bin", 0x000000, 0x001000, CRC(fb3726f8) SHA1(080ff88f19de22328e162954ee2b51ee65f9d5cd) )
+
+	ROM_REGION( 0x800, "keyboard", 0 )
+	ROM_LOAD( "341-0132-d.e12", 0x000, 0x800, CRC(c506efb9) SHA1(8e14e85c645187504ec9d162b3ea614a0c421d32) )
 ROM_END
 
 ROM_START(apple2ep)
@@ -1025,7 +1022,7 @@ COMP( 1983, mprof3,   apple2e,  0,        mprof3,	   apple2e,  0,        "Multit
 COMP( 1985, apple2ee, apple2e,  0,        apple2ee,	   apple2e,  0,        "Apple Computer",    "Apple //e (enhanced)", GAME_SUPPORTS_SAVE )
 COMP( 1987, apple2ep, apple2e,  0,        apple2ep,	   apple2ep, 0,        "Apple Computer",    "Apple //e (Platinum)", GAME_SUPPORTS_SAVE )
 COMP( 1984, apple2c,  0,        apple2,	  apple2c,	   apple2e,  0,        "Apple Computer",    "Apple //c" , GAME_SUPPORTS_SAVE )
-COMP( 1989, prav8c,   apple2c,  0,        apple2c,	   apple2e,  0,        "Pravetz",           "Pravetz 8C", GAME_SUPPORTS_SAVE )
+COMP( 1989, prav8c,   apple2c,  0,        apple2c,	   apple2e,  0,        "Pravetz",           "Pravetz 8C", GAME_NOT_WORKING | GAME_SUPPORTS_SAVE )
 COMP( 1983, las3000,  apple2,   0,        apple2p,	   apple2p,  0,        "Video Technology",  "Laser 3000",	GAME_NOT_WORKING )
 COMP( 1987, laser128, apple2c,  0,        apple2c,	   apple2e,  0,        "Video Technology",  "Laser 128 (rev 4)", GAME_NOT_WORKING )
 COMP( 1987, las128ex, apple2c,  0,        apple2c,	   apple2e,  0,        "Video Technology",  "Laser 128ex (rev 4a)", GAME_NOT_WORKING )

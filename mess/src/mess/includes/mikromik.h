@@ -1,5 +1,23 @@
+#pragma once
+
 #ifndef __MIKROMIKKO__
 #define __MIKROMIKKO__
+
+#define ADDRESS_MAP_MODERN
+
+#include "emu.h"
+#include "cpu/i8085/i8085.h"
+#include "formats/basicdsk.h"
+#include "imagedev/flopdrv.h"
+#include "machine/8237dma.h"
+#include "machine/i8212.h"
+#include "machine/pit8253.h"
+#include "machine/ram.h"
+#include "machine/upd765.h"
+#include "machine/upd7201.h"
+#include "video/i8275.h"
+#include "video/upd7220.h"
+#include "sound/speaker.h"
 
 #define SCREEN_TAG		"screen"
 #define I8085A_TAG		"ic40"
@@ -10,13 +28,12 @@
 #define I8275_TAG		"ic59"
 #define UPD7201_TAG		"ic11"
 #define UPD7220_TAG		"ic101"
-#define SPEAKER_TAG		"speaker"
 
 class mm1_state : public driver_device
 {
 public:
-	mm1_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config),
+	mm1_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag),
 		  m_maincpu(*this, I8085A_TAG),
 		  m_iop(*this, I8212_TAG),
 		  m_dmac(*this, I8237_TAG),
@@ -34,8 +51,8 @@ public:
 	required_device<device_t> m_dmac;
 	required_device<device_t> m_crtc;
 	required_device<device_t> m_fdc;
-	required_device<device_t> m_mpsc;
-	required_device<device_t> m_hgdc;
+	required_device<upd7201_device> m_mpsc;
+	required_device<upd7220_device> m_hgdc;
 	required_device<device_t> m_speaker;
 	required_device<device_t> m_floppy0;
 	required_device<device_t> m_floppy1;
@@ -44,7 +61,7 @@ public:
 	virtual void machine_reset();
 
 	virtual void video_start();
-	virtual bool video_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect);
+	virtual bool screen_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect);
 
 	DECLARE_WRITE8_MEMBER( ls259_w );
 	DECLARE_READ8_MEMBER( kb_r );

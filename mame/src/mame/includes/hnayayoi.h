@@ -7,19 +7,19 @@
 class hnayayoi_state : public driver_device
 {
 public:
-	hnayayoi_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	hnayayoi_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 	/* video-related */
-	UINT8      *pixmap[8];
-	int        palbank;
-	int        total_pixmaps;
-	UINT8      blit_layer;
-	UINT16     blit_dest;
-	UINT32     blit_src;
+	UINT8      *m_pixmap[8];
+	int        m_palbank;
+	int        m_total_pixmaps;
+	UINT8      m_blit_layer;
+	UINT16     m_blit_dest;
+	UINT32     m_blit_src;
 
 	/* misc */
-	int        keyb;
+	int        m_keyb;
 };
 
 
@@ -27,7 +27,7 @@ public:
 
 VIDEO_START( hnayayoi );
 VIDEO_START( untoucha );
-VIDEO_UPDATE( hnayayoi );
+SCREEN_UPDATE( hnayayoi );
 
 WRITE8_HANDLER( dynax_blitter_rev1_param_w );
 WRITE8_HANDLER( dynax_blitter_rev1_start_w );

@@ -71,15 +71,15 @@ $F000-$FFFF:    ROM address space
 #include "cpu/m6502/m6502.h"
 #include "machine/6821pia.h"
 #include "includes/apple1.h"
-#include "devices/snapquik.h"
-#include "devices/cassette.h"
-#include "devices/messram.h"
+#include "imagedev/snapquik.h"
+#include "imagedev/cassette.h"
+#include "machine/ram.h"
 
 /* port i/o functions */
 
 /* memory w/r functions */
 
-static ADDRESS_MAP_START( apple1_map, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( apple1_map, AS_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0xbfff) AM_NOP
 
 	/* Cassette interface I/O space: */
@@ -93,7 +93,7 @@ static ADDRESS_MAP_START( apple1_map, ADDRESS_SPACE_PROGRAM, 8 )
        and PIA registers are addressed with address bits 0-1.  All
        other address bits are ignored.  Thus $D010-$D013 is mirrored
        at all $Dxxx addresses with bit 4 high. */
-	AM_RANGE(0xd010, 0xd013) AM_MIRROR(0x0fec) AM_DEVREADWRITE("pia", pia6821_r, pia6821_w)
+	AM_RANGE(0xd010, 0xd013) AM_MIRROR(0x0fec) AM_DEVREADWRITE_MODERN("pia",pia6821_device, read, write)
 	/* $Dxxx addresses with bit 4 low are NOPs. */
 	AM_RANGE(0xd000, 0xd00f) AM_NOP AM_MIRROR(0xfe0)
 
@@ -209,11 +209,12 @@ INPUT_PORTS_END
 
 /* sound output */
 
-static const cassette_config apple1_cassette_config =
+static const cassette_interface apple1_cassette_interface =
 {
 	cassette_default_formats,
 	NULL,
 	(cassette_state)(CASSETTE_STOPPED),
+	NULL,
 	NULL
 };
 
@@ -224,6 +225,10 @@ static MACHINE_CONFIG_START( apple1, apple1_state )
        slows it to 960 kHz. */
 	MCFG_CPU_ADD("maincpu", M6502, 960000)        /* 1.023 MHz */
 	MCFG_CPU_PROGRAM_MAP(apple1_map)
+
+	MCFG_MACHINE_RESET( apple1 )
+	MCFG_QUANTUM_TIME(attotime::from_hz(60))
+
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(60)
 	/* Video is blanked for 70 out of 262 scanlines per refresh cycle.
@@ -232,34 +237,32 @@ static MACHINE_CONFIG_START( apple1, apple1_state )
        is 2 cycles of the fundamental 14.31818 MHz oscillator.  The
        total blanking time is about 4450 microseconds. */
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC((int) (70 * 65 * 7 * 2 / 14.31818)))
-	MCFG_QUANTUM_TIME(HZ(60))
-
-	MCFG_MACHINE_RESET( apple1 )
-
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	/* It would be nice if we could implement some sort of display
        overscan here. */
 	MCFG_SCREEN_SIZE(40 * 7, 24 * 8)
 	MCFG_SCREEN_VISIBLE_AREA(0, 40 * 7 - 1, 0, 24 * 8 - 1)
+	MCFG_SCREEN_UPDATE(apple1)
+
+
 	MCFG_GFXDECODE(apple1)
 	MCFG_PALETTE_LENGTH(2)
 	MCFG_PALETTE_INIT(black_and_white)
 
 	MCFG_VIDEO_START(apple1)
-	MCFG_VIDEO_UPDATE(apple1)
 
 	MCFG_PIA6821_ADD( "pia", apple1_pia0 )
 
 	/* snapshot */
 	MCFG_SNAPSHOT_ADD("snapshot", apple1, "snp", 0)
 
-	MCFG_CASSETTE_ADD( "cassette", apple1_cassette_config )
+	MCFG_CASSETTE_ADD( CASSETTE_TAG, apple1_cassette_interface )
 
 	/* Note that because we always include 4K of RAM at $E000-$EFFF,
        the RAM amounts listed here will be 4K below the actual RAM
        total. */
 	/* internal ram */
-	MCFG_RAM_ADD("messram")
+	MCFG_RAM_ADD(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("48K")
 	MCFG_RAM_EXTRA_OPTIONS("4K,8K,12K,16K,20K,24K,28K,32K,36K,40K,44K")
 

@@ -25,22 +25,22 @@
 class dragrace_state : public driver_device
 {
 public:
-	dragrace_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	dragrace_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 	/* memory pointers */
-	UINT8 *  playfield_ram;
-	UINT8 *  position_ram;
+	UINT8 *  m_playfield_ram;
+	UINT8 *  m_position_ram;
 
 	/* video-related */
-	tilemap_t  *bg_tilemap;
+	tilemap_t  *m_bg_tilemap;
 
 	/* misc */
-	unsigned  misc_flags;
-	int       gear[2];
+	unsigned  m_misc_flags;
+	int       m_gear[2];
 
 	/* devices */
-	device_t *discrete;
+	device_t *m_discrete;
 };
 
 
@@ -51,4 +51,4 @@ DISCRETE_SOUND_EXTERN( dragrace );
 /*----------- defined in video/dragrace.c -----------*/
 
 VIDEO_START( dragrace );
-VIDEO_UPDATE( dragrace );
+SCREEN_UPDATE( dragrace );

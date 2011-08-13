@@ -101,7 +101,7 @@ static int					buffer_overflows;
 //============================================================
 
 static void 		sound_exit(running_machine &machine);
-static HRESULT		dsound_init(running_machine *machine);
+static HRESULT		dsound_init(running_machine &machine);
 static void			dsound_kill(void);
 static HRESULT		dsound_create_buffers(void);
 static void			dsound_destroy_buffers(void);
@@ -112,14 +112,14 @@ static void			dsound_destroy_buffers(void);
 //  winsound_init
 //============================================================
 
-void winsound_init(running_machine *machine)
+void winsound_init(running_machine &machine)
 {
 	// if no sound, don't create anything
-	if (!options_get_bool(machine->options(), OPTION_SOUND))
+	if (!machine.options().sound())
 		return;
 
 	// ensure we get called on the way out
-	machine->add_notifier(MACHINE_NOTIFY_EXIT, sound_exit);
+	machine.add_notifier(MACHINE_NOTIFY_EXIT, machine_notify_delegate(FUNC(sound_exit), &machine));
 
 	// attempt to initialize directsound
 	// don't make it fatal if we can't -- we'll just run without sound
@@ -262,12 +262,33 @@ void windows_osd_interface::set_mastervolume(int attenuation)
 		IDirectSoundBuffer_SetVolume(stream_buffer, (attenuation == -32) ? DSBVOLUME_MIN : attenuation * 100);
 }
 
+void windows_osd_interface::pauseAudio(bool pause)
+{
+    HRESULT result;
+    if(pause)
+    {
+        result = IDirectSoundBuffer_Stop(stream_buffer);
+        if (result != DS_OK)
+        {
+            printf("DSOUND Error stopping: %08x\n", (UINT32)result);
+        }
+    }
+    else
+    {
+        result = IDirectSoundBuffer_Play(stream_buffer, 0, 0, DSBPLAY_LOOPING);
+        if (result != DS_OK)
+        {
+            printf("DSOUND Error resuming: %08x\n", (UINT32)result);
+        }
+    }
+}
+
 
 //============================================================
 //  dsound_init
 //============================================================
 
-static HRESULT dsound_init(running_machine *machine)
+static HRESULT dsound_init(running_machine &machine)
 {
 	HRESULT result;
 
@@ -300,12 +321,12 @@ static HRESULT dsound_init(running_machine *machine)
 	stream_format.wBitsPerSample	= 16;
 	stream_format.wFormatTag		= WAVE_FORMAT_PCM;
 	stream_format.nChannels			= 2;
-	stream_format.nSamplesPerSec	= machine->sample_rate;
+	stream_format.nSamplesPerSec	= machine.sample_rate();
 	stream_format.nBlockAlign		= stream_format.wBitsPerSample * stream_format.nChannels / 8;
 	stream_format.nAvgBytesPerSec	= stream_format.nSamplesPerSec * stream_format.nBlockAlign;
 
 	// compute the buffer size based on the output sample rate
-	stream_buffer_size = stream_format.nSamplesPerSec * stream_format.nBlockAlign * options_get_int(machine->options(), WINOPTION_AUDIO_LATENCY) / 10;
+	stream_buffer_size = stream_format.nSamplesPerSec * stream_format.nBlockAlign * downcast<windows_options &>(machine.options()).audio_latency() / 10;
 	stream_buffer_size = (stream_buffer_size / 1024) * 1024;
 	if (stream_buffer_size < 1024)
 		stream_buffer_size = 1024;

@@ -51,23 +51,26 @@ EEPROM chip: 93C46
 static WRITE16_DEVICE_HANDLER( eeprom_chip_select_w )
 {
 	/* bit 0 is CS (active low) */
-	eeprom_set_cs_line(device, (data & 0x01) ? CLEAR_LINE : ASSERT_LINE);
+	eeprom_device *eeprom = downcast<eeprom_device *>(device);
+	eeprom->set_cs_line((data & 0x01) ? CLEAR_LINE : ASSERT_LINE);
 }
 
 static WRITE16_DEVICE_HANDLER( eeprom_serial_clock_w )
 {
 	/* bit 0 is SK (active high) */
-	eeprom_set_clock_line(device, (data & 0x01) ? ASSERT_LINE : CLEAR_LINE);
+	eeprom_device *eeprom = downcast<eeprom_device *>(device);
+	eeprom->set_clock_line((data & 0x01) ? ASSERT_LINE : CLEAR_LINE);
 }
 
 static WRITE16_DEVICE_HANDLER( eeprom_data_w )
 {
 	/* bit 0 is EEPROM data (DIN) */
-	eeprom_write_bit(device, data & 0x01);
+	eeprom_device *eeprom = downcast<eeprom_device *>(device);
+	eeprom->write_bit(data & 0x01);
 }
 
 
-static ADDRESS_MAP_START( xorworld_map, ADDRESS_SPACE_PROGRAM, 16 )
+static ADDRESS_MAP_START( xorworld_map, AS_PROGRAM, 16 )
 	AM_RANGE(0x000000, 0x01ffff) AM_ROM
 	AM_RANGE(0x200000, 0x200001) AM_READ_PORT("P1")
 	AM_RANGE(0x400000, 0x400001) AM_READ_PORT("P2")
@@ -77,8 +80,8 @@ static ADDRESS_MAP_START( xorworld_map, ADDRESS_SPACE_PROGRAM, 16 )
 	AM_RANGE(0xa00008, 0xa00009) AM_DEVWRITE("eeprom", eeprom_chip_select_w)
 	AM_RANGE(0xa0000a, 0xa0000b) AM_DEVWRITE("eeprom", eeprom_serial_clock_w)
 	AM_RANGE(0xa0000c, 0xa0000d) AM_DEVWRITE("eeprom", eeprom_data_w)
-	AM_RANGE(0xffc000, 0xffc7ff) AM_RAM_WRITE(xorworld_videoram16_w) AM_BASE_MEMBER(xorworld_state, videoram)
-	AM_RANGE(0xffc800, 0xffc87f) AM_RAM	AM_BASE_GENERIC(spriteram)
+	AM_RANGE(0xffc000, 0xffc7ff) AM_RAM_WRITE(xorworld_videoram16_w) AM_BASE_MEMBER(xorworld_state, m_videoram)
+	AM_RANGE(0xffc800, 0xffc87f) AM_RAM	AM_BASE_MEMBER(xorworld_state, m_spriteram)
 	AM_RANGE(0xffc880, 0xffc881) AM_WRITENOP
 	AM_RANGE(0xffc882, 0xffc883) AM_WRITENOP
 	AM_RANGE(0xffc884, 0xffffff) AM_RAM
@@ -99,7 +102,7 @@ static INPUT_PORTS_START( xorworld )
 	PORT_DIPNAME( 0x08, 0x00, DEF_STR( Demo_Sounds ) )
 	PORT_DIPSETTING(    0x08, DEF_STR( Off ) )
 	PORT_DIPSETTING(    0x00, DEF_STR( On ) )
-	PORT_BIT( 0x10, IP_ACTIVE_HIGH, IPT_SPECIAL ) PORT_READ_LINE_DEVICE("eeprom", eeprom_read_bit)	/* used for accessing the NVRAM */
+	PORT_BIT( 0x10, IP_ACTIVE_HIGH, IPT_SPECIAL ) PORT_READ_LINE_DEVICE_MEMBER("eeprom", eeprom_device, read_bit)	/* used for accessing the NVRAM */
 	PORT_DIPNAME( 0x60, 0x40, DEF_STR( Difficulty ) )
 	PORT_DIPSETTING(    0x40, DEF_STR( Easy ) )
 	PORT_DIPSETTING(    0x60, DEF_STR( Normal ) )
@@ -164,11 +167,11 @@ static INTERRUPT_GEN( xorworld_interrupt )
 {
 	if (cpu_getiloops(device) == 0)
 	{
-		cpu_set_input_line(device, 2, HOLD_LINE);
+		device_set_input_line(device, 2, HOLD_LINE);
 	}
 	else if (cpu_getiloops(device) % 2)
 	{
-		cpu_set_input_line(device, 6, HOLD_LINE);
+		device_set_input_line(device, 6, HOLD_LINE);
 	}
 }
 
@@ -179,7 +182,7 @@ static MACHINE_CONFIG_START( xorworld, xorworld_state )
 	MCFG_CPU_PROGRAM_MAP(xorworld_map)
 	MCFG_CPU_VBLANK_INT_HACK(xorworld_interrupt, 4)	// 1 IRQ2 + 1 IRQ4 + 1 IRQ6
 
-	MCFG_QUANTUM_TIME(HZ(60))
+	MCFG_QUANTUM_TIME(attotime::from_hz(60))
 
 	MCFG_EEPROM_93C46_ADD("eeprom")
 
@@ -191,13 +194,13 @@ static MACHINE_CONFIG_START( xorworld, xorworld_state )
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(32*8, 32*8)
 	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_UPDATE(xorworld)
 
 	MCFG_GFXDECODE(xorworld)
 	MCFG_PALETTE_LENGTH(256)
 
 	MCFG_PALETTE_INIT(xorworld)
 	MCFG_VIDEO_START(xorworld)
-	MCFG_VIDEO_UPDATE(xorworld)
 
 	// sound hardware
 	MCFG_SPEAKER_STANDARD_MONO("mono")
@@ -229,7 +232,7 @@ static DRIVER_INIT( xorworld )
 	/*  patch some strange protection (without this, strange characters appear
         after level 5 and some pieces don't rotate properly some times) */
 
-	UINT16 *rom = (UINT16 *)(machine->region("maincpu")->base() + 0x1390);
+	UINT16 *rom = (UINT16 *)(machine.region("maincpu")->base() + 0x1390);
 
 	PATCH(0x4239); PATCH(0x00ff); PATCH(0xe196);	/* clr.b $ffe196 */
 	PATCH(0x4239); PATCH(0x00ff); PATCH(0xe197);	/* clr.b $ffe197 */

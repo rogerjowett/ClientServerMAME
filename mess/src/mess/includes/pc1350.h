@@ -15,13 +15,13 @@
 class pc1350_state : public driver_device
 {
 public:
-	pc1350_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	pc1350_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
-	UINT8 outa;
-	UINT8 outb;
-	int power;
-	UINT8 reg[0x1000];
+	UINT8 m_outa;
+	UINT8 m_outb;
+	int m_power;
+	UINT8 m_reg[0x1000];
 };
 
 
@@ -43,9 +43,9 @@ NVRAM_HANDLER( pc1350 );
 
 READ8_HANDLER(pc1350_lcd_read);
 WRITE8_HANDLER(pc1350_lcd_write);
-VIDEO_UPDATE( pc1350 );
+SCREEN_UPDATE( pc1350 );
 
-int pc1350_keyboard_line_r(running_machine *machine);
+int pc1350_keyboard_line_r(running_machine &machine);
 
 
 #endif /* PC1350_H_ */

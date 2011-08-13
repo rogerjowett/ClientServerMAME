@@ -7,7 +7,7 @@
 #ifndef DAI_H_
 #define DAI_H_
 
-#include "machine/i8255a.h"
+#include "machine/i8255.h"
 #include "machine/tms5501.h"
 
 #define DAI_DEBUG	1
@@ -16,23 +16,23 @@
 class dai_state : public driver_device
 {
 public:
-	dai_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	dai_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
-	UINT8 paddle_select;
-	UINT8 paddle_enable;
-	UINT8 cassette_motor[2];
-	device_t *sound;
-	device_t *tms5501;
-	UINT8 keyboard_scan_mask;
-	unsigned short _4_colours_palette[4];
+	UINT8 m_paddle_select;
+	UINT8 m_paddle_enable;
+	UINT8 m_cassette_motor[2];
+	device_t *m_sound;
+	device_t *m_tms5501;
+	UINT8 m_keyboard_scan_mask;
+	unsigned short m_4_colours_palette[4];
 };
 
 
 /*----------- defined in machine/dai.c -----------*/
 
 extern const struct pit8253_config dai_pit8253_intf;
-extern const i8255a_interface dai_ppi82555_intf;
+extern const i8255_interface dai_ppi82555_intf;
 extern const tms5501_interface dai_tms5501_interface;
 
 MACHINE_START( dai );
@@ -49,7 +49,7 @@ WRITE8_HANDLER( dai_amd9511_w );
 extern const unsigned char dai_palette[16*3];
 
 VIDEO_START( dai );
-VIDEO_UPDATE( dai );
+SCREEN_UPDATE( dai );
 PALETTE_INIT( dai );
 
 

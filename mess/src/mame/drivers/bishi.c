@@ -84,7 +84,6 @@ Notes:
 ***************************************************************************/
 
 #include "emu.h"
-#include "deprecat.h"
 #include "video/konicdev.h"
 #include "cpu/m68000/m68000.h"
 #include "sound/ymz280b.h"
@@ -92,64 +91,61 @@ Notes:
 
 static READ16_HANDLER( control_r )
 {
-	bishi_state *state = space->machine->driver_data<bishi_state>();
-	return state->cur_control;
+	bishi_state *state = space->machine().driver_data<bishi_state>();
+	return state->m_cur_control;
 }
 
 static WRITE16_HANDLER( control_w )
 {
 	// bit 8 = interrupt gate
-	bishi_state *state = space->machine->driver_data<bishi_state>();
-	COMBINE_DATA(&state->cur_control);
+	bishi_state *state = space->machine().driver_data<bishi_state>();
+	COMBINE_DATA(&state->m_cur_control);
 }
 
 static WRITE16_HANDLER( control2_w )
 {
 	// bit 12 = part of the banking calculation for the K056832 ROM readback
-	bishi_state *state = space->machine->driver_data<bishi_state>();
-	COMBINE_DATA(&state->cur_control2);
+	bishi_state *state = space->machine().driver_data<bishi_state>();
+	COMBINE_DATA(&state->m_cur_control2);
 }
 
-static INTERRUPT_GEN(bishi_interrupt)
+static TIMER_DEVICE_CALLBACK( bishi_scanline )
 {
-	bishi_state *state = device->machine->driver_data<bishi_state>();
-	if (state->cur_control & 0x800)
-	{
-		switch (cpu_getiloops(device))
-		{
-			case 0:
-				cpu_set_input_line(device, M68K_IRQ_3, HOLD_LINE);
-				break;
+	bishi_state *state = timer.machine().driver_data<bishi_state>();
+	int scanline = param;
 
-			case 1:
-				cpu_set_input_line(device, M68K_IRQ_4, HOLD_LINE);
-				break;
-		}
+	if (state->m_cur_control & 0x800)
+	{
+		if(scanline == 240) // vblank-out irq
+			cputag_set_input_line(timer.machine(), "maincpu", M68K_IRQ_3, HOLD_LINE);
+
+		if(scanline == 0) // vblank-in irq
+			cputag_set_input_line(timer.machine(), "maincpu", M68K_IRQ_4, HOLD_LINE);
 	}
 }
 
 /* compensate for a bug in the ram/rom test */
 static READ16_HANDLER( bishi_mirror_r )
 {
-	return space->machine->generic.paletteram.u16[offset];
+	return space->machine().generic.paletteram.u16[offset];
 }
 
 static READ16_HANDLER( bishi_K056832_rom_r )
 {
-	bishi_state *state = space->machine->driver_data<bishi_state>();
+	bishi_state *state = space->machine().driver_data<bishi_state>();
 	UINT16 ouroffs;
 
 	ouroffs = (offset >> 1) * 8;
 	if (offset & 1)
 		ouroffs++;
 
-	if (state->cur_control2 & 0x1000)
+	if (state->m_cur_control2 & 0x1000)
 		ouroffs += 4;
 
-	return k056832_bishi_rom_word_r(state->k056832, ouroffs, mem_mask);
+	return k056832_bishi_rom_word_r(state->m_k056832, ouroffs, mem_mask);
 }
 
-static ADDRESS_MAP_START( main_map, ADDRESS_SPACE_PROGRAM, 16 )
+static ADDRESS_MAP_START( main_map, AS_PROGRAM, 16 )
 	AM_RANGE(0x000000, 0x0fffff) AM_ROM
 	AM_RANGE(0x400000, 0x407fff) AM_RAM						// Work RAM
 	AM_RANGE(0x800000, 0x800001) AM_READWRITE(control_r, control_w)
@@ -369,11 +365,9 @@ INPUT_PORTS_END
 
 static void sound_irq_gen(device_t *device, int state)
 {
-	bishi_state *bishi = device->machine->driver_data<bishi_state>();
-	if (state)
-		cpu_set_input_line(bishi->maincpu, M68K_IRQ_1, ASSERT_LINE);
-	else
-		cpu_set_input_line(bishi->maincpu, M68K_IRQ_1, CLEAR_LINE);
+	bishi_state *bishi = device->machine().driver_data<bishi_state>();
+
+	device_set_input_line(bishi->m_maincpu, M68K_IRQ_1, (state) ? ASSERT_LINE : CLEAR_LINE);
 }
 
 static const ymz280b_interface ymz280b_intf =
@@ -400,22 +394,22 @@ static const k054338_interface bishi_k054338_intf =
 
 static MACHINE_START( bishi )
 {
-	bishi_state *state = machine->driver_data<bishi_state>();
+	bishi_state *state = machine.driver_data<bishi_state>();
 
-	state->maincpu = machine->device("maincpu");
-	state->k056832 = machine->device("k056832");
-	state->k054338 = machine->device("k054338");
-	state->k055555 = machine->device("k055555");
+	state->m_maincpu = machine.device("maincpu");
+	state->m_k056832 = machine.device("k056832");
+	state->m_k054338 = machine.device("k054338");
+	state->m_k055555 = machine.device("k055555");
 
-	state_save_register_global(machine, state->cur_control);
-	state_save_register_global(machine, state->cur_control2);
+	state->save_item(NAME(state->m_cur_control));
+	state->save_item(NAME(state->m_cur_control2));
 }
 
 static MACHINE_RESET( bishi )
 {
-	bishi_state *state = machine->driver_data<bishi_state>();
-	state->cur_control = 0;
-	state->cur_control2 = 0;
+	bishi_state *state = machine.driver_data<bishi_state>();
+	state->m_cur_control = 0;
+	state->m_cur_control2 = 0;
 }
 
 static MACHINE_CONFIG_START( bishi, bishi_state )
@@ -423,7 +417,7 @@ static MACHINE_CONFIG_START( bishi, bishi_state )
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68000, CPU_CLOCK) /* 12MHz (24MHz OSC / 2 ) */
 	MCFG_CPU_PROGRAM_MAP(main_map)
-	MCFG_CPU_VBLANK_INT_HACK(bishi_interrupt, 2)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", bishi_scanline, "screen", 0, 1)
 
 	MCFG_MACHINE_START(bishi)
 	MCFG_MACHINE_RESET(bishi)
@@ -437,11 +431,11 @@ static MACHINE_CONFIG_START( bishi, bishi_state )
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
 	MCFG_SCREEN_SIZE(64*8, 32*8)
 	MCFG_SCREEN_VISIBLE_AREA(29, 29+288-1, 16, 16+224-1)
+	MCFG_SCREEN_UPDATE(bishi)
 
 	MCFG_PALETTE_LENGTH(4096)
 
 	MCFG_VIDEO_START(bishi)
-	MCFG_VIDEO_UPDATE(bishi)
 
 	MCFG_K056832_ADD("k056832", bishi_k056832_intf)
 	MCFG_K054338_ADD("k054338", bishi_k054338_intf)

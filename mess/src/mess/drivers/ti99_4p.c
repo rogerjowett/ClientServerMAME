@@ -50,14 +50,11 @@
 #include "sound/wave.h"
 #include "sound/dac.h"
 #include "sound/sn76496.h"
-#include "sound/tms5220.h"
-#include "video/v9938.h"
 
 #include "machine/tms9901.h"
-#include "machine/tms9902.h"
 #include "machine/ti99/peribox.h"
 
-#include "devices/cassette.h"
+#include "imagedev/cassette.h"
 #include "machine/ti99/videowrp.h"
 #include "machine/ti99/sgcpu.h"
 #include "machine/ti99/peribox.h"
@@ -66,17 +63,17 @@
 class ti99_4p_state : public driver_device
 {
 public:
-	ti99_4p_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	ti99_4p_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 };
 
 
-static ADDRESS_MAP_START(memmap, ADDRESS_SPACE_PROGRAM, 16)
+static ADDRESS_MAP_START(memmap, AS_PROGRAM, 16)
 	AM_RANGE(0x0000, 0xffff) AM_DEVREADWRITE("sgcpu_board", sgcpu_r, sgcpu_w )
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START(cru_map, ADDRESS_SPACE_IO, 8)
+static ADDRESS_MAP_START(cru_map, AS_IO, 8)
 	AM_RANGE(0x0000, 0x007f) AM_DEVREAD("tms9901", tms9901_cru_r)
 	AM_RANGE(0x0080, 0x01ff) AM_DEVREAD("sgcpu_board", sgcpu_cru_r )
 
@@ -122,8 +119,13 @@ static INPUT_PORTS_START(ti99_4p)
 
 	PORT_START( "EXTCARD" )
 	PORT_CONFNAME( 0x03, 0x02, "HSGPL extension" )
-		PORT_CONFSETTING(    0x01, "Flash" )
 		PORT_CONFSETTING(    0x02, DEF_STR( On ) )
+
+	// We do not want to show this setting; makes only sense for Geneve
+	PORT_START( "MODE" )
+	PORT_CONFNAME( 0x01, 0x00, "Ext. cards modification" ) PORT_CONDITION( "HFDCDIP", 0xff, PORTCOND_EQUALS, GM_NEVER )
+		PORT_CONFSETTING(    0x00, "Standard" )
+		PORT_CONFSETTING(    GENMOD, "GenMod" )
 
 	PORT_START( "HFDCDIP" )
 	PORT_DIPNAME( 0xff, 0x55, "HFDC drive config" ) PORT_CONDITION( "DISKCTRL", 0x07, PORTCOND_EQUALS, 0x03 )
@@ -131,6 +133,11 @@ static INPUT_PORTS_START(ti99_4p)
 		PORT_DIPSETTING( 0xaa, "40 track, 8 ms")
 		PORT_DIPSETTING( 0x55, "80 track, 2 ms")
 		PORT_DIPSETTING( 0xff, "80 track HD, 2 ms")
+
+	PORT_START( "V9938-MEM" )
+	PORT_CONFNAME( 0x01, 0x00, "V9938 RAM size" )
+		PORT_CONFSETTING(	0x00, "128 KiB" )
+		PORT_CONFSETTING(	0x01, "192 KiB" )
 
 	PORT_START( "DRVSPD" )
 	PORT_CONFNAME( 0x01, 0x01, "Floppy and HD speed" ) PORT_CONDITION( "DISKCTRL", 0x07, PORTCOND_EQUALS, 0x03 )
@@ -261,12 +268,12 @@ MACHINE_START( ti99_4p )
 */
 MACHINE_RESET( ti99_4p )
 {
-	tms9901_set_single_int(machine->device("tms9901"), 12, 0);
+	tms9901_set_single_int(machine.device("tms9901"), 12, 0);
 }
 
 INTERRUPT_GEN( ti99_4p_hblank_interrupt )
 {
-	v9938_interrupt(device->machine, 0);
+	v9938_interrupt(device->machine(), 0);
 }
 
 /*
@@ -293,8 +300,8 @@ static MACHINE_CONFIG_START( ti99_4p_60hz, ti99_4p_state )
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 	MCFG_SOUND_ADD("dac", DAC, 0)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.20)
-	MCFG_SOUND_WAVE_ADD("wave", "cassette")
-	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.20)
+	MCFG_SOUND_WAVE_ADD(WAVE_TAG, CASSETTE_TAG)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 	MCFG_SOUND_ADD("soundgen", SN76496, 3579545)	/* 3.579545 MHz */
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.75)
 
@@ -304,7 +311,7 @@ static MACHINE_CONFIG_START( ti99_4p_60hz, ti99_4p_state )
 	/* devices */
 	MCFG_PBOXSG_ADD( "peribox", card_extint, card_notconnected, card_ready )
 	MCFG_SGCPUB_ADD( "sgcpu_board" )
-	MCFG_CASSETTE_ADD( "cassette", default_cassette_config )
+	MCFG_CASSETTE_ADD( CASSETTE_TAG, default_cassette_interface )
 MACHINE_CONFIG_END
 
 

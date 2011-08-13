@@ -20,29 +20,29 @@ struct taitoair_poly {
 class taitoair_state : public driver_device
 {
 public:
-	taitoair_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	taitoair_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 	/* memory pointers */
-	UINT16 *      m68000_mainram;
-	UINT16 *      line_ram;
-	UINT16 *      dsp_ram;	/* Shared 68000/TMS32025 RAM */
-	UINT16 *      paletteram;
+	UINT16 *      m_m68000_mainram;
+	UINT16 *      m_line_ram;
+	UINT16 *      m_dsp_ram;	/* Shared 68000/TMS32025 RAM */
+	UINT16 *      m_paletteram;
 
 	/* video-related */
-	taitoair_poly  q;
+	taitoair_poly  m_q;
 
 	/* misc */
-	int           dsp_hold_signal;
-	INT32         banknum;
+	int           m_dsp_hold_signal;
+	INT32         m_banknum;
 
 	/* devices */
-	device_t *audiocpu;
-	device_t *dsp;
-	device_t *tc0080vco;
+	device_t *m_audiocpu;
+	device_t *m_dsp;
+	device_t *m_tc0080vco;
 };
 
 
 /*----------- defined in video/taitoair.c -----------*/
 
-VIDEO_UPDATE( taitoair );
+SCREEN_UPDATE( taitoair );

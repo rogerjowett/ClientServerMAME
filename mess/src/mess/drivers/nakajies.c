@@ -54,29 +54,29 @@ NTS information from http://web.archive.org/web/19980205154137/nts.dreamwriter.c
 
 File Management & Memory:
 
-?? Uniquely name up to 128 files
-?? Recall, rename or delete files
-?? Copy files to and from PCMCIA Memory card
-?? PCMCIA Memory expansion cards available for 60 or 250 pages of text
-?? Working memory allows up to 20 pages of text (50KB) to be displayed
-?? Storage memory allows up to 80 pages of text (128KB) in total
-?? DreamLink software exports and imports documents in RTF retaining all
+- Uniquely name up to 128 files
+- Recall, rename or delete files
+- Copy files to and from PCMCIA Memory card
+- PCMCIA Memory expansion cards available for 60 or 250 pages of text
+- Working memory allows up to 20 pages of text (50KB) to be displayed
+- Storage memory allows up to 80 pages of text (128KB) in total
+- DreamLink software exports and imports documents in RTF retaining all
   formatting to Macintosh or Windows PC to all commonly used Word Processing programs
-?? Transfer cable provided compatible to both Macintosh and Windows PC's.
-?? T400 is field upgradeable to IR with the optional Infrared module.
+- Transfer cable provided compatible to both Macintosh and Windows PC's.
+- T400 is field upgradeable to IR with the optional Infrared module.
 
 Hardware:
 
-?? LCD Screen displays 8 lines by 80 characters raised and tilted 30 degrees
-?? Contrast Dial and feet adjust to user preference
-?? Parallel and Serial ports( IR Upgrade Optional) for connectivity to printers, Macintosh and Windows PC's
-?? Full size 64 key keyboard with color coded keys and quick reference menu bar
-?? NiCad rechargeable batteries for up to 8 hours of continuous use prior to recharging
-?? AC adapter for recharging batteries is lightweight and compact design
-?? NEC V20HL 9.83 MHz processor for fast response time
-?? Durable solid state construction weighing 2.2 lbs including battery pack
-?? Dimensions approximately 11" wide by 8" long by 1" deep
-?? FCC and CSA approved
+- LCD Screen displays 8 lines by 80 characters raised and tilted 30 degrees
+- Contrast Dial and feet adjust to user preference
+- Parallel and Serial ports( IR Upgrade Optional) for connectivity to printers, Macintosh and Windows PC's
+- Full size 64 key keyboard with color coded keys and quick reference menu bar
+- NiCad rechargeable batteries for up to 8 hours of continuous use prior to recharging
+- AC adapter for recharging batteries is lightweight and compact design
+- NEC V20HL 9.83 MHz processor for fast response time
+- Durable solid state construction weighing 2.2 lbs including battery pack
+- Dimensions approximately 11" wide by 8" long by 1" deep
+- FCC and CSA approved
 
 
 I/O Map:
@@ -192,43 +192,61 @@ disabled). Perhaps power on/off related??
 
 ******************************************************************************/
 
+#define ADDRESS_MAP_MODERN
+
 #include "emu.h"
 #include "cpu/nec/nec.h"
 #include "sound/speaker.h"
+#include "rendlay.h"
 
 
 class nakajies_state : public driver_device
 {
 public:
-	nakajies_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	nakajies_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag),
+		  m_maincpu(*this, "v20hl")
+		{}
 
-	/* Device lookups */
-	device_t *cpu;
+	required_device<cpu_device> m_maincpu;
+
+	virtual void machine_reset();
+	virtual bool screen_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect);
+
+	void nakajies_update_irqs( running_machine &machine );
+	DECLARE_READ8_MEMBER( irq_clear_r );
+	DECLARE_WRITE8_MEMBER( irq_clear_w );
+	DECLARE_READ8_MEMBER( irq_enable_r );
+	DECLARE_WRITE8_MEMBER( irq_enable_w );
+	DECLARE_READ8_MEMBER( unk_a0_r );
+	DECLARE_WRITE8_MEMBER( lcd_memory_start_w );
 
 	/* IRQ handling */
-	UINT8	irq_enabled;
-	UINT8	irq_active;
+	UINT8	m_irq_enabled;
+	UINT8	m_irq_active;
+
+	UINT8	m_lcd_memory_start;
+	UINT8*	m_ram_base;
 };
 
 
 #define X301	19660000
 
 
-static ADDRESS_MAP_START( nakajies210_map, ADDRESS_SPACE_PROGRAM, 8 )
-	AM_RANGE( 0x00000, 0x1ffff ) AM_RAM
+static ADDRESS_MAP_START( nakajies210_map, AS_PROGRAM, 8, nakajies_state )
+	AM_RANGE( 0x00000, 0x1ffff ) AM_RAM	AM_BASE(m_ram_base)
 	AM_RANGE( 0x80000, 0xfffff ) AM_ROM AM_REGION( "bios", 0 )
 ADDRESS_MAP_END
 
 
-static ADDRESS_MAP_START( nakajies220_map, ADDRESS_SPACE_PROGRAM, 8 )
-	AM_RANGE( 0x00000, 0x3ffff ) AM_RAM
-	AM_RANGE( 0x80000, 0xfffff ) AM_ROM AM_REGION( "bios", 0 )
+static ADDRESS_MAP_START( nakajies220_map, AS_PROGRAM, 8, nakajies_state )
+	AM_RANGE( 0x00000, 0x3ffff ) AM_RAM	AM_BASE(m_ram_base)
+	AM_RANGE( 0x80000, 0xfffff ) AM_ROM AM_REGION( "bios", 0x80000 )
 ADDRESS_MAP_END
 
 
-static ADDRESS_MAP_START( nakajies250_map, ADDRESS_SPACE_PROGRAM, 8 )
-	AM_RANGE( 0x00000, 0x3ffff ) AM_RAM
+static ADDRESS_MAP_START( nakajies250_map, AS_PROGRAM, 8, nakajies_state )
+	AM_RANGE( 0x00000, 0x3ffff ) AM_RAM	AM_BASE(m_ram_base)
 	AM_RANGE( 0x80000, 0xfffff ) AM_ROM AM_REGION( "bios", 0x80000 )
 ADDRESS_MAP_END
 
@@ -237,13 +255,12 @@ ADDRESS_MAP_END
   IRQ Handling
 *********************************************/
 
-static void nakajies_update_irqs( running_machine *machine )
+void nakajies_state::nakajies_update_irqs( running_machine &machine )
 {
-	nakajies_state *state = machine->driver_data<nakajies_state>();
-	UINT8 irq = state->irq_enabled & state->irq_active;
+	UINT8 irq = m_irq_enabled & m_irq_active;
 	UINT8 vector = 0xff;
 
-	logerror("nakajies_update_irqs: irq_enabled = %02x, irq_active = %02x\n", state->irq_enabled, state->irq_active );
+	logerror("nakajies_update_irqs: irq_enabled = %02x, irq_active = %02x\n", m_irq_enabled, m_irq_active );
 
 	/* Assuming irq 0xFF has the highest priority and 0xF8 the lowest */
 	while( vector >= 0xf8 && ! ( irq & 0x01 ) )
@@ -254,54 +271,54 @@ static void nakajies_update_irqs( running_machine *machine )
 
 	if ( vector >= 0xf8 )
 	{
-		cpu_set_input_line_and_vector( state->cpu, 0, ASSERT_LINE, vector );
+		device_set_input_line_and_vector( m_maincpu, 0, ASSERT_LINE, vector );
 	}
 	else
 	{
-		cpu_set_input_line( state->cpu, 0, CLEAR_LINE );
+		device_set_input_line( m_maincpu, 0, CLEAR_LINE );
 	}
 }
 
 
-static READ8_HANDLER( irq_clear_r )
+READ8_MEMBER( nakajies_state::irq_clear_r )
 {
 	return 0x00;
 }
 
 
-static WRITE8_HANDLER( irq_clear_w )
+WRITE8_MEMBER( nakajies_state::irq_clear_w )
 {
-	nakajies_state *state = space->machine->driver_data<nakajies_state>();
-
-	state->irq_active &= ~data;
-	nakajies_update_irqs( space->machine );
+	m_irq_active &= ~data;
+	nakajies_update_irqs(machine());
 }
 
 
-static READ8_HANDLER( irq_enable_r )
+READ8_MEMBER( nakajies_state::irq_enable_r )
 {
-	nakajies_state *state = space->machine->driver_data<nakajies_state>();
-
-	return state->irq_enabled;
+	return m_irq_enabled;
 }
 
 
-static WRITE8_HANDLER( irq_enable_w )
+WRITE8_MEMBER( nakajies_state::irq_enable_w )
 {
-	nakajies_state *state = space->machine->driver_data<nakajies_state>();
-
-	state->irq_enabled = data;
-	nakajies_update_irqs( space->machine );
+	m_irq_enabled = data;
+	nakajies_update_irqs(machine());
 }
 
 
-static READ8_HANDLER( unk_a0_r )
+READ8_MEMBER( nakajies_state::unk_a0_r )
 {
 	return 0xff;
 }
 
+WRITE8_MEMBER( nakajies_state::lcd_memory_start_w )
+{
+	m_lcd_memory_start = data;
+}
 
-static ADDRESS_MAP_START( nakajies_io_map, ADDRESS_SPACE_IO, 8 )
+
+static ADDRESS_MAP_START( nakajies_io_map, AS_IO, 8, nakajies_state )
+	AM_RANGE( 0x0000, 0x0000 ) AM_WRITE( lcd_memory_start_w )
 	AM_RANGE( 0x0060, 0x0060 ) AM_READWRITE( irq_enable_r, irq_enable_w )
 	AM_RANGE( 0x0090, 0x0090 ) AM_READWRITE( irq_clear_r, irq_clear_w )
 	AM_RANGE( 0x00a0, 0x00a0 ) AM_READ( unk_a0_r )
@@ -310,11 +327,11 @@ ADDRESS_MAP_END
 
 static INPUT_CHANGED( trigger_irq )
 {
-	nakajies_state *state = field->port->machine->driver_data<nakajies_state>();
-	UINT8 irqs = input_port_read( field->port->machine, "debug" );
+	nakajies_state *state = field.machine().driver_data<nakajies_state>();
+	UINT8 irqs = input_port_read( field.machine(), "debug" );
 
-	state->irq_active |= irqs;
-	nakajies_update_irqs( field->port->machine );
+	state->m_irq_active |= irqs;
+	state->nakajies_update_irqs(field.machine());
 }
 
 
@@ -331,13 +348,31 @@ static INPUT_PORTS_START( nakajies )
 INPUT_PORTS_END
 
 
-static MACHINE_RESET( nakajies )
+void nakajies_state::machine_reset()
 {
-	nakajies_state *state = machine->driver_data<nakajies_state>();
+	m_irq_enabled = 0;
+	m_irq_active = 0;
+	m_lcd_memory_start = 0;
+}
 
-	state->cpu = machine->device( "v20hl" );
-	state->irq_enabled = 0;
-	state->irq_active = 0;
+bool nakajies_state::screen_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect)
+{
+	UINT8* lcd_memory_start = m_ram_base + (m_lcd_memory_start<<9);
+	int height = screen.height();
+
+	for (int y=0; y<height; y++)
+		for (int x=0; x<60; x++)
+		{
+			UINT8 data = lcd_memory_start[y*64 + x];
+
+			for (int px=0; px<8; px++)
+			{
+				*BITMAP_ADDR16(&bitmap, y, (x * 8) + px) = BIT(data, 7);
+				data <<= 1;
+			}
+		}
+
+	return 0;
 }
 
 /* F4 Character Displayer */
@@ -376,8 +411,6 @@ static MACHINE_CONFIG_START( nakajies210, nakajies_state )
 	MCFG_CPU_PROGRAM_MAP( nakajies210_map)
 	MCFG_CPU_IO_MAP( nakajies_io_map)
 
-	MCFG_MACHINE_RESET( nakajies )
-
 	MCFG_SCREEN_ADD( "screen", LCD )
 	MCFG_SCREEN_REFRESH_RATE( 50 )	/* Wild guess */
 	MCFG_SCREEN_FORMAT( BITMAP_FORMAT_INDEXED16 )
@@ -385,10 +418,12 @@ static MACHINE_CONFIG_START( nakajies210, nakajies_state )
 	MCFG_SCREEN_VISIBLE_AREA( 0, 6 * 80 - 1, 0, 8 * 8 - 1 )
 	MCFG_GFXDECODE(wales210)
 	MCFG_PALETTE_LENGTH( 2 )
+	MCFG_DEFAULT_LAYOUT(layout_lcd)
+	MCFG_PALETTE_INIT(black_and_white)
 
 	/* sound */
 	MCFG_SPEAKER_STANDARD_MONO( "mono" )
-	MCFG_SOUND_ADD( "speaker", SPEAKER_SOUND, 0 )
+	MCFG_SOUND_ADD( SPEAKER_TAG, SPEAKER_SOUND, 0 )
 	MCFG_SOUND_ROUTE( ALL_OUTPUTS, "mono", 1.00 )
 MACHINE_CONFIG_END
 
@@ -401,8 +436,6 @@ static MACHINE_CONFIG_START( nakajies220, nakajies_state )
 	MCFG_CPU_PROGRAM_MAP( nakajies220_map)
 	MCFG_CPU_IO_MAP( nakajies_io_map)
 
-	MCFG_MACHINE_RESET( nakajies )
-
 	MCFG_SCREEN_ADD( "screen", LCD )
 	MCFG_SCREEN_REFRESH_RATE( 50 )	/* Wild guess */
 	MCFG_SCREEN_FORMAT( BITMAP_FORMAT_INDEXED16 )
@@ -410,10 +443,12 @@ static MACHINE_CONFIG_START( nakajies220, nakajies_state )
 	MCFG_SCREEN_VISIBLE_AREA( 0, 6 * 80 - 1, 0, 8 * 8 - 1 )
 	MCFG_GFXDECODE(drwrt400)
 	MCFG_PALETTE_LENGTH( 2 )
+	MCFG_DEFAULT_LAYOUT(layout_lcd)
+	MCFG_PALETTE_INIT(black_and_white)
 
 	/* sound */
 	MCFG_SPEAKER_STANDARD_MONO( "mono" )
-	MCFG_SOUND_ADD( "speaker", SPEAKER_SOUND, 0 )
+	MCFG_SOUND_ADD( SPEAKER_TAG, SPEAKER_SOUND, 0 )
 	MCFG_SOUND_ROUTE( ALL_OUTPUTS, "mono", 1.00 )
 MACHINE_CONFIG_END
 
@@ -423,31 +458,34 @@ static MACHINE_CONFIG_START( nakajies250, nakajies_state )
 	MCFG_CPU_PROGRAM_MAP( nakajies250_map)
 	MCFG_CPU_IO_MAP( nakajies_io_map)
 
-	MCFG_MACHINE_RESET( nakajies )
-
 	MCFG_SCREEN_ADD( "screen", LCD )
 	MCFG_SCREEN_REFRESH_RATE( 50 )  /* Wild guess */
 	MCFG_SCREEN_FORMAT( BITMAP_FORMAT_INDEXED16 )
-	MCFG_SCREEN_SIZE( 80 * 6, 8 * 8 )
-	MCFG_SCREEN_VISIBLE_AREA( 0, 6 * 80 - 1, 0, 8 * 8 - 1 )
+	MCFG_SCREEN_SIZE( 80 * 6, 16 * 8 )
+	MCFG_SCREEN_VISIBLE_AREA( 0, 6 * 80 - 1, 0, 16 * 8 - 1 )
 	MCFG_GFXDECODE(drwrt200)
 	MCFG_PALETTE_LENGTH( 2 )
+	MCFG_DEFAULT_LAYOUT(layout_lcd)
+	MCFG_PALETTE_INIT(black_and_white)
 
 	/* sound */
 	MCFG_SPEAKER_STANDARD_MONO( "mono" )
-	MCFG_SOUND_ADD( "speaker", SPEAKER_SOUND, 0 )
+	MCFG_SOUND_ADD( SPEAKER_TAG, SPEAKER_SOUND, 0 )
 	MCFG_SOUND_ROUTE( ALL_OUTPUTS, "mono", 1.00 )
 MACHINE_CONFIG_END
 
 
 ROM_START(drwrt400)
-	ROM_REGION( 0x80000, "bios", 0 )
+	ROM_REGION( 0x100000, "bios", 0 )
 
-	ROM_SYSTEM_BIOS( 0, "drwrt400", "DreamWriter T400" )
-	ROMX_LOAD("t4_ir_2.1.ic303", 0x00000, 0x80000, CRC(f0f45fd2) SHA1(3b4d5722b3e32e202551a1be8ae36f34ad705ddd), ROM_BIOS(1))
+	ROM_SYSTEM_BIOS( 0, "drwrt450", "DreamWriter 450" )
+	ROMX_LOAD("t4_ir_35ba308.ic303", 0x00000, 0x100000, CRC(3b5a580d) SHA1(72df34ece1e6d70adf953025d1c458e22ce819e1), ROM_BIOS(1))
 
-	ROM_SYSTEM_BIOS( 1, "drwrt100", "DreamWriter T100" )
-	ROMX_LOAD("t100_2.3.ic303", 0x00000, 0x80000, CRC(8a16f12f) SHA1(0a907186db3d1756566d767ee847a7ecf694e74b), ROM_BIOS(2))	/* Checksum 01F5 on label */
+	ROM_SYSTEM_BIOS( 1, "drwrt400", "DreamWriter T400" )
+	ROMX_LOAD("t4_ir_2.1.ic303", 0x80000, 0x80000, CRC(f0f45fd2) SHA1(3b4d5722b3e32e202551a1be8ae36f34ad705ddd), ROM_BIOS(2))
+
+	ROM_SYSTEM_BIOS( 2, "drwrt100", "DreamWriter T100" )
+	ROMX_LOAD("t100_2.3.ic303", 0x80000, 0x80000, CRC(8a16f12f) SHA1(0a907186db3d1756566d767ee847a7ecf694e74b), ROM_BIOS(3))	/* Checksum 01F5 on label */
 ROM_END
 
 

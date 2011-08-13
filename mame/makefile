@@ -86,6 +86,9 @@ endif
 ifeq ($(firstword $(filter GNU/kFreeBSD,$(UNAME))),GNU/kFreeBSD)
 TARGETOS = freebsd
 endif
+ifeq ($(firstword $(filter NetBSD,$(UNAME))),NetBSD)
+TARGETOS = netbsd
+endif
 ifeq ($(firstword $(filter OpenBSD,$(UNAME))),OpenBSD)
 TARGETOS = openbsd
 endif
@@ -380,6 +383,12 @@ endif
 #Define STATICLIB for miniupnpc
 DEFS += -DSTATICLIB
 
+#Define _RAKNET_LIB for RakNet
+DEFS += -D_RAKNET_LIB
+
+#Define _7ZIP_ST for p7zip
+DEFS += -D_7ZIP_ST
+
 # map the INLINE to something digestible by GCC
 DEFS += -DINLINE="static inline"
 
@@ -473,7 +482,8 @@ CCOMFLAGS += \
 	-Wundef \
 	-Wformat-security \
 	-Wwrite-strings \
-	-Wno-sign-compare
+	-Wno-sign-compare \
+	-Wno-conversion
 
 # warnings only applicable to C compiles
 CONLYFLAGS += \
@@ -500,10 +510,10 @@ INCPATH += \
 	-I$(OBJ)/emu/layout \
 	-I$(SRC)/lib/util \
 	-I$(SRC)/lib/miniupnpc-1.4.20100609 \
+	-I$(SRC)/lib/RakNet \
+	-I$(SRC)/lib \
 	-I$(SRC)/osd \
 	-I$(SRC)/osd/$(OSD) \
-	-I$(SRC)/../../../Libraries/RakNet/Source \
-	-I$(SRC)/../../../Libraries/RakNet32/Source 
 
 
 #-------------------------------------------------
@@ -578,6 +588,8 @@ LIBOCORE = $(OBJ)/libocore.a
 LIBOSD = $(OBJ)/libosd.a
 
 VERSIONOBJ = $(OBJ)/version.o
+DRIVLISTSRC = $(OBJ)/drivlist.c
+DRIVLISTOBJ = $(OBJ)/drivlist.o
 
 
 
@@ -588,25 +600,6 @@ VERSIONOBJ = $(OBJ)/version.o
 
 # start with an empty set of libs
 LIBS =
-
-# add RakNet
-ifdef MSVC_BUILD
-# Do nothing, this has to be taken care of in the windows osd makefile
-else
-#ifdef DEBUG
-#ifeq ($(PTR64),1)
-#LIBS += -L${SRC}/../../../Libraries/RakNet/Lib/LibStatic -lRakNetStaticDebug
-#else
-#LIBS += -L${SRC}/../../../Libraries/RakNet32/Lib/LibStatic -lRakNetStaticDebug
-#endif
-#else
-ifeq ($(PTR64),1)
-LIBS += -L${SRC}/../../../Libraries/RakNet/Lib/LibStatic -lRakNetStatic
-else
-LIBS += -L${SRC}/../../../Libraries/RakNet32/Lib/LibStatic -lRakNetStatic
-endif
-#endif
-endif
 
 # add expat XML library
 ifeq ($(BUILD_EXPAT),1)
@@ -626,8 +619,28 @@ LIBS += -lz
 ZLIB =
 endif
 
+#Add p7zip compression library
+
+INCPATH += -I$(SRC)/lib/p7zip
+P7ZIP = $(OBJ)/libp7zip.a
+
+
+# add miniupnpc library
+INCPATH += -I$(SRC)/lib/miniupnpc-1.4.20100609
+MINIUPNPC = $(OBJ)/libminiupnpc.a
+
+# add RakNet library
+INCPATH += -I$(SRC)/lib/RakNet
+RAKNET = $(OBJ)/libraknet.a
+
 # add SoftFloat floating point emulation library
 SOFTFLOAT = $(OBJ)/libsoftfloat.a
+
+# add formats emulation library
+FORMATS_LIB = $(OBJ)/libformats.a
+
+# add cothread library
+COTHREAD = $(OBJ)/libco.a
 
 
 
@@ -712,6 +725,10 @@ ifdef MAP
 	@echo Deleting $(FULLNAME).map...
 	$(RM) $(FULLNAME).map
 endif
+ifdef SYMBOLS
+	@echo Deleting $(FULLNAME).sym...
+	$(RM) $(FULLNAME).sym
+endif
 
 checkautodetect:
 	@echo TARGETOS=$(TARGETOS) 
@@ -736,9 +753,9 @@ $(sort $(OBJDIRS)):
 ifndef EXECUTABLE_DEFINED
 
 # always recompile the version string
-$(VERSIONOBJ): $(DRVLIBS) $(LIBOSD) $(LIBCPU) $(LIBEMU) $(LIBSOUND) $(LIBUTIL) $(EXPAT) $(ZLIB) $(OBJ)/libminiupnpc.a $(SOFTFLOAT) $(LIBOCORE) $(RESFILE)
+$(VERSIONOBJ): $(DRVLIBS) $(LIBOSD) $(LIBCPU) $(LIBEMU) $(LIBSOUND) $(LIBUTIL) $(EXPAT) $(ZLIB) $(P7ZIP) $(MINIUPNPC) $(RAKNET) $(SOFTFLOAT) $(FORMATS_LIB) $(COTHREAD) $(LIBOCORE) $(RESFILE)
 
-$(EMULATOR): $(VERSIONOBJ) $(DRVLIBS) $(LIBOSD) $(LIBCPU) $(LIBEMU) $(LIBDASM) $(LIBSOUND) $(LIBUTIL) $(EXPAT) $(SOFTFLOAT) $(ZLIB) $(OBJ)/libminiupnpc.a $(LIBOCORE) $(RESFILE)
+$(EMULATOR): $(VERSIONOBJ) $(DRIVLISTOBJ) $(DRVLIBS) $(LIBOSD) $(LIBCPU) $(LIBEMU) $(LIBDASM) $(LIBSOUND) $(LIBUTIL) $(EXPAT) $(SOFTFLOAT) $(FORMATS_LIB) $(COTHREAD) $(ZLIB) $(P7ZIP) $(MINIUPNPC) $(RAKNET) $(LIBOCORE) $(RESFILE)
 	@echo Linking $@...
 ifeq ($(TARGETOS),win32)
 	$(LD) $(LDFLAGS) $(LDFLAGSEMULATOR) $^ $(LIBS) -lIphlpapi -lws2_32 -o $@
@@ -779,6 +796,14 @@ $(OBJ)/%.fh: $(SRC)/%.png $(PNG2BDC_TARGET) $(FILE2STR_TARGET)
 	@echo Converting $<...
 	@$(PNG2BDC) $< $(OBJ)/temp.bdc
 	@$(FILE2STR) $(OBJ)/temp.bdc $@ font_$(basename $(notdir $<)) UINT8
+
+$(DRIVLISTOBJ): $(DRIVLISTSRC)
+	@echo Compiling $<...
+	$(CC) $(CDEFS) $(CFLAGS) -c $< -o $@
+
+$(DRIVLISTSRC): $(SRC)/$(TARGET)/$(SUBTARGET).lst $(MAKELIST_TARGET)
+	@echo Building driver list $<...
+	@$(MAKELIST) $< >$@
 
 $(OBJ)/%.a:
 	@echo Archiving $@...

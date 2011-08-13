@@ -29,22 +29,22 @@ NMI
 #include "emu.h"
 #include "cpu/z80/z80.h"
 #include "includes/cgenie.h"
-#include "devices/flopdrv.h"
+#include "imagedev/flopdrv.h"
 #include "formats/basicdsk.h"
-#include "devices/cartslot.h"
-#include "devices/cassette.h"
+#include "imagedev/cartslot.h"
+#include "imagedev/cassette.h"
 #include "sound/ay8910.h"
 #include "sound/dac.h"
 #include "formats/cgen_cas.h"
-#include "devices/messram.h"
+#include "machine/ram.h"
 
-static ADDRESS_MAP_START (cgenie_mem, ADDRESS_SPACE_PROGRAM, 8)
+static ADDRESS_MAP_START (cgenie_mem, AS_PROGRAM, 8)
 	AM_RANGE(0x0000, 0x3fff) AM_ROM
 //  AM_RANGE(0x4000, 0xbfff) AM_RAM // set up in MACHINE_START
 //  AM_RANGE(0xc000, 0xdfff) AM_ROM // installed in cgenie_init_machine
 //  AM_RANGE(0xe000, 0xefff) AM_ROM // installed in cgenie_init_machine
-	AM_RANGE(0xf000, 0xf3ff) AM_READWRITE( cgenie_colorram_r, cgenie_colorram_w ) AM_BASE_MEMBER(cgenie_state, colorram )
-	AM_RANGE(0xf400, 0xf7ff) AM_READWRITE( cgenie_fontram_r, cgenie_fontram_w) AM_BASE_MEMBER(cgenie_state, fontram )
+	AM_RANGE(0xf000, 0xf3ff) AM_READWRITE( cgenie_colorram_r, cgenie_colorram_w ) AM_BASE_MEMBER(cgenie_state, m_colorram )
+	AM_RANGE(0xf400, 0xf7ff) AM_READWRITE( cgenie_fontram_r, cgenie_fontram_w) AM_BASE_MEMBER(cgenie_state, m_fontram )
 	AM_RANGE(0xf800, 0xf8ff) AM_READ( cgenie_keyboard_r )
 	AM_RANGE(0xf900, 0xffdf) AM_NOP
 	AM_RANGE(0xffe0, 0xffe3) AM_READWRITE( cgenie_irq_status_r, cgenie_motor_w )
@@ -58,7 +58,7 @@ static ADDRESS_MAP_START (cgenie_mem, ADDRESS_SPACE_PROGRAM, 8)
 	AM_RANGE(0xfff0, 0xffff) AM_NOP
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START (cgenie_io, ADDRESS_SPACE_IO, 8)
+static ADDRESS_MAP_START (cgenie_io, AS_IO, 8)
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 	AM_RANGE(0xf8, 0xf8) AM_DEVREADWRITE("ay8910", cgenie_sh_control_port_r, cgenie_sh_control_port_w )
 	AM_RANGE(0xf9, 0xf9) AM_DEVREADWRITE("ay8910", ay8910_r, ay8910_data_w )
@@ -447,32 +447,32 @@ static PALETTE_INIT( cgenie )
 {
 	UINT8 i, r, g, b;
 
-	machine->colortable = colortable_alloc(machine, 49);
+	machine.colortable = colortable_alloc(machine, 49);
 
 	for ( i = 0; i < 49; i++ )
 	{
 		r = cgenie_colors[i*3]; g = cgenie_colors[i*3+1]; b = cgenie_colors[i*3+2];
-		colortable_palette_set_color(machine->colortable, i, MAKE_RGB(r, g, b));
+		colortable_palette_set_color(machine.colortable, i, MAKE_RGB(r, g, b));
 	}
 
 	for(i=0; i<108; i++)
-		colortable_entry_set_value(machine->colortable, i, cgenie_palette[i]);
+		colortable_entry_set_value(machine.colortable, i, cgenie_palette[i]);
 }
 
 static PALETTE_INIT( cgenienz )
 {
 	UINT8 i, r, g, b;
 
-	machine->colortable = colortable_alloc(machine, 49);
+	machine.colortable = colortable_alloc(machine, 49);
 
 	for ( i = 0; i < 49; i++ )
 	{
 		r = cgenienz_colors[i*3]; g = cgenienz_colors[i*3+1]; b = cgenienz_colors[i*3+2];
-		colortable_palette_set_color(machine->colortable, i, MAKE_RGB(r, g, b));
+		colortable_palette_set_color(machine.colortable, i, MAKE_RGB(r, g, b));
 	}
 
 	for(i=0; i<108; i++)
-		colortable_entry_set_value(machine->colortable, i, cgenie_palette[i]);
+		colortable_entry_set_value(machine.colortable, i, cgenie_palette[i]);
 }
 
 static const ay8910_interface cgenie_ay8910_interface =
@@ -486,17 +486,18 @@ static const ay8910_interface cgenie_ay8910_interface =
 };
 
 
-static const cassette_config cgenie_cassette_config =
+static const cassette_interface cgenie_cassette_interface =
 {
 	cgenie_cassette_formats,
 	NULL,
 	(cassette_state)(CASSETTE_STOPPED),
+	NULL,
 	NULL
 };
 
 // This is currently broken
 static FLOPPY_OPTIONS_START(cgenie )
-	FLOPPY_OPTION( cgd, "cgd", "Colour Genie disk image", basicdsk_identify_default, basicdsk_construct_default,
+	FLOPPY_OPTION( cgd, "cgd", "Colour Genie disk image", basicdsk_identify_default, basicdsk_construct_default, NULL,
 		HEADS([2])
 		TRACKS([40])
 		SECTORS([10])
@@ -504,7 +505,7 @@ static FLOPPY_OPTIONS_START(cgenie )
 		FIRST_SECTOR_ID([1]))
 FLOPPY_OPTIONS_END
 
-static const floppy_config cgenie_floppy_config =
+static const floppy_interface cgenie_floppy_interface =
 {
 	DEVCB_NULL,
 	DEVCB_NULL,
@@ -513,6 +514,7 @@ static const floppy_config cgenie_floppy_config =
 	DEVCB_NULL,
 	FLOPPY_STANDARD_5_25_DSHD,
 	FLOPPY_OPTIONS_NAME(cgenie),
+	NULL,
 	NULL
 };
 
@@ -523,7 +525,7 @@ static MACHINE_CONFIG_START( cgenie_common, cgenie_state )
 	MCFG_CPU_IO_MAP(cgenie_io)
 	MCFG_CPU_VBLANK_INT("screen", cgenie_frame_interrupt)
 	MCFG_CPU_PERIODIC_INT(cgenie_timer_interrupt, 40)
-	MCFG_QUANTUM_TIME(HZ(240))
+	MCFG_QUANTUM_TIME(attotime::from_hz(240))
 
 	MCFG_MACHINE_START( cgenie )
 	MCFG_MACHINE_RESET( cgenie )
@@ -535,12 +537,13 @@ static MACHINE_CONFIG_START( cgenie_common, cgenie_state )
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(48*8, 32*8)
 	MCFG_SCREEN_VISIBLE_AREA(0*8, 48*8-1,0*8,32*8-1)
+	MCFG_SCREEN_UPDATE( cgenie )
+
 	MCFG_GFXDECODE( cgenie )
 	MCFG_PALETTE_LENGTH(108)
 
 	// Actually the video is driven by an HD46505 clocked at XTAL_17_73447MHz/16
 	MCFG_VIDEO_START( cgenie )
-	MCFG_VIDEO_UPDATE( cgenie )
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
@@ -550,18 +553,18 @@ static MACHINE_CONFIG_START( cgenie_common, cgenie_state )
 	MCFG_SOUND_CONFIG(cgenie_ay8910_interface)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.75)
 
-	MCFG_CASSETTE_ADD( "cassette", cgenie_cassette_config )
+	MCFG_CASSETTE_ADD( CASSETTE_TAG, cgenie_cassette_interface )
 
-	MCFG_WD179X_ADD("wd179x", cgenie_wd17xx_interface )
+	MCFG_FD1793_ADD("wd179x", cgenie_wd17xx_interface ) // TODO confirm type
 
-	MCFG_FLOPPY_4_DRIVES_ADD(cgenie_floppy_config)
+	MCFG_FLOPPY_4_DRIVES_ADD(cgenie_floppy_interface)
 	/* cartridge */
 	MCFG_CARTSLOT_ADD("cart")
 	MCFG_CARTSLOT_EXTENSION_LIST("rom")
 	MCFG_CARTSLOT_NOT_MANDATORY
 
 	/* internal ram */
-	MCFG_RAM_ADD("messram")
+	MCFG_RAM_ADD(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("16K")
 	MCFG_RAM_EXTRA_OPTIONS("32K")
 MACHINE_CONFIG_END
@@ -708,7 +711,7 @@ DEVICE_IMAGE_LOAD( cgenie_floppy )
                 spt = pd_list[i].SPT / heads;
                 dir_sector = pd_list[i].DDSL * pd_list[i].GATM * pd_list[i].GPL + pd_list[i].SPT;
                 dir_length = pd_list[i].DDGA * pd_list[i].GPL;
-                memcpy(image.device().machine->region("maincpu")->base() + 0x5A71 + floppy_get_drive(image) * sizeof(PDRIVE), &pd_list[i], sizeof(PDRIVE));
+                memcpy(image.device().machine().region("maincpu")->base() + 0x5A71 + floppy_get_drive(image) * sizeof(PDRIVE), &pd_list[i], sizeof(PDRIVE));
                 break;
             }
         }

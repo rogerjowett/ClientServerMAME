@@ -39,7 +39,7 @@
     480000-48001F   R/W   -------- xxxxxxxx   MC68681 DUART 1
     480020-480033   R     -------- xxxxxxxx   Inputs
     480041          R     -xxxxxxx xxxxxxxx   Reel optos
-    480060-480067   R/W   -------- xxxxxxxx   D71055C? PPI?
+    480060-480067   R/W   -------- xxxxxxxx   uPD71055C (NEC clone of 8255 PPI)
     480080-480081     W   -------- xxxxxxxx   uPD7559 communications
     480082-480083     W   -------- xxxxxxxx   Sound control
                           -------- -------x      (uPD7759 reset)
@@ -87,63 +87,12 @@
 
 /*************************************
  *
- *  Statics
- *
- *************************************/
-
-static UINT8 tms_irq;
-static UINT8 duart_1_irq;
-static UINT8 touch_cnt;
-static UINT8 touch_data[3];
-
-static int lamp_strobe;
-static UINT8 Lamps[256];
-
-
-/*************************************
- *
  *  MC68681 DUART (TODO)
  *
  *************************************/
 
 #define MC68681_1_CLOCK		3686400
 #define MC68681_2_CLOCK		3686400
-
-static struct
-{
-	UINT8 MR1A, MR2A;
-	UINT8 SRA, CSRA;
-	UINT8 CRA;
-	UINT8 RBA, TBA;
-
-	UINT8 IPCR;
-	UINT8 ACR;
-	UINT8 ISR, IMR;
-
-	union
-	{
-		UINT8 CUR, CLR;
-		UINT16 CR;
-	};
-	union
-	{
-		UINT8 CTUR, CTLR;
-		UINT16 CT;
-	};
-
-	int tc;
-
-	UINT8 MR1B, MR2B;
-	UINT8 SRB, CSRB;
-	UINT8 CRB;
-	UINT8 RBB, TBB;
-
-	UINT8 IVR;
-	UINT8 IP;
-	UINT8 OP;
-	UINT8 OPR;
-	UINT8 OPCR;
-} duart_1;//, duart_2;
 
 
 /*************************************
@@ -152,10 +101,11 @@ static struct
  *
  *************************************/
 
-static void update_irqs(running_machine *machine)
+static void update_irqs(running_machine &machine)
 {
-	cputag_set_input_line(machine, "maincpu", 2, tms_irq ? ASSERT_LINE : CLEAR_LINE);
-	cputag_set_input_line(machine, "maincpu", 5, duart_1_irq ? ASSERT_LINE : CLEAR_LINE);
+	jpmimpct_state *state = machine.driver_data<jpmimpct_state>();
+	cputag_set_input_line(machine, "maincpu", 2, state->m_tms_irq ? ASSERT_LINE : CLEAR_LINE);
+	cputag_set_input_line(machine, "maincpu", 5, state->m_duart_1_irq ? ASSERT_LINE : CLEAR_LINE);
 }
 
 
@@ -167,27 +117,29 @@ static void update_irqs(running_machine *machine)
 
 static MACHINE_START( jpmimpct )
 {
-	state_save_register_global(machine, tms_irq);
-	state_save_register_global(machine, duart_1_irq);
-	state_save_register_global(machine, touch_cnt);
-	state_save_register_global_array(machine, touch_data);
+	jpmimpct_state *state = machine.driver_data<jpmimpct_state>();
+	state_save_register_global(machine, state->m_tms_irq);
+	state_save_register_global(machine, state->m_duart_1_irq);
+	state_save_register_global(machine, state->m_touch_cnt);
+	state_save_register_global_array(machine, state->m_touch_data);
 
 	/* TODO! */
-	state_save_register_global(machine, duart_1.ISR);
-	state_save_register_global(machine, duart_1.IMR);
-	state_save_register_global(machine, duart_1.CT);
+	state_save_register_global(machine, state->m_duart_1.ISR);
+	state_save_register_global(machine, state->m_duart_1.IMR);
+	state_save_register_global(machine, state->m_duart_1.CT);
 }
 
 
 static MACHINE_RESET( jpmimpct )
 {
-	memset(&duart_1, 0, sizeof(duart_1));
+	jpmimpct_state *state = machine.driver_data<jpmimpct_state>();
+	memset(&state->m_duart_1, 0, sizeof(state->m_duart_1));
 
 	/* Reset states */
-	duart_1_irq = tms_irq = 0;
-	touch_cnt = 0;
+	state->m_duart_1_irq = state->m_tms_irq = 0;
+	state->m_touch_cnt = 0;
 
-//  duart_1.IVR=0x0f;
+//  state->m_duart_1.IVR=0x0f;
 }
 
 
@@ -199,12 +151,12 @@ static MACHINE_RESET( jpmimpct )
 
 static WRITE16_HANDLER( m68k_tms_w )
 {
-	tms34010_host_w(space->machine->device("dsp"), offset, data);
+	tms34010_host_w(space->machine().device("dsp"), offset, data);
 }
 
 static READ16_HANDLER( m68k_tms_r )
 {
-	return tms34010_host_r(space->machine->device("dsp"), offset);
+	return tms34010_host_r(space->machine().device("dsp"), offset);
 }
 
 
@@ -238,15 +190,18 @@ static READ16_HANDLER( m68k_tms_r )
 
 static TIMER_DEVICE_CALLBACK( duart_1_timer_event )
 {
-	duart_1.tc = 0;
-	duart_1.ISR |= 0x08;
+	jpmimpct_state *state = timer.machine().driver_data<jpmimpct_state>();
+	state->m_duart_1.tc = 0;
+	state->m_duart_1.ISR |= 0x08;
 
-	duart_1_irq = 1;
-	update_irqs(timer.machine);
+	state->m_duart_1_irq = 1;
+	update_irqs(timer.machine());
 }
 
 static READ16_HANDLER( duart_1_r )
 {
+	jpmimpct_state *state = space->machine().driver_data<jpmimpct_state>();
+	struct duart_t &duart_1 = state->m_duart_1;
 	UINT16 val = 0xffff;
 	switch (offset)
 	{
@@ -287,20 +242,20 @@ static READ16_HANDLER( duart_1_r )
 		}
 		case 0xd:
 		{
-			val = input_port_read(space->machine, "TEST/DEMO");
+			val = input_port_read(space->machine(), "TEST/DEMO");
 			break;
 		}
 		case 0xe:
 		{
-			attotime rate = attotime_mul(ATTOTIME_IN_HZ(MC68681_1_CLOCK), 16 * duart_1.CT);
-			timer_device *duart_timer = space->machine->device<timer_device>("duart_1_timer");
+			attotime rate = attotime::from_hz(MC68681_1_CLOCK) * (16 * duart_1.CT);
+			timer_device *duart_timer = space->machine().device<timer_device>("duart_1_timer");
 			duart_timer->adjust(rate, 0, rate);
 			break;
 		}
 		case 0xf:
 		{
-			duart_1_irq = 0;
-			update_irqs(space->machine);
+			state->m_duart_1_irq = 0;
+			update_irqs(space->machine());
 			duart_1.ISR |= ~0x8;
 			break;
 		}
@@ -311,6 +266,8 @@ static READ16_HANDLER( duart_1_r )
 
 static WRITE16_HANDLER( duart_1_w )
 {
+	jpmimpct_state *state = space->machine().driver_data<jpmimpct_state>();
+	struct duart_t &duart_1 = state->m_duart_1;
 	//int old_val;
 	switch (offset)
 	{
@@ -396,17 +353,18 @@ static WRITE16_HANDLER( duart_1_w )
 */
 static READ16_HANDLER( duart_2_r )
 {
+	jpmimpct_state *state = space->machine().driver_data<jpmimpct_state>();
 	switch (offset)
 	{
 		case 0x9:
 		{
-			if (touch_cnt == 0)
+			if (state->m_touch_cnt == 0)
 			{
-				if ( input_port_read(space->machine, "TOUCH") & 0x1 )
+				if ( input_port_read(space->machine(), "TOUCH") & 0x1 )
 				{
-					touch_data[0] = 0x2a;
-					touch_data[1] = 0x7 - (input_port_read(space->machine, "TOUCH_Y") >> 5) + 0x30;
-					touch_data[2] = (input_port_read(space->machine, "TOUCH_X") >> 5) + 0x30;
+					state->m_touch_data[0] = 0x2a;
+					state->m_touch_data[1] = 0x7 - (input_port_read(space->machine(), "TOUCH_Y") >> 5) + 0x30;
+					state->m_touch_data[2] = (input_port_read(space->machine(), "TOUCH_X") >> 5) + 0x30;
 
 					/* Return RXRDY */
 					return 0x1;
@@ -420,10 +378,10 @@ static READ16_HANDLER( duart_2_r )
 		}
 		case 0xb:
 		{
-			UINT16 val = touch_data[touch_cnt];
+			UINT16 val = state->m_touch_data[state->m_touch_cnt];
 
-			if (touch_cnt++ == 3)
-				touch_cnt = 0;
+			if (state->m_touch_cnt++ == 3)
+				state->m_touch_cnt = 0;
 
 			return val;
 		}
@@ -470,22 +428,22 @@ static READ16_HANDLER( inputs1_r )
 	{
 		case 0:
 		{
-			val = input_port_read(space->machine, "DSW");
+			val = input_port_read(space->machine(), "DSW");
 			break;
 		}
 		case 2:
 		{
-			val = input_port_read(space->machine, "SW2");
+			val = input_port_read(space->machine(), "SW2");
 			break;
 		}
 		case 4:
 		{
-			val = input_port_read(space->machine, "SW1");
+			val = input_port_read(space->machine(), "SW1");
 			break;
 		}
 		case 9:
 		{
-			val = input_port_read(space->machine, "COINS");
+			val = input_port_read(space->machine(), "COINS");
 			break;
 		}
 	}
@@ -543,15 +501,15 @@ static WRITE16_HANDLER( unk_w )
 {
 }
 
-static void jpm_draw_lamps(int data, int lamp_strobe)
+static void jpm_draw_lamps(jpmimpct_state *state, int data, int lamp_strobe)
 {
 	int i;
 	for (i=0; i<16; i++)
 	{
-		Lamps[16*(lamp_strobe+i)] = data & 1;
-		output_set_lamp_value((16*lamp_strobe)+i, (Lamps[(16*lamp_strobe)+i]));
-	    data = data >> 1;
-    }
+		state->m_Lamps[16*(state->m_lamp_strobe+i)] = data & 1;
+		output_set_lamp_value((16*lamp_strobe)+i, (state->m_Lamps[(16*lamp_strobe)+i]));
+		data = data >> 1;
+	}
 }
 
 static READ16_HANDLER( jpmio_r )
@@ -561,7 +519,7 @@ static READ16_HANDLER( jpmio_r )
 
 static WRITE16_HANDLER( jpmio_w )
 {
-	UINT64 cycles = space->machine->firstcpu->total_cycles();
+	jpmimpct_state *state = space->machine().driver_data<jpmimpct_state>();
 	switch (offset)
 	{
 		case 0x02:
@@ -589,27 +547,27 @@ static WRITE16_HANDLER( jpmio_w )
 			}
 			else
 //          slide = 0;
-			Mechmtr_update(0, cycles, data >> 10);
-			duart_1.IP &= ~0x10;
+			MechMtr_update(0, data >> 10);
+			state->m_duart_1.IP &= ~0x10;
 			break;
 		}
 
 		case 0x08:
 		{
-			jpm_draw_lamps(data, lamp_strobe);
+			jpm_draw_lamps(state, data, state->m_lamp_strobe);
 			break;
 		}
 
 		case 0x0b:
 		{
-			output_set_digit_value(lamp_strobe,data);
+			output_set_digit_value(state->m_lamp_strobe,data);
 			break;
 		}
 		case 0x0f:
 		{
 			if (data & 0x10)
 			{
-				lamp_strobe = (data +1) & 0x0f;
+				state->m_lamp_strobe = (data +1) & 0x0f;
 			}
 			break;
 		}
@@ -621,7 +579,7 @@ static WRITE16_HANDLER( jpmio_w )
  *  Main CPU memory handlers
  *
  *************************************/
-static ADDRESS_MAP_START( m68k_program_map, ADDRESS_SPACE_PROGRAM, 16 )
+static ADDRESS_MAP_START( m68k_program_map, AS_PROGRAM, 16 )
 	AM_RANGE(0x00000000, 0x000fffff) AM_ROM
 	AM_RANGE(0x00100000, 0x001fffff) AM_ROM
 	AM_RANGE(0x00400000, 0x00403fff) AM_RAM AM_SHARE("nvram")
@@ -651,12 +609,13 @@ ADDRESS_MAP_END
  *
  *************************************/
 
-static ADDRESS_MAP_START( tms_program_map, ADDRESS_SPACE_PROGRAM, 16 )
+static ADDRESS_MAP_START( tms_program_map, AS_PROGRAM, 16 )
 	AM_RANGE(0xc0000000, 0xc00001ff) AM_READWRITE(tms34010_io_register_r, tms34010_io_register_w)
-	AM_RANGE(0x00000000, 0x003fffff) AM_MIRROR(0xf8000000) AM_RAM AM_BASE(&jpmimpct_vram)
+	AM_RANGE(0x00000000, 0x003fffff) AM_MIRROR(0xf8000000) AM_RAM AM_BASE_MEMBER(jpmimpct_state, m_vram)
 	AM_RANGE(0x00800000, 0x00ffffff) AM_MIRROR(0xf8000000) AM_ROM AM_REGION("user1", 0x100000)
 	AM_RANGE(0x02000000, 0x027fffff) AM_MIRROR(0xf8000000) AM_ROM AM_REGION("user1", 0)
-	AM_RANGE(0x01000000, 0x0100003f) AM_MIRROR(0xf87fffc0) AM_READWRITE(jpmimpct_bt477_r, jpmimpct_bt477_w)
+//  AM_RANGE(0x01000000, 0x0100003f) AM_MIRROR(0xf87fffc0) AM_READWRITE(jpmimpct_bt477_r, jpmimpct_bt477_w)
+	AM_RANGE(0x01000000, 0x017fffff) AM_MIRROR(0xf8000000) AM_MASK(0x1f) AM_READWRITE(jpmimpct_bt477_r, jpmimpct_bt477_w)
 	AM_RANGE(0x07800000, 0x07bfffff) AM_MIRROR(0xf8400000) AM_RAM
 ADDRESS_MAP_END
 
@@ -823,8 +782,9 @@ INPUT_PORTS_END
 
 static void jpmimpct_tms_irq(device_t *device, int state)
 {
-	tms_irq = state;
-	update_irqs(device->machine);
+	jpmimpct_state *drvstate = device->machine().driver_data<jpmimpct_state>();
+	drvstate->m_tms_irq = state;
+	update_irqs(device->machine());
 }
 
 static const tms34010_config tms_config =
@@ -846,7 +806,7 @@ static const tms34010_config tms_config =
  *
  *************************************/
 
-static MACHINE_CONFIG_START( jpmimpct, driver_device )
+static MACHINE_CONFIG_START( jpmimpct, jpmimpct_state )
 	MCFG_CPU_ADD("maincpu", M68000, 8000000)
 	MCFG_CPU_PROGRAM_MAP(m68k_program_map)
 
@@ -854,7 +814,7 @@ static MACHINE_CONFIG_START( jpmimpct, driver_device )
 	MCFG_CPU_CONFIG(tms_config)
 	MCFG_CPU_PROGRAM_MAP(tms_program_map)
 
-	MCFG_QUANTUM_TIME(HZ(30000))
+	MCFG_QUANTUM_TIME(attotime::from_hz(30000))
 	MCFG_MACHINE_START(jpmimpct)
 	MCFG_MACHINE_RESET(jpmimpct)
 	MCFG_NVRAM_ADD_0FILL("nvram")
@@ -864,6 +824,7 @@ static MACHINE_CONFIG_START( jpmimpct, driver_device )
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
 	MCFG_SCREEN_RAW_PARAMS(40000000/4, 156*4, 0, 100*4, 328, 0, 300)
+	MCFG_SCREEN_UPDATE(tms340x0)
 	MCFG_PALETTE_LENGTH(256)
 
 	MCFG_SPEAKER_STANDARD_MONO("mono")
@@ -871,7 +832,6 @@ static MACHINE_CONFIG_START( jpmimpct, driver_device )
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
 	MCFG_VIDEO_START(jpmimpct)
-	MCFG_VIDEO_UPDATE(tms340x0)
 MACHINE_CONFIG_END
 
 
@@ -1068,25 +1028,21 @@ GAME( 1999, coronatn, 0,      jpmimpct, coronatn, 0, ROT0, "JPM", "Coronation St
 
 /**************************************************************************
 
-    Mechanical IMPACT Games
-        AGEMAME driver
+Mechanical IMPACT Games
 
-    This is mostly based on old documentation, and needs a proper look.
+IMPACT apparently stands for Interactive Moving Picture Amusment Control
+Technology, and is intended as a replacement for the JPM System 5 board.
+Large sections of the processing were moved to two identical custom ASICs
+(U1 and U2), only half of each is used.
+
+Thanks to Tony Friery and JPeMU for I/O routines and documentation.
+
 ***************************************************************************/
 
 #include "video/awpvid.h"
 #include "machine/steppers.h"
 #include "machine/roc10937.h"
-#include "machine/8255ppi.h"
-
-/*************************************
- *
- *  Statics
- *
- *************************************/
-
-static int optic_pattern;
-static int payen;
+#include "machine/i8255.h"
 
 /*************************************
  *
@@ -1096,54 +1052,127 @@ static int payen;
 
 static READ8_DEVICE_HANDLER( hopper_b_r )
 {
-	//?
-	return 0;
+	jpmimpct_state *state = device->machine().driver_data<jpmimpct_state>();
+
+	int retval;
+	// B0 = ?1 Hopper Out Verif
+	// B1 = Hopper High
+	// B2 = Hopper Low
+	// B3 = 20p Hopper Opto
+
+	// Always return hoppers full
+   retval=0xed; // 1110 1101
+
+   if (!state->m_hopinhibit)//if inhibited, we don't change these flags
+   {
+		if (state->m_hopper[0] && state->m_motor[0]) //&& ((state->m_hopflag1 & 0x20)==0x20))
+		{//100p
+			retval &= ~0x01;
+		}
+		if (((state->m_hopper[1] && state->m_motor[1]) || (state->m_hopper[2] && state->m_slidesout))) //&& ((state->m_hopflag2 & 0x20)==0x20))
+		{
+			retval &= ~0x08;
+		}
+   }
+
+   return retval;
 }
 
 static READ8_DEVICE_HANDLER( hopper_c_r )
 {
-	//?
-	return 0;
+	jpmimpct_state *state = device->machine().driver_data<jpmimpct_state>();
+
+	int retval;
+   // C0-C2 = Alpha
+   // C3
+   // C4 = 20p Hopper Detect
+   // C5 = Hopper Top-Up
+   // C6 = ?1 Hopper Detect
+   // C7 = Payout Verif (Slides)
+
+   retval=0xf0; //1111 0000
+
+//    if (StatBtns & 0x20) // Top Up switch
+//    retval &= ~0x20;
+
+	// Which hoppers are present
+	if (state->m_hopper[0])
+	{
+		retval &= ~0x40;
+	}
+	if (state->m_hopper[1])
+	{
+		retval &= ~0x10;
+	}
+
+	if (!state->m_hopinhibit)
+	{
+		if ((state->m_slidesout==1) && ((state->m_hopper[2]==0)))
+		{
+			state->m_slidesout=0;
+			retval &= ~0x80;
+		}
+	}
+
+	return retval;
 }
 
 static WRITE8_DEVICE_HANDLER( payen_a_w )
 {
-	if ( data )
-	{
-		if ( data & 0x10 )
-		payen = 1;
-		else
-		payen = 0;
-    }
+	jpmimpct_state *state = device->machine().driver_data<jpmimpct_state>();
+
+	state->m_motor[0] = (data & 0x01);
+	state->m_payen = (data & 0x10);
+	state->m_slidesout = (data & 0x10);
+	state->m_motor[1] = (data & 0x40);
+	state->m_hopinhibit = (data & 0x80);
 }
 
 static WRITE8_DEVICE_HANDLER( display_c_w )
 {
+	jpmimpct_state *state = device->machine().driver_data<jpmimpct_state>();
+
+	if(data & 0x04)
+	{
+		state->m_alpha_data_line = ((data >> 1) & 1);
+		if (state->m_alpha_clock != (data & 1))
+		{
+			if (!state->m_alpha_clock)//falling edge
+			{
+				ROC10937_shift_data(0, state->m_alpha_data_line?0:1);
+			}
+		}
+		state->m_alpha_clock = (data & 1);
+	}
+	else
+	{
+		ROC10937_reset(0);
+	}
+		ROC10937_draw_16seg(0);
 	//?
 }
 
-static const ppi8255_interface ppi8255_intf[1] =
+static I8255_INTERFACE (ppi8255_intf)
 {
-	{
-		DEVCB_NULL,
-		DEVCB_HANDLER(hopper_b_r),
-		DEVCB_HANDLER(hopper_c_r),
-		DEVCB_HANDLER(payen_a_w),
-		DEVCB_NULL,
-		DEVCB_HANDLER(display_c_w)
-	}
+	DEVCB_NULL,
+	DEVCB_HANDLER(payen_a_w),
+	DEVCB_HANDLER(hopper_b_r),
+	DEVCB_NULL,
+	DEVCB_HANDLER(hopper_c_r),
+	DEVCB_HANDLER(display_c_w)
 };
 
 static MACHINE_START( impctawp )
 {
-	state_save_register_global(machine, duart_1_irq);
-	state_save_register_global(machine, touch_cnt);
-	state_save_register_global_array(machine, touch_data);
+	jpmimpct_state *state = machine.driver_data<jpmimpct_state>();
+	state_save_register_global(machine, state->m_duart_1_irq);
+	state_save_register_global(machine, state->m_touch_cnt);
+	state_save_register_global_array(machine, state->m_touch_data);
 
 	/* TODO! */
-	state_save_register_global(machine, duart_1.ISR);
-	state_save_register_global(machine, duart_1.IMR);
-	state_save_register_global(machine, duart_1.CT);
+	state_save_register_global(machine, state->m_duart_1.ISR);
+	state_save_register_global(machine, state->m_duart_1.IMR);
+	state_save_register_global(machine, state->m_duart_1.CT);
 
 	stepper_config(machine, 0, &starpoint_interface_48step);
 	stepper_config(machine, 1, &starpoint_interface_48step);
@@ -1156,12 +1185,13 @@ static MACHINE_START( impctawp )
 
 static MACHINE_RESET( impctawp )
 {
-	memset(&duart_1, 0, sizeof(duart_1));
+	jpmimpct_state *state = machine.driver_data<jpmimpct_state>();
+	memset(&state->m_duart_1, 0, sizeof(state->m_duart_1));
 
 	/* Reset states */
-	duart_1_irq = 0;
+	state->m_duart_1_irq = 0;
 
-	ROC10937_init(0, MSC1937,0);
+	ROC10937_init(0, MSC1937,1);//Reversed
 	ROC10937_reset(0);	/* reset display1 */
 }
 /*************************************
@@ -1185,28 +1215,85 @@ static MACHINE_RESET( impctawp )
  *  8: Payslides
  *  9: Coin mechanism
  */
+static READ16_HANDLER( inputs1awp_r )
+{
+	UINT16 val = 0x00;
+
+	{
+		switch (offset)
+		{
+			case 0:
+			{
+				val = input_port_read(space->machine(), "DSW");
+				break;
+			}
+			case 1:
+			{
+				val = input_port_read(space->machine(), "PERCENT");
+				break;
+			}
+			case 2:
+			{
+				val = input_port_read(space->machine(), "KEYS");
+				break;
+			}
+			case 3:
+			{
+				val = input_port_read(space->machine(), "SW2");
+				break;
+			}
+			case 4:
+			{
+				val = input_port_read(space->machine(), "SW1");
+				break;
+			}
+			case 5:
+			{
+				val = (input_port_read(space->machine(), "SW3") );
+				break;
+			}
+			case 6:
+			{
+				val = (input_port_read(space->machine(), "SW4") );
+				break;
+			}
+			case 7://5
+			{
+				val = (input_port_read(space->machine(), "SW5") );
+				break;
+			}
+			case 9:
+			{
+				val = input_port_read(space->machine(), "COINS");
+				break;
+			}
+		}
+	return val & 0xff00;
+	}
+}
+
 static READ16_HANDLER( optos_r )
 {
+	jpmimpct_state *state = space->machine().driver_data<jpmimpct_state>();
 	int i;
 
 	for (i=0; i<6; i++)
 	{
-		if ( stepper_optic_state(i) ) optic_pattern |= (1 << i);
-		else                          optic_pattern &= ~(1 << i);
+		if ( stepper_optic_state(i) ) state->m_optic_pattern |= (1 << i);
+		else                          state->m_optic_pattern &= ~(1 << i);
 	}
-	return optic_pattern;
+	return state->m_optic_pattern;
 }
 
-/*************************************
- *
- *  Mysterious stuff
- *
- *************************************/
+static READ16_HANDLER( prot_1_r )
+{
+	return 0x01;
+}
 
 static WRITE16_HANDLER( jpmioawp_w )
 {
-	int i;
-	UINT64 cycles  = space->machine->firstcpu->total_cycles();
+	jpmimpct_state *state = space->machine().driver_data<jpmimpct_state>();
+	int i,metno;
 	switch (offset)
 	{
 		case 0x00:
@@ -1222,6 +1309,7 @@ static WRITE16_HANDLER( jpmioawp_w )
 			for (i=0; i<4; i++)
 			{
 				stepper_update(i, (data >> i)& 0x0F );
+				awp_draw_reel(i);
 			}
 			break;
 		}
@@ -1229,53 +1317,73 @@ static WRITE16_HANDLER( jpmioawp_w )
 		{
 			for (i=0; i<2; i++)
 			{
-				stepper_update(i, (data >> (i + 4)& 0x0F ));
+				stepper_update(i+4, (data >> (i + 4)& 0x0F ));
+				awp_draw_reel(i+4);
 			}
 			break;
 		}
 		case 0x06:
 		{
-			if ( data & 0x10 )
-			{   // PAYEN ?
-				if ( data & 0xf )
+			//Slides
+			if ((data & 0xff)!=0x00)
+			{
+				state->m_slidesout=2;
+			}
+			if (((data & 0xff)==0x00) && (state->m_slidesout==2))
+			{
+				state->m_slidesout=1;
+			}
+	      // Meters
+			metno=(data >>8) & 0xff;
+			{
+				switch (metno)
 				{
-			//      slide = 1;
-				}
-				else
-				{
-				//  slide = 0;
+					case 0x00:
+					{
+						for (i=0; i<5; i++)
+						{
+							MechMtr_update(i, 0);
+						}
+						break;
+					}
+					default:
+					{
+						MechMtr_update(((metno <<2) - 1), 1);
+					}
+					break;
 				}
 			}
-			else
-//          slide = 0;
-			Mechmtr_update(0, cycles, data >> 10);
-			if ( data )
+			int combined_meter = MechMtr_GetActivity(0) | MechMtr_GetActivity(1) |
+			MechMtr_GetActivity(2) | MechMtr_GetActivity(3) |
+			MechMtr_GetActivity(4);
+
+			if(combined_meter)
 			{
-				duart_1.IP &= ~0x10;
+				state->m_duart_1.IP &= ~0x10;
 			}
 			else
 			{
-				duart_1.IP |= 0x10;
+				state->m_duart_1.IP |= 0x10;
 			}
 			break;
 		}
 
 		case 0x08:
 		{
-			jpm_draw_lamps(data, lamp_strobe);
+			jpm_draw_lamps(state, data, state->m_lamp_strobe);
 			break;
 		}
 
 		case 0x0b:
 		{
-			output_set_digit_value(lamp_strobe,data);
+			output_set_digit_value(state->m_lamp_strobe,data);
 			break;
 		}
 		case 0x0f:
 		{
 			if (data & 0x10)
 			{
-				lamp_strobe = (data & 0x0f);
+				state->m_lamp_strobe = (data & 0x0f);
 			}
 			break;
 		}
@@ -1292,29 +1400,155 @@ static READ16_HANDLER( ump_r )
  *  Main CPU memory handlers
  *
  *************************************/
-static ADDRESS_MAP_START( awp68k_program_map, ADDRESS_SPACE_PROGRAM, 16 )
+static ADDRESS_MAP_START( awp68k_program_map, AS_PROGRAM, 16 )
 	AM_RANGE(0x00000000, 0x000fffff) AM_ROM
 	AM_RANGE(0x00100000, 0x001fffff) AM_ROM
 	AM_RANGE(0x00400000, 0x00403fff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0x00480000, 0x0048001f) AM_READWRITE(duart_1_r, duart_1_w)
-	AM_RANGE(0x00480020, 0x00480033) AM_READ(inputs1_r)
+	AM_RANGE(0x00480020, 0x00480033) AM_READ(inputs1awp_r)
 	AM_RANGE(0x00480034, 0x00480035) AM_READ(ump_r)
 	AM_RANGE(0x00480040, 0x00480041) AM_READ(optos_r)
-	AM_RANGE(0x00480060, 0x00480067) AM_DEVREADWRITE8("ppi8255_0", ppi8255_r, ppi8255_w, 0xff00)
-	AM_RANGE(0x004800a0, 0x004800af) AM_READWRITE(jpmio_r, jpmioawp_w)
-	AM_RANGE(0x004800e0, 0x004800e1) AM_WRITE(unk_w)
-	AM_RANGE(0x004801dc, 0x004801dd) AM_READ(unk_r)
-	AM_RANGE(0x004801de, 0x004801df) AM_READ(unk_r)
+	AM_RANGE(0x00480060, 0x00480067) AM_DEVREADWRITE8_MODERN("ppi8255", i8255_device, read, write,0x00ff)
 	AM_RANGE(0x00480080, 0x00480081) AM_DEVWRITE("upd", upd7759_w)
 	AM_RANGE(0x00480082, 0x00480083) AM_DEVWRITE("upd",volume_w)
 	AM_RANGE(0x00480084, 0x00480085) AM_DEVREAD("upd", upd7759_r)
+	AM_RANGE(0x00480086, 0x0048009f) AM_READ(prot_1_r)
+	AM_RANGE(0x004800a0, 0x004800af) AM_READWRITE(jpmio_r, jpmioawp_w)
+//  AM_RANGE(0x004800b0, 0x004800df) AM_READ(prot_1_r)
+//  AM_RANGE(0x004800e0, 0x004800e1) AM_WRITE(unk_w)
+//  AM_RANGE(0x00480086, 0x006576ff) AM_READ(prot_1_r)
+	AM_RANGE(0x004801dc, 0x004801dd) AM_READ(prot_1_r)
+
+//  AM_RANGE(0x004801dc, 0x004801dd) AM_READ(unk_r)
+//  AM_RANGE(0x004801de, 0x004801df) AM_READ(unk_r)
+//  AM_RANGE(0x00657600, 0x00657601) AM_READ(prot_0_r)
+	//AM_RANGE(0x00657602, 0x00bfffff) AM_READ(prot_1_r)
 //  AM_RANGE(0x004801e0, 0x004801ff) AM_READWRITE(duart_2_r, duart_2_w)
-//  AM_RANGE(0x00800000, 0x00800007) AM_READWRITE(m68k_tms_r, m68k_tms_w)
 	AM_RANGE(0x00c00000, 0x00cfffff) AM_ROM
 	AM_RANGE(0x00d00000, 0x00dfffff) AM_ROM
 	AM_RANGE(0x00e00000, 0x00efffff) AM_ROM
 	AM_RANGE(0x00f00000, 0x00ffffff) AM_ROM
 ADDRESS_MAP_END
+
+static INPUT_PORTS_START( tbirds )
+	PORT_START("DSW")
+	PORT_DIPNAME( 0x01, 0x01, "DSW 0 (toggle to stop alarm)")
+	PORT_DIPSETTING(	0x01, DEF_STR( Off ) )
+	PORT_DIPSETTING(	0x00, DEF_STR( On ) )
+	PORT_DIPNAME( 0x02, 0x02, "DSW 1")
+	PORT_DIPSETTING(	0x02, DEF_STR( Off ) )
+	PORT_DIPSETTING(	0x00, DEF_STR( On ) )
+	PORT_DIPNAME( 0x04, 0x04, "DSW 2")
+	PORT_DIPSETTING(	0x04, DEF_STR( Off ) )
+	PORT_DIPSETTING(	0x00, DEF_STR( On ) )
+	PORT_DIPNAME( 0x08, 0x08, "DSW 3")
+	PORT_DIPSETTING(	0x08, DEF_STR( Off ) )
+	PORT_DIPSETTING(	0x00, DEF_STR( On ) )
+	PORT_DIPNAME( 0x10, 0x10, "DSW 4")
+	PORT_DIPSETTING(	0x10, DEF_STR( Off ) )
+	PORT_DIPSETTING(	0x00, DEF_STR( On ) )
+	PORT_DIPNAME( 0x20, 0x20, "DSW 5")
+	PORT_DIPSETTING(	0x20, DEF_STR( Off ) )
+	PORT_DIPSETTING(	0x00, DEF_STR( On ) )
+	PORT_DIPNAME( 0x40, 0x40, "DSW 6")
+	PORT_DIPSETTING(	0x40, DEF_STR( Off ) )
+	PORT_DIPSETTING(	0x00, DEF_STR( On ) )
+	PORT_DIPNAME( 0x80, 0x80, "DSW 7")
+	PORT_DIPSETTING(	0x80, DEF_STR( Off ) )
+	PORT_DIPSETTING(	0x00, DEF_STR( On ) )
+
+	PORT_START("PERCENT")
+	PORT_CONFNAME( 0x0F, 0x00, "Percentage Key" )
+	PORT_CONFSETTING(    0x00, "Not fitted / 68% (Invalid for UK Games)"  )
+	PORT_CONFSETTING(    0x01, "70" )
+	PORT_CONFSETTING(    0x02, "72" )
+	PORT_CONFSETTING(    0x03, "74" )
+	PORT_CONFSETTING(    0x04, "76" )
+	PORT_CONFSETTING(    0x05, "78" )
+	PORT_CONFSETTING(    0x06, "80" )
+	PORT_CONFSETTING(    0x07, "82" )
+	PORT_CONFSETTING(    0x08, "84" )
+	PORT_CONFSETTING(    0x09, "86" )
+	PORT_CONFSETTING(    0x0A, "88" )
+	PORT_CONFSETTING(    0x0B, "90" )
+	PORT_CONFSETTING(    0x0C, "92" )
+	PORT_CONFSETTING(    0x0D, "94" )
+	PORT_CONFSETTING(    0x0E, "96" )
+	PORT_CONFSETTING(    0x0F, "98" )
+
+	PORT_START("KEYS")
+	PORT_CONFNAME( 0x0F, 0x0F, "Jackpot / Prize Key" )
+	PORT_CONFSETTING(    0x0F, "Not fitted"  )
+	PORT_CONFSETTING(    0x0E, "3 GBP"  )
+	PORT_CONFSETTING(    0x0D, "4 GBP"  )
+	PORT_CONFSETTING(    0x0C, "5 GBP"  )
+	PORT_CONFSETTING(    0x0B, "6 GBP"  )
+	PORT_CONFSETTING(    0x0A, "6 GBP Token"  )
+	PORT_CONFSETTING(    0x09, "8 GBP"  )
+	PORT_CONFSETTING(    0x08, "8 GBP Token"  )
+	PORT_CONFSETTING(    0x07, "10 GBP"  )
+	PORT_CONFSETTING(    0x06, "15 GBP"  )
+	PORT_CONFSETTING(    0x05, "25 GBP"  )
+	PORT_CONFSETTING(    0x04, "25 GBP (Licensed Betting Office Profile)"  )
+	PORT_CONFSETTING(    0x03, "35 GBP"  )
+	PORT_CONFSETTING(    0x02, "70 GBP"  )
+	PORT_CONFSETTING(    0x01, "Reserved"  )
+	PORT_CONFSETTING(    0x00, "Reserved"  )
+
+	PORT_CONFNAME( 0xF0, 0x00, "Stake Key" )
+	PORT_CONFSETTING(    0x00, "Not fitted / 5p"  )
+	PORT_CONFSETTING(    0x80, "10p" )
+	PORT_CONFSETTING(    0x40, "20p" )
+	PORT_CONFSETTING(    0xC0, "25p" )
+	PORT_CONFSETTING(    0x20, "30p" )
+//  PORT_CONFSETTING(    0x20, "40p" )
+	PORT_CONFSETTING(    0x60, "50p" )
+	PORT_CONFSETTING(    0xE0, "1 GBP" )
+
+	PORT_START("SW5")
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_BUTTON1 ) PORT_NAME( "Collect" )
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_BUTTON2 ) PORT_NAME( "'3'" )
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_BUTTON3 ) PORT_NAME( "'2'" )
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_BUTTON4 ) PORT_NAME( "'1'" )
+
+	PORT_START("SW4")
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_BUTTON1 ) PORT_NAME( "Collect" )
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_BUTTON2 ) PORT_NAME( "'3'" )
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_BUTTON3 ) PORT_NAME( "'2'" )
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_BUTTON4 ) PORT_NAME( "'1'" )
+
+	PORT_START("SW3")
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_BUTTON1 ) PORT_NAME( "Collect" )
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_BUTTON2 ) PORT_NAME( "'3'" )
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_BUTTON3 ) PORT_NAME( "'2'" )
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_BUTTON4 ) PORT_NAME( "'1'" )
+
+	PORT_START("SW2")
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_BUTTON1 ) PORT_NAME( "Collect" )
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_BUTTON2 ) PORT_NAME( "'3'" )
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_BUTTON3 ) PORT_NAME( "'2'" )
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_BUTTON4 ) PORT_NAME( "'1'" )
+
+	PORT_START("SW1")
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_SERVICE1 ) PORT_TOGGLE PORT_NAME( "Back Door" )
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_SERVICE2 ) PORT_TOGGLE PORT_NAME( "Cash Door" )
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE3 ) PORT_TOGGLE PORT_NAME( "Refill Key" )
+
+	PORT_START("TEST/DEMO")
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_SERVICE4 ) PORT_NAME( "Test/Demo" )
+
+	PORT_START("COINS")
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_COIN1 ) PORT_IMPULSE(1) PORT_NAME( "Coin: 1 pound" )
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_COIN2 ) PORT_IMPULSE(1) PORT_NAME( "Coin: 50p" )
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_COIN3 ) PORT_IMPULSE(1) PORT_NAME( "Coin: 20p" )
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_COIN4 ) PORT_IMPULSE(1) PORT_NAME( "Coin: 10p" )
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_COIN5 ) PORT_IMPULSE(1) PORT_NAME( "Token: 20" )
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_COIN6 ) PORT_IMPULSE(1) PORT_NAME( "Coin: 5p" )
+	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_UNKNOWN )
+	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_UNKNOWN )
+
+INPUT_PORTS_END
+
 
 /*************************************
  *
@@ -1322,18 +1556,17 @@ ADDRESS_MAP_END
  *
  *************************************/
 
-static MACHINE_CONFIG_START( impctawp, driver_device )
+static MACHINE_CONFIG_START( impctawp, jpmimpct_state )
 	MCFG_CPU_ADD("maincpu",M68000, 8000000)
 	MCFG_CPU_PROGRAM_MAP(awp68k_program_map)
 
-	MCFG_QUANTUM_TIME(HZ(30000))
+	MCFG_QUANTUM_TIME(attotime::from_hz(30000))
 
 	MCFG_MACHINE_START(impctawp)
 	MCFG_MACHINE_RESET(impctawp)
 	MCFG_NVRAM_ADD_0FILL("nvram")
 
-	MCFG_PPI8255_ADD( "ppi8255_0", ppi8255_intf[0] )
-
+	MCFG_I8255_ADD( "ppi8255", ppi8255_intf )
 	MCFG_TIMER_ADD( "duart_1_timer", duart_1_timer_event)
 
 	MCFG_SPEAKER_STANDARD_MONO("mono")
@@ -1365,4 +1598,4 @@ ROM_END
  *
  *************************************/
 
-GAME( 199?, m_tbirds, 0,      impctawp, trivialp, 0, ROT0, "JPM", "Thunderbirds", GAME_NOT_WORKING )
+GAME( 199?, m_tbirds, 0,      impctawp, tbirds, 0, ROT0, "JPM", "Thunderbirds", GAME_NOT_WORKING )

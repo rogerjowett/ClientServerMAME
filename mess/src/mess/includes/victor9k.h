@@ -3,6 +3,23 @@
 #ifndef __VICTOR9K__
 #define __VICTOR9K__
 
+#define ADDRESS_MAP_MODERN
+
+#include "emu.h"
+#include "cpu/i86/i86.h"
+#include "cpu/mcs48/mcs48.h"
+#include "imagedev/flopdrv.h"
+#include "machine/ram.h"
+#include "machine/ctronics.h"
+#include "machine/6522via.h"
+#include "machine/ieee488.h"
+#include "machine/mc6852.h"
+#include "machine/pit8253.h"
+#include "machine/pic8259.h"
+#include "machine/upd7201.h"
+#include "sound/hc55516.h"
+#include "video/mc6845.h"
+
 #define SCREEN_TAG		"screen"
 #define I8088_TAG		"8l"
 #define I8048_TAG		"5d"
@@ -19,15 +36,13 @@
 #define M6522_4_TAG		"m6522_4"
 #define M6522_5_TAG		"m6522_5"
 #define M6522_6_TAG		"m6522_6"
-#define SPEAKER_TAG		"speaker"
 #define CENTRONICS_TAG	"centronics"
-#define IEEE488_TAG		"ieee488"
 
 class victor9k_state : public driver_device
 {
 public:
-	victor9k_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config),
+	victor9k_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag),
 		  m_maincpu(*this, I8088_TAG),
 		  m_fdc_cpu(*this, I8048_TAG),
 		  m_ieee488(*this, IEEE488_TAG),
@@ -36,26 +51,26 @@ public:
 		  m_via1(*this, M6522_1_TAG),
 		  m_cvsd(*this, HC55516_TAG),
 		  m_crtc(*this, HD46505S_TAG),
-		  m_ram(*this, "messram"),
+		  m_ram(*this, RAM_TAG),
 		  m_floppy0(*this, FLOPPY_0),
 		  m_floppy1(*this, FLOPPY_1)
 	{ }
 
 	required_device<cpu_device> m_maincpu;
 	required_device<cpu_device> m_fdc_cpu;
-	required_device<device_t> m_ieee488;
+	required_device<ieee488_device> m_ieee488;
 	required_device<device_t> m_pic;
-	required_device<device_t> m_ssda;
+	required_device<mc6852_device> m_ssda;
 	required_device<device_t> m_via1;
 	required_device<device_t> m_cvsd;
-	required_device<device_t> m_crtc;
+	required_device<mc6845_device> m_crtc;
 	required_device<device_t> m_ram;
 	required_device<device_t> m_floppy0;
 	required_device<device_t> m_floppy1;
-	
+
 	virtual void machine_start();
 
-	virtual bool video_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect);
+	virtual bool screen_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect);
 
 	DECLARE_WRITE_LINE_MEMBER( vsync_w );
 	DECLARE_WRITE_LINE_MEMBER( ssda_irq_w );
@@ -66,6 +81,7 @@ public:
 	DECLARE_WRITE_LINE_MEMBER( via5_irq_w );
 	DECLARE_WRITE_LINE_MEMBER( via6_irq_w );
 	DECLARE_WRITE8_MEMBER( via1_pa_w );
+	DECLARE_READ8_MEMBER( via1_pb_r );
 	DECLARE_WRITE8_MEMBER( via1_pb_w );
 	DECLARE_WRITE_LINE_MEMBER( codec_vol_w );
 	DECLARE_READ8_MEMBER( via2_pa_r );

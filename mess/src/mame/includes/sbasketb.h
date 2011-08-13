@@ -1,19 +1,19 @@
 class sbasketb_state : public driver_device
 {
 public:
-	sbasketb_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	sbasketb_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 	/* memory pointers */
-	UINT8 *  videoram;
-	UINT8 *  colorram;
-	UINT8 *  scroll;
-	UINT8 *  spriteram;
-	UINT8 *  palettebank;
-	UINT8 *  spriteram_select;
+	UINT8 *  m_videoram;
+	UINT8 *  m_colorram;
+	UINT8 *  m_scroll;
+	UINT8 *  m_spriteram;
+	UINT8 *  m_palettebank;
+	UINT8 *  m_spriteram_select;
 
 	/* video-related */
-	tilemap_t  *bg_tilemap;
+	tilemap_t  *m_bg_tilemap;
 };
 
 /*----------- defined in video/sbasketb.c -----------*/
@@ -24,4 +24,4 @@ WRITE8_HANDLER( sbasketb_flipscreen_w );
 
 PALETTE_INIT( sbasketb );
 VIDEO_START( sbasketb );
-VIDEO_UPDATE( sbasketb );
+SCREEN_UPDATE( sbasketb );

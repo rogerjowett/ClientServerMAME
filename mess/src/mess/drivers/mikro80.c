@@ -10,32 +10,32 @@
 #include "emu.h"
 #include "cpu/i8085/i8085.h"
 #include "sound/wave.h"
-#include "machine/i8255a.h"
+#include "machine/i8255.h"
 #include "includes/mikro80.h"
-#include "devices/cassette.h"
-#include "devices/cartslot.h"
+#include "imagedev/cassette.h"
+#include "imagedev/cartslot.h"
 #include "formats/rk_cas.h"
 #include "sound/dac.h"
 
 /* Address maps */
-static ADDRESS_MAP_START(mikro80_mem, ADDRESS_SPACE_PROGRAM, 8)
+static ADDRESS_MAP_START(mikro80_mem, AS_PROGRAM, 8)
 	AM_RANGE( 0x0000, 0x07ff ) AM_RAMBANK("bank1") // First bank
     AM_RANGE( 0x0800, 0xdfff ) AM_RAM  // RAM
-    AM_RANGE( 0xe000, 0xe7ff ) AM_RAM  AM_BASE_MEMBER(mikro80_state, cursor_ram)// Video RAM
-    AM_RANGE( 0xe800, 0xefff ) AM_RAM  AM_BASE_MEMBER(mikro80_state, video_ram) // Video RAM
+    AM_RANGE( 0xe000, 0xe7ff ) AM_RAM  AM_BASE_MEMBER(mikro80_state, m_cursor_ram)// Video RAM
+    AM_RANGE( 0xe800, 0xefff ) AM_RAM  AM_BASE_MEMBER(mikro80_state, m_video_ram) // Video RAM
     AM_RANGE( 0xd000, 0xf7ff ) AM_RAM  // RAM
     AM_RANGE( 0xf800, 0xffff ) AM_ROM  // System ROM
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( mikro80_io , ADDRESS_SPACE_IO, 8)
+static ADDRESS_MAP_START( mikro80_io , AS_IO, 8)
 	ADDRESS_MAP_UNMAP_HIGH
 	AM_RANGE( 0x01, 0x01) AM_READWRITE ( mikro80_tape_r, mikro80_tape_w )
-	AM_RANGE( 0x04, 0x07) AM_DEVREADWRITE ( "ppi8255", mikro80_keyboard_r, mikro80_keyboard_w )
+	AM_RANGE( 0x04, 0x07) AM_READWRITE ( mikro80_keyboard_r, mikro80_keyboard_w )
 ADDRESS_MAP_END
 
 static WRITE8_DEVICE_HANDLER( radio99_dac_w )	{ dac_data_w(device, data); }
 
-static ADDRESS_MAP_START( radio99_io , ADDRESS_SPACE_IO, 8)
+static ADDRESS_MAP_START( radio99_io , AS_IO, 8)
 	ADDRESS_MAP_UNMAP_HIGH
 	AM_RANGE( 0x01, 0x01) AM_READWRITE ( mikro80_tape_r, mikro80_tape_w )
 	AM_RANGE( 0x04, 0x04) AM_DEVWRITE  ( "dac", radio99_dac_w )
@@ -138,11 +138,12 @@ static INPUT_PORTS_START( mikro80 )
 INPUT_PORTS_END
 
 /* Machine driver */
-static const cassette_config mikro80_cassette_config =
+static const cassette_interface mikro80_cassette_interface =
 {
 	rk8_cassette_formats,
 	NULL,
 	(cassette_state)(CASSETTE_STOPPED | CASSETTE_SPEAKER_ENABLED | CASSETTE_MOTOR_ENABLED),
+	NULL,
 	NULL
 };
 
@@ -172,7 +173,7 @@ static MACHINE_CONFIG_START( mikro80, mikro80_state )
 	MCFG_CPU_IO_MAP(mikro80_io)
 	MCFG_MACHINE_RESET( mikro80 )
 
-	MCFG_I8255A_ADD( "ppi8255", mikro80_ppi8255_interface )
+	MCFG_I8255_ADD( "ppi8255", mikro80_ppi8255_interface )
 
 	/* video hardware */
 	MCFG_SCREEN_ADD("screen", RASTER)
@@ -181,18 +182,19 @@ static MACHINE_CONFIG_START( mikro80, mikro80_state )
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(64*8, 32*8)
 	MCFG_SCREEN_VISIBLE_AREA(0, 64*8-1, 0, 32*8-1)
+	MCFG_SCREEN_UPDATE(mikro80)
+
 	MCFG_GFXDECODE(mikro80)
 	MCFG_PALETTE_LENGTH(2)
 	MCFG_PALETTE_INIT(black_and_white)
 
 	MCFG_VIDEO_START(mikro80)
-	MCFG_VIDEO_UPDATE(mikro80)
 
 	MCFG_SPEAKER_STANDARD_MONO("mono")
-	MCFG_SOUND_WAVE_ADD("wave", "cassette")
-	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
+	MCFG_SOUND_WAVE_ADD(WAVE_TAG, CASSETTE_TAG)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
-	MCFG_CASSETTE_ADD( "cassette", mikro80_cassette_config )
+	MCFG_CASSETTE_ADD( CASSETTE_TAG, mikro80_cassette_interface )
 MACHINE_CONFIG_END
 
 static MACHINE_CONFIG_DERIVED( radio99, mikro80 )

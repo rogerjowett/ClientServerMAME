@@ -121,7 +121,7 @@ Keyboard: Full-sized 102 key QWERTY (19 key numeric keypad!; 4 direction
  *************************************/
 
 
-static ADDRESS_MAP_START(cbmb_mem , ADDRESS_SPACE_PROGRAM, 8)
+static ADDRESS_MAP_START(cbmb_mem , AS_PROGRAM, 8)
 	AM_RANGE(0x00000, 0x0ffff) AM_READONLY AM_WRITENOP
 	AM_RANGE(0x10000, 0x4ffff) AM_RAM
 	AM_RANGE(0x50002, 0x5ffff) AM_READONLY AM_WRITENOP
@@ -133,10 +133,10 @@ static ADDRESS_MAP_START(cbmb_mem , ADDRESS_SPACE_PROGRAM, 8)
 	AM_RANGE(0xf2000, 0xf3fff) AM_ROM	/* cartridges or ram */
 	AM_RANGE(0xf4000, 0xf5fff) AM_ROM
 	AM_RANGE(0xf6000, 0xf7fff) AM_ROM
-	AM_RANGE(0xf8000, 0xfbfff) AM_ROM AM_BASE_MEMBER(cbmb_state, basic)
-	AM_RANGE(0xfd000, 0xfd7ff) AM_RAM AM_BASE_MEMBER(cbmb_state, videoram) /* VIDEORAM */
-	AM_RANGE(0xfd800, 0xfd800) AM_MIRROR(0xfe) AM_DEVWRITE("crtc", mc6845_address_w)
-	AM_RANGE(0xfd801, 0xfd801) AM_MIRROR(0xfe) AM_DEVREADWRITE("crtc", mc6845_register_r , mc6845_register_w)
+	AM_RANGE(0xf8000, 0xfbfff) AM_ROM AM_BASE_MEMBER(cbmb_state, m_basic)
+	AM_RANGE(0xfd000, 0xfd7ff) AM_RAM AM_BASE_MEMBER(cbmb_state, m_videoram) /* VIDEORAM */
+	AM_RANGE(0xfd800, 0xfd800) AM_MIRROR(0xfe) AM_DEVWRITE_MODERN("crtc", mc6845_device, address_w)
+	AM_RANGE(0xfd801, 0xfd801) AM_MIRROR(0xfe) AM_DEVREADWRITE_MODERN("crtc", mc6845_device, register_r, register_w)
 	/* disk units */
 	AM_RANGE(0xfda00, 0xfdaff) AM_DEVREADWRITE("sid6581", sid6581_r, sid6581_w)
 	/* db00 coprocessor */
@@ -144,10 +144,10 @@ static ADDRESS_MAP_START(cbmb_mem , ADDRESS_SPACE_PROGRAM, 8)
 	/* dd00 acia */
 	AM_RANGE(0xfde00, 0xfdeff) AM_DEVREADWRITE("tpi6525_0", tpi6525_r, tpi6525_w)
 	AM_RANGE(0xfdf00, 0xfdfff) AM_DEVREADWRITE("tpi6525_1", tpi6525_r, tpi6525_w)
-	AM_RANGE(0xfe000, 0xfffff) AM_ROM AM_BASE_MEMBER(cbmb_state, kernal)
+	AM_RANGE(0xfe000, 0xfffff) AM_ROM AM_BASE_MEMBER(cbmb_state, m_kernal)
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START(p500_mem , ADDRESS_SPACE_PROGRAM, 8)
+static ADDRESS_MAP_START(p500_mem , AS_PROGRAM, 8)
 	AM_RANGE(0x00000, 0x1ffff) AM_RAM
 	AM_RANGE(0x20000, 0x2ffff) AM_READONLY AM_WRITENOP
 	AM_RANGE(0x30000, 0x7ffff) AM_RAM
@@ -160,9 +160,9 @@ static ADDRESS_MAP_START(p500_mem , ADDRESS_SPACE_PROGRAM, 8)
 	AM_RANGE(0xf2000, 0xf3fff) AM_ROM	/* cartridges or ram */
 	AM_RANGE(0xf4000, 0xf5fff) AM_ROM
 	AM_RANGE(0xf6000, 0xf7fff) AM_ROM
-	AM_RANGE(0xf8000, 0xfbfff) AM_ROM AM_BASE_MEMBER(cbmb_state, basic)
-	AM_RANGE(0xfd000, 0xfd3ff) AM_RAM AM_BASE_MEMBER(cbmb_state, videoram)		/* videoram */
-	AM_RANGE(0xfd400, 0xfd7ff) AM_RAM_WRITE(cbmb_colorram_w) AM_BASE_MEMBER(cbmb_state, colorram)		/* colorram */
+	AM_RANGE(0xf8000, 0xfbfff) AM_ROM AM_BASE_MEMBER(cbmb_state, m_basic)
+	AM_RANGE(0xfd000, 0xfd3ff) AM_RAM AM_BASE_MEMBER(cbmb_state, m_videoram)		/* videoram */
+	AM_RANGE(0xfd400, 0xfd7ff) AM_RAM_WRITE(cbmb_colorram_w) AM_BASE_MEMBER(cbmb_state, m_colorram)		/* colorram */
 	AM_RANGE(0xfd800, 0xfd8ff) AM_DEVREADWRITE("vic6567", vic2_port_r, vic2_port_w)
 	/* disk units */
 	AM_RANGE(0xfda00, 0xfdaff) AM_DEVREADWRITE("sid6581", sid6581_r, sid6581_w)
@@ -171,7 +171,7 @@ static ADDRESS_MAP_START(p500_mem , ADDRESS_SPACE_PROGRAM, 8)
 	/* dd00 acia */
 	AM_RANGE(0xfde00, 0xfdeff) AM_DEVREADWRITE("tpi6525_0", tpi6525_r, tpi6525_w)
 	AM_RANGE(0xfdf00, 0xfdfff) AM_DEVREADWRITE("tpi6525_1", tpi6525_r, tpi6525_w)
-	AM_RANGE(0xfe000, 0xfffff) AM_ROM AM_BASE_MEMBER(cbmb_state, kernal)
+	AM_RANGE(0xfe000, 0xfffff) AM_ROM AM_BASE_MEMBER(cbmb_state, m_kernal)
 ADDRESS_MAP_END
 
 
@@ -337,30 +337,30 @@ static PALETTE_INIT( p500 )
 	}
 }
 
-static VIDEO_UPDATE( p500 )
+static SCREEN_UPDATE( p500 )
 {
-	device_t *vic2 = screen->machine->device("vic6567");
+	device_t *vic2 = screen->machine().device("vic6567");
 
 	vic2_video_update(vic2, bitmap, cliprect);
 	return 0;
 }
 
-static UINT8 cbmb_lightpen_x_cb( running_machine *machine )
+static UINT8 cbmb_lightpen_x_cb( running_machine &machine )
 {
 	return input_port_read(machine, "LIGHTX") & ~0x01;
 }
 
-static UINT8 cbmb_lightpen_y_cb( running_machine *machine )
+static UINT8 cbmb_lightpen_y_cb( running_machine &machine )
 {
 	return input_port_read(machine, "LIGHTY") & ~0x01;
 }
 
-static UINT8 cbmb_lightpen_button_cb( running_machine *machine )
+static UINT8 cbmb_lightpen_button_cb( running_machine &machine )
 {
 	return input_port_read(machine, "OTHER") & 0x04;
 }
 
-static UINT8 cbmb_rdy_cb( running_machine *machine )
+static UINT8 cbmb_rdy_cb( running_machine &machine )
 {
 	return input_port_read(machine, "CTRLSEL") & 0x08;
 }
@@ -387,35 +387,33 @@ static const vic2_interface p500_vic2_intf = {
 
 static const tpi6525_interface cbmb_tpi_0_intf =
 {
-	cbmb_tpi0_port_a_r,
-	cbmb_tpi0_port_b_r,
-	NULL,
-	cbmb_tpi0_port_a_w,
-	cbmb_tpi0_port_b_w,
-	NULL,
-	cbmb_change_font,
-	NULL,
-	cbmb_irq
+	DEVCB_LINE(cbmb_irq),
+	DEVCB_HANDLER(cbmb_tpi0_port_a_r),
+	DEVCB_HANDLER(cbmb_tpi0_port_a_w),
+	DEVCB_HANDLER(cbmb_tpi0_port_b_r),
+	DEVCB_HANDLER(cbmb_tpi0_port_b_w),
+	DEVCB_NULL,
+	DEVCB_NULL,
+	DEVCB_LINE(cbmb_change_font),
+	DEVCB_NULL
 };
 
 static const tpi6525_interface cbmb_tpi_1_intf =
 {
-	cbmb_keyboard_line_a,
-	cbmb_keyboard_line_b,
-	cbmb_keyboard_line_c,
-	cbmb_keyboard_line_select_a,
-	cbmb_keyboard_line_select_b,
-	cbmb_keyboard_line_select_c,
-	NULL,
-	NULL,
-	NULL
+	DEVCB_NULL,
+	DEVCB_HANDLER(cbmb_keyboard_line_a),
+	DEVCB_HANDLER(cbmb_keyboard_line_select_a),
+	DEVCB_HANDLER(cbmb_keyboard_line_b),
+	DEVCB_HANDLER(cbmb_keyboard_line_select_b),
+	DEVCB_HANDLER(cbmb_keyboard_line_c),
+	DEVCB_HANDLER(cbmb_keyboard_line_select_c),
+	DEVCB_NULL,
+	DEVCB_NULL
 };
 
 static IEEE488_DAISY( ieee488_daisy )
 {
-	{ "tpi6525_0" },
-	{ "cia" },
-	{ C2040_IEEE488("drive") },
+	{ "drive" },
 	{ NULL}
 };
 
@@ -433,6 +431,8 @@ static MACHINE_CONFIG_START( cbm600, cbmb_state )
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(640, 200)
 	MCFG_SCREEN_VISIBLE_AREA(0, 640 - 1, 0, 200 - 1)
+	MCFG_SCREEN_UPDATE( cbmb_crtc )
+
 	MCFG_GFXDECODE( cbm600 )
 	MCFG_PALETTE_LENGTH(ARRAY_LENGTH(cbm700_palette) / 3)
 	MCFG_PALETTE_INIT( cbm700 )
@@ -440,7 +440,6 @@ static MACHINE_CONFIG_START( cbm600, cbmb_state )
 	MCFG_MC6845_ADD("crtc", MC6845, XTAL_18MHz / 8 /*?*/ /*  I do not know if this is correct, please verify */, cbm600_crtc)
 
 	MCFG_VIDEO_START( cbmb_crtc )
-	MCFG_VIDEO_UPDATE( cbmb_crtc )
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
@@ -458,8 +457,8 @@ static MACHINE_CONFIG_START( cbm600, cbmb_state )
 	MCFG_TPI6525_ADD("tpi6525_1", cbmb_tpi_1_intf)
 
 	/* IEEE bus */
-	MCFG_IEEE488_ADD("ieee_bus", ieee488_daisy)
-	MCFG_C8250_ADD("drive", "ieee_bus", 8)
+	MCFG_IEEE488_ADD(ieee488_daisy)
+	MCFG_C8250_ADD("drive", 8)
 
 	MCFG_FRAGMENT_ADD(cbmb_cartslot)
 MACHINE_CONFIG_END
@@ -511,11 +510,10 @@ static MACHINE_CONFIG_START( p500, cbmb_state )
 	MCFG_SCREEN_VISIBLE_AREA(0, VIC6567_VISIBLECOLUMNS - 1, 0, VIC6567_VISIBLELINES - 1)
 	MCFG_SCREEN_REFRESH_RATE(VIC6567_VRETRACERATE)
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
+	MCFG_SCREEN_UPDATE( p500 )
 
 	MCFG_PALETTE_INIT( p500 )
 	MCFG_PALETTE_LENGTH(ARRAY_LENGTH(p500_palette) / 3)
-
-	MCFG_VIDEO_UPDATE( p500 )
 
 	MCFG_VIC2_ADD("vic6567", p500_vic2_intf)
 
@@ -535,8 +533,8 @@ static MACHINE_CONFIG_START( p500, cbmb_state )
 	MCFG_TPI6525_ADD("tpi6525_1", cbmb_tpi_1_intf)
 
 	/* IEEE bus */
-	MCFG_IEEE488_ADD("ieee_bus", ieee488_daisy)
-	MCFG_C8250_ADD("drive", "ieee_bus", 8)
+	MCFG_IEEE488_ADD(ieee488_daisy)
+	MCFG_C8250_ADD("drive", 8)
 
 	MCFG_FRAGMENT_ADD(cbmb_cartslot)
 MACHINE_CONFIG_END

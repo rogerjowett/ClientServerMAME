@@ -1,5 +1,19 @@
+#pragma once
+
 #ifndef __INCLUDES_ELF__
 #define __INCLUDES_ELF__
+
+#define ADDRESS_MAP_MODERN
+
+#include "emu.h"
+#include "cpu/cosmac/cosmac.h"
+#include "imagedev/cassette.h"
+#include "imagedev/snapquik.h"
+#include "machine/mm74c922.h"
+#include "video/cdp1861.h"
+#include "video/dm9368.h"
+#include "machine/rescap.h"
+#include "machine/ram.h"
 
 #define SCREEN_TAG		"screen"
 #define CDP1802_TAG		"a6"
@@ -7,23 +21,46 @@
 #define MM74C923_TAG	"a10"
 #define DM9368_L_TAG	"a12"
 #define DM9368_H_TAG	"a8"
-#define CASSETTE_TAG	"cassette"
 
 class elf2_state : public driver_device
 {
 public:
-	elf2_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	elf2_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag),
+		  m_maincpu(*this, CDP1802_TAG),
+		  m_vdc(*this, CDP1861_TAG),
+		  m_kb(*this, MM74C923_TAG),
+		  m_led_l(*this, DM9368_L_TAG),
+		  m_led_h(*this, DM9368_H_TAG),
+		  m_cassette(*this, CASSETTE_TAG),
+		  m_ram(*this, RAM_TAG)
+	{ }
 
-	/* display state */
-	UINT8 data;
+	required_device<cpu_device> m_maincpu;
+	required_device<cdp1861_device> m_vdc;
+	required_device<mm74c922_device> m_kb;
+	required_device<dm9368_device> m_led_l;
+	required_device<dm9368_device> m_led_h;
+	required_device<cassette_image_device> m_cassette;
+	required_device<device_t> m_ram;
 
-	/* devices */
-	device_t *cdp1861;
-	device_t *mm74c923;
-	device_t *dm9368_l;
-	device_t *dm9368_h;
-	device_t *cassette;
+	virtual void machine_start();
+
+	virtual bool screen_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect);
+
+	DECLARE_READ8_MEMBER( dispon_r );
+	DECLARE_READ8_MEMBER( data_r );
+	DECLARE_WRITE8_MEMBER( data_w );
+	DECLARE_WRITE8_MEMBER( memory_w );
+	DECLARE_READ_LINE_MEMBER( wait_r );
+	DECLARE_READ_LINE_MEMBER( clear_r );
+	DECLARE_READ_LINE_MEMBER( ef4_r );
+	DECLARE_WRITE_LINE_MEMBER( q_w );
+	DECLARE_READ8_MEMBER( dma_r );
+	DECLARE_WRITE_LINE_MEMBER( da_w );
+
+	// display state
+	UINT8 m_data;
 };
 
 #endif

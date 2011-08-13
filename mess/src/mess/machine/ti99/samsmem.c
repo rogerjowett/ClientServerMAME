@@ -21,6 +21,8 @@ typedef struct _ti99_samsmem_state
 INLINE ti99_samsmem_state *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
+	assert(device->type() == SAMSMEM);
+
 	return (ti99_samsmem_state *)downcast<legacy_device_base *>(device)->token();
 }
 
@@ -34,6 +36,7 @@ static WRITE8_DEVICE_HANDLER( samsmem_cru_w )
 	ti99_samsmem_state *card = get_safe_token(device);
 	if ((offset & 0xff00)==SAMS_CRU_BASE)
 	{
+//      printf("cru address %04x = %02x\n", offset&0xffff, data);
 		if ((offset & 0x000e)==0) card->access_mapper = data;
 		if ((offset & 0x000e)==2) card->map_mode = data;
 	}
@@ -59,9 +62,9 @@ static READ8Z_DEVICE_HANDLER( samsmem_rz )
 	{
 		// select memory expansion
 		if (card->map_mode)
-			address = (card->mapper[offset>>12] << 12) + (offset & 0x0fff);
+			address = (card->mapper[(offset & 0xf000)>>12] << 12) + (offset & 0x0fff);
 		else // transparent mode
-			address = offset;
+			address = offset & 0xffff;
 		*value = card->memory[address];
 	}
 }
@@ -78,14 +81,21 @@ static WRITE8_DEVICE_HANDLER( samsmem_w )
 	{
 		// select the mapper circuit
 		card->mapper[(offset>>1)&0x000f] = data;
+//      printf("mapper %d = %02x\n", (offset >> 1)&0xf, data);
 	}
 	if (((offset & 0xe000)==0x2000) || ((offset & 0xe000)==0xa000) || ((offset & 0xc000)==0xc000))
 	{
 		// select memory expansion
 		if (card->map_mode)
-			address = (card->mapper[offset>>12] << 12) + (offset & 0x0fff);
+		{
+			address = (card->mapper[(offset & 0xf000)>>12] << 12) + (offset & 0x0fff);
+//          printf("map mode, address = %04x\n", address);
+		}
 		else // transparent mode
-			address = offset;
+		{
+			address = offset & 0xffff;
+//          printf("direct mode, address = %04x\n", address);
+		}
 		card->memory[address] = data;
 	}
 }
@@ -102,23 +112,23 @@ static const ti99_peb_card samsmem_card =
 
 static DEVICE_START( ti99_samsmem )
 {
-	ti99_samsmem_state *card = (ti99_samsmem_state*)downcast<legacy_device_base *>(device)->token();
+	ti99_samsmem_state *card = get_safe_token(device);
 	card->memory=NULL;
 }
 
 static DEVICE_STOP( ti99_samsmem )
 {
-	ti99_samsmem_state *card = (ti99_samsmem_state*)downcast<legacy_device_base *>(device)->token();
+	ti99_samsmem_state *card = get_safe_token(device);
 	if (card->memory) free(card->memory);
 }
 
 static DEVICE_RESET( ti99_samsmem )
 {
-	ti99_samsmem_state *card = (ti99_samsmem_state*)downcast<legacy_device_base *>(device)->token();
+	ti99_samsmem_state *card = get_safe_token(device);
 	/* Register the card */
 	device_t *peb = device->owner();
 
-	if (input_port_read(device->machine, "RAM")==RAM_SUPERAMS1024)
+	if (input_port_read(device->machine(), "RAM")==RAM_SUPERAMS1024)
 	{
 		int success = mount_card(peb, device, &samsmem_card, get_pebcard_config(device)->slot);
 		if (!success) return;

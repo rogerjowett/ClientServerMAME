@@ -24,13 +24,13 @@
 class sbc6510_state : public driver_device
 {
 public:
-	sbc6510_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	sbc6510_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 };
 
 
-static ADDRESS_MAP_START(sbc6510_mem, ADDRESS_SPACE_PROGRAM, 8)
+static ADDRESS_MAP_START(sbc6510_mem, AS_PROGRAM, 8)
 	ADDRESS_MAP_UNMAP_HIGH
 	AM_RANGE(0x0000, 0xdfff) AM_RAM
 	AM_RANGE(0xf000, 0xffff) AM_ROM
@@ -49,7 +49,7 @@ static VIDEO_START( sbc6510 )
 {
 }
 
-static VIDEO_UPDATE( sbc6510 )
+static SCREEN_UPDATE( sbc6510 )
 {
     return 0;
 }
@@ -58,8 +58,8 @@ static const m6502_interface sbc6510_m6510_interface =
 {
 	NULL,
 	NULL,
-	NULL,
-	NULL
+	DEVCB_NULL,
+	DEVCB_NULL
 };
 
 static const ay8910_interface sbc6510_ay_interface =
@@ -97,11 +97,12 @@ static MACHINE_CONFIG_START( sbc6510, sbc6510_state )
     MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
     MCFG_SCREEN_SIZE(640, 480)
     MCFG_SCREEN_VISIBLE_AREA(0, 640-1, 0, 480-1)
+    MCFG_SCREEN_UPDATE(sbc6510)
+
     MCFG_PALETTE_LENGTH(2)
     MCFG_PALETTE_INIT(black_and_white)
 
     MCFG_VIDEO_START(sbc6510)
-    MCFG_VIDEO_UPDATE(sbc6510)
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")

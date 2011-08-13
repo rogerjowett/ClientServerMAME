@@ -27,11 +27,11 @@ static struct {
 
 static TIMER_CALLBACK(pc_mouse_scan);
 
-void pc_mouse_initialise(running_machine *machine)
+void pc_mouse_initialise(running_machine &machine)
 {
 	pc_mouse.head = pc_mouse.tail = 0;
-	pc_mouse.timer = timer_alloc(machine, pc_mouse_scan, NULL);
-	pc_mouse.inputs=UART8250_HANDSHAKE_IN_DSR|UART8250_HANDSHAKE_IN_CTS;
+	pc_mouse.timer = machine.scheduler().timer_alloc(FUNC(pc_mouse_scan));
+	pc_mouse.inputs = 0;
 	pc_mouse.ins8250 = NULL;
 }
 
@@ -199,30 +199,21 @@ static TIMER_CALLBACK(pc_mouse_scan)
 
 INS8250_HANDSHAKE_OUT( pc_mouse_handshake_in )
 {
-    int new_msr = 0x00;
-
 	if (device!=pc_mouse.ins8250) return;
+	if (!(data ^ pc_mouse.inputs)) {
+		ins8250_handshake_in(pc_mouse.ins8250, 0);
+		return;
+	}
 
-    /* check if mouse port has DTR set */
-	if( data & UART8250_HANDSHAKE_OUT_DTR )
-		new_msr |= UART8250_HANDSHAKE_IN_DSR;	/* set DSR */
-
-	/* check if mouse port has RTS set */
-	if( data & UART8250_HANDSHAKE_OUT_RTS )
-		new_msr |= UART8250_HANDSHAKE_IN_CTS;	/* set CTS */
-
-	/* CTS changed state? */
-	if (((pc_mouse.inputs^new_msr) & UART8250_HANDSHAKE_IN_CTS)!=0)
+	if ((data & UART8250_HANDSHAKE_OUT_DTR) && (data & UART8250_HANDSHAKE_OUT_RTS))
 	{
-		/* CTS just went to 1? */
-		if ((new_msr & 0x010)!=0)
+		/* RTS toggled */
+		if (!(pc_mouse.inputs & UART8250_HANDSHAKE_OUT_RTS) && (data & UART8250_HANDSHAKE_OUT_RTS))
 		{
-			/* set CTS is now 1 */
-
 			/* reset mouse */
 			pc_mouse.head = pc_mouse.tail = pc_mouse.mb = 0;
 
-			if ((input_port_read(device->machine, "pc_mouse_misc") & 0x80) == 0 )
+			if ((input_port_read(device->machine(), "pc_mouse_misc") & 0x80) == 0 )
 			{
 				/* Identify as Microsoft 3 Button Mouse */
 				pc_mouse.queue[pc_mouse.head] = 'M';
@@ -232,20 +223,19 @@ INS8250_HANDSHAKE_OUT( pc_mouse_handshake_in )
 				pc_mouse.head++;
 				pc_mouse.head %= 256;
 			}
-
-			/* start a timer to scan the mouse input */
-			timer_adjust_periodic(pc_mouse.timer, attotime_zero, 0, ATTOTIME_IN_HZ(240));
 		}
-		else
-		{
-			/* CTS just went to 0 */
-			timer_adjust_oneshot(pc_mouse.timer, attotime_zero, 0);
-			pc_mouse.head = pc_mouse.tail = 0;
-		}
+		/* start a timer to scan the mouse input */
+		pc_mouse.timer->adjust(attotime::zero, 0, attotime::from_hz(240));
+	}
+	else
+	{
+		pc_mouse.timer->adjust(attotime::zero);
+		pc_mouse.head = pc_mouse.tail = 0;
 	}
 
-	pc_mouse.inputs=new_msr;
-	ins8250_handshake_in(pc_mouse.ins8250, new_msr);
+	pc_mouse.inputs=data;
+	// do not set DSR or CTS
+	ins8250_handshake_in(pc_mouse.ins8250, 0);
 }
 
 

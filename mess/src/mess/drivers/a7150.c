@@ -7,6 +7,7 @@
     http://www.robotrontechnik.de/index.htm?/html/computer/a7150.htm
 
 ****************************************************************************/
+#define ADDRESS_MAP_MODERN
 
 #include "emu.h"
 #include "cpu/i86/i86.h"
@@ -15,13 +16,13 @@
 class a7150_state : public driver_device
 {
 public:
-	a7150_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	a7150_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 };
 
 
-static ADDRESS_MAP_START(a7150_mem, ADDRESS_SPACE_PROGRAM, 16)
+static ADDRESS_MAP_START(a7150_mem, AS_PROGRAM, 16, a7150_state)
 	ADDRESS_MAP_UNMAP_HIGH
 	AM_RANGE(0x00000,0xeffff) AM_RAM
 	AM_RANGE(0xf8000,0xfffff) AM_ROM AM_REGION("user1", 0)
@@ -40,7 +41,7 @@ static VIDEO_START( a7150 )
 {
 }
 
-static VIDEO_UPDATE( a7150 )
+static SCREEN_UPDATE( a7150 )
 {
 	return 0;
 }
@@ -59,11 +60,12 @@ static MACHINE_CONFIG_START( a7150, a7150_state )
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(640, 480)
 	MCFG_SCREEN_VISIBLE_AREA(0, 640-1, 0, 480-1)
+	MCFG_SCREEN_UPDATE(a7150)
+
 	MCFG_PALETTE_LENGTH(2)
 	MCFG_PALETTE_INIT(black_and_white)
 
 	MCFG_VIDEO_START(a7150)
-	MCFG_VIDEO_UPDATE(a7150)
 MACHINE_CONFIG_END
 
 /* ROM definition */
@@ -75,4 +77,4 @@ ROM_END
 /* Driver */
 
 /*    YEAR  NAME    PARENT  COMPAT   MACHINE    INPUT    INIT    COMPANY           FULLNAME       FLAGS */
-COMP( 1986, a7150,  0,      0,       a7150,     a7150,    0,     "VEB Robotron",   "A7150",       GAME_NOT_WORKING | GAME_NO_SOUND)
+COMP( 1986, a7150,  0,      0,       a7150,     a7150,    0,     "VEB Robotron",   "A7150", GAME_NOT_WORKING | GAME_NO_SOUND)

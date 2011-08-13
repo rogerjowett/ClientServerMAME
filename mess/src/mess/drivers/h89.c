@@ -5,6 +5,7 @@
         12/05/2009 Skeleton driver.
 
 ****************************************************************************/
+#define ADDRESS_MAP_MODERN
 
 #include "emu.h"
 #include "cpu/z80/z80.h"
@@ -13,19 +14,19 @@
 class h89_state : public driver_device
 {
 public:
-	h89_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	h89_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 };
 
 
-static ADDRESS_MAP_START(h89_mem, ADDRESS_SPACE_PROGRAM, 8)
+static ADDRESS_MAP_START(h89_mem, AS_PROGRAM, 8, h89_state)
 	ADDRESS_MAP_UNMAP_HIGH
 	AM_RANGE(0x0000, 0x0fff) AM_ROM
 	AM_RANGE(0x1000, 0xffff) AM_RAM
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( h89_io , ADDRESS_SPACE_IO, 8)
+static ADDRESS_MAP_START( h89_io, AS_IO, 8, h89_state)
 	ADDRESS_MAP_UNMAP_HIGH
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 ADDRESS_MAP_END
@@ -43,31 +44,32 @@ static VIDEO_START( h89 )
 {
 }
 
-static VIDEO_UPDATE( h89 )
+static SCREEN_UPDATE( h89 )
 {
-    return 0;
+	return 0;
 }
 
 static MACHINE_CONFIG_START( h89, h89_state )
-    /* basic machine hardware */
-    MCFG_CPU_ADD("maincpu",Z80, XTAL_12_288MHz / 6)
-    MCFG_CPU_PROGRAM_MAP(h89_mem)
-    MCFG_CPU_IO_MAP(h89_io)
+	/* basic machine hardware */
+	MCFG_CPU_ADD("maincpu",Z80, XTAL_12_288MHz / 6)
+	MCFG_CPU_PROGRAM_MAP(h89_mem)
+	MCFG_CPU_IO_MAP(h89_io)
 
-    MCFG_MACHINE_RESET(h89)
+	MCFG_MACHINE_RESET(h89)
 
-    /* video hardware */
-    MCFG_SCREEN_ADD("screen", RASTER)
-    MCFG_SCREEN_REFRESH_RATE(50)
-    MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
-    MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-    MCFG_SCREEN_SIZE(640, 480)
-    MCFG_SCREEN_VISIBLE_AREA(0, 640-1, 0, 480-1)
-    MCFG_PALETTE_LENGTH(2)
-    MCFG_PALETTE_INIT(black_and_white)
+	/* video hardware */
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(50)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(640, 480)
+	MCFG_SCREEN_VISIBLE_AREA(0, 640-1, 0, 480-1)
+	MCFG_SCREEN_UPDATE(h89)
 
-    MCFG_VIDEO_START(h89)
-    MCFG_VIDEO_UPDATE(h89)
+	MCFG_PALETTE_LENGTH(2)
+	MCFG_PALETTE_INIT(black_and_white)
+
+	MCFG_VIDEO_START(h89)
 MACHINE_CONFIG_END
 
 /* ROM definition */
@@ -83,4 +85,4 @@ ROM_END
 /* Driver */
 
 /*    YEAR  NAME    PARENT  COMPAT   MACHINE    INPUT    INIT    COMPANY   FULLNAME       FLAGS */
-COMP( 1979, h89,	0,       0, 		h89,	h89,	 0, 	  "Heath Inc",   "Heathkit H89",		GAME_NOT_WORKING | GAME_NO_SOUND)
+COMP( 1979, h89,    0,      0,       h89,       h89,     0,    "Heath Inc", "Heathkit H89", GAME_NOT_WORKING | GAME_NO_SOUND)

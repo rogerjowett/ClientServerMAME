@@ -75,24 +75,24 @@ INLINE pc_lpt_state *get_safe_token(device_t *device)
 static DEVICE_START( pc_lpt )
 {
 	pc_lpt_state *lpt = get_safe_token(device);
-	const pc_lpt_interface *intf = (const pc_lpt_interface *)device->baseconfig().static_config();
+	const pc_lpt_interface *intf = (const pc_lpt_interface *)device->static_config();
 	/* validate some basic stuff */
-	assert(device->baseconfig().static_config() != NULL);
+	assert(device->static_config() != NULL);
 
 	/* get centronics device */
 	lpt->centronics = device->subdevice("centronics");
 	assert(lpt->centronics != NULL);
 
 	/* resolve callbacks */
-	devcb_resolve_write_line(&lpt->out_irq_func, &intf->out_irq_func, device);
+	lpt->out_irq_func.resolve(intf->out_irq_func, *device);
 
 	/* register for state saving */
-	state_save_register_device_item(device, 0, lpt->ack);
-	state_save_register_device_item(device, 0, lpt->strobe);
-	state_save_register_device_item(device, 0, lpt->autofd);
-	state_save_register_device_item(device, 0, lpt->init);
-	state_save_register_device_item(device, 0, lpt->select);
-	state_save_register_device_item(device, 0, lpt->irq_enabled);
+	device->save_item(NAME(lpt->ack));
+	device->save_item(NAME(lpt->strobe));
+	device->save_item(NAME(lpt->autofd));
+	device->save_item(NAME(lpt->init));
+	device->save_item(NAME(lpt->select));
+	device->save_item(NAME(lpt->irq_enabled));
 }
 
 static DEVICE_RESET( pc_lpt )
@@ -143,8 +143,8 @@ static WRITE_LINE_DEVICE_HANDLER( pc_lpt_ack_w )
 	if (lpt->irq_enabled && lpt->ack == TRUE && state == FALSE)
 	{
 		/* pulse irq when going from high to low */
-		devcb_call_write_line(&lpt->out_irq_func, TRUE);
-		devcb_call_write_line(&lpt->out_irq_func, FALSE);
+		lpt->out_irq_func(TRUE);
+		lpt->out_irq_func(FALSE);
 	}
 
 	lpt->ack = state;

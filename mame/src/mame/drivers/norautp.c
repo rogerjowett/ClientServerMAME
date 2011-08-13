@@ -39,7 +39,8 @@
    * Kimble Double HI-LO,                 198?,  Kimble Ireland.
    * GTI Poker,                           1983,  GTI Inc.
    * HI-LO Double Up Joker Poker,         1983,  SMS Manufacturing Corp.
-   * DRHL Poker (v.2.89),                 1986,  Drews Inc.
+   * Drews Revenge (v.2.89, set 1),       1986,  Drews Inc.
+   * Drews Revenge (v.2.89, set 2),       1986,  Drews Inc.
    * Turbo Poker 2,                       1993,  Micro Manufacturing, Inc.
    * Southern Systems Joker Poker,        1982,  Southern Systems & Assembly, Ltd.
    * Fast Draw (poker conversion kit)?,   198?,  Stern Electronics?
@@ -517,6 +518,12 @@
   - Added some technical notes.
 
 
+  [2011-01-24]
+
+  - Changed DRHL description to "Drews Revenge (v.2.89, set 1)"
+  - Added Drews Revenge (v.2.89, set 2). Based on 8080 CPU.
+
+
   TODO:
 
   - Analize and hook the 3rd PPI device at 0xc0-0xc3.
@@ -538,15 +545,12 @@
 #include "emu.h"
 #include "cpu/z80/z80.h"
 #include "cpu/i8085/i8085.h"
-#include "machine/i8255a.h"
+#include "machine/i8255.h"
 #include "machine/nvram.h"
 #include "includes/norautp.h"
 
 #include "noraut11.lh"
 #include "noraut12.lh"
-
-static UINT16 *np_vram;
-static UINT16 np_addr;
 
 
 /*************************
@@ -555,17 +559,19 @@ static UINT16 np_addr;
 
 static VIDEO_START( norautp )
 {
-	np_vram = auto_alloc_array(machine, UINT16, 0x1000/2);
+	norautp_state *state = machine.driver_data<norautp_state>();
+	state->m_np_vram = auto_alloc_array_clear(machine, UINT16, 0x1000/2);
 }
 
 
-static VIDEO_UPDATE( norautp )
+static SCREEN_UPDATE( norautp )
 {
+	norautp_state *state = screen->machine().driver_data<norautp_state>();
 	int x, y, count;
 
 	count = 0;
 
-	bitmap_fill(bitmap, cliprect, screen->machine->pens[0]); //black pen
+	bitmap_fill(bitmap, cliprect, screen->machine().pens[0]); //black pen
 
 	for(y = 0; y < 8; y++)
 	{
@@ -574,10 +580,10 @@ static VIDEO_UPDATE( norautp )
 		{
 			for(x = 0; x < 16; x++)
 			{
-				int tile = np_vram[count] & 0x3f;
-				int colour = (np_vram[count] & 0xc0) >> 6;
+				int tile = state->m_np_vram[count] & 0x3f;
+				int colour = (state->m_np_vram[count] & 0xc0) >> 6;
 
-				drawgfx_opaque(bitmap,cliprect, screen->machine->gfx[1], tile, colour, 0, 0, (x * 32) + 8, y * 32);
+				drawgfx_opaque(bitmap,cliprect, screen->machine().gfx[1], tile, colour, 0, 0, (x * 32) + 8, y * 32);
 
 				count+=2;
 			}
@@ -586,10 +592,10 @@ static VIDEO_UPDATE( norautp )
 		{
 			for(x = 0; x < 32; x++)
 			{
-				int tile = np_vram[count] & 0x3f;
-				int colour = (np_vram[count] & 0xc0) >> 6;
+				int tile = state->m_np_vram[count] & 0x3f;
+				int colour = (state->m_np_vram[count] & 0xc0) >> 6;
 
-				drawgfx_opaque(bitmap,cliprect, screen->machine->gfx[0], tile, colour, 0, 0, x * 16, y * 32);
+				drawgfx_opaque(bitmap,cliprect, screen->machine().gfx[0], tile, colour, 0, 0, x * 16, y * 32);
 
 				count++;
 			}
@@ -658,7 +664,7 @@ static WRITE8_DEVICE_HANDLER( soundlamps_w )
   xxxx ----  * Discrete Sound Lines.
 */
 
-	device_t *discrete = device->machine->device("discrete");
+	device_t *discrete = device->machine().device("discrete");
 
 	output_set_lamp_value(8, (data >> 0) & 1);	/* DEAL / DRAW lamp */
 	output_set_lamp_value(9, (data >> 1) & 1);	/* BET / COLLECT lamp */
@@ -688,9 +694,9 @@ static WRITE8_DEVICE_HANDLER( counterlamps_w )
 	output_set_lamp_value(10, (data >> 0) & 1);	/* HI lamp */
 	output_set_lamp_value(11, (data >> 1) & 1);	/* LO lamp */
 
-	coin_counter_w(device->machine, 0, data & 0x10);	/* Coin1/3 counter */
-	coin_counter_w(device->machine, 1, data & 0x20);	/* Coin2 counter */
-	coin_counter_w(device->machine, 2, data & 0x08);	/* Payout pulse */
+	coin_counter_w(device->machine(), 0, data & 0x10);	/* Coin1/3 counter */
+	coin_counter_w(device->machine(), 1, data & 0x20);	/* Coin2 counter */
+	coin_counter_w(device->machine(), 2, data & 0x08);	/* Payout pulse */
 }
 
 
@@ -719,24 +725,27 @@ static READ8_HANDLER( test_r )
 static READ8_HANDLER( vram_data_r )
 //static READ8_DEVICE_HANDLER( vram_data_r )
 {
-	return np_vram[np_addr];
+	norautp_state *state = space->machine().driver_data<norautp_state>();
+	return state->m_np_vram[state->m_np_addr];
 }
 
 static WRITE8_HANDLER( vram_data_w )
 //static WRITE8_DEVICE_HANDLER( vram_data_w )
 {
-	np_vram[np_addr] = data & 0xff;
+	norautp_state *state = space->machine().driver_data<norautp_state>();
+	state->m_np_vram[state->m_np_addr] = data & 0xff;
 
 	/* trigger 8255-2 port C bit 7 (/OBF) */
-//  i8255a_pc7_w(device->machine->device("ppi8255_2"), 0);
-//  i8255a_pc7_w(device->machine->device("ppi8255_2"), 1);
+//  i8255a_pc7_w(device->machine().device("ppi8255_2"), 0);
+//  i8255a_pc7_w(device->machine().device("ppi8255_2"), 1);
 
 }
 
 static WRITE8_HANDLER( vram_addr_w )
 //static WRITE8_DEVICE_HANDLER( vram_addr_w )
 {
-	np_addr = data;
+	norautp_state *state = space->machine().driver_data<norautp_state>();
+	state->m_np_addr = data;
 }
 
 /* game waits for bit 4 (0x10) to be reset.*/
@@ -800,17 +809,17 @@ static READ8_HANDLER( test2_r )
   +----------+---------+--------------+--------+--------------+--------+--------------+------------------------+
 
 */
-static ADDRESS_MAP_START( norautp_map, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( norautp_map, AS_PROGRAM, 8 )
 	ADDRESS_MAP_GLOBAL_MASK(0x3fff)
 	AM_RANGE(0x0000, 0x1fff) AM_ROM
 	AM_RANGE(0x2000, 0x27ff) AM_RAM AM_SHARE("nvram")	/* 6116 */
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( norautp_portmap, ADDRESS_SPACE_IO, 8 )
+static ADDRESS_MAP_START( norautp_portmap, AS_IO, 8 )
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x60, 0x63) AM_MIRROR(0x1c) AM_DEVREADWRITE("ppi8255_0", i8255a_r, i8255a_w)
-	AM_RANGE(0xa0, 0xa3) AM_MIRROR(0x1c) AM_DEVREADWRITE("ppi8255_1", i8255a_r, i8255a_w)
-//  AM_RANGE(0xc0, 0xc3) AM_MIRROR(0x3c) AM_DEVREADWRITE("ppi8255_2", i8255a_r, i8255a_w)
+	AM_RANGE(0x60, 0x63) AM_MIRROR(0x1c) AM_DEVREADWRITE_MODERN("ppi8255_0", i8255_device, read, write)
+	AM_RANGE(0xa0, 0xa3) AM_MIRROR(0x1c) AM_DEVREADWRITE_MODERN("ppi8255_1", i8255_device, read, write)
+//  AM_RANGE(0xc0, 0xc3) AM_MIRROR(0x3c) AM_DEVREADWRITE_MODERN("ppi8255_2", i8255_device, read, write)
 	AM_RANGE(0xc0, 0xc0) AM_MIRROR(0x3c) AM_READWRITE(vram_data_r, vram_data_w)
 	AM_RANGE(0xc1, 0xc1) AM_MIRROR(0x3c) AM_WRITE(vram_addr_w)
 	AM_RANGE(0xc2, 0xc2) AM_MIRROR(0x3c) AM_READ(test_r)
@@ -831,65 +840,69 @@ ADDRESS_MAP_END
 
 */
 
-static ADDRESS_MAP_START( nortest1_map, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( nortest1_map, AS_PROGRAM, 8 )
 	ADDRESS_MAP_GLOBAL_MASK(0x7fff)
 	AM_RANGE(0x0000, 0x2fff) AM_ROM
 	AM_RANGE(0x5000, 0x57ff) AM_RAM AM_SHARE("nvram")
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( norautxp_map, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( norautxp_map, AS_PROGRAM, 8 )
 //  ADDRESS_MAP_GLOBAL_MASK(~0x4000)
 	ADDRESS_MAP_GLOBAL_MASK(0x7fff)
 	AM_RANGE(0x0000, 0x3fff) AM_ROM	/* need to be checked */
 	AM_RANGE(0x6000, 0x67ff) AM_RAM AM_SHARE("nvram") /* HM6116 */
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( norautx4_map, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( norautx4_map, AS_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x3fff) AM_ROM
 	AM_RANGE(0x6000, 0x67ff) AM_RAM AM_SHARE("nvram") /* 6116 */
 ADDRESS_MAP_END
 
 #ifdef UNUSED_CODE
-static ADDRESS_MAP_START( norautx8_map, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( norautx8_map, AS_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x7fff) AM_ROM	/* need to be checked */
 	AM_RANGE(0xc000, 0xc7ff) AM_RAM AM_SHARE("nvram") /* 6116 */
 ADDRESS_MAP_END
 #endif
 
-static ADDRESS_MAP_START( kimble_map, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( kimble_map, AS_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0xbfff) AM_ROM
 	AM_RANGE(0xc000, 0xc7ff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0xc800, 0xc9ff) AM_RAM	/* working RAM? */
 ADDRESS_MAP_END
 
 #ifdef UNUSED_CODE
-static ADDRESS_MAP_START( norautxp_portmap, ADDRESS_SPACE_IO, 8 )
+static ADDRESS_MAP_START( norautxp_portmap, AS_IO, 8 )
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 ADDRESS_MAP_END
 #endif
 
+static ADDRESS_MAP_START( newhilop_map, AS_PROGRAM, 8 )
+	AM_RANGE(0x0000, 0x1fff) AM_ROM
+	AM_RANGE(0xd000, 0xd7ff) AM_RAM AM_SHARE("nvram")	/* 6116 */
+ADDRESS_MAP_END
 
 /*********** 8080 based **********/
 
-static ADDRESS_MAP_START( dphl_map, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( dphl_map, AS_PROGRAM, 8 )
 	ADDRESS_MAP_GLOBAL_MASK(0x7fff)	/* A15 not connected */
 	AM_RANGE(0x0000, 0x3fff) AM_ROM
 	AM_RANGE(0x5000, 0x53ff) AM_RAM	AM_SHARE("nvram")	/* should be 2x 0x100 segments (4x 2111) */
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( dphla_map, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( dphla_map, AS_PROGRAM, 8 )
 	ADDRESS_MAP_GLOBAL_MASK(0x3fff)
 	AM_RANGE(0x0000, 0x1fff) AM_ROM
 	AM_RANGE(0x2000, 0x23ff) AM_RAM AM_SHARE("nvram")
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( ssjkrpkr_map, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( ssjkrpkr_map, AS_PROGRAM, 8 )
 	ADDRESS_MAP_GLOBAL_MASK(0x7fff)
 	AM_RANGE(0x0000, 0x1fff) AM_ROM
 	AM_RANGE(0x4000, 0x43ff) AM_RAM AM_SHARE("nvram")
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( dphltest_map, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( dphltest_map, AS_PROGRAM, 8 )
 //  ADDRESS_MAP_GLOBAL_MASK(0x7fff) /* A15 not connected */
 	AM_RANGE(0x0000, 0x6fff) AM_ROM
 	AM_RANGE(0x7000, 0x7fff) AM_RAM
@@ -909,12 +922,12 @@ ADDRESS_MAP_END
   The code read on port $62, when is suppossed to be set as output.
 
 */
-static ADDRESS_MAP_START( kimbldhl_map, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( kimbldhl_map, AS_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x7fff) AM_ROM
 	AM_RANGE(0xc000, 0xc7ff) AM_RAM AM_SHARE("nvram")
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( drhl_map, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( drhl_map, AS_PROGRAM, 8 )
 	ADDRESS_MAP_GLOBAL_MASK(0x7fff)	/* A15 not connected */
 	AM_RANGE(0x0000, 0x3fff) AM_ROM
 	AM_RANGE(0x5000, 0x53ff) AM_RAM AM_SHARE("nvram")
@@ -1192,25 +1205,25 @@ GFXDECODE_END
 *      PPI 8255 (x3) Interface      *
 ************************************/
 
-static I8255A_INTERFACE (ppi8255_intf_0)
+static I8255_INTERFACE (ppi8255_intf_0)
 {
 	/* (60-63) Mode 0 - Port A set as input */
 	DEVCB_INPUT_PORT("DSW1"),		/* Port A read */
-	DEVCB_NULL,						/* Port B read */
-	DEVCB_NULL,						/* Port C read */
 	DEVCB_NULL,						/* Port A write */
+	DEVCB_NULL,						/* Port B read */
 	DEVCB_HANDLER(mainlamps_w),		/* Port B write */
+	DEVCB_NULL,						/* Port C read */
 	DEVCB_HANDLER(counterlamps_w)	/* Port C write */
 };
 
-static I8255A_INTERFACE (ppi8255_intf_1)
+static I8255_INTERFACE (ppi8255_intf_1)
 {
 	/* (a0-a3) Mode 0 - Ports A & B set as input */
 	DEVCB_INPUT_PORT("IN0"),		/* Port A read */
-	DEVCB_INPUT_PORT("IN1"),		/* Port B read */
-	DEVCB_NULL,						/* Port C read */
 	DEVCB_NULL,						/* Port A write */
+	DEVCB_INPUT_PORT("IN1"),		/* Port B read */
 	DEVCB_NULL,						/* Port B write */
+	DEVCB_NULL,						/* Port C read */
 	DEVCB_HANDLER(soundlamps_w)		/* Port C write */
 };
 
@@ -1219,10 +1232,10 @@ static I8255A_INTERFACE (ppi8255_intf_1)
     /* (c0-c3) Group A Mode 2 (5-lines handshacked bidirectional port)
                Group B Mode 0, output;  (see below for lines PC0-PC2) */
 //  DEVCB_HANDLER(vram_data_r),     /* Port A read (VRAM data read)*/
-//  DEVCB_NULL,                     /* Port B read */
-//  DEVCB_HANDLER(ppi2_portc_r),    /* Port C read */
 //  DEVCB_HANDLER(vram_data_w),     /* Port A write (VRAM data write) */
+//  DEVCB_NULL,                     /* Port B read */
 //  DEVCB_HANDLER(vram_addr_w),     /* Port B write (VRAM address write) */
+//  DEVCB_HANDLER(ppi2_portc_r),    /* Port C read */
 //  DEVCB_HANDLER(ppi2_portc_w)     /* Port C write */
 
 	/*  PPI-2 is configured as mixed mode2 and mode0 output.
@@ -1236,7 +1249,7 @@ static I8255A_INTERFACE (ppi8255_intf_1)
 *    Machine Drivers     *
 *************************/
 
-static MACHINE_CONFIG_START( noraut_base, driver_device )
+static MACHINE_CONFIG_START( noraut_base, norautp_state )
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, NORAUT_CPU_CLOCK)
@@ -1246,9 +1259,9 @@ static MACHINE_CONFIG_START( noraut_base, driver_device )
 	MCFG_NVRAM_ADD_0FILL("nvram")	/* doesn't work if placed at derivative drivers */
 
 	/* 3x 8255 */
-	MCFG_I8255A_ADD( "ppi8255_0", ppi8255_intf_0 )
-	MCFG_I8255A_ADD( "ppi8255_1", ppi8255_intf_1 )
-//  MCFG_I8255A_ADD( "ppi8255_2", ppi8255_intf_2 )
+	MCFG_I8255_ADD( "ppi8255_0", ppi8255_intf_0 )
+	MCFG_I8255_ADD( "ppi8255_1", ppi8255_intf_1 )
+//  MCFG_I8255_ADD( "ppi8255_2", ppi8255_intf_2 )
 
 	/* video hardware */
 	MCFG_SCREEN_ADD("screen", RASTER)
@@ -1257,13 +1270,13 @@ static MACHINE_CONFIG_START( noraut_base, driver_device )
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(32*16, 32*16)
 	MCFG_SCREEN_VISIBLE_AREA(2*16, 31*16-1, (0*16) + 8, 16*16-1)	/* the hardware clips the top 8 pixels */
+	MCFG_SCREEN_UPDATE(norautp)
 
 	MCFG_GFXDECODE(norautp)
 
 	MCFG_PALETTE_INIT(norautp)
 	MCFG_PALETTE_LENGTH(8)
 	MCFG_VIDEO_START(norautp)
-	MCFG_VIDEO_UPDATE(norautp)
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
@@ -1343,6 +1356,14 @@ static MACHINE_CONFIG_DERIVED( kimble, noraut_base )
 	MCFG_SOUND_CONFIG_DISCRETE(kimble)
 MACHINE_CONFIG_END
 
+static MACHINE_CONFIG_DERIVED( newhilop, noraut_base )
+
+	/* basic machine hardware */
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(newhilop_map)
+//  MCFG_CPU_IO_MAP(newhilop_portmap)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
+MACHINE_CONFIG_END
 
 /********** 8080 based **********/
 
@@ -2490,6 +2511,23 @@ ROM_START( bjpoker )
 
 ROM_END
 
+ROM_START( newhilop )
+	ROM_REGION( 0x10000, "cpu_data", 0 )
+	ROM_LOAD( "new_hi-low.3e",  0x0000, 0x10000, CRC(8efe02a2) SHA1(e8150544f073e80ca83f2033bce64b65de08194c) )
+
+	ROM_REGION( 0x10000, "gfx_data", 0 )
+	ROM_LOAD( "new_hi-low.3a",  0x0000, 0x10000, CRC(6750f0e7) SHA1(cfb180aed9ff288cf1108071f2618587ac85ad1a) )
+
+	ROM_REGION( 0x10000, "maincpu", 0 )
+	ROM_COPY( "cpu_data", 0xe000, 0x0000, 0x2000 )
+
+	ROM_REGION( 0x1000,  "gfx", 0 )
+	ROM_COPY( "gfx_data", 0xf000, 0x0000, 0x1000 )
+
+	ROM_REGION( 0x0100,  "proms", 0 )
+	ROM_LOAD( "82s129.4d", 0x0000, 0x0100, CRC(88302127) SHA1(aed1273974917673405f1234ab64e6f8b3856c34) ) //= japan_6301.u51        dphljp     Draw Poker HI-LO (Japanese)
+ROM_END
+
 
 /*************************************** 8080 sets **************************************/
 /*                                                                                      */
@@ -3035,7 +3073,7 @@ ROM_END
 /*
 
   DRHL
-  poker looking board
+  Drews Revenge (poker)
 
   .u26  2732  stickered DRHL V2.89 U-26
   .u19  2732  stickered DRHL V2.89 U-19
@@ -3063,6 +3101,24 @@ ROM_START( drhl )
 	ROM_REGION( 0x0200,  "plds", 0 )	/* possible bad dump. fusemap's 1st half is all 1's and 2nd half 0's */
 	ROM_LOAD( "drhl_ampal16l8pc.u51",  0x0000, 0x0104, CRC(bd76fb53) SHA1(2d0634e8edb3289a103719466465e9777606086e) )
 ROM_END
+
+ROM_START( drhla )
+	ROM_REGION( 0x10000, "maincpu", 0 )
+	ROM_LOAD( "dspd_j_v.2.89.u12", 0x0000, 0x1000, CRC(8ac3bcfa) SHA1(9cc7c4529e18e4b3f7dabd65388604631bda2cc4) )
+	ROM_LOAD( "dspd_j_v.2.89.u18", 0x1000, 0x1000, CRC(79b4c7af) SHA1(76abe5def47aaca17e5ec40f50841a12a1d8773b) )
+	ROM_LOAD( "dspd_j_v.2.89.u19", 0x2000, 0x1000, CRC(6cce9025) SHA1(57d2e22df5be96082c13a3c1bcd1bc11849a6997) )
+	ROM_LOAD( "dspd_j_v.2.89.u26", 0x3000, 0x1000, CRC(85be4d99) SHA1(96f067a5a3db6415929e71f3cf3c39614187ccec) )
+
+	ROM_REGION( 0x1000,  "gfx", 0 )
+	ROM_LOAD( "drews.u31",  0x0000, 0x1000, CRC(bbc7c970) SHA1(9268a430764a5ea8ba7cd18944ec254a44d9dff2) )
+
+	ROM_REGION( 0x0800,  "dallas", 0 )	/* it's in fact NVRAM, but double sized... */
+	ROM_LOAD( "ds1220ab.u33",  0x0000, 0x0800, CRC(f357d314) SHA1(72791b2effd3ec2e98b735c9b215fc9abe3f5aea) )
+
+	ROM_REGION( 0x0200,  "plds", 0 )	/* this one is unprotected and seems ok */
+	ROM_LOAD( "pal16l8a.u51",  0x0000, 0x0104, CRC(4c98193f) SHA1(b6bdb6eef0d962a3aa4df0e23a8937a7e3210062) )
+ROM_END
+
 
 /*
 
@@ -3343,21 +3399,21 @@ ROM_END
 */
 //static DRIVER_INIT( norautrh )
 //{
-//  UINT8 *ROM = machine->region("maincpu")->base();
+//  UINT8 *ROM = machine.region("maincpu")->base();
 //  ROM[0x1110] = 0x00;
 //  ROM[0x1111] = 0x00;
 //}
 
 //static DRIVER_INIT( norautpn )
 //{
-//  UINT8 *ROM = machine->region("maincpu")->base();
+//  UINT8 *ROM = machine.region("maincpu")->base();
 //  ROM[0x0827] = 0x00;
 //  ROM[0x0828] = 0x00;
 //}
 
 //static DRIVER_INIT( norautu )
 //{
-//  UINT8 *ROM = machine->region("maincpu")->base();
+//  UINT8 *ROM = machine.region("maincpu")->base();
 //  ROM[0x083c] = 0x00;
 //  ROM[0x083d] = 0x00;
 //  ROM[0x083e] = 0x00;
@@ -3365,7 +3421,7 @@ ROM_END
 
 //static DRIVER_INIT( gtipoker )
 //{
-//  UINT8 *ROM = machine->region("maincpu")->base();
+//  UINT8 *ROM = machine.region("maincpu")->base();
 //  ROM[0x0cc6] = 0x00;
 //  ROM[0x0cc7] = 0x00;
 //  ROM[0x0cc8] = 0x00;
@@ -3376,7 +3432,7 @@ ROM_END
 
 //static DRIVER_INIT( dphl )
 //{
-//  UINT8 *ROM = machine->region("maincpu")->base();
+//  UINT8 *ROM = machine.region("maincpu")->base();
 //  ROM[0x1510] = 0x00;
 //  ROM[0x1511] = 0x00;
 //  ROM[0x1512] = 0x00;
@@ -3384,7 +3440,7 @@ ROM_END
 
 //static DRIVER_INIT( dphla )
 //{
-//  UINT8 *ROM = machine->region("maincpu")->base();
+//  UINT8 *ROM = machine.region("maincpu")->base();
 //  ROM[0x0b09] = 0x00;
 //  ROM[0x0b0a] = 0x00;
 //  ROM[0x0b0b] = 0x00;
@@ -3394,9 +3450,9 @@ static DRIVER_INIT( enc )
 {
 /* Attempt to decrypt the program ROM */
 
-//  UINT8 *rom = machine->region("maincpu")->base();
+//  UINT8 *rom = machine.region("maincpu")->base();
 //  UINT8 *buffer;
-//  int size = 0x2000; //machine->region("maincpu")->bytes();
+//  int size = 0x2000; //machine.region("maincpu")->bytes();
 //  int start = 0;
 //  int i;
 
@@ -3433,7 +3489,7 @@ static DRIVER_INIT( deb )
 /* Just for debugging purposes */
 /*   Should be removed soon    */
 {
-	UINT8 *ROM = machine->region("maincpu")->base();
+	UINT8 *ROM = machine.region("maincpu")->base();
 	ROM[0x02f7] = 0xca;
 	ROM[0x02f8] = 0x18;
 	ROM[0x206c] = 0xff;
@@ -3443,7 +3499,7 @@ static DRIVER_INIT( ssa )
 /* Passing the video PPI handshaking lines */
 /* Just for debugging purposes */
 {
-//  UINT8 *ROM = machine->region("maincpu")->base();
+//  UINT8 *ROM = machine.region("maincpu")->base();
 
 //  ROM[0x073b] = 0x00;
 //  ROM[0x073c] = 0x00;
@@ -3485,6 +3541,7 @@ GAMEL( 1999, cgip30cs, 0,       norautx4, norautkl, deb, ROT0, "CGI",           
 GAME(  198?, kimblz80, 0,       kimble,   norautp,  0,   ROT0, "Kimble Ireland",           "Kimble Double HI-LO (z80 version)",   GAME_NOT_WORKING )
 GAME(  1983, pma,      0,       nortest1, norautp,  0,   ROT0, "PMA",                      "PMA Poker",                           GAME_NOT_WORKING )
 GAMEL( 198?, bjpoker,  0,       norautxp, norautrh, 0,   ROT0, "M.Kramer Manufacturing.",  "Poker / Black Jack (Model 7521)",     GAME_NOT_WORKING, layout_noraut12 )
+GAME(  19??, newhilop, 0,       newhilop, norautp,  0,   ROT0, "Song Won?",                "New Hi-Low Poker",                    GAME_NOT_WORKING )
 
 
 /************************************* 8080 sets **************************************/
@@ -3499,11 +3556,12 @@ GAME(  1983, dphljp,   0,       dphl,     norautp,  0,   ROT0, "<unknown>",     
 GAME(  198?, kimbldhl, 0,       kimbldhl, norautp,  0,   ROT0, "Kimble Ireland",              "Kimble Double HI-LO",              GAME_NOT_WORKING )
 GAME(  1983, gtipoker, 0,       dphl,     norautp,  0,   ROT0, "GTI Inc",                     "GTI Poker",                        GAME_NOT_WORKING )
 GAME(  1983, smshilo,  0,       dphla,    norautp,  0,   ROT0, "SMS Manufacturing Corp.",     "HI-LO Double Up Joker Poker",      GAME_NOT_WORKING )
-GAME(  1986, drhl,     0,       drhl,     norautp,  0,   ROT0, "Drews Inc.",                  "DRHL Poker (v.2.89)",              GAME_NOT_WORKING )
+GAME(  1986, drhl,     0,       drhl,     norautp,  0,   ROT0, "Drews Inc.",                  "Drews Revenge (v.2.89, set 1)",    GAME_NOT_WORKING )
+GAME(  1986, drhla,    0,       drhl,     norautp,  0,   ROT0, "Drews Inc.",                  "Drews Revenge (v.2.89, set 2)",    GAME_NOT_WORKING )
 GAME(  1982, ssjkrpkr, 0,       ssjkrpkr, norautp,  ssa, ROT0, "Southern Systems & Assembly", "Southern Systems Joker Poker",     GAME_NOT_WORKING )
 
 /* The following one also has a custom 68705 MCU */
-GAME(  1993, tpoker2,  0,       dphltest, norautp,  0,   ROT0, "Micro Manufacturing Inc.",    "Turbo Poker 2",                    GAME_NOT_WORKING )
+GAME(  1993, tpoker2,  0,       dphltest, norautp,  0,   ROT0, "Micro Manufacturing",         "Turbo Poker 2",                    GAME_NOT_WORKING )
 
 
 /************************************ unknown sets ************************************/

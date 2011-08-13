@@ -44,6 +44,7 @@
 #include <windows.h>
 #include <windowsx.h>
 #include <tchar.h>
+#include <commdlg.h>
 #ifdef _MSC_VER
 #include <zmouse.h>
 #endif
@@ -51,6 +52,7 @@
 // MAME headers
 #include "emu.h"
 #include "uiinput.h"
+#include "imagedev/cassette.h"
 #include "debugger.h"
 #include "debug/debugvw.h"
 #include "debug/dvdisasm.h"
@@ -138,7 +140,9 @@ enum
 	ID_SHOW_ENCRYPTED,
 	ID_SHOW_COMMENTS,
 	ID_RUN_TO_CURSOR,
-	ID_TOGGLE_BREAKPOINT
+	ID_TOGGLE_BREAKPOINT,
+
+	ID_DEVICE_OPTIONS  // keep this always at the end
 };
 
 
@@ -148,7 +152,7 @@ enum
 //============================================================
 
 typedef struct _debugview_info debugview_info;
-typedef struct _debugwin_info debugwin_info;
+class debugwin_info;
 
 
 struct _debugview_info
@@ -161,8 +165,14 @@ struct _debugview_info
 };
 
 
-struct _debugwin_info
+class debugwin_info
 {
+public:
+	debugwin_info(running_machine &machine)
+		: m_machine(machine) { }
+
+	running_machine &machine() const { return m_machine; }
+
 	debugwin_info *			next;
 	HWND					wnd;
 	HWND					focuswnd;
@@ -189,7 +199,8 @@ struct _debugwin_info
 
 	HWND					otherwnd[MAX_OTHER_WND];
 
-	running_machine *		machine;
+private:
+	running_machine &		m_machine;
 };
 
 
@@ -217,7 +228,7 @@ static UINT32 vscroll_width;
 //  PROTOTYPES
 //============================================================
 
-static debugwin_info *debugwin_window_create(running_machine *machine, LPCSTR title, WNDPROC handler);
+static debugwin_info *debugwin_window_create(running_machine &machine, LPCSTR title, WNDPROC handler);
 static void debugwin_window_free(debugwin_info *info);
 static LRESULT CALLBACK debugwin_window_proc(HWND wnd, UINT message, WPARAM wparam, LPARAM lparam);
 
@@ -231,23 +242,23 @@ static LRESULT CALLBACK debugwin_edit_proc(HWND wnd, UINT message, WPARAM wparam
 //static void generic_create_window(int type);
 static void generic_recompute_children(debugwin_info *info);
 
-static void memory_create_window(running_machine *machine);
+static void memory_create_window(running_machine &machine);
 static void memory_recompute_children(debugwin_info *info);
 static void memory_process_string(debugwin_info *info, const char *string);
 static void memory_update_menu(debugwin_info *info);
 static int memory_handle_command(debugwin_info *info, WPARAM wparam, LPARAM lparam);
 static int memory_handle_key(debugwin_info *info, WPARAM wparam, LPARAM lparam);
-static void memory_update_caption(running_machine *machine, HWND wnd);
+static void memory_update_caption(running_machine &machine, HWND wnd);
 
-static void disasm_create_window(running_machine *machine);
+static void disasm_create_window(running_machine &machine);
 static void disasm_recompute_children(debugwin_info *info);
 static void disasm_process_string(debugwin_info *info, const char *string);
 static void disasm_update_menu(debugwin_info *info);
 static int disasm_handle_command(debugwin_info *info, WPARAM wparam, LPARAM lparam);
 static int disasm_handle_key(debugwin_info *info, WPARAM wparam, LPARAM lparam);
-static void disasm_update_caption(running_machine *machine, HWND wnd);
+static void disasm_update_caption(running_machine &machine, HWND wnd);
 
-static void console_create_window(running_machine *machine);
+static void console_create_window(running_machine &machine);
 static void console_recompute_children(debugwin_info *info);
 static void console_process_string(debugwin_info *info, const char *string);
 static void console_set_cpu(device_t *device);
@@ -259,7 +270,7 @@ static void smart_set_window_bounds(HWND wnd, HWND parent, RECT *bounds);
 static void smart_show_window(HWND wnd, BOOL show);
 static void smart_show_all(BOOL show);
 
-
+static void image_update_menu(debugwin_info *info);
 
 //============================================================
 //  wait_for_debugger
@@ -271,7 +282,7 @@ void windows_osd_interface::wait_for_debugger(device_t &device, bool firststop)
 
 	// create a console window
 	if (main_console == NULL)
-		console_create_window(&machine());
+		console_create_window(machine());
 
 	// update the views in the console to reflect the current CPU
 	if (main_console != NULL)
@@ -290,7 +301,7 @@ void windows_osd_interface::wait_for_debugger(device_t &device, bool firststop)
 	smart_show_all(TRUE);
 
 	// run input polling to ensure that our status is in sync
-	wininput_poll(&machine());
+	wininput_poll(machine());
 
 	// get and process messages
 	GetMessage(&message, NULL, 0, 0);
@@ -308,7 +319,7 @@ void windows_osd_interface::wait_for_debugger(device_t &device, bool firststop)
 
 		// process everything else
 		default:
-			winwindow_dispatch_message(&machine(), &message);
+			winwindow_dispatch_message(machine(), &message);
 			break;
 	}
 
@@ -322,28 +333,29 @@ void windows_osd_interface::wait_for_debugger(device_t &device, bool firststop)
 //  debugwin_seq_pressed
 //============================================================
 
-static int debugwin_seq_pressed(running_machine *machine)
+static int debugwin_seq_pressed(running_machine &machine)
 {
-	const input_seq *seq = input_type_seq(machine, IPT_UI_DEBUG_BREAK, 0, SEQ_TYPE_STANDARD);
+	const input_seq &seq = input_type_seq(machine, IPT_UI_DEBUG_BREAK, 0, SEQ_TYPE_STANDARD);
 	int result = FALSE;
 	int invert = FALSE;
 	int first = TRUE;
 	int codenum;
 
 	// iterate over all of the codes
-	for (codenum = 0; codenum < ARRAY_LENGTH(seq->code); codenum++)
+	int length = seq.length();
+	for (codenum = 0; codenum < length; codenum++)
 	{
-		input_code code = seq->code[codenum];
+		input_code code = seq[codenum];
 
 		// handle NOT
-		if (code == SEQCODE_NOT)
+		if (code == input_seq::not_code)
 			invert = TRUE;
 
 		// handle OR and END
-		else if (code == SEQCODE_OR || code == SEQCODE_END)
+		else if (code == input_seq::or_code || code == input_seq::end_code)
 		{
 			// if we have a positive result from the previous set, we're done
-			if (result || code == SEQCODE_END)
+			if (result || code == input_seq::end_code)
 				break;
 
 			// otherwise, reset our state
@@ -381,7 +393,7 @@ static int debugwin_seq_pressed(running_machine *machine)
 //  debugwin_init_windows
 //============================================================
 
-void debugwin_init_windows(void)
+void debugwin_init_windows(running_machine &machine)
 {
 	static int class_registered;
 
@@ -427,11 +439,12 @@ void debugwin_init_windows(void)
 
 		if (temp_dc != NULL)
 		{
-			int size = options_get_int(mame_options(), WINOPTION_DEBUGGER_FONT_SIZE);
+			windows_options &options = downcast<windows_options &>(machine.options());
+			int size = options.debugger_font_size();
 			TCHAR *t_face;
 
 			// create a standard font
-			t_face = tstring_from_utf8(options_get_string(mame_options(), WINOPTION_DEBUGGER_FONT));
+			t_face = tstring_from_utf8(options.debugger_font());
 			debug_font = CreateFont(-MulDiv(size, GetDeviceCaps(temp_dc, LOGPIXELSY), 72), 0, 0, 0, FW_MEDIUM, FALSE, FALSE, FALSE,
 						ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, FF_DONTCARE, t_face);
 			osd_free(t_face);
@@ -503,10 +516,10 @@ void debugwin_show(int type)
 //  debugwin_update_during_game
 //============================================================
 
-void debugwin_update_during_game(running_machine *machine)
+void debugwin_update_during_game(running_machine &machine)
 {
 	// if we're running live, do some checks
-	if (!winwindow_has_focus() && !debug_cpu_is_stopped(machine) && machine->phase() == MACHINE_PHASE_RUNNING)
+	if (!winwindow_has_focus() && !debug_cpu_is_stopped(machine) && machine.phase() == MACHINE_PHASE_RUNNING)
 	{
 		// see if the interrupt key is pressed and break if it is
 		if (debugwin_seq_pressed(machine))
@@ -533,13 +546,13 @@ void debugwin_update_during_game(running_machine *machine)
 //  debugwin_window_create
 //============================================================
 
-static debugwin_info *debugwin_window_create(running_machine *machine, LPCSTR title, WNDPROC handler)
+static debugwin_info *debugwin_window_create(running_machine &machine, LPCSTR title, WNDPROC handler)
 {
 	debugwin_info *info = NULL;
 	RECT work_bounds;
 
 	// allocate memory
-	info = global_alloc_clear(debugwin_info);
+	info = global_alloc_clear(debugwin_info(machine));
 
 	// create the window
 	info->handler = handler;
@@ -559,8 +572,6 @@ static debugwin_info *debugwin_window_create(running_machine *machine, LPCSTR ti
 	info->handle_command = global_handle_command;
 	info->handle_key = global_handle_key;
 	strcpy(info->edit_defstr, "");
-
-	info->machine = machine;
 
 	// hook us in
 	info->next = window_list;
@@ -598,7 +609,7 @@ static void debugwin_window_free(debugwin_info *info)
 	for (viewnum = 0; viewnum < ARRAY_LENGTH(info->view); viewnum++)
 		if (info->view[viewnum].view != NULL)
 		{
-			info->machine->debug_view().free_view(*info->view[viewnum].view);
+			info->machine().debug_view().free_view(*info->view[viewnum].view);
 			info->view[viewnum].view = NULL;
 		}
 
@@ -707,7 +718,7 @@ static LRESULT CALLBACK debugwin_window_proc(HWND wnd, UINT message, WPARAM wpar
 		case WM_CHAR:
 			if (info->ignore_char_lparam == (lparam >> 16))
 				info->ignore_char_lparam = 0;
-			else if (waiting_for_debugger || !debugwin_seq_pressed(info->machine))
+			else if (waiting_for_debugger || !debugwin_seq_pressed(info->machine()))
 				return DefWindowProc(wnd, message, wparam, lparam);
 			break;
 
@@ -742,7 +753,17 @@ static LRESULT CALLBACK debugwin_window_proc(HWND wnd, UINT message, WPARAM wpar
 		// mouse wheel: forward to the first view
 		case WM_MOUSEWHEEL:
 		{
-			int delta = (INT16)HIWORD(wparam) / WHEEL_DELTA;
+			static int units_carryover = 0;
+
+			UINT lines_per_click;
+			if (!SystemParametersInfo(SPI_GETWHEELSCROLLLINES, 0, &lines_per_click, 0))
+				lines_per_click = 3;
+
+			int units = GET_WHEEL_DELTA_WPARAM(wparam) + units_carryover;
+			int clicks = units / WHEEL_DELTA;
+			units_carryover = units % WHEEL_DELTA;
+
+			int delta = clicks * lines_per_click;
 			int viewnum = 0;
 			POINT point;
 			HWND child;
@@ -763,10 +784,10 @@ static LRESULT CALLBACK debugwin_window_proc(HWND wnd, UINT message, WPARAM wpar
 			// send the appropriate message to this view's scrollbar
 			if (info->view[viewnum].wnd && info->view[viewnum].vscroll)
 			{
-				int message_type = SB_LINELEFT;
+				int message_type = SB_LINEUP;
 				if (delta < 0)
 				{
-					message_type = SB_LINERIGHT;
+					message_type = SB_LINEDOWN;
 					delta = -delta;
 				}
 				while (delta > 0)
@@ -795,7 +816,7 @@ static LRESULT CALLBACK debugwin_window_proc(HWND wnd, UINT message, WPARAM wpar
 			if (main_console && main_console->wnd == wnd)
 			{
 				smart_show_all(FALSE);
-				debug_cpu_get_visible_cpu(info->machine)->debug()->go();
+				debug_cpu_get_visible_cpu(info->machine())->debug()->go();
 			}
 			else
 				DestroyWindow(wnd);
@@ -842,7 +863,7 @@ static int debugwin_view_create(debugwin_info *info, int which, debug_view_type 
 		goto cleanup;
 
 	// create the debug view
-	view->view = info->machine->debug_view().alloc_view(type, debugwin_view_update, view);
+	view->view = info->machine().debug_view().alloc_view(type, debugwin_view_update, view);
 	if (view->view == NULL)
 		goto cleanup;
 
@@ -850,7 +871,7 @@ static int debugwin_view_create(debugwin_info *info, int which, debug_view_type 
 
 cleanup:
 	if (view->view)
-		info->machine->debug_view().free_view(*view->view);
+		info->machine().debug_view().free_view(*view->view);
 	if (view->hscroll)
 		DestroyWindow(view->hscroll);
 	if (view->vscroll)
@@ -1329,6 +1350,10 @@ static LRESULT CALLBACK debugwin_view_proc(HWND wnd, UINT message, WPARAM wparam
 		}
 
 		// keydown: handle debugger keys
+		case WM_SYSKEYDOWN:
+			if (wparam != VK_F10)
+				return DefWindowProc(wnd, message, wparam, lparam);
+			// (fall through)
 		case WM_KEYDOWN:
 		{
 			if ((*info->owner->handle_key)(info->owner, wparam, lparam))
@@ -1412,7 +1437,7 @@ static LRESULT CALLBACK debugwin_view_proc(HWND wnd, UINT message, WPARAM wparam
 		{
 			if (info->owner->ignore_char_lparam == (lparam >> 16))
 				info->owner->ignore_char_lparam = 0;
-			else if (waiting_for_debugger || !debugwin_seq_pressed(info->owner->machine))
+			else if (waiting_for_debugger || !debugwin_seq_pressed(info->owner->machine()))
 			{
 				if (wparam >= 32 && wparam < 127 && info->view->cursor_supported())
 					info->view->process_char(wparam);
@@ -1459,7 +1484,7 @@ static LRESULT CALLBACK debugwin_view_proc(HWND wnd, UINT message, WPARAM wparam
 			debug_view_xy topleft = info->view->visible_position();
 			topleft.x = debugwin_view_process_scroll(info, LOWORD(wparam), (HWND)lparam);
 			info->view->set_visible_position(topleft);
-			info->owner->machine->debug_view().flush_osd_updates();
+			info->owner->machine().debug_view().flush_osd_updates();
 			break;
 		}
 
@@ -1469,7 +1494,7 @@ static LRESULT CALLBACK debugwin_view_proc(HWND wnd, UINT message, WPARAM wparam
 			debug_view_xy topleft = info->view->visible_position();
 			topleft.y = debugwin_view_process_scroll(info, LOWORD(wparam), (HWND)lparam);
 			info->view->set_visible_position(topleft);
-			info->owner->machine->debug_view().flush_osd_updates();
+			info->owner->machine().debug_view().flush_osd_updates();
 			break;
 		}
 
@@ -1496,6 +1521,10 @@ static LRESULT CALLBACK debugwin_edit_proc(HWND wnd, UINT message, WPARAM wparam
 	switch (message)
 	{
 		// key down: handle navigation in the attached view
+		case WM_SYSKEYDOWN:
+			if (wparam != VK_F10)
+				return CallWindowProc(info->original_editproc, wnd, message, wparam, lparam);
+			// (fall through)
 		case WM_KEYDOWN:
 			switch (wparam)
 			{
@@ -1552,7 +1581,7 @@ static LRESULT CALLBACK debugwin_edit_proc(HWND wnd, UINT message, WPARAM wparam
 			// ignore chars associated with keys we've handled
 			if (info->ignore_char_lparam == (lparam >> 16))
 				info->ignore_char_lparam = 0;
-			else if (waiting_for_debugger || !debugwin_seq_pressed(info->machine))
+			else if (waiting_for_debugger || !debugwin_seq_pressed(info->machine()))
 			{
 				switch (wparam)
 				{
@@ -1619,13 +1648,13 @@ static LRESULT CALLBACK debugwin_edit_proc(HWND wnd, UINT message, WPARAM wparam
 //============================================================
 
 #ifdef UNUSED_FUNCTION
-static void generic_create_window(running_machine *machine, debug_view_type type)
+static void generic_create_window(running_machine &machine, debug_view_type type)
 {
 	debugwin_info *info;
 	char title[256];
 
 	// create the window
-	_snprintf(title, ARRAY_LENGTH(title), "Debug: %s [%s]", machine->gamedrv->description, machine->gamedrv->name);
+	_snprintf(title, ARRAY_LENGTH(title), "Debug: %s [%s]", machine.system().description, machine.system().name);
 	info = debugwin_window_create(machine, title, NULL);
 	if (info == NULL || !debugwin_view_create(info, 0, type))
 		return;
@@ -1677,7 +1706,7 @@ static void generic_recompute_children(debugwin_info *info)
 //  log_create_window
 //============================================================
 
-static void log_create_window(running_machine *machine)
+static void log_create_window(running_machine &machine)
 {
 	debug_view_xy totalsize;
 	debugwin_info *info;
@@ -1685,7 +1714,7 @@ static void log_create_window(running_machine *machine)
 	RECT bounds;
 
 	// create the window
-	_snprintf(title, ARRAY_LENGTH(title), "Errorlog: %s [%s]", machine->gamedrv->description, machine->gamedrv->name);
+	_snprintf(title, ARRAY_LENGTH(title), "Errorlog: %s [%s]", machine.system().description, machine.system().name);
 	info = debugwin_window_create(machine, title, NULL);
 	if (info == NULL || !debugwin_view_create(info, 0, DVT_LOG))
 		return;
@@ -1721,7 +1750,7 @@ static void log_create_window(running_machine *machine)
 //  memory_create_window
 //============================================================
 
-static void memory_create_window(running_machine *machine)
+static void memory_create_window(running_machine &machine)
 {
 	device_t *curcpu = debug_cpu_get_visible_cpu(machine);
 	debugwin_info *info;
@@ -1911,7 +1940,7 @@ static int memory_handle_command(debugwin_info *info, WPARAM wparam, LPARAM lpar
 			if (sel != CB_ERR)
 			{
 				memview->set_source(*memview->source_list().by_index(sel));
-				memory_update_caption(info->machine, info->wnd);
+				memory_update_caption(info->machine(), info->wnd);
 
 				// reset the focus
 				SetFocus(info->focuswnd);
@@ -2023,7 +2052,7 @@ static int memory_handle_key(debugwin_info *info, WPARAM wparam, LPARAM lparam)
 //  memory_update_caption
 //============================================================
 
-static void memory_update_caption(running_machine *machine, HWND wnd)
+static void memory_update_caption(running_machine &machine, HWND wnd)
 {
 	debugwin_info *info = (debugwin_info *)(FPTR)GetWindowLongPtr(wnd, GWLP_USERDATA);
 	astring title;
@@ -2038,7 +2067,7 @@ static void memory_update_caption(running_machine *machine, HWND wnd)
 //  disasm_create_window
 //============================================================
 
-static void disasm_create_window(running_machine *machine)
+static void disasm_create_window(running_machine &machine)
 {
 	device_t *curcpu = debug_cpu_get_visible_cpu(machine);
 	debugwin_info *info;
@@ -2220,7 +2249,7 @@ static int disasm_handle_command(debugwin_info *info, WPARAM wparam, LPARAM lpar
 			if (sel != CB_ERR)
 			{
 				dasmview->set_source(*dasmview->source_list().by_index(sel));
-				disasm_update_caption(info->machine, info->wnd);
+				disasm_update_caption(info->machine(), info->wnd);
 
 				// reset the focus
 				SetFocus(info->focuswnd);
@@ -2249,16 +2278,16 @@ static int disasm_handle_command(debugwin_info *info, WPARAM wparam, LPARAM lpar
 					return 1;
 
 				case ID_RUN_TO_CURSOR:
-					if (dasmview->cursor_visible() && debug_cpu_get_visible_cpu(info->machine) == dasmview->source()->device())
+					if (dasmview->cursor_visible() && debug_cpu_get_visible_cpu(info->machine()) == dasmview->source()->device())
 					{
 						offs_t address = dasmview->selected_address();
 						sprintf(command, "go 0x%X", address);
-						debug_console_execute_command(info->machine, command, 1);
+						debug_console_execute_command(info->machine(), command, 1);
 					}
 					return 1;
 
 				case ID_TOGGLE_BREAKPOINT:
-					if (dasmview->cursor_visible() && debug_cpu_get_visible_cpu(info->machine) == dasmview->source()->device())
+					if (dasmview->cursor_visible() && debug_cpu_get_visible_cpu(info->machine()) == dasmview->source()->device())
 					{
 						offs_t address = dasmview->selected_address();
 						device_debug *debug = dasmview->source()->device()->debug();
@@ -2277,7 +2306,7 @@ static int disasm_handle_command(debugwin_info *info, WPARAM wparam, LPARAM lpar
 							sprintf(command, "bpset 0x%X", address);
 						else
 							sprintf(command, "bpclear 0x%X", bpindex);
-						debug_console_execute_command(info->machine, command, 1);
+						debug_console_execute_command(info->machine(), command, 1);
 					}
 					return 1;
 			}
@@ -2341,7 +2370,7 @@ static int disasm_handle_key(debugwin_info *info, WPARAM wparam, LPARAM lparam)
 //  disasm_update_caption
 //============================================================
 
-static void disasm_update_caption(running_machine *machine, HWND wnd)
+static void disasm_update_caption(running_machine &machine, HWND wnd)
 {
 	debugwin_info *info = (debugwin_info *)(FPTR)GetWindowLongPtr(wnd, GWLP_USERDATA);
 	astring title;
@@ -2351,18 +2380,92 @@ static void disasm_update_caption(running_machine *machine, HWND wnd)
 }
 
 
+enum
+{
+	DEVOPTION_OPEN,
+	DEVOPTION_CREATE,
+	DEVOPTION_CLOSE,
+	DEVOPTION_CASSETTE_STOPPAUSE,
+	DEVOPTION_CASSETTE_PLAY,
+	DEVOPTION_CASSETTE_RECORD,
+	DEVOPTION_CASSETTE_REWIND,
+	DEVOPTION_CASSETTE_FASTFORWARD,
+	DEVOPTION_MAX
+};
+
+//============================================================
+//  memory_update_menu
+//============================================================
+
+static void image_update_menu(debugwin_info *info)
+{
+	device_image_interface *img = NULL;
+	UINT32 cnt = 0;
+	HMENU devicesmenu;
+
+	DeleteMenu(GetMenu(info->wnd), 2, MF_BYPOSITION);
+
+	// create the image menu
+	devicesmenu = CreatePopupMenu();
+	for (bool gotone = info->machine().devicelist().first(img); gotone; gotone = img->next(img))
+	{
+		astring temp;
+		UINT flags_for_exists;
+		UINT flags_for_writing;
+		HMENU devicesubmenu = CreatePopupMenu();
+
+		UINT_PTR new_item = ID_DEVICE_OPTIONS + (cnt * DEVOPTION_MAX);
+
+		flags_for_exists = MF_ENABLED | MF_STRING;
+
+		if (!img->exists())
+			flags_for_exists |= MF_GRAYED;
+
+		flags_for_writing = flags_for_exists;
+		if (img->is_readonly())
+			flags_for_writing |= MF_GRAYED;
+
+		AppendMenu(devicesubmenu, MF_STRING, new_item + DEVOPTION_OPEN, TEXT("Mount..."));
+
+		/*if (img->is_creatable())
+            AppendMenu(devicesubmenu, MF_STRING, new_item + DEVOPTION_CREATE, TEXT("Create..."));
+        */
+		AppendMenu(devicesubmenu, flags_for_exists, new_item + DEVOPTION_CLOSE, TEXT("Unmount"));
+
+		if (img->device().type() == CASSETTE)
+		{
+			cassette_state state;
+			state = (cassette_state)(img->exists() ? (dynamic_cast<cassette_image_device*>(&img->device())->get_state() & CASSETTE_MASK_UISTATE) : CASSETTE_STOPPED);
+			AppendMenu(devicesubmenu, MF_SEPARATOR, 0, NULL);
+			AppendMenu(devicesubmenu, flags_for_exists	| ((state == CASSETTE_STOPPED)	? MF_CHECKED : 0), new_item + DEVOPTION_CASSETTE_STOPPAUSE, TEXT("Pause/Stop"));
+			AppendMenu(devicesubmenu, flags_for_exists	| ((state == CASSETTE_PLAY) ? MF_CHECKED : 0), new_item + DEVOPTION_CASSETTE_PLAY, TEXT("Play"));
+			AppendMenu(devicesubmenu, flags_for_writing | ((state == CASSETTE_RECORD)	? MF_CHECKED : 0), new_item + DEVOPTION_CASSETTE_RECORD, TEXT("Record"));
+			AppendMenu(devicesubmenu, flags_for_exists, new_item + DEVOPTION_CASSETTE_REWIND, TEXT("Rewind"));
+			AppendMenu(devicesubmenu, flags_for_exists, new_item + DEVOPTION_CASSETTE_FASTFORWARD, TEXT("Fast Forward"));
+		}
+
+		temp.format("%s :%s", img->device().name(), img->exists() ? img->filename() : "[empty slot]");
+
+		AppendMenu(devicesmenu, MF_ENABLED | MF_POPUP, (UINT_PTR)devicesubmenu,  tstring_from_utf8(temp.cstr()));
+
+		cnt++;
+	}
+	AppendMenu(GetMenu(info->wnd), MF_ENABLED | MF_POPUP, (UINT_PTR)devicesmenu, TEXT("Images"));
+
+}
 
 //============================================================
 //  console_create_window
 //============================================================
 
-void console_create_window(running_machine *machine)
+void console_create_window(running_machine &machine)
 {
 	debugwin_info *info;
 	int bestwidth, bestheight;
 	RECT bounds, work_bounds;
 	HMENU optionsmenu;
 	UINT32 conchars;
+	device_image_interface *img = NULL;
 
 	// create the window
 	info = debugwin_window_create(machine, "Debug", NULL);
@@ -2388,12 +2491,15 @@ void console_create_window(running_machine *machine)
 	AppendMenu(optionsmenu, MF_ENABLED, ID_SHOW_COMMENTS, TEXT("Comments\tCtrl+N"));
 	AppendMenu(GetMenu(info->wnd), MF_ENABLED | MF_POPUP, (UINT_PTR)optionsmenu, TEXT("Options"));
 
+	// Add image menu only if image devices exist
+	if (info->machine().devicelist().first(img))	{
+		info->update_menu = image_update_menu;
+		image_update_menu(info);
+	}
+
 	// set the handlers
 	info->handle_command = disasm_handle_command;
 	info->handle_key = disasm_handle_key;
-
-	// set up the disassembly view to track the current pc
-	downcast<debug_view_disasm *>(info->view[0].view)->set_expression("curpc");
 
 	// create an edit box and override its key handling
 	info->editwnd = CreateWindowEx(EDIT_BOX_STYLE_EX, TEXT("EDIT"), NULL, EDIT_BOX_STYLE,
@@ -2468,6 +2574,9 @@ void console_create_window(running_machine *machine)
 	// recompute the children
 	console_set_cpu(debug_cpu_get_visible_cpu(machine));
 
+	// set up the disassembly view to track the current pc
+	downcast<debug_view_disasm *>(info->view[0].view)->set_expression("curpc");
+
 	// mark the edit box as the default focus and set it
 	info->focuswnd = info->editwnd;
 	SetFocus(info->editwnd);
@@ -2475,11 +2584,11 @@ void console_create_window(running_machine *machine)
 
 cleanup:
 	if (info->view[2].view)
-		machine->debug_view().free_view(*info->view[2].view);
+		machine.debug_view().free_view(*info->view[2].view);
 	if (info->view[1].view)
-		machine->debug_view().free_view(*info->view[1].view);
+		machine.debug_view().free_view(*info->view[1].view);
 	if (info->view[0].view)
-		machine->debug_view().free_view(*info->view[0].view);
+		machine.debug_view().free_view(*info->view[0].view);
 }
 
 
@@ -2543,11 +2652,11 @@ static void console_process_string(debugwin_info *info, const char *string)
 
 	// an empty string is a single step
 	if (string[0] == 0)
-		debug_cpu_get_visible_cpu(info->machine)->debug()->single_step();
+		debug_cpu_get_visible_cpu(info->machine())->debug()->single_step();
 
 	// otherwise, just process the command
 	else
-		debug_console_execute_command(info->machine, string, 1);
+		debug_console_execute_command(info->machine(), string, 1);
 
 	// clear the edit text box
 	SendMessage(info->editwnd, WM_SETTEXT, 0, (LPARAM)&buffer);
@@ -2569,7 +2678,7 @@ static void console_set_cpu(device_t *device)
 	char curtitle[256];
 	astring title;
 
-	title.printf("Debug: %s - %s '%s'", device->machine->gamedrv->name, device->name(), device->tag());
+	title.printf("Debug: %s - %s '%s'", device->machine().system().name, device->name(), device->tag());
 	win_get_window_text_utf8(main_console->wnd, curtitle, ARRAY_LENGTH(curtitle));
 	if (title.cmp(curtitle) != 0)
 		win_set_window_text_utf8(main_console->wnd, title);
@@ -2622,7 +2731,94 @@ static HMENU create_standard_menubar(void)
 	return menubar;
 }
 
+//============================================================
+//  copy_extension_list
+//============================================================
 
+static int copy_extension_list(char *dest, size_t dest_len, const char *extensions)
+{
+	const char *s;
+	int pos = 0;
+
+	// our extension lists are comma delimited; Win32 expects to see lists
+	// delimited by semicolons
+	s = extensions;
+	while(*s)
+	{
+		// append a semicolon if not at the beginning
+		if (s != extensions)
+			pos += snprintf(&dest[pos], dest_len - pos, ";");
+
+		// append ".*"
+		pos += snprintf(&dest[pos], dest_len - pos, "*.");
+
+		// append the file extension
+		while(*s && (*s != ','))
+		{
+			pos += snprintf(&dest[pos], dest_len - pos, "%c", *s);
+			s++;
+		}
+
+		// if we found a comma, advance
+		while(*s == ',')
+			s++;
+	}
+	return pos;
+}
+
+//============================================================
+//  add_filter_entry
+//============================================================
+
+static int add_filter_entry(char *dest, size_t dest_len, const char *description, const char *extensions)
+{
+	int pos = 0;
+
+	// add the description
+	pos += snprintf(&dest[pos], dest_len - pos, "%s (", description);
+
+	// add the extensions to the description
+	pos += copy_extension_list(&dest[pos], dest_len - pos, extensions);
+
+	// add the trailing rparen and '|' character
+	pos += snprintf(&dest[pos], dest_len - pos, ")|");
+
+	// now add the extension list itself
+	pos += copy_extension_list(&dest[pos], dest_len - pos, extensions);
+
+	// append a '|'
+	pos += snprintf(&dest[pos], dest_len - pos, "|");
+
+	return pos;
+}
+//============================================================
+//  build_generic_filter
+//============================================================
+
+static void build_generic_filter(device_image_interface *img, int is_save, char *filter, size_t filter_len)
+{
+	char *s;
+
+	const char *file_extension;
+
+	/* copy the string */
+	file_extension = img->file_extensions();
+
+	// start writing the filter
+	s = filter;
+
+	// common image types
+	s += add_filter_entry(filter, filter_len, "Common image types", file_extension);
+
+	// all files
+	s += sprintf(s, "All files (*.*)|*.*|");
+
+	// compressed
+	if (!is_save)
+		s += sprintf(s, "Compressed Images (*.zip)|*.zip|");
+
+	*(s++) = '\0';
+}
 
 //============================================================
 //  global_handle_command
@@ -2634,63 +2830,146 @@ static int global_handle_command(debugwin_info *info, WPARAM wparam, LPARAM lpar
 		switch (LOWORD(wparam))
 		{
 			case ID_NEW_MEMORY_WND:
-				memory_create_window(info->machine);
+				memory_create_window(info->machine());
 				return 1;
 
 			case ID_NEW_DISASM_WND:
-				disasm_create_window(info->machine);
+				disasm_create_window(info->machine());
 				return 1;
 
 			case ID_NEW_LOG_WND:
-				log_create_window(info->machine);
+				log_create_window(info->machine());
 				return 1;
 
 			case ID_RUN_AND_HIDE:
 				smart_show_all(FALSE);
 			case ID_RUN:
-				debug_cpu_get_visible_cpu(info->machine)->debug()->go();
+				debug_cpu_get_visible_cpu(info->machine())->debug()->go();
 				return 1;
 
 			case ID_NEXT_CPU:
-				debug_cpu_get_visible_cpu(info->machine)->debug()->go_next_device();
+				debug_cpu_get_visible_cpu(info->machine())->debug()->go_next_device();
 				return 1;
 
 			case ID_RUN_VBLANK:
-				debug_cpu_get_visible_cpu(info->machine)->debug()->go_vblank();
+				debug_cpu_get_visible_cpu(info->machine())->debug()->go_vblank();
 				return 1;
 
 			case ID_RUN_IRQ:
-				debug_cpu_get_visible_cpu(info->machine)->debug()->go_interrupt();
+				debug_cpu_get_visible_cpu(info->machine())->debug()->go_interrupt();
 				return 1;
 
 			case ID_STEP:
-				debug_cpu_get_visible_cpu(info->machine)->debug()->single_step();
+				debug_cpu_get_visible_cpu(info->machine())->debug()->single_step();
 				return 1;
 
 			case ID_STEP_OVER:
-				debug_cpu_get_visible_cpu(info->machine)->debug()->single_step_over();
+				debug_cpu_get_visible_cpu(info->machine())->debug()->single_step_over();
 				return 1;
 
 			case ID_STEP_OUT:
-				debug_cpu_get_visible_cpu(info->machine)->debug()->single_step_out();
+				debug_cpu_get_visible_cpu(info->machine())->debug()->single_step_out();
 				return 1;
 
 			case ID_HARD_RESET:
-				info->machine->schedule_hard_reset();
+				info->machine().schedule_hard_reset();
 				return 1;
 
 			case ID_SOFT_RESET:
-				info->machine->schedule_soft_reset();
-				debug_cpu_get_visible_cpu(info->machine)->debug()->go();
+				info->machine().schedule_soft_reset();
+				debug_cpu_get_visible_cpu(info->machine())->debug()->go();
 				return 1;
 
 			case ID_EXIT:
 				if (info->focuswnd != NULL)
 					SetFocus(info->focuswnd);
-				info->machine->schedule_exit();
+				info->machine().schedule_exit();
 				return 1;
 		}
+		if (LOWORD(wparam) >= ID_DEVICE_OPTIONS) {
+			UINT32 devid = (LOWORD(wparam) - ID_DEVICE_OPTIONS) / DEVOPTION_MAX;
+			device_image_interface *img = NULL;
+			UINT32 cnt = 0;
+			for (bool gotone = info->machine().devicelist().first(img); gotone; gotone = img->next(img))
+			{
+				if (cnt==devid) break;
+				cnt++;
+			}
+			if (img!=NULL) {
+				switch ((LOWORD(wparam) - ID_DEVICE_OPTIONS) % DEVOPTION_MAX)
+				{
+					case DEVOPTION_OPEN :
+											{
+												char filter[2048];
+												build_generic_filter(img, FALSE, filter, ARRAY_LENGTH(filter));
 
+												TCHAR selectedFilename[MAX_PATH];
+												selectedFilename[0] = '\0';
+												LPTSTR buffer;
+												LPTSTR t_filter = NULL;
+
+												buffer = tstring_from_utf8(filter);
+
+												// convert a pipe-char delimited string into a NUL delimited string
+												t_filter = (LPTSTR) alloca((_tcslen(buffer) + 2) * sizeof(*t_filter));
+												int i = 0;
+												for (i = 0; buffer[i] != '\0'; i++)
+													t_filter[i] = (buffer[i] != '|') ? buffer[i] : '\0';
+												t_filter[i++] = '\0';
+												t_filter[i++] = '\0';
+												osd_free(buffer);
+
+
+												OPENFILENAME  ofn;
+												memset(&ofn,0,sizeof(ofn));
+												ofn.lStructSize = sizeof(ofn);
+												ofn.hwndOwner = NULL;
+												ofn.lpstrFile = selectedFilename;
+												ofn.lpstrFile[0] = '\0';
+												ofn.nMaxFile = MAX_PATH;
+												ofn.lpstrFilter = t_filter;
+												ofn.nFilterIndex = 1;
+												ofn.lpstrFileTitle = NULL;
+												ofn.nMaxFileTitle = 0;
+												ofn.lpstrInitialDir = NULL;
+												ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+
+												if (GetOpenFileName(&ofn)) {
+													img->load(utf8_from_tstring(selectedFilename));
+												}
+											}
+											return 1;
+/*                  case DEVOPTION_CREATE:
+                                            return 1;*/
+					case DEVOPTION_CLOSE:
+											img->unload();
+											return 1;
+					default:
+						if (img->device().type() == CASSETTE) {
+							cassette_image_device* cassette = dynamic_cast<cassette_image_device*>(&img->device());
+							switch ((LOWORD(wparam) - ID_DEVICE_OPTIONS) % DEVOPTION_MAX)
+							{
+
+								case DEVOPTION_CASSETTE_STOPPAUSE:
+														cassette->change_state(CASSETTE_STOPPED, CASSETTE_MASK_UISTATE);
+														return 1;
+								case DEVOPTION_CASSETTE_PLAY:
+														cassette->change_state(CASSETTE_PLAY, CASSETTE_MASK_UISTATE);
+														return 1;
+								case DEVOPTION_CASSETTE_RECORD:
+														cassette->change_state(CASSETTE_RECORD, CASSETTE_MASK_UISTATE);
+														return 1;
+								case DEVOPTION_CASSETTE_REWIND:
+														cassette->seek(-60.0, SEEK_CUR);
+														return 1;
+								case DEVOPTION_CASSETTE_FASTFORWARD:
+														cassette->seek(+60.0, SEEK_CUR);
+														return 1;
+							}
+						}
+				}
+			}
+		}
 	return 0;
 }
 
@@ -2703,7 +2982,7 @@ static int global_handle_command(debugwin_info *info, WPARAM wparam, LPARAM lpar
 static int global_handle_key(debugwin_info *info, WPARAM wparam, LPARAM lparam)
 {
 	/* ignore any keys that are received while the debug key is down */
-	if (!waiting_for_debugger && debugwin_seq_pressed(info->machine))
+	if (!waiting_for_debugger && debugwin_seq_pressed(info->machine()))
 		return 1;
 
 	switch (wparam)

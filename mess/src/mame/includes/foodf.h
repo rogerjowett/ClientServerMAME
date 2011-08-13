@@ -10,18 +10,19 @@
 class foodf_state : public atarigen_state
 {
 public:
-	foodf_state(running_machine &machine, const driver_device_config_base &config)
-		: atarigen_state(machine, config),
+	foodf_state(const machine_config &mconfig, device_type type, const char *tag)
+		: atarigen_state(mconfig, type, tag),
 		  m_nvram(*this, "nvram") { }
 
 	required_device<x2212_device> m_nvram;
 
-	double			rweights[3];
-	double			gweights[3];
-	double			bweights[2];
-	UINT8			playfield_flip;
+	double			m_rweights[3];
+	double			m_gweights[3];
+	double			m_bweights[2];
+	UINT8			m_playfield_flip;
 
-	UINT8			whichport;
+	UINT8			m_whichport;
+	UINT16 *m_spriteram;
 };
 
 
@@ -31,4 +32,4 @@ WRITE16_HANDLER( foodf_paletteram_w );
 
 void foodf_set_flip(foodf_state *state, int flip);
 VIDEO_START( foodf );
-VIDEO_UPDATE( foodf );
+SCREEN_UPDATE( foodf );

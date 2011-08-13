@@ -9,18 +9,18 @@
 
 #include "emu.h"
 #include "cpu/i8085/i8085.h"
-#include "machine/i8255a.h"
+#include "machine/i8255.h"
 #include "machine/wd17xx.h"
-#include "devices/flopdrv.h"
+#include "imagedev/flopdrv.h"
 #include "formats/basicdsk.h"
 #include "includes/pk8020.h"
-#include "devices/messram.h"
+#include "machine/ram.h"
 
 /* Address maps */
-static ADDRESS_MAP_START(pk8020_mem, ADDRESS_SPACE_PROGRAM, 8)
+static ADDRESS_MAP_START(pk8020_mem, AS_PROGRAM, 8)
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( pk8020_io , ADDRESS_SPACE_IO, 8)
+static ADDRESS_MAP_START( pk8020_io , AS_IO, 8)
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 	ADDRESS_MAP_UNMAP_HIGH
 ADDRESS_MAP_END
@@ -140,16 +140,17 @@ static INPUT_PORTS_START( pk8020 )
 INPUT_PORTS_END
 
 /* Machine driver */
-static const cassette_config pk8020_cassette_config =
+static const cassette_interface pk8020_cassette_interface =
 {
 	cassette_default_formats,
 	NULL,
 	(cassette_state)(CASSETTE_PLAY),
+	NULL,
 	NULL
 };
 
 static FLOPPY_OPTIONS_START(pk8020)
-	FLOPPY_OPTION(pk8020, "kdi", "PK8020 disk image", basicdsk_identify_default, basicdsk_construct_default,
+	FLOPPY_OPTION(pk8020, "kdi", "PK8020 disk image", basicdsk_identify_default, basicdsk_construct_default, NULL,
 		HEADS([2])
 		TRACKS([80])
 		SECTORS([5])
@@ -157,7 +158,7 @@ static FLOPPY_OPTIONS_START(pk8020)
 		FIRST_SECTOR_ID([1]))
 FLOPPY_OPTIONS_END
 
-static const floppy_config pk8020_floppy_config =
+static const floppy_interface pk8020_floppy_interface =
 {
 	DEVCB_NULL,
 	DEVCB_NULL,
@@ -166,6 +167,7 @@ static const floppy_config pk8020_floppy_config =
 	DEVCB_NULL,
 	FLOPPY_STANDARD_5_25_DSHD,
 	FLOPPY_OPTIONS_NAME(pk8020),
+	NULL,
 	NULL
 };
 
@@ -213,36 +215,37 @@ static MACHINE_CONFIG_START( pk8020, pk8020_state )
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(512, 256)
 	MCFG_SCREEN_VISIBLE_AREA(0, 512-1, 0, 256-1)
+	MCFG_SCREEN_UPDATE(pk8020)
+
 	MCFG_GFXDECODE(pk8020)
 	MCFG_PALETTE_LENGTH(16)
 	MCFG_PALETTE_INIT(pk8020)
 
 	MCFG_VIDEO_START(pk8020)
-	MCFG_VIDEO_UPDATE(pk8020)
 
-	MCFG_I8255A_ADD( "ppi8255_1", pk8020_ppi8255_interface_1 )
-	MCFG_I8255A_ADD( "ppi8255_2", pk8020_ppi8255_interface_2 )
-	MCFG_I8255A_ADD( "ppi8255_3", pk8020_ppi8255_interface_3 )
+	MCFG_I8255_ADD( "ppi8255_1", pk8020_ppi8255_interface_1 )
+	MCFG_I8255_ADD( "ppi8255_2", pk8020_ppi8255_interface_2 )
+	MCFG_I8255_ADD( "ppi8255_3", pk8020_ppi8255_interface_3 )
 	MCFG_PIT8253_ADD( "pit8253", pk8020_pit8253_intf )
 	MCFG_PIC8259_ADD( "pic8259", pk8020_pic8259_config )
 	MCFG_MSM8251_ADD( "rs232", default_msm8251_interface)
 	MCFG_MSM8251_ADD( "lan", default_msm8251_interface)
 
-	MCFG_WD1793_ADD( "wd1793", pk8020_wd17xx_interface )
+	MCFG_FD1793_ADD( "wd1793", pk8020_wd17xx_interface )
 
 	/* audio hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
-	MCFG_SOUND_ADD("speaker", SPEAKER_SOUND, 0)
-	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
-	MCFG_SOUND_WAVE_ADD("wave", "cassette")
-	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
+	MCFG_SOUND_ADD(SPEAKER_TAG, SPEAKER_SOUND, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+	MCFG_SOUND_WAVE_ADD(WAVE_TAG, CASSETTE_TAG)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
-	MCFG_CASSETTE_ADD( "cassette", pk8020_cassette_config )
+	MCFG_CASSETTE_ADD( CASSETTE_TAG, pk8020_cassette_interface )
 
-	MCFG_FLOPPY_4_DRIVES_ADD(pk8020_floppy_config)
+	MCFG_FLOPPY_4_DRIVES_ADD(pk8020_floppy_interface)
 
 	/* internal ram */
-	MCFG_RAM_ADD("messram")
+	MCFG_RAM_ADD(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("258K")	//64 + 4*48 + 2
 	MCFG_RAM_DEFAULT_VALUE(0x00)
 MACHINE_CONFIG_END

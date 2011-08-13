@@ -387,8 +387,10 @@ normal keyboards?
 #include "includes/pet.h"
 #include "machine/cbmipt.h"
 #include "video/mc6845.h"
-#include "devices/messram.h"
+#include "machine/ram.h"
 #include "machine/c2040.h"
+#include "machine/c8280.h"
+#include "machine/c9060.h"
 
 /* devices config */
 #include "includes/cbm.h"
@@ -401,28 +403,28 @@ normal keyboards?
  *
  *************************************/
 
-static ADDRESS_MAP_START(pet_mem , ADDRESS_SPACE_PROGRAM, 8)
-	AM_RANGE(0x8000, 0x83ff) AM_MIRROR(0x0c00) AM_RAM AM_BASE_MEMBER(pet_state, videoram)
+static ADDRESS_MAP_START(pet_mem , AS_PROGRAM, 8)
+	AM_RANGE(0x8000, 0x83ff) AM_MIRROR(0x0c00) AM_RAM AM_BASE_MEMBER(pet_state, m_videoram)
 	AM_RANGE(0xa000, 0xe7ff) AM_ROM
-	AM_RANGE(0xe810, 0xe813) AM_DEVREADWRITE("pia_0", pia6821_r, pia6821_w)
-	AM_RANGE(0xe820, 0xe823) AM_DEVREADWRITE("pia_1", pia6821_r, pia6821_w)
+	AM_RANGE(0xe810, 0xe813) AM_DEVREADWRITE_MODERN("pia_0", pia6821_device, read, write)
+	AM_RANGE(0xe820, 0xe823) AM_DEVREADWRITE_MODERN("pia_1", pia6821_device, read, write)
 	AM_RANGE(0xe840, 0xe84f) AM_DEVREADWRITE_MODERN("via6522_0", via6522_device, read, write)
 /*  AM_RANGE(0xe900, 0xe91f) AM_DEVREAD("ieee_bus", cbm_ieee_state)    // for debugging */
 	AM_RANGE(0xf000, 0xffff) AM_ROM
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( pet40_mem , ADDRESS_SPACE_PROGRAM, 8)
-	AM_RANGE(0x8000, 0x83ff) AM_MIRROR(0x0c00) AM_RAM AM_BASE_MEMBER(pet_state, videoram)
+static ADDRESS_MAP_START( pet40_mem , AS_PROGRAM, 8)
+	AM_RANGE(0x8000, 0x83ff) AM_MIRROR(0x0c00) AM_RAM AM_BASE_MEMBER(pet_state, m_videoram)
 	AM_RANGE(0xa000, 0xe7ff) AM_ROM
-	AM_RANGE(0xe810, 0xe813) AM_DEVREADWRITE("pia_0", pia6821_r, pia6821_w)
-	AM_RANGE(0xe820, 0xe823) AM_DEVREADWRITE("pia_1", pia6821_r, pia6821_w)
+	AM_RANGE(0xe810, 0xe813) AM_DEVREADWRITE_MODERN("pia_0", pia6821_device, read, write)
+	AM_RANGE(0xe820, 0xe823) AM_DEVREADWRITE_MODERN("pia_1", pia6821_device, read, write)
 	AM_RANGE(0xe840, 0xe84f) AM_DEVREADWRITE_MODERN("via6522_0", via6522_device, read, write)
-	AM_RANGE(0xe880, 0xe880) AM_DEVWRITE("crtc", mc6845_address_w)
-	AM_RANGE(0xe881, 0xe881) AM_DEVREADWRITE("crtc", mc6845_register_r, mc6845_register_w)
+	AM_RANGE(0xe880, 0xe880) AM_DEVWRITE_MODERN("crtc", mc6845_device, address_w)
+	AM_RANGE(0xe881, 0xe881) AM_DEVREADWRITE_MODERN("crtc", mc6845_device, register_r, register_w)
 	AM_RANGE(0xf000, 0xffff) AM_ROM
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( pet80_mem , ADDRESS_SPACE_PROGRAM, 8)
+static ADDRESS_MAP_START( pet80_mem , AS_PROGRAM, 8)
 	AM_RANGE(0x8000, 0x8fff) AM_RAMBANK("bank1")
 	AM_RANGE(0x9000, 0x9fff) AM_RAMBANK("bank2")
 	AM_RANGE(0xa000, 0xafff) AM_RAMBANK("bank3")
@@ -434,8 +436,8 @@ static ADDRESS_MAP_START( pet80_mem , ADDRESS_SPACE_PROGRAM, 8)
 	AM_RANGE(0xe810, 0xe813) AM_DEVREADWRITE("pia_0", pia6821_r, pia6821_w)
 	AM_RANGE(0xe820, 0xe823) AM_DEVREADWRITE("pia_1", pia6821_r, pia6821_w)
 	AM_RANGE(0xe840, 0xe84f) AM_DEVREADWRITE_MODERN("via6522_0", via6522_device, read, write)
-	AM_RANGE(0xe880, 0xe880) AM_DEVWRITE("crtc", mc6845_address_w)
-	AM_RANGE(0xe881, 0xe881) AM_DEVREADWRITE("crtc", mc6845_register_r, mc6845_register_w)
+	AM_RANGE(0xe880, 0xe880) AM_DEVWRITE_MODERN("crtc", mc6845_device, address_w)
+	AM_RANGE(0xe881, 0xe881) AM_DEVREADWRITE_MODERN("crtc", mc6845_device, register_r, register_w)
 #endif
 	AM_RANGE(0xf000, 0xffff) AM_READ_BANK("bank8")
 	AM_RANGE(0xf000, 0xffef) AM_WRITE_BANK("bank8")
@@ -458,31 +460,31 @@ ADDRESS_MAP_END
         bit 7    1=enable system latch
 
 */
-static ADDRESS_MAP_START( superpet_mem , ADDRESS_SPACE_PROGRAM, 8)
-	AM_RANGE(0x0000, 0x7fff) AM_RAM AM_SHARE("share1") AM_BASE_MEMBER(pet_state, memory)
-	AM_RANGE(0x8000, 0x87ff) AM_RAM AM_SHARE("share2") AM_BASE_MEMBER(pet_state, videoram)
+static ADDRESS_MAP_START( superpet_mem , AS_PROGRAM, 8)
+	AM_RANGE(0x0000, 0x7fff) AM_RAM AM_SHARE("share1") AM_BASE_MEMBER(pet_state, m_memory)
+	AM_RANGE(0x8000, 0x87ff) AM_RAM AM_SHARE("share2") AM_BASE_MEMBER(pet_state, m_videoram)
 	AM_RANGE(0xa000, 0xe7ff) AM_ROM
-	AM_RANGE(0xe810, 0xe813) AM_DEVREADWRITE("pia_0", pia6821_r, pia6821_w)
-	AM_RANGE(0xe820, 0xe823) AM_DEVREADWRITE("pia_1", pia6821_r, pia6821_w)
+	AM_RANGE(0xe810, 0xe813) AM_DEVREADWRITE_MODERN("pia_0", pia6821_device, read, write)
+	AM_RANGE(0xe820, 0xe823) AM_DEVREADWRITE_MODERN("pia_1", pia6821_device, read, write)
 	AM_RANGE(0xe840, 0xe84f) AM_DEVREADWRITE_MODERN("via6522_0", via6522_device, read, write)
-	AM_RANGE(0xe880, 0xe880) AM_DEVWRITE("crtc", mc6845_address_w)
-	AM_RANGE(0xe881, 0xe881) AM_DEVREADWRITE("crtc", mc6845_register_r, mc6845_register_w)
+	AM_RANGE(0xe880, 0xe880) AM_DEVWRITE_MODERN("crtc", mc6845_device, address_w)
+	AM_RANGE(0xe881, 0xe881) AM_DEVREADWRITE_MODERN("crtc", mc6845_device, register_r, register_w)
 	/* 0xefe0, 0xefe3, mos 6702 */
 	/* 0xeff0, 0xeff3, acia6551 */
 	AM_RANGE(0xeff8, 0xefff) AM_READWRITE(superpet_r, superpet_w)
 	AM_RANGE(0xf000, 0xffff) AM_ROM
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( superpet_m6809_mem, ADDRESS_SPACE_PROGRAM, 8)
+static ADDRESS_MAP_START( superpet_m6809_mem, AS_PROGRAM, 8)
 	AM_RANGE(0x0000, 0x7fff) AM_RAM AM_SHARE("share1")	/* same memory as m6502 */
 	AM_RANGE(0x8000, 0x87ff) AM_RAM AM_SHARE("share2")	/* same memory as m6502 */
     AM_RANGE(0x9000, 0x9fff) AM_RAMBANK("bank1")	/* 64 kbyte ram turned in */
 	AM_RANGE(0xa000, 0xe7ff) AM_ROM
-	AM_RANGE(0xe810, 0xe813) AM_DEVREADWRITE("pia_0", pia6821_r, pia6821_w)
-	AM_RANGE(0xe820, 0xe823) AM_DEVREADWRITE("pia_1", pia6821_r, pia6821_w)
+	AM_RANGE(0xe810, 0xe813) AM_DEVREADWRITE_MODERN("pia_0", pia6821_device, read, write)
+	AM_RANGE(0xe820, 0xe823) AM_DEVREADWRITE_MODERN("pia_1", pia6821_device, read, write)
 	AM_RANGE(0xe840, 0xe84f) AM_DEVREADWRITE_MODERN("via6522_0", via6522_device, read, write)
-	AM_RANGE(0xe880, 0xe880) AM_DEVWRITE("crtc", mc6845_address_w)
-	AM_RANGE(0xe881, 0xe881) AM_DEVREADWRITE("crtc", mc6845_register_r, mc6845_register_w)
+	AM_RANGE(0xe880, 0xe880) AM_DEVWRITE_MODERN("crtc", mc6845_device, address_w)
+	AM_RANGE(0xe881, 0xe881) AM_DEVREADWRITE_MODERN("crtc", mc6845_device, register_r, register_w)
 	AM_RANGE(0xeff8, 0xefff) AM_READWRITE(superpet_r, superpet_w)
 	AM_RANGE(0xf000, 0xffff) AM_ROM
 ADDRESS_MAP_END
@@ -637,21 +639,31 @@ static VIDEO_START( pet_crtc )
 {
 }
 
-static VIDEO_UPDATE( pet_crtc )
+static SCREEN_UPDATE( pet_crtc )
 {
-	device_t *mc6845 = screen->machine->device("crtc");
-	mc6845_update(mc6845, bitmap, cliprect);
+	mc6845_device *mc6845 = screen->machine().device<mc6845_device>("crtc");
+	mc6845->update( bitmap, cliprect);
 	return 0;
 }
 
 static IEEE488_DAISY( ieee488_daisy )
 {
-	{ "pia_0" },
-	{ "pia_1", DEVCB_NULL, DEVCB_NULL, DEVCB_NULL, DEVCB_NULL, DEVCB_NULL, DEVCB_DEVICE_LINE("pia_1", pia6821_cb1_w), DEVCB_DEVICE_LINE("pia_1", pia6821_ca1_w), DEVCB_NULL },
-	{ "via6522_0" },
-	{ C2040_IEEE488("drive") },
+	{ "drive" },
 	{ NULL}
 };
+
+static IEEE488_INTERFACE( ieee488_intf )
+{
+	DEVCB_NULL,
+	DEVCB_NULL,
+	DEVCB_NULL,
+	DEVCB_NULL,
+	DEVCB_NULL,
+	DEVCB_DEVICE_LINE_MEMBER("pia_1", pia6821_device, cb1_w),
+	DEVCB_DEVICE_LINE_MEMBER("pia_1", pia6821_device, ca1_w),
+	DEVCB_NULL
+};
+
 
 /*************************************
  *
@@ -674,15 +686,15 @@ static MACHINE_CONFIG_START( pet_general, pet_state )
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(320, 200)
 	MCFG_SCREEN_VISIBLE_AREA(0, 320 - 1, 0, 200 - 1)
+	MCFG_SCREEN_UPDATE( pet )
+
 	MCFG_GFXDECODE( pet )
 	MCFG_PALETTE_LENGTH(ARRAY_LENGTH(pet_palette) / 3)
 	MCFG_PALETTE_INIT( pet )
 
-	MCFG_VIDEO_UPDATE( pet )
-
 	/* cassette */
-	MCFG_CASSETTE_ADD( "cassette1", cbm_cassette_config )
-	MCFG_CASSETTE_ADD( "cassette2", cbm_cassette_config )
+	MCFG_CASSETTE_ADD( CASSETTE_TAG, cbm_cassette_interface )
+	MCFG_CASSETTE_ADD( CASSETTE2_TAG, cbm_cassette_interface )
 
 	/* via */
 	MCFG_VIA6522_ADD( "via6522_0", 0, pet_via)
@@ -698,13 +710,13 @@ static MACHINE_CONFIG_DERIVED( pet, pet_general )
 	MCFG_FRAGMENT_ADD(pet_cartslot)
 
 	/* internal ram */
-	MCFG_RAM_ADD("messram")
+	MCFG_RAM_ADD(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("32K")
 	MCFG_RAM_EXTRA_OPTIONS("8K,16K")
 
 	/* IEEE bus */
-	MCFG_IEEE488_ADD("ieee_bus", ieee488_daisy)
-	MCFG_C4040_ADD("drive", "ieee_bus", 8)
+	MCFG_IEEE488_CONFIG_ADD(ieee488_daisy, ieee488_intf)
+	MCFG_C4040_ADD("drive", 8)
 MACHINE_CONFIG_END
 
 
@@ -717,13 +729,13 @@ static MACHINE_CONFIG_DERIVED( pet2001, pet_general )
 	MCFG_FRAGMENT_ADD(pet_cartslot)
 
 	/* internal ram */
-	MCFG_RAM_ADD("messram")
+	MCFG_RAM_ADD(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("8K")
 	MCFG_RAM_EXTRA_OPTIONS("4K")
 
 	/* IEEE bus */
-	MCFG_IEEE488_ADD("ieee_bus", ieee488_daisy)
-	MCFG_C4040_ADD("drive", "ieee_bus", 8)
+	MCFG_IEEE488_CONFIG_ADD(ieee488_daisy, ieee488_intf)
+	MCFG_C4040_ADD("drive", 8)
 MACHINE_CONFIG_END
 
 
@@ -734,7 +746,8 @@ static MACHINE_CONFIG_DERIVED( pet40, pet )
 	MCFG_MC6845_ADD("crtc", MC6845, XTAL_17_73447MHz/3	/* This is a wild guess and mostly likely incorrect */, crtc_pet40)
 
 	MCFG_VIDEO_START( pet_crtc )
-	MCFG_VIDEO_UPDATE( pet_crtc )
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_UPDATE( pet_crtc )
 
 	MCFG_FRAGMENT_ADD(pet4_cartslot)
 MACHINE_CONFIG_END
@@ -759,24 +772,24 @@ static MACHINE_CONFIG_DERIVED( pet80, pet_general )
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(640, 250)
 	MCFG_SCREEN_VISIBLE_AREA(0, 640 - 1, 0, 250 - 1)
+	MCFG_SCREEN_UPDATE( pet_crtc )
 
 	MCFG_MC6845_ADD("crtc", MC6845, XTAL_12MHz / 2	/* This is a wild guess and mostly likely incorrect */, crtc_pet80)
 
 	MCFG_GFXDECODE( pet80 )
 	MCFG_VIDEO_START( pet_crtc )
-	MCFG_VIDEO_UPDATE( pet_crtc )
 
 	MCFG_PIA6821_MODIFY( "pia_0", petb_pia0 )
 
 	MCFG_FRAGMENT_ADD(pet4_cartslot)
 
 	/* internal ram */
-	MCFG_RAM_ADD("messram")
+	MCFG_RAM_ADD(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("32K")
 
 	/* IEEE bus */
-	MCFG_IEEE488_ADD("ieee_bus", ieee488_daisy)
-	MCFG_C8050_ADD("drive", "ieee_bus", 8)
+	MCFG_IEEE488_CONFIG_ADD(ieee488_daisy, ieee488_intf)
+	MCFG_C8050_ADD("drive", 8)
 MACHINE_CONFIG_END
 
 

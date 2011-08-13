@@ -48,10 +48,30 @@
 
 
 //**************************************************************************
-//  DEVICE CONFIGURATION
+//  LIVE DEVICE
 //**************************************************************************
 
-GENERIC_DEVICE_CONFIG_SETUP(i8257, "DMA8257")
+// device type definition
+const device_type I8257 = &device_creator<i8257_device>;
+
+//-------------------------------------------------
+//  i8257_device - constructor
+//-------------------------------------------------
+
+i8257_device::i8257_device(const machine_config &mconfig, const char *tag, device_t *owner, UINT32 clock)
+    : device_t(mconfig, I8257, "DMA8257", tag, owner, clock),
+      m_mode(0),
+      m_rr(0),
+      m_msb(0),
+      m_drq(0),
+      m_status(0x0f)
+{
+	memset(m_registers, 0, sizeof(m_registers));
+	memset(m_address, 0, sizeof(m_address));
+	memset(m_count, 0, sizeof(m_count));
+	memset(m_rwmode, 0, sizeof(m_rwmode));
+}
+
 
 //-------------------------------------------------
 //  device_config_complete - perform any
@@ -59,7 +79,7 @@ GENERIC_DEVICE_CONFIG_SETUP(i8257, "DMA8257")
 //  complete
 //-------------------------------------------------
 
-void i8257_device_config::device_config_complete()
+void i8257_device::device_config_complete()
 {
 	// inherit a copy of the static data
 	const i8257_interface *intf = reinterpret_cast<const i8257_interface *>(static_config());
@@ -71,48 +91,22 @@ void i8257_device_config::device_config_complete()
 	// or initialize to defaults if none provided
 	else
 	{
-    	memset(&m_out_hrq_func, 0, sizeof(m_out_hrq_func));
-    	memset(&m_out_tc_func, 0, sizeof(m_out_tc_func));
-    	memset(&m_out_mark_func, 0, sizeof(m_out_mark_func));
-    	memset(&m_in_memr_func, 0, sizeof(m_in_memr_func));
-    	memset(&m_out_memw_func, 0, sizeof(m_out_memw_func));
-    	memset(&m_in_ior_func[0], 0, sizeof(m_in_ior_func[0]));
-    	memset(&m_in_ior_func[1], 0, sizeof(m_in_ior_func[1]));
-    	memset(&m_in_ior_func[2], 0, sizeof(m_in_ior_func[2]));
-    	memset(&m_in_ior_func[3], 0, sizeof(m_in_ior_func[3]));
-    	memset(&m_out_iow_func[0], 0, sizeof(m_out_iow_func[0]));
-    	memset(&m_out_iow_func[1], 0, sizeof(m_out_iow_func[1]));
-    	memset(&m_out_iow_func[2], 0, sizeof(m_out_iow_func[2]));
-    	memset(&m_out_iow_func[3], 0, sizeof(m_out_iow_func[3]));
+    	memset(&m_out_hrq_cb, 0, sizeof(m_out_hrq_cb));
+    	memset(&m_out_tc_cb, 0, sizeof(m_out_tc_cb));
+    	memset(&m_out_mark_cb, 0, sizeof(m_out_mark_cb));
+    	memset(&m_in_memr_cb, 0, sizeof(m_in_memr_cb));
+    	memset(&m_out_memw_cb, 0, sizeof(m_out_memw_cb));
+    	memset(&m_in_ior_cb[0], 0, sizeof(m_in_ior_cb[0]));
+    	memset(&m_in_ior_cb[1], 0, sizeof(m_in_ior_cb[1]));
+    	memset(&m_in_ior_cb[2], 0, sizeof(m_in_ior_cb[2]));
+    	memset(&m_in_ior_cb[3], 0, sizeof(m_in_ior_cb[3]));
+    	memset(&m_out_iow_cb[0], 0, sizeof(m_out_iow_cb[0]));
+    	memset(&m_out_iow_cb[1], 0, sizeof(m_out_iow_cb[1]));
+    	memset(&m_out_iow_cb[2], 0, sizeof(m_out_iow_cb[2]));
+    	memset(&m_out_iow_cb[3], 0, sizeof(m_out_iow_cb[3]));
 	}
 }
 
-
-
-//**************************************************************************
-//  LIVE DEVICE
-//**************************************************************************
-
-const device_type I8257 = i8257_device_config::static_alloc_device_config;
-
-//-------------------------------------------------
-//  i8257_device - constructor
-//-------------------------------------------------
-
-i8257_device::i8257_device(running_machine &_machine, const i8257_device_config &config)
-    : device_t(_machine, config),
-      m_mode(0),
-      m_rr(0),
-      m_msb(0),
-      m_drq(0),
-      m_status(0x0f),
-      m_config(config)
-{
-	memset(m_registers, 0, sizeof(m_registers));
-	memset(m_address, 0, sizeof(m_address));
-	memset(m_count, 0, sizeof(m_count));
-	memset(m_rwmode, 0, sizeof(m_rwmode));
-}
 
 //-------------------------------------------------
 //  device_start - device-specific startup
@@ -124,32 +118,32 @@ void i8257_device::device_start()
 	assert(this != NULL);
 
 	/* resolve callbacks */
-	devcb_resolve_write_line(&m_out_hrq_func, &m_config.m_out_hrq_func, this);
-	devcb_resolve_write_line(&m_out_tc_func, &m_config.m_out_tc_func, this);
-	devcb_resolve_write_line(&m_out_mark_func, &m_config.m_out_mark_func, this);
-	devcb_resolve_read8(&m_in_memr_func, &m_config.m_in_memr_func, this);
-	devcb_resolve_write8(&m_out_memw_func, &m_config.m_out_memw_func, this);
+	m_out_hrq_func.resolve(m_out_hrq_cb, *this);
+	m_out_tc_func.resolve(m_out_tc_cb, *this);
+	m_out_mark_func.resolve(m_out_mark_cb, *this);
+	m_in_memr_func.resolve(m_in_memr_cb, *this);
+	m_out_memw_func.resolve(m_out_memw_cb, *this);
 
 	for (int i = 0; i < I8257_NUM_CHANNELS; i++)
 	{
-		devcb_resolve_read8(&m_in_ior_func[i], &m_config.m_in_ior_func[i], this);
-		devcb_resolve_write8(&m_out_iow_func[i], &m_config.m_out_iow_func[i], this);
+		m_in_ior_func[i].resolve(m_in_ior_cb[i], *this);
+		m_out_iow_func[i].resolve(m_out_iow_cb[i], *this);
 	}
 
 	/* set initial values */
-	m_timer = device_timer_alloc(*this, TIMER_OPERATION);
-	m_msbflip_timer = device_timer_alloc(*this, TIMER_MSBFLIP);
+	m_timer = timer_alloc(TIMER_OPERATION);
+	m_msbflip_timer = timer_alloc(TIMER_MSBFLIP);
 
 	/* register for state saving */
-	state_save_register_device_item_array(this, 0, m_address);
-	state_save_register_device_item_array(this, 0, m_count);
-	state_save_register_device_item_array(this, 0, m_rwmode);
-	state_save_register_device_item_array(this, 0, m_registers);
-	state_save_register_device_item(this, 0, m_mode);
-	state_save_register_device_item(this, 0, m_rr);
-	state_save_register_device_item(this, 0, m_msb);
-	state_save_register_device_item(this, 0, m_drq);
-	state_save_register_device_item(this, 0, m_status);
+	save_item(NAME(m_address));
+	save_item(NAME(m_count));
+	save_item(NAME(m_rwmode));
+	save_item(NAME(m_registers));
+	save_item(NAME(m_mode));
+	save_item(NAME(m_rr));
+	save_item(NAME(m_msb));
+	save_item(NAME(m_drq));
+	save_item(NAME(m_status));
 }
 
 
@@ -175,22 +169,22 @@ int i8257_device::i8257_do_operation(int channel)
 	{
 		m_status |=  (0x01 << channel);
 
-		devcb_call_write_line(&m_out_tc_func, ASSERT_LINE);
+		m_out_tc_func(ASSERT_LINE);
 	}
 	switch(mode) {
 	case 1:
-		if (&m_in_memr_func.target != NULL)
+		if (!m_in_memr_func.isnull())
 		{
-			data = devcb_call_read8(&m_in_memr_func, m_address[channel]);
+			data = m_in_memr_func(m_address[channel]);
 		}
 		else
 		{
 			data = 0;
 			logerror("8257: No memory read function defined.\n");
 		}
-		if (&m_out_iow_func[channel].target != NULL)
+		if (!m_out_iow_func[channel].isnull())
 		{
-			devcb_call_write8(&m_out_iow_func[channel], 0, data);
+			m_out_iow_func[channel](m_address[channel], data);
 		}
 		else
 		{
@@ -203,9 +197,9 @@ int i8257_device::i8257_do_operation(int channel)
 		break;
 
 	case 2:
-		if (&m_in_ior_func[channel].target != NULL)
+		if (!m_in_ior_func[channel].isnull())
 		{
-			data = devcb_call_read8(&m_in_ior_func[channel], 0);
+			data = m_in_ior_func[channel](m_address[channel]);
 		}
 		else
 		{
@@ -213,9 +207,9 @@ int i8257_device::i8257_do_operation(int channel)
 			logerror("8257: No channel read function for channel %d defined.\n",channel);
 		}
 
-		if (&m_out_memw_func.target != NULL)
+		if (!m_out_memw_func.isnull())
 		{
-			devcb_call_write8(&m_out_memw_func, m_address[channel], data);
+			m_out_memw_func(m_address[channel], data);
 		}
 		else
 		{
@@ -244,7 +238,7 @@ int i8257_device::i8257_do_operation(int channel)
 			m_registers[5] = m_registers[7];
 		}
 
-		devcb_call_write_line(&m_out_tc_func, CLEAR_LINE);
+		m_out_tc_func(CLEAR_LINE);
 	}
 	return done;
 }
@@ -329,9 +323,9 @@ void i8257_device::i8257_update_status()
 
 	if (pending_transfer)
 	{
-		next = ATTOTIME_IN_HZ(clock() / 4 );
-		timer_adjust_periodic(m_timer,
-			attotime_zero,
+		next = attotime::from_hz(clock() / 4 );
+		m_timer->adjust(
+			attotime::zero,
 			0,
 			/* 1 byte transferred in 4 clock cycles */
 			next);
@@ -339,17 +333,17 @@ void i8257_device::i8257_update_status()
 	else
 	{
 		/* no transfers active right now */
-		timer_reset(m_timer, attotime_never);
+		m_timer->reset();
 	}
 
 	/* set the halt line */
-	devcb_call_write_line(&m_out_hrq_func, pending_transfer ? ASSERT_LINE : CLEAR_LINE);
+	m_out_hrq_func(pending_transfer ? ASSERT_LINE : CLEAR_LINE);
 }
 
 
 void i8257_device::i8257_prepare_msb_flip()
 {
-	timer_adjust_oneshot(m_msbflip_timer, attotime_zero, 0);
+	m_msbflip_timer->adjust(attotime::zero);
 }
 
 
@@ -449,7 +443,7 @@ void i8257_device::i8257_drq_w(int channel, int state)
 {
 	int param = (channel << 1) | (state ? 1 : 0);
 
-	device_timer_call_after_resynch(*this, TIMER_DRQ_SYNC, param);
+	synchronize(TIMER_DRQ_SYNC, param);
 }
 
 WRITE_LINE_DEVICE_HANDLER( i8257_hlda_w ) { }

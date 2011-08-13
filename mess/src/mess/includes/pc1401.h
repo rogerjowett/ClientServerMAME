@@ -15,14 +15,14 @@
 class pc1401_state : public driver_device
 {
 public:
-	pc1401_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	pc1401_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
-	UINT8 portc;
-	UINT8 outa;
-	UINT8 outb;
-	int power;
-	UINT8 reg[0x100];
+	UINT8 m_portc;
+	UINT8 m_outa;
+	UINT8 m_outb;
+	int m_power;
+	UINT8 m_reg[0x100];
 };
 
 
@@ -44,7 +44,7 @@ NVRAM_HANDLER( pc1401 );
 
 READ8_HANDLER(pc1401_lcd_read);
 WRITE8_HANDLER(pc1401_lcd_write);
-VIDEO_UPDATE( pc1401 );
+SCREEN_UPDATE( pc1401 );
 
 
 #endif /* PC1401_H_ */

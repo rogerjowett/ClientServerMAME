@@ -27,8 +27,8 @@
 
 #include "emu.h"
 #include "cpu/z80/z80.h"
-#include "devices/flopdrv.h"
-#include "devices/messram.h"
+#include "imagedev/flopdrv.h"
+#include "machine/ram.h"
 #include "formats/basicdsk.h"
 #include "machine/6821pia.h"
 #include "machine/ctronics.h"
@@ -52,33 +52,33 @@
 
 void bw12_state::bankswitch()
 {
-	address_space *program = cpu_get_address_space(m_maincpu, ADDRESS_SPACE_PROGRAM);
+	address_space *program = m_maincpu->memory().space(AS_PROGRAM);
 
 	switch (m_bank)
 	{
 	case 0: /* ROM */
-		memory_install_read_bank(program, 0x0000, 0x7fff, 0, 0, "bank1");
-		memory_unmap_write(program, 0x0000, 0x7fff, 0, 0);
+		program->install_read_bank(0x0000, 0x7fff, "bank1");
+		program->unmap_write(0x0000, 0x7fff);
 		break;
 
 	case 1: /* BK0 */
-		memory_install_readwrite_bank(program, 0x0000, 0x7fff, 0, 0, "bank1");
+		program->install_readwrite_bank(0x0000, 0x7fff, "bank1");
 		break;
 
 	case 2: /* BK1 */
 	case 3: /* BK2 */
-		if (messram_get_size(m_ram) > 64*1024)
+		if (ram_get_size(m_ram) > 64*1024)
 		{
-			memory_install_readwrite_bank(program, 0x0000, 0x7fff, 0, 0, "bank1");
+			program->install_readwrite_bank(0x0000, 0x7fff, "bank1");
 		}
 		else
 		{
-			memory_unmap_readwrite(program, 0x0000, 0x7fff, 0, 0);
+			program->unmap_readwrite(0x0000, 0x7fff);
 		}
 		break;
 	}
 
-	memory_set_bank(machine, "bank1", m_bank);
+	memory_set_bank(machine(), "bank1", m_bank);
 }
 
 void bw12_state::floppy_motor_off()
@@ -94,7 +94,7 @@ void bw12_state::floppy_motor_off()
 
 static TIMER_DEVICE_CALLBACK( floppy_motor_off_tick )
 {
-	bw12_state *state = timer.machine->driver_data<bw12_state>();
+	bw12_state *state = timer.machine().driver_data<bw12_state>();
 
 	state->floppy_motor_off();
 }
@@ -115,8 +115,8 @@ void bw12_state::set_floppy_motor_off_timer()
             C11 = CAP_U(4.7)
 
         */
-		
-		m_floppy_timer->adjust(attotime_zero);
+
+		m_floppy_timer->adjust(attotime::zero);
 	}
 }
 
@@ -191,20 +191,20 @@ READ8_MEMBER( bw12_state::ls259_r )
 
 /* Memory Maps */
 
-static ADDRESS_MAP_START( bw12_mem, ADDRESS_SPACE_PROGRAM, 8, bw12_state )
+static ADDRESS_MAP_START( bw12_mem, AS_PROGRAM, 8, bw12_state )
 	AM_RANGE(0x0000, 0x7fff) AM_RAMBANK("bank1")
 	AM_RANGE(0x8000, 0xf7ff) AM_RAM
 	AM_RANGE(0xf800, 0xffff) AM_RAM AM_BASE(m_video_ram)
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( bw12_io, ADDRESS_SPACE_IO, 8, bw12_state )
+static ADDRESS_MAP_START( bw12_io, AS_IO, 8, bw12_state )
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 	AM_RANGE(0x00, 0x0f) AM_READWRITE(ls259_r, ls259_w)
-	AM_RANGE(0x10, 0x10) AM_MIRROR(0x0e) AM_DEVWRITE_LEGACY(MC6845_TAG, mc6845_address_w)
-	AM_RANGE(0x11, 0x11) AM_MIRROR(0x0e) AM_DEVREADWRITE_LEGACY(MC6845_TAG, mc6845_register_r, mc6845_register_w)
+	AM_RANGE(0x10, 0x10) AM_MIRROR(0x0e) AM_DEVWRITE(MC6845_TAG, mc6845_device, address_w)
+	AM_RANGE(0x11, 0x11) AM_MIRROR(0x0e) AM_DEVREADWRITE(MC6845_TAG, mc6845_device, register_r, register_w)
 	AM_RANGE(0x20, 0x20) AM_MIRROR(0x0e) AM_DEVREAD_LEGACY(UPD765_TAG, upd765_status_r)
 	AM_RANGE(0x21, 0x21) AM_MIRROR(0x0e) AM_DEVREADWRITE_LEGACY(UPD765_TAG, upd765_data_r, upd765_data_w)
-	AM_RANGE(0x30, 0x33) AM_MIRROR(0x0c) AM_DEVREADWRITE_LEGACY(PIA6821_TAG, pia6821_r, pia6821_w)
+	AM_RANGE(0x30, 0x33) AM_MIRROR(0x0c) AM_DEVREADWRITE(PIA6821_TAG, pia6821_device, read, write)
 	AM_RANGE(0x40, 0x40) AM_MIRROR(0x0c) AM_DEVREADWRITE_LEGACY(Z80SIO_TAG, z80dart_d_r, z80dart_d_w)
 	AM_RANGE(0x41, 0x41) AM_MIRROR(0x0c) AM_DEVREADWRITE_LEGACY(Z80SIO_TAG, z80dart_c_r, z80dart_c_w)
 	AM_RANGE(0x42, 0x42) AM_MIRROR(0x0c) AM_DEVREADWRITE_LEGACY(Z80SIO_TAG, z80dart_d_r, z80dart_d_w)
@@ -361,7 +361,7 @@ INPUT_PORTS_END
 
 static MC6845_UPDATE_ROW( bw12_update_row )
 {
-	bw12_state *state = device->machine->driver_data<bw12_state>();
+	bw12_state *state = device->machine().driver_data<bw12_state>();
 
 	int column, bit;
 
@@ -405,12 +405,12 @@ static const mc6845_interface bw12_mc6845_interface =
 void bw12_state::video_start()
 {
 	/* find memory regions */
-	m_char_rom = machine->region("chargen")->base();
+	m_char_rom = machine().region("chargen")->base();
 }
 
-bool bw12_state::video_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect)
+bool bw12_state::screen_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect)
 {
-	mc6845_update(m_crtc, &bitmap, &cliprect);
+	m_crtc->update( &bitmap, &cliprect);
 
 	return 0;
 }
@@ -424,7 +424,7 @@ WRITE_LINE_MEMBER( bw12_state::fdc_intrq_w )
 
 static UPD765_GET_IMAGE( bw12_upd765_get_image )
 {
-	bw12_state *state = device->machine->driver_data<bw12_state>();
+	bw12_state *state = device->machine().driver_data<bw12_state>();
 
 	switch (floppy_index)
 	{
@@ -521,7 +521,7 @@ static const pia6821_interface pia_intf =
 static const centronics_interface bw12_centronics_intf =
 {
 	0,													/* is IBM PC? */
-	DEVCB_DEVICE_LINE(PIA6821_TAG, pia6821_ca1_w),		/* ACK output */
+	DEVCB_DEVICE_LINE_MEMBER(PIA6821_TAG, pia6821_device, ca1_w),		/* ACK output */
 	DEVCB_NULL,											/* BUSY output */
 	DEVCB_NULL											/* NOT BUSY output */
 };
@@ -585,45 +585,25 @@ static const struct pit8253_config pit_intf =
 
 /* AY-5-3600-PRO-002 Interface */
 
-static AY3600_Y_READ( bw2_ay3600_y_r )
+READ_LINE_MEMBER( bw12_state::ay3600_shift_r )
 {
-	UINT16 data = 0;
-
-	switch (x)
-	{
-	case 0: data = input_port_read(device->machine, "X0"); break;
-	case 1: data = input_port_read(device->machine, "X1"); break;
-	case 2: data = input_port_read(device->machine, "X2"); break;
-	case 3: data = input_port_read(device->machine, "X3"); break;
-	case 4: data = input_port_read(device->machine, "X4"); break;
-	case 5: data = input_port_read(device->machine, "X5"); break;
-	case 6: data = input_port_read(device->machine, "X6"); break;
-	case 7: data = input_port_read(device->machine, "X7"); break;
-	case 8: data = input_port_read(device->machine, "X8"); break;
-	}
-
-	return data;
+	return BIT(input_port_read(machine(), "MODIFIERS"), 0);
 }
 
-static READ_LINE_DEVICE_HANDLER( ay3600_shift_r )
+READ_LINE_MEMBER( bw12_state::ay3600_control_r )
 {
-	return BIT(input_port_read(device->machine, "MODIFIERS"), 0);
-}
-
-static READ_LINE_DEVICE_HANDLER( ay3600_control_r )
-{
-	return BIT(input_port_read(device->machine, "MODIFIERS"), 1);
+	return BIT(input_port_read(machine(), "MODIFIERS"), 1);
 }
 
 WRITE_LINE_MEMBER( bw12_state::ay3600_data_ready_w )
 {
 	m_key_stb = state;
 
-	pia6821_cb1_w(m_pia, state);
+	m_pia->cb1_w(state);
 
 	if (state)
 	{
-		UINT16 data = ay3600_b_r(m_kbc);
+		UINT16 data = m_kbc->b_r();
 
 		m_key_data[0] = BIT(data, 6);
 		m_key_data[1] = BIT(data, 3);
@@ -642,11 +622,19 @@ WRITE_LINE_MEMBER( bw12_state::ay3600_data_ready_w )
 
 static AY3600_INTERFACE( bw12_ay3600_intf )
 {
-	bw2_ay3600_y_r,							/* Y input */
-	DEVCB_LINE(ay3600_shift_r),			/* shift */
-	DEVCB_LINE(ay3600_control_r),		/* control */
-	DEVCB_DRIVER_LINE_MEMBER(bw12_state, ay3600_data_ready_w),	/* data ready */
-	DEVCB_NULL								/* any key down */
+	DEVCB_INPUT_PORT("X0"),
+	DEVCB_INPUT_PORT("X1"),
+	DEVCB_INPUT_PORT("X2"),
+	DEVCB_INPUT_PORT("X3"),
+	DEVCB_INPUT_PORT("X4"),
+	DEVCB_INPUT_PORT("X5"),
+	DEVCB_INPUT_PORT("X6"),
+	DEVCB_INPUT_PORT("X7"),
+	DEVCB_INPUT_PORT("X8"),
+	DEVCB_DRIVER_LINE_MEMBER(bw12_state, ay3600_shift_r),
+	DEVCB_DRIVER_LINE_MEMBER(bw12_state, ay3600_control_r),
+	DEVCB_DRIVER_LINE_MEMBER(bw12_state, ay3600_data_ready_w),
+	DEVCB_NULL
 };
 
 /* Machine Initialization */
@@ -654,21 +642,21 @@ static AY3600_INTERFACE( bw12_ay3600_intf )
 void bw12_state::machine_start()
 {
 	/* setup memory banking */
-	memory_configure_bank(machine, "bank1", 0, 1, machine->region(Z80_TAG)->base(), 0);
-	memory_configure_bank(machine, "bank1", 1, 1, messram_get_ptr(m_ram), 0);
-	memory_configure_bank(machine, "bank1", 2, 2, messram_get_ptr(m_ram) + 0x10000, 0x8000);
+	memory_configure_bank(machine(), "bank1", 0, 1, machine().region(Z80_TAG)->base(), 0);
+	memory_configure_bank(machine(), "bank1", 1, 1, ram_get_ptr(m_ram), 0);
+	memory_configure_bank(machine(), "bank1", 2, 2, ram_get_ptr(m_ram) + 0x10000, 0x8000);
 
 	/* register for state saving */
-	state_save_register_global(machine, m_bank);
-	state_save_register_global(machine, m_pit_out2);
-	state_save_register_global_array(machine, m_key_data);
-	state_save_register_global(machine, m_key_sin);
-	state_save_register_global(machine, m_key_stb);
-	state_save_register_global(machine, m_key_shift);
-	state_save_register_global(machine, m_fdc_int);
-	state_save_register_global(machine, m_motor_on);
-	state_save_register_global(machine, m_motor0);
-	state_save_register_global(machine, m_motor1);
+	state_save_register_global(machine(), m_bank);
+	state_save_register_global(machine(), m_pit_out2);
+	state_save_register_global_array(machine(), m_key_data);
+	state_save_register_global(machine(), m_key_sin);
+	state_save_register_global(machine(), m_key_stb);
+	state_save_register_global(machine(), m_key_shift);
+	state_save_register_global(machine(), m_fdc_int);
+	state_save_register_global(machine(), m_motor_on);
+	state_save_register_global(machine(), m_motor0);
+	state_save_register_global(machine(), m_motor1);
 }
 
 void bw12_state::machine_reset()
@@ -682,19 +670,19 @@ void bw12_state::machine_reset()
 }
 
 static FLOPPY_OPTIONS_START( bw12 )
-	FLOPPY_OPTION(bw12, "dsk", "180KB BW 12 SSDD", basicdsk_identify_default, basicdsk_construct_default,
+	FLOPPY_OPTION(bw12, "dsk", "180KB BW 12 SSDD", basicdsk_identify_default, basicdsk_construct_default, NULL,
 		HEADS([1])
 		TRACKS([40])
 		SECTORS([18])
 		SECTOR_LENGTH([256])
 		FIRST_SECTOR_ID([0]))
-	FLOPPY_OPTION(bw12, "dsk", "SVI-328 SSDD", basicdsk_identify_default, basicdsk_construct_default,
+	FLOPPY_OPTION(bw12, "dsk", "SVI-328 SSDD", basicdsk_identify_default, basicdsk_construct_default, NULL,
 		HEADS([1])
 		TRACKS([40])
 		SECTORS([17])
 		SECTOR_LENGTH([256])
 		FIRST_SECTOR_ID([0]))
-	FLOPPY_OPTION(bw12, "dsk", "Kaypro II SSDD", basicdsk_identify_default, basicdsk_construct_default,
+	FLOPPY_OPTION(bw12, "dsk", "Kaypro II SSDD", basicdsk_identify_default, basicdsk_construct_default, NULL,
 		HEADS([1])
 		TRACKS([40])
 		SECTORS([10])
@@ -702,7 +690,7 @@ static FLOPPY_OPTIONS_START( bw12 )
 		FIRST_SECTOR_ID([0]))
 FLOPPY_OPTIONS_END
 
-static const floppy_config bw12_floppy_config =
+static const floppy_interface bw12_floppy_interface =
 {
 	DEVCB_NULL,
 	DEVCB_NULL,
@@ -711,35 +699,36 @@ static const floppy_config bw12_floppy_config =
 	DEVCB_NULL,
 	FLOPPY_STANDARD_5_25_SSDD,
 	FLOPPY_OPTIONS_NAME(bw12),
+	NULL,
 	NULL
 };
 
 static FLOPPY_OPTIONS_START( bw14 )
-	FLOPPY_OPTION(bw14, "dsk", "180KB BW 12 SSDD", basicdsk_identify_default, basicdsk_construct_default,
+	FLOPPY_OPTION(bw14, "dsk", "180KB BW 12 SSDD", basicdsk_identify_default, basicdsk_construct_default, NULL,
 		HEADS([1])
 		TRACKS([40])
 		SECTORS([18])
 		SECTOR_LENGTH([256])
 		FIRST_SECTOR_ID([0]))
-	FLOPPY_OPTION(bw14, "dsk", "360KB BW 14 DSDD", basicdsk_identify_default, basicdsk_construct_default,
+	FLOPPY_OPTION(bw14, "dsk", "360KB BW 14 DSDD", basicdsk_identify_default, basicdsk_construct_default, NULL,
 		HEADS([2])
 		TRACKS([40])
 		SECTORS([18])
 		SECTOR_LENGTH([256])
 		FIRST_SECTOR_ID([0]))
-	FLOPPY_OPTION(bw14, "dsk", "SVI-328 SSDD", basicdsk_identify_default, basicdsk_construct_default,
+	FLOPPY_OPTION(bw14, "dsk", "SVI-328 SSDD", basicdsk_identify_default, basicdsk_construct_default, NULL,
 		HEADS([1])
 		TRACKS([40])
 		SECTORS([17])
 		SECTOR_LENGTH([256])
 		FIRST_SECTOR_ID([0]))
-	FLOPPY_OPTION(bw14, "dsk", "SVI-328 DSDD", basicdsk_identify_default, basicdsk_construct_default,
+	FLOPPY_OPTION(bw14, "dsk", "SVI-328 DSDD", basicdsk_identify_default, basicdsk_construct_default, NULL,
 		HEADS([2])
 		TRACKS([40])
 		SECTORS([17])
 		SECTOR_LENGTH([256])
 		FIRST_SECTOR_ID([0]))
-	FLOPPY_OPTION(bw14, "dsk", "Kaypro II SSDD", basicdsk_identify_default, basicdsk_construct_default,
+	FLOPPY_OPTION(bw14, "dsk", "Kaypro II SSDD", basicdsk_identify_default, basicdsk_construct_default, NULL,
 		HEADS([1])
 		TRACKS([40])
 		SECTORS([10])
@@ -748,7 +737,7 @@ static FLOPPY_OPTIONS_START( bw14 )
 FLOPPY_OPTIONS_END
 
 
-static const floppy_config bw14_floppy_config =
+static const floppy_interface bw14_floppy_interface =
 {
 	DEVCB_NULL,
 	DEVCB_NULL,
@@ -757,6 +746,7 @@ static const floppy_config bw14_floppy_config =
 	DEVCB_NULL,
 	FLOPPY_STANDARD_5_25_DSHD,
 	FLOPPY_OPTIONS_NAME(bw14),
+	NULL,
 	NULL
 };
 
@@ -812,7 +802,7 @@ static MACHINE_CONFIG_START( common, bw12_state )
 	MCFG_PIA6821_ADD(PIA6821_TAG, pia_intf)
 	MCFG_Z80SIO0_ADD(Z80SIO_TAG, XTAL_16MHz/4, sio_intf)
 	MCFG_PIT8253_ADD(PIT8253_TAG, pit_intf)
-	MCFG_AY3600PRO002_ADD(AY3600_TAG, bw12_ay3600_intf)
+	MCFG_AY3600_ADD(AY3600PRO002_TAG, 0, bw12_ay3600_intf)
 
 	/* printer */
 	MCFG_CENTRONICS_ADD(CENTRONICS_TAG, bw12_centronics_intf)
@@ -820,19 +810,19 @@ MACHINE_CONFIG_END
 
 static MACHINE_CONFIG_DERIVED( bw12, common )
 	/* floppy drives */
-	MCFG_FLOPPY_2_DRIVES_ADD(bw12_floppy_config)
+	MCFG_FLOPPY_2_DRIVES_ADD(bw12_floppy_interface)
 
 	/* internal ram */
-	MCFG_RAM_ADD("messram")
+	MCFG_RAM_ADD(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("64K")
 MACHINE_CONFIG_END
 
 static MACHINE_CONFIG_DERIVED( bw14, common )
 	/* floppy drives */
-	MCFG_FLOPPY_2_DRIVES_ADD(bw14_floppy_config)
+	MCFG_FLOPPY_2_DRIVES_ADD(bw14_floppy_interface)
 
 	/* internal ram */
-	MCFG_RAM_ADD("messram")
+	MCFG_RAM_ADD(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("128K")
 MACHINE_CONFIG_END
 

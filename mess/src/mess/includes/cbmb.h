@@ -13,33 +13,38 @@
 
 #include "video/mc6845.h"
 #include "machine/6526cia.h"
-#include "devices/cartslot.h"
+#include "machine/ieee488.h"
+#include "imagedev/cartslot.h"
 
 class cbmb_state : public driver_device
 {
 public:
-	cbmb_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	cbmb_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag),
+		  m_ieee(*this, IEEE488_TAG)
+	{ }
+
+	required_device<ieee488_device> m_ieee;
 
 	/* keyboard lines */
-	int cbmb_keyline_a;
-	int cbmb_keyline_b;
-	int cbmb_keyline_c;
+	int m_cbmb_keyline_a;
+	int m_cbmb_keyline_b;
+	int m_cbmb_keyline_c;
 
-	int p500;
-	int cbm700;
-	int cbm_ntsc;
-	UINT8 *videoram;
-	UINT8 *basic;
-	UINT8 *kernal;
-	UINT8 *colorram;
-	int keyline_a;
-	int keyline_b;
-	int keyline_c;
-	UINT8 *chargen;
-	int old_level;
-	int irq_level;
-	int font;
+	int m_p500;
+	int m_cbm700;
+	int m_cbm_ntsc;
+	UINT8 *m_videoram;
+	UINT8 *m_basic;
+	UINT8 *m_kernal;
+	UINT8 *m_colorram;
+	int m_keyline_a;
+	int m_keyline_b;
+	int m_keyline_c;
+	UINT8 *m_chargen;
+	int m_old_level;
+	int m_irq_level;
+	int m_font;
 };
 
 /*----------- defined in machine/cbmb.c -----------*/
@@ -59,12 +64,12 @@ WRITE8_DEVICE_HANDLER( cbmb_keyboard_line_select_c );
 READ8_DEVICE_HANDLER( cbmb_keyboard_line_a );
 READ8_DEVICE_HANDLER( cbmb_keyboard_line_b );
 READ8_DEVICE_HANDLER( cbmb_keyboard_line_c );
-void cbmb_irq(device_t *device, int level);
+WRITE_LINE_DEVICE_HANDLER( cbmb_irq );
 
-int cbmb_dma_read(running_machine *machine, int offset);
-int cbmb_dma_read_color(running_machine *machine, int offset);
+int cbmb_dma_read(running_machine &machine, int offset);
+int cbmb_dma_read_color(running_machine &machine, int offset);
 
-WRITE8_DEVICE_HANDLER( cbmb_change_font );
+WRITE_LINE_DEVICE_HANDLER( cbmb_change_font );
 
 DRIVER_INIT( p500 );
 DRIVER_INIT( cbm600 );
@@ -79,16 +84,16 @@ MACHINE_CONFIG_EXTERN( cbmb_cartslot );
 /*----------- defined in video/cbmb.c -----------*/
 
 VIDEO_START( cbmb_crtc );
-VIDEO_UPDATE( cbmb_crtc );
+SCREEN_UPDATE( cbmb_crtc );
 MC6845_UPDATE_ROW( cbm600_update_row );
 MC6845_UPDATE_ROW( cbm700_update_row );
 WRITE_LINE_DEVICE_HANDLER( cbmb_display_enable_changed );
 
-void cbm600_vh_init(running_machine *machine);
-void cbm700_vh_init(running_machine *machine);
+void cbm600_vh_init(running_machine &machine);
+void cbm700_vh_init(running_machine &machine);
 VIDEO_START( cbm700 );
 
-void cbmb_vh_set_font(running_machine *machine, int font);
+void cbmb_vh_set_font(running_machine &machine, int font);
 
 
 #endif /* CBMB_H_ */

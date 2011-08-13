@@ -10,11 +10,11 @@
 #include "emu.h"
 #include "cpu/i8085/i8085.h"
 #include "sound/wave.h"
-#include "machine/i8255a.h"
-#include "machine/i8257.h"
+#include "machine/i8255.h"
+#include "machine/8257dma.h"
 #include "machine/pit8253.h"
 #include "video/i8275.h"
-#include "devices/cassette.h"
+#include "imagedev/cassette.h"
 #include "formats/rk_cas.h"
 #include "includes/radio86.h"
 
@@ -22,19 +22,19 @@
 class mikrosha_state : public radio86_state
 {
 public:
-	mikrosha_state(running_machine &machine, const driver_device_config_base &config)
-		: radio86_state(machine, config) { }
+	mikrosha_state(const machine_config &mconfig, device_type type, const char *tag)
+		: radio86_state(mconfig, type, tag) { }
 
 };
 
 
 /* Address maps */
-static ADDRESS_MAP_START(mikrosha_mem, ADDRESS_SPACE_PROGRAM, 8)
+static ADDRESS_MAP_START(mikrosha_mem, AS_PROGRAM, 8)
     AM_RANGE( 0x0000, 0x0fff ) AM_RAMBANK("bank1") // First bank
     AM_RANGE( 0x1000, 0x7fff ) AM_RAM // RAM
     AM_RANGE( 0x8000, 0xbfff ) AM_READ(radio_cpu_state_r) // Not connected
-    AM_RANGE( 0xc000, 0xc003 ) AM_DEVREADWRITE("ppi8255_1", i8255a_r, i8255a_w) AM_MIRROR(0x07fc)
-    AM_RANGE( 0xc800, 0xc803 ) AM_DEVREADWRITE("ppi8255_2", i8255a_r, i8255a_w) AM_MIRROR(0x07fc)
+    AM_RANGE( 0xc000, 0xc003 ) AM_DEVREADWRITE_MODERN("ppi8255_1", i8255_device, read, write) AM_MIRROR(0x07fc)
+    AM_RANGE( 0xc800, 0xc803 ) AM_DEVREADWRITE_MODERN("ppi8255_2", i8255_device, read, write) AM_MIRROR(0x07fc)
     AM_RANGE( 0xd000, 0xd001 ) AM_DEVREADWRITE("i8275", i8275_r, i8275_w) AM_MIRROR(0x07fe) // video
     AM_RANGE( 0xd800, 0xd803 ) AM_DEVREADWRITE("pit8253", pit8253_r,pit8253_w) AM_MIRROR(0x07fc) // Timer
     AM_RANGE( 0xe000, 0xf7ff ) AM_READ(radio_cpu_state_r) // Not connected
@@ -42,7 +42,7 @@ static ADDRESS_MAP_START(mikrosha_mem, ADDRESS_SPACE_PROGRAM, 8)
     AM_RANGE( 0xf800, 0xffff ) AM_ROM  // System ROM
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( mikrosha_io , ADDRESS_SPACE_IO, 8)
+static ADDRESS_MAP_START( mikrosha_io , AS_IO, 8)
 	ADDRESS_MAP_UNMAP_HIGH
 	AM_RANGE( 0x00, 0xff ) AM_READWRITE(radio_io_r,radio_io_w)
 ADDRESS_MAP_END
@@ -141,11 +141,12 @@ static INPUT_PORTS_START( mikrosha )
 INPUT_PORTS_END
 
 /* Machine driver */
-static const cassette_config mikrosha_cassette_config =
+static const cassette_interface mikrosha_cassette_interface =
 {
 	rkm_cassette_formats,
 	NULL,
 	(cassette_state)(CASSETTE_STOPPED | CASSETTE_SPEAKER_ENABLED | CASSETTE_MOTOR_ENABLED),
+	NULL,
 	NULL
 };
 
@@ -202,9 +203,9 @@ static MACHINE_CONFIG_START( mikrosha, mikrosha_state )
 
 	MCFG_MACHINE_RESET( radio86 )
 
-	MCFG_I8255A_ADD( "ppi8255_1", mikrosha_ppi8255_interface_1 )
+	MCFG_I8255_ADD( "ppi8255_1", mikrosha_ppi8255_interface_1 )
 
-	MCFG_I8255A_ADD( "ppi8255_2", mikrosha_ppi8255_interface_2 )
+	MCFG_I8255_ADD( "ppi8255_2", mikrosha_ppi8255_interface_2 )
 
 	MCFG_I8275_ADD  ( "i8275", mikrosha_i8275_interface)
 
@@ -217,20 +218,21 @@ static MACHINE_CONFIG_START( mikrosha, mikrosha_state )
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(78*6, 30*10)
 	MCFG_SCREEN_VISIBLE_AREA(0, 78*6-1, 0, 30*10-1)
+	MCFG_SCREEN_UPDATE(radio86)
+
 	MCFG_GFXDECODE(mikrosha)
 	MCFG_PALETTE_LENGTH(3)
 	MCFG_PALETTE_INIT(radio86)
 
 	MCFG_VIDEO_START(generic_bitmapped)
-	MCFG_VIDEO_UPDATE(radio86)
 
 	MCFG_SPEAKER_STANDARD_MONO("mono")
-	MCFG_SOUND_WAVE_ADD("wave", "cassette")
+	MCFG_SOUND_WAVE_ADD(WAVE_TAG, CASSETTE_TAG)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
 	MCFG_I8257_ADD("dma8257", XTAL_16MHz / 9, radio86_dma)
 
-	MCFG_CASSETTE_ADD( "cassette", mikrosha_cassette_config )
+	MCFG_CASSETTE_ADD( CASSETTE_TAG, mikrosha_cassette_interface )
 MACHINE_CONFIG_END
 
 
@@ -242,7 +244,15 @@ ROM_START( mikrosha )
 	ROM_LOAD ("mikrosha.fnt", 0x0000, 0x0800, CRC(B315DA1C) SHA1(b5bf9abc0fff75b1aba709a7f08b23d4a89bb04b))
 ROM_END
 
+ROM_START( m86rk )
+    ROM_REGION( 0x10000, "maincpu", ROMREGION_ERASEFF )
+	ROM_LOAD( "m86rk.bin", 0xf800, 0x0800, CRC(a898d77a) SHA1(c2497bf8434b5028fe0a9fc09be311465d5553a5))
+	ROM_REGION(0x0800, "gfx1",0)
+	/* here should probably be different rom */
+	ROM_LOAD ("mikrosha.fnt", 0x0000, 0x0800, CRC(B315DA1C) SHA1(b5bf9abc0fff75b1aba709a7f08b23d4a89bb04b))
+ROM_END
 
 /* Driver */
 /*    YEAR  NAME      PARENT  COMPAT    MACHINE     INPUT       INIT        COMPANY     FULLNAME        FLAGS */
 COMP( 1987, mikrosha, radio86,0,		mikrosha,	mikrosha,	radio86,	"Lianozovo Electromechanical Factory",		"Mikrosha",		0)
+COMP( 1987, m86rk,	  radio86,0,		mikrosha,	mikrosha,	radio86,	"<unknown>",		"Mikrosha-86RK",		0)

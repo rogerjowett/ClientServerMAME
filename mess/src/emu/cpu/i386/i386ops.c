@@ -354,7 +354,7 @@ static void I386OP(cmpsb)(i386_state *cpustate)				// Opcode 0xa6
 static void I386OP(in_al_i8)(i386_state *cpustate)			// Opcode 0xe4
 {
 	UINT16 port = FETCH(cpustate);
-	UINT8 data = READPORT8(port);
+	UINT8 data = READPORT8(cpustate, port);
 	REG8(AL) = data;
 	CYCLES(cpustate,CYCLES_IN_VAR);
 }
@@ -362,7 +362,7 @@ static void I386OP(in_al_i8)(i386_state *cpustate)			// Opcode 0xe4
 static void I386OP(in_al_dx)(i386_state *cpustate)			// Opcode 0xec
 {
 	UINT16 port = REG16(DX);
-	UINT8 data = READPORT8(port);
+	UINT8 data = READPORT8(cpustate, port);
 	REG8(AL) = data;
 	CYCLES(cpustate,CYCLES_IN);
 }
@@ -876,7 +876,7 @@ static void I386OP(out_al_i8)(i386_state *cpustate)			// Opcode 0xe6
 {
 	UINT16 port = FETCH(cpustate);
 	UINT8 data = REG8(AL);
-	WRITEPORT8(port, data);
+	WRITEPORT8(cpustate, port, data);
 	CYCLES(cpustate,CYCLES_OUT_VAR);
 }
 
@@ -884,7 +884,7 @@ static void I386OP(out_al_dx)(i386_state *cpustate)			// Opcode 0xee
 {
 	UINT16 port = REG16(DX);
 	UINT8 data = REG8(AL);
-	WRITEPORT8(port, data);
+	WRITEPORT8(cpustate, port, data);
 	CYCLES(cpustate,CYCLES_OUT);
 }
 
@@ -934,15 +934,15 @@ static void I386OP(ins_generic)(i386_state *cpustate, int size)
 
 	switch(size) {
 	case 1:
-		vb = READPORT8(REG16(DX));
+		vb = READPORT8(cpustate, REG16(DX));
 		WRITE8(cpustate,ead, vb);
 		break;
 	case 2:
-		vw = READPORT16(REG16(DX));
+		vw = READPORT16(cpustate, REG16(DX));
 		WRITE16(cpustate,ead, vw);
 		break;
 	case 4:
-		vd = READPORT32(REG16(DX));
+		vd = READPORT32(cpustate, REG16(DX));
 		WRITE32(cpustate,ead, vd);
 		break;
 	}
@@ -982,15 +982,15 @@ static void I386OP(outs_generic)(i386_state *cpustate, int size)
 	switch(size) {
 	case 1:
 		vb = READ8(cpustate,eas);
-		WRITEPORT8(REG16(DX), vb);
+		WRITEPORT8(cpustate, REG16(DX), vb);
 		break;
 	case 2:
 		vw = READ16(cpustate,eas);
-		WRITEPORT16(REG16(DX), vw);
+		WRITEPORT16(cpustate, REG16(DX), vw);
 		break;
 	case 4:
 		vd = READ32(cpustate,eas);
-		WRITEPORT32(REG16(DX), vd);
+		WRITEPORT32(cpustate, REG16(DX), vd);
 		break;
 	}
 
@@ -1018,7 +1018,7 @@ static void I386OP(repeat)(i386_state *cpustate, int invert_flag)
 	UINT32 repeated_eip = cpustate->eip;
 	UINT32 repeated_pc = cpustate->pc;
 	UINT8 opcode; // = FETCH(cpustate);
-	UINT32 eas, ead;
+//  UINT32 eas, ead;
 	UINT32 count;
 	INT32 cycle_base = 0, cycle_adjustment = 0;
 	UINT8 prefix_flag=1;
@@ -1068,11 +1068,12 @@ static void I386OP(repeat)(i386_state *cpustate, int invert_flag)
 
 	if( cpustate->segment_prefix ) {
 		// FIXME: the following does not work if both address override and segment override are used
-		eas = i386_translate(cpustate, cpustate->segment_override, cpustate->sreg[cpustate->segment_prefix].d ? REG32(ESI) : REG16(SI) );
+		i386_translate(cpustate, cpustate->segment_override, cpustate->sreg[cpustate->segment_prefix].d ? REG32(ESI) : REG16(SI) );
 	} else {
-		eas = i386_translate(cpustate, DS, cpustate->address_size ? REG32(ESI) : REG16(SI) );
+		//eas =
+		i386_translate(cpustate, DS, cpustate->address_size ? REG32(ESI) : REG16(SI) );
 	}
-	ead = i386_translate(cpustate, ES, cpustate->address_size ? REG32(EDI) : REG16(DI) );
+	i386_translate(cpustate, ES, cpustate->address_size ? REG32(EDI) : REG16(DI) );
 
 	switch(opcode)
 	{
@@ -2196,20 +2197,20 @@ static void I386OP(nop)(i386_state *cpustate)				// Opcode 0x90
 static void I386OP(int3)(i386_state *cpustate)				// Opcode 0xcc
 {
 	CYCLES(cpustate,CYCLES_INT3);
-	i386_trap(cpustate,3, 1);
+	i386_trap(cpustate,3, 1, 0);
 }
 
 static void I386OP(int)(i386_state *cpustate)				// Opcode 0xcd
 {
 	int interrupt = FETCH(cpustate);
 	CYCLES(cpustate,CYCLES_INT);
-	i386_trap(cpustate,interrupt, 1);
+	i386_trap(cpustate,interrupt, 1, 0);
 }
 
 static void I386OP(into)(i386_state *cpustate)				// Opcode 0xce
 {
 	if( cpustate->OF ) {
-		i386_trap(cpustate,4, 1);
+		i386_trap(cpustate,4, 1, 0);
 		CYCLES(cpustate,CYCLES_INTO_OF1);
 	}
 	else
@@ -2218,13 +2219,13 @@ static void I386OP(into)(i386_state *cpustate)				// Opcode 0xce
 	}
 }
 
+static UINT32 i386_escape_ea;	// hack around GCC 4.6 error because we need the side effects of GetEA()
 static void I386OP(escape)(i386_state *cpustate)			// Opcodes 0xd8 - 0xdf
 {
 	UINT8 modrm = FETCH(cpustate);
 	if(modrm < 0xc0)
 	{
-		UINT32 ea;
-		ea = GetEA(cpustate,modrm);
+		i386_escape_ea = GetEA(cpustate,modrm);
 	}
 	CYCLES(cpustate,3);	// TODO: confirm this
 	(void) LOAD_RM8(modrm);
@@ -2371,5 +2372,5 @@ static void I386OP(unimplemented)(i386_state *cpustate)
 static void I386OP(invalid)(i386_state *cpustate)
 {
 	logerror("i386: Invalid opcode %02X at %08X\n", cpustate->opcode, cpustate->pc - 1);
-	i386_trap(cpustate, 6, 0);
+	i386_trap(cpustate, 6, 0, 0);
 }

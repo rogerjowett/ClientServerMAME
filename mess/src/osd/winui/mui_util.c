@@ -36,19 +36,20 @@
 #include "strconv.h"
 #include "winui.h"
 #include "mui_util.h"
+#include "mui_opts.h"
 
 #include <shlwapi.h>
 
 /***************************************************************************
-	function prototypes
+    function prototypes
  ***************************************************************************/
 
 /***************************************************************************
-	External variables
+    External variables
  ***************************************************************************/
 
 /***************************************************************************
-	Internal structures
+    Internal structures
  ***************************************************************************/
 static struct DriversInfo
 {
@@ -70,11 +71,11 @@ static struct DriversInfo
 
 
 /***************************************************************************
-	External functions
+    External functions
  ***************************************************************************/
 
 /*
-	ErrorMsg
+    ErrorMsg
 */
 void __cdecl ErrorMsg(const char* fmt, ...)
 {
@@ -110,7 +111,7 @@ void __cdecl ErrorMsg(const char* fmt, ...)
 
 void __cdecl dprintf(const char* fmt, ...)
 {
-	char 	buf[5000];
+	char	buf[5000];
 	va_list va;
 
 	va_start(va, fmt);
@@ -128,7 +129,7 @@ UINT GetDepth(HWND hWnd)
 	HDC 	hDC;
 
 	hDC = GetDC(hWnd);
-	
+
 	nBPP = GetDeviceCaps(hDC, BITSPIXEL) * GetDeviceCaps(hDC, PLANES);
 
 	ReleaseDC(hWnd, hDC);
@@ -152,19 +153,19 @@ LONG GetCommonControlVersion()
 		{
 			FARPROC lpfnDLLI = GetProcAddress(hModule, "DllInstall");
 
-			if (NULL != lpfnDLLI) 
+			if (NULL != lpfnDLLI)
 			{
 				/* comctl 4.71 or greater */
 
 				// see if we can find out exactly
-				
+
 				DLLGETVERSIONPROC pDllGetVersion;
 				pDllGetVersion = (DLLGETVERSIONPROC)GetProcAddress(hModule, "DllGetVersion");
 
 				/* Because some DLLs might not implement this function, you
-				   must test for it explicitly. Depending on the particular 
-				   DLL, the lack of a DllGetVersion function can be a useful
-				   indicator of the version. */
+                   must test for it explicitly. Depending on the particular
+                   DLL, the lack of a DllGetVersion function can be a useful
+                   indicator of the version. */
 
 				if(pDllGetVersion)
 				{
@@ -196,13 +197,13 @@ void DisplayTextFile(HWND hWnd, const char *cName)
 	HINSTANCE hErr;
 	LPCTSTR	  msg = 0;
 	LPTSTR    tName;
-	
+
 	tName = tstring_from_utf8(cName);
 	if( !tName )
 		return;
 
 	hErr = ShellExecute(hWnd, NULL, tName, NULL, NULL, SW_SHOWNORMAL);
-	if ((FPTR)hErr > 32) 
+	if ((FPTR)hErr > 32)
 	{
 		osd_free(tName);
 		return;
@@ -215,7 +216,7 @@ void DisplayTextFile(HWND hWnd, const char *cName)
 		break;
 
 	case ERROR_FILE_NOT_FOUND:
-		msg = TEXT("The specified file was not found."); 
+		msg = TEXT("The specified file was not found.");
 		break;
 
 	case SE_ERR_NOASSOC :
@@ -237,9 +238,9 @@ void DisplayTextFile(HWND hWnd, const char *cName)
 	default:
 		msg = TEXT("Unknown error.");
 	}
- 
+
 	MessageBox(NULL, msg, tName, MB_OK);
-	
+
 	osd_free(tName);
 }
 
@@ -248,18 +249,18 @@ char* MyStrStrI(const char* pFirst, const char* pSrch)
 	char* cp = (char*)pFirst;
 	char* s1;
 	char* s2;
-	
+
 	while (*cp)
 	{
 		s1 = cp;
 		s2 = (char*)pSrch;
-		
+
 		while (*s1 && *s2 && !mame_strnicmp(s1, s2, 1))
 			s1++, s2++;
-		
+
 		if (!*s2)
 			return cp;
-		
+
 		cp++;
 	}
 	return NULL;
@@ -295,7 +296,7 @@ const char * GetDriverFilename(int nIndex)
 	static char tmp[40];
 	const char *ptmp;
 
-	const char *s = drivers[nIndex]->source_file;
+	const char *s = driver_list::driver(nIndex).source_file;
 
 	tmp[0] = '\0';
 
@@ -320,10 +321,10 @@ const char * GetDriverFilename(int nIndex)
 
 BOOL isDriverVector(const machine_config *config)
 {
-	const screen_device_config *screen  = config->first_screen();
+	const screen_device *screen  = config->first_screen();
 
 	if (screen != NULL) {
-		// parse "vector.ini" for vector games 
+		// parse "vector.ini" for vector games
 		if (SCREEN_TYPE_VECTOR == screen->screen_type())
 		{
 			return TRUE;
@@ -334,20 +335,19 @@ BOOL isDriverVector(const machine_config *config)
 
 int numberOfScreens(const machine_config *config)
 {
-	const screen_device_config *screen  = config->first_screen();
+	const screen_device *screen  = config->first_screen();
 	int i=0;
 	for (; screen != NULL; screen = screen->next_screen()) {
 		i++;
 	}
-	return i;	
+	return i;
 }
 
 
 
 int numberOfSpeakers(const machine_config *config)
 {
-	int speakers = speaker_output_count(config);
-	return speakers;
+	return config->devicelist().count(SPEAKER);
 }
 
 static struct DriversInfo* GetDriversInfo(int driver_index)
@@ -355,13 +355,13 @@ static struct DriversInfo* GetDriversInfo(int driver_index)
 	if (drivers_info == NULL)
 	{
 		int ndriver;
-		drivers_info = (DriversInfo*)malloc(sizeof(struct DriversInfo) * driver_list_get_count(drivers));
-		for (ndriver = 0; ndriver < driver_list_get_count(drivers); ndriver++)
+		drivers_info = (DriversInfo*)malloc(sizeof(struct DriversInfo) * driver_list::total());
+		for (ndriver = 0; ndriver < driver_list::total(); ndriver++)
 		{
-			const game_driver *gamedrv = drivers[ndriver];
+			const game_driver *gamedrv = &driver_list::driver(ndriver);
 			struct DriversInfo *gameinfo = &drivers_info[ndriver];
 			const rom_entry *region, *rom;
-			machine_config config(*gamedrv);
+			machine_config config(*gamedrv, MameUIGlobal());
 			const rom_source *source;
 			int num_speakers;
 
@@ -403,28 +403,28 @@ static struct DriversInfo* GetDriversInfo(int driver_index)
 				{
 					for (rom = rom_first_file(region); rom; rom = rom_next_file(rom))
 					{
-						gameinfo->usesRoms = TRUE; 
-						break; 
+						gameinfo->usesRoms = TRUE;
+						break;
 					}
 				}
 			}
 			gameinfo->usesSamples = FALSE;
-			
+
 			{
-				const device_config_sound_interface *sound = NULL;
+				const device_sound_interface *sound = NULL;
 				const char * const * samplenames = NULL;
-				for (bool gotone = config.m_devicelist.first(sound); gotone; gotone = sound->next(sound)) {
-					if (sound->devconfig().type() == SAMPLES)
+				for (bool gotone = config.devicelist().first(sound); gotone; gotone = sound->next(sound)) {
+					if (sound->device().type() == SAMPLES)
 					{
-						const samples_interface *intf = (const samples_interface *)sound->devconfig().static_config();
+						const samples_interface *intf = (const samples_interface *)sound->device().static_config();
 						samplenames = intf->samplenames;
 
 						if (samplenames != 0 && samplenames[0] != 0)
 						{
 							gameinfo->usesSamples = TRUE;
 							break;
-						}			
-					}				
+						}
+					}
 				}
 			}
 
@@ -432,21 +432,26 @@ static struct DriversInfo* GetDriversInfo(int driver_index)
 			gameinfo->usesLightGun = FALSE;
 			if (gamedrv->ipt != NULL)
 			{
-				const input_port_config *port;
+				input_port_config *port;
 				ioport_list portlist;
-				
-				input_port_list_init(portlist, gamedrv->ipt, NULL, 0, FALSE);
+				astring errors;
+				for (device_t *cfg = config.devicelist().first(); cfg != NULL; cfg = cfg->next())
+				{
+					if (cfg->input_ports()!=NULL) {
+						input_port_list_init(*cfg, portlist, errors);
+					}
+				}
 
 				for (port = portlist.first(); port != NULL; port = port->next())
 				{
-					const input_field_config *field;
-					for (field = port->fieldlist; field != NULL; field = field->next)
- 					{
+					input_field_config *field;
+					for (field = port->fieldlist().first(); field != NULL; field = field->next())
+					{
 						UINT32 type;
 						type = field->type;
 						if (type == IPT_END)
 							break;
-						if (type == IPT_DIAL || type == IPT_PADDLE || 
+						if (type == IPT_DIAL || type == IPT_PADDLE ||
 							type == IPT_TRACKBALL_X || type == IPT_TRACKBALL_Y ||
 							type == IPT_AD_STICK_X || type == IPT_AD_STICK_Y)
 							gameinfo->usesTrackball = TRUE;
@@ -480,11 +485,18 @@ BOOL DriverIsHarddisk(int driver_index)
 BOOL DriverIsBios(int driver_index)
 {
 	BOOL bBios = FALSE;
-	if( !( (drivers[driver_index]->flags & GAME_IS_BIOS_ROOT ) == 0)   )
+	if( !( (driver_list::driver(driver_index).flags & GAME_IS_BIOS_ROOT ) == 0)   )
 		bBios = TRUE;
 	return bBios;
 }
 
+BOOL DriverIsMechanical(int driver_index)
+{
+	BOOL bMechanical = FALSE;
+	if( !( (driver_list::driver(driver_index).flags & GAME_MECHANICAL ) == 0)   )
+		bMechanical = TRUE;
+	return bMechanical;
+}
 
 BOOL DriverHasOptionalBIOS(int driver_index)
 {
@@ -537,7 +549,7 @@ BOOL DriverSupportsSaveState(int driver_index)
 }
 
 BOOL DriverIsVertical(int driver_index) {
-	return GetDriversInfo(driver_index)->isVertical; 
+	return GetDriversInfo(driver_index)->isVertical;
 }
 
 void FlushFileCaches(void)
@@ -551,7 +563,7 @@ BOOL StringIsSuffixedBy(const char *s, const char *suffix)
 }
 
 /***************************************************************************
-	Win32 wrappers
+    Win32 wrappers
  ***************************************************************************/
 
 BOOL SafeIsAppThemed(void)
@@ -559,7 +571,7 @@ BOOL SafeIsAppThemed(void)
 	BOOL bResult = FALSE;
 	HMODULE hThemes;
 	BOOL (WINAPI *pfnIsAppThemed)(void);
-	
+
 	hThemes = LoadLibrary(TEXT("uxtheme.dll"));
 	if (hThemes != NULL)
 	{
@@ -593,11 +605,11 @@ HICON win_extract_icon_utf8(HINSTANCE inst, const char* exefilename, UINT iconin
 	TCHAR* t_exefilename = tstring_from_utf8(exefilename);
 	if( !t_exefilename )
 		return icon;
-	
+
 	icon = ExtractIcon(inst, t_exefilename, iconindex);
-	
+
 	osd_free(t_exefilename);
-	
+
 	return icon;
 }
 
@@ -623,20 +635,20 @@ TCHAR* win_tstring_strdup(LPCTSTR str)
 //  win_create_file_utf8
 //============================================================
 
-HANDLE win_create_file_utf8(const char* filename, DWORD desiredmode, DWORD sharemode, 
-					   		LPSECURITY_ATTRIBUTES securityattributes, DWORD creationdisposition,
-					   		DWORD flagsandattributes, HANDLE templatehandle)
+HANDLE win_create_file_utf8(const char* filename, DWORD desiredmode, DWORD sharemode,
+							LPSECURITY_ATTRIBUTES securityattributes, DWORD creationdisposition,
+							DWORD flagsandattributes, HANDLE templatehandle)
 {
 	HANDLE result = 0;
 	TCHAR* t_filename = tstring_from_utf8(filename);
 	if( !t_filename )
 		return result;
-	
+
 	result = CreateFile(t_filename, desiredmode, sharemode, securityattributes, creationdisposition,
 						flagsandattributes, templatehandle);
 
 	osd_free(t_filename);
-						
+
 	return result;
 }
 
@@ -649,15 +661,15 @@ DWORD win_get_current_directory_utf8(DWORD bufferlength, char* buffer)
 	DWORD result = 0;
 	TCHAR* t_buffer = NULL;
 	char* utf8_buffer = NULL;
-	
+
 	if( bufferlength > 0 ) {
 		t_buffer = (TCHAR*)malloc((bufferlength * sizeof(TCHAR)) + 1);
 		if( !t_buffer )
 			return result;
 	}
-	
+
 	result = GetCurrentDirectory(bufferlength, t_buffer);
-	
+
 	if( bufferlength > 0 ) {
 		utf8_buffer = utf8_from_tstring(t_buffer);
 		if( !utf8_buffer ) {
@@ -665,15 +677,15 @@ DWORD win_get_current_directory_utf8(DWORD bufferlength, char* buffer)
 			return result;
 		}
 	}
-		
+
 	strncpy(buffer, utf8_buffer, bufferlength);
-	
+
 	if( utf8_buffer )
 		osd_free(utf8_buffer);
-	
+
 	if( t_buffer )
 		free(t_buffer);
-	
+
 	return result;
 }
 
@@ -687,11 +699,11 @@ HANDLE win_find_first_file_utf8(const char* filename, LPWIN32_FIND_DATA findfile
 	TCHAR* t_filename = tstring_from_utf8(filename);
 	if( !t_filename )
 		return result;
-	
+
 	result = FindFirstFile(t_filename, findfiledata);
-	
+
 	osd_free(t_filename);
-	
+
 	return result;
 }
 

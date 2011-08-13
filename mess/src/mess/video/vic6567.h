@@ -14,22 +14,22 @@
     TYPE DEFINITIONS
 ***************************************************************************/
 
-typedef UINT8 (*vic2_lightpen_x_callback)(running_machine *machine);
-typedef UINT8 (*vic2_lightpen_y_callback)(running_machine *machine);
-typedef UINT8 (*vic2_lightpen_button_callback)(running_machine *machine);
+typedef UINT8 (*vic2_lightpen_x_callback)(running_machine &machine);
+typedef UINT8 (*vic2_lightpen_y_callback)(running_machine &machine);
+typedef UINT8 (*vic2_lightpen_button_callback)(running_machine &machine);
 
-typedef int (*vic2_dma_read)(running_machine *machine, int);
-typedef int (*vic2_dma_read_color)(running_machine *machine, int);
-typedef void (*vic2_irq) (running_machine *, int);
+typedef int (*vic2_dma_read)(running_machine &machine, int);
+typedef int (*vic2_dma_read_color)(running_machine &machine, int);
+typedef void (*vic2_irq) (running_machine&, int);
 
-typedef UINT8 (*vic2_rdy_callback)(running_machine *machine);
+typedef UINT8 (*vic2_rdy_callback)(running_machine &machine);
 
 typedef enum
 {
 	VIC6567,	// VIC II NTSC
 	VIC6569,	// VIC II PAL
-      VIC8564,	// VIC IIe NTSC
-      VIC8566	// VIC IIe PAL
+	VIC8564,	// VIC IIe NTSC
+	VIC8566	// VIC IIe PAL
 } vic2_type;
 
 typedef struct _vic2_interface vic2_interface;

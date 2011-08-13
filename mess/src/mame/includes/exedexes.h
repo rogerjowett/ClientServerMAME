@@ -8,20 +8,25 @@
 class exedexes_state : public driver_device
 {
 public:
-	exedexes_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	exedexes_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 	/* memory pointers */
-	UINT8 *        videoram;
-	UINT8 *        colorram;
-	UINT8 *        bg_scroll;
-	UINT8 *        nbg_yscroll;
-	UINT8 *        nbg_xscroll;
-//  UINT8 *        spriteram;   // currently this uses generic buffered_spriteram
+	UINT8 *        m_videoram;
+	UINT8 *        m_colorram;
+	UINT8 *        m_bg_scroll;
+	UINT8 *        m_nbg_yscroll;
+	UINT8 *        m_nbg_xscroll;
+//  UINT8 *        m_spriteram;   // currently this uses generic buffered_spriteram
 
 	/* video-related */
-	tilemap_t        *bg_tilemap, *fg_tilemap, *tx_tilemap;
-	int            chon, objon, sc1on, sc2on;
+	tilemap_t        *m_bg_tilemap;
+	tilemap_t        *m_fg_tilemap;
+	tilemap_t        *m_tx_tilemap;
+	int            m_chon;
+	int            m_objon;
+	int            m_sc1on;
+	int            m_sc2on;
 };
 
 
@@ -35,5 +40,5 @@ extern WRITE8_HANDLER( exedexes_gfxctrl_w );
 
 extern PALETTE_INIT( exedexes );
 extern VIDEO_START( exedexes );
-extern VIDEO_UPDATE( exedexes );
-extern VIDEO_EOF( exedexes );
+extern SCREEN_UPDATE( exedexes );
+extern SCREEN_EOF( exedexes );

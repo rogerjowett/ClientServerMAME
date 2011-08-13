@@ -4,24 +4,37 @@
 
         03/12/2009 Skeleton driver.
 
+BASIC-52 is an official Intel release.
+
+BASIC-31 (and variants) as found on the below url, are homebrews.
+
+http://dsaprojects.110mb.com/electronics/8031-ah/8031-bas.html
+
 ****************************************************************************/
+#define ADDRESS_MAP_MODERN
 
 #include "emu.h"
 #include "cpu/mcs51/mcs51.h"
-#include "machine/i8255a.h"
+#include "machine/i8255.h"
 #include "machine/terminal.h"
 
 
 class basic52_state : public driver_device
 {
 public:
-	basic52_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	basic52_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
+	DECLARE_WRITE8_MEMBER(kbd_put);
+	UINT8 m_term_data;
 };
 
+// may need AS_DATA as well..
 
-static ADDRESS_MAP_START(basic52_mem, ADDRESS_SPACE_PROGRAM, 8)
+// according to my reading of the mcs51 cpu source, AS_PROGRAM is for
+// external RAM, AS_DATA for internal RAM, and AS_IO for the IO ports
+
+static ADDRESS_MAP_START(basic52_mem, AS_PROGRAM, 8, basic52_state)
 	ADDRESS_MAP_UNMAP_HIGH
 	AM_RANGE(0x0000, 0x1fff) AM_ROM
 	AM_RANGE(0x2000, 0x7fff) AM_RAM
@@ -30,73 +43,72 @@ static ADDRESS_MAP_START(basic52_mem, ADDRESS_SPACE_PROGRAM, 8)
 	//AM_RANGE(0xe000, 0xffff) // Expansion block
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( basic52_io , ADDRESS_SPACE_IO, 8)
+static ADDRESS_MAP_START(basic52_io, AS_IO, 8, basic52_state)
 	ADDRESS_MAP_UNMAP_HIGH
 	AM_RANGE(0x0000, 0x7fff) AM_RAM
 	AM_RANGE(0x8000, 0x9fff) AM_ROM // EPROM
-	AM_RANGE(0xa000, 0xa003) AM_DEVREADWRITE("ppi8255", i8255a_r, i8255a_w)  // PPI-8255
+	AM_RANGE(0xa000, 0xa003) AM_DEVREADWRITE("ppi8255", i8255_device, read, write)  // PPI-8255
 	//AM_RANGE(0xc000, 0xdfff) // Expansion block
 	//AM_RANGE(0xe000, 0xffff) // Expansion block
 ADDRESS_MAP_END
 
 /* Input ports */
 static INPUT_PORTS_START( basic52 )
-	PORT_INCLUDE(generic_terminal)
 INPUT_PORTS_END
 
 
-static MACHINE_RESET(basic52)
+static MACHINE_RESET( basic52 )
 {
 }
 
-static WRITE8_DEVICE_HANDLER( basic52_kbd_put )
+WRITE8_MEMBER( basic52_state::kbd_put )
 {
-
+	m_term_data = data;
 }
 
-static GENERIC_TERMINAL_INTERFACE( basic52_terminal_intf )
+static GENERIC_TERMINAL_INTERFACE( terminal_intf )
 {
-	DEVCB_HANDLER(basic52_kbd_put)
+	DEVCB_DRIVER_MEMBER(basic52_state, kbd_put)
 };
 
-static I8255A_INTERFACE( ppi8255_intf )
+static I8255_INTERFACE( ppi8255_intf )
 {
 	DEVCB_NULL,					/* Port A read */
-	DEVCB_NULL,					/* Port B read */
-	DEVCB_NULL,					/* Port C read */
 	DEVCB_NULL,					/* Port A write */
+	DEVCB_NULL,					/* Port B read */
 	DEVCB_NULL,					/* Port B write */
+	DEVCB_NULL,					/* Port C read */
 	DEVCB_NULL					/* Port C write */
 };
 
 static MACHINE_CONFIG_START( basic31, basic52_state )
-    /* basic machine hardware */
-    MCFG_CPU_ADD("maincpu", I8031, XTAL_11_0592MHz)
-    MCFG_CPU_PROGRAM_MAP(basic52_mem)
-    MCFG_CPU_IO_MAP(basic52_io)
+	/* basic machine hardware */
+	MCFG_CPU_ADD("maincpu", I8031, XTAL_11_0592MHz)
+	MCFG_CPU_PROGRAM_MAP(basic52_mem)
+	MCFG_CPU_IO_MAP(basic52_io)
 
-    MCFG_MACHINE_RESET(basic52)
+	MCFG_MACHINE_RESET(basic52)
 
-    /* video hardware */
-    MCFG_FRAGMENT_ADD( generic_terminal )
-	MCFG_GENERIC_TERMINAL_ADD(TERMINAL_TAG,basic52_terminal_intf)
+	/* video hardware */
+	MCFG_FRAGMENT_ADD( generic_terminal )
+	MCFG_GENERIC_TERMINAL_ADD(TERMINAL_TAG, terminal_intf)
 
-	MCFG_I8255A_ADD("ppi8255", ppi8255_intf )
+	MCFG_I8255_ADD("ppi8255", ppi8255_intf )
 MACHINE_CONFIG_END
 
 static MACHINE_CONFIG_START( basic52, basic52_state )
-    /* basic machine hardware */
-    MCFG_CPU_ADD("maincpu", I8052, XTAL_11_0592MHz)
-    MCFG_CPU_PROGRAM_MAP(basic52_mem)
-    MCFG_CPU_IO_MAP(basic52_io)
+	/* basic machine hardware */
+	MCFG_CPU_ADD("maincpu", I8052, XTAL_11_0592MHz)
+	MCFG_CPU_PROGRAM_MAP(basic52_mem)
+	MCFG_CPU_IO_MAP(basic52_io)
 
-    MCFG_MACHINE_RESET(basic52)
+	MCFG_MACHINE_RESET(basic52)
 
-    /* video hardware */
-    MCFG_FRAGMENT_ADD( generic_terminal )
-	MCFG_GENERIC_TERMINAL_ADD(TERMINAL_TAG,basic52_terminal_intf)
+	/* video hardware */
+	MCFG_FRAGMENT_ADD( generic_terminal )
+	MCFG_GENERIC_TERMINAL_ADD(TERMINAL_TAG, terminal_intf)
 
-	MCFG_I8255A_ADD("ppi8255", ppi8255_intf )
+	MCFG_I8255_ADD("ppi8255", ppi8255_intf )
 MACHINE_CONFIG_END
 
 /* ROM definition */
@@ -120,6 +132,6 @@ ROM_END
 
 /* Driver */
 /*    YEAR  NAME    PARENT  COMPAT   MACHINE    INPUT    INIT    COMPANY   FULLNAME       FLAGS */
-COMP( 1985, basic52,  0,       0,	basic52,	basic52,	 0,  "Intel",   "MCS BASIC 52",		GAME_NOT_WORKING | GAME_NO_SOUND)
-COMP( 1985, basic31,  basic52, 0,	basic31,	basic52,	 0,  "Intel",   "MCS BASIC 31",		GAME_NOT_WORKING | GAME_NO_SOUND)
+COMP( 1985, basic52,  0,       0,    basic52,   basic52,  0,    "Intel", "MCS BASIC 52", GAME_NOT_WORKING | GAME_NO_SOUND)
+COMP( 1985, basic31,  basic52, 0,    basic31,   basic52,  0,    "Intel", "MCS BASIC 31", GAME_NOT_WORKING | GAME_NO_SOUND)
 

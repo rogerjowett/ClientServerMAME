@@ -15,16 +15,16 @@
 class pc1403_state : public driver_device
 {
 public:
-	pc1403_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	pc1403_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
-	UINT8 portc;
-	UINT8 outa;
-	int power;
-	UINT8 asic[4];
-	int DOWN;
-	int RIGHT;
-	UINT8 reg[0x100];
+	UINT8 m_portc;
+	UINT8 m_outa;
+	int m_power;
+	UINT8 m_asic[4];
+	int m_DOWN;
+	int m_RIGHT;
+	UINT8 m_reg[0x100];
 };
 
 
@@ -48,7 +48,7 @@ WRITE8_HANDLER(pc1403_asic_write);
 /*----------- defined in video/pc1403.c -----------*/
 
 VIDEO_START( pc1403 );
-VIDEO_UPDATE( pc1403 );
+SCREEN_UPDATE( pc1403 );
 
 READ8_HANDLER(pc1403_lcd_read);
 WRITE8_HANDLER(pc1403_lcd_write);

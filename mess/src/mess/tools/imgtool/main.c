@@ -11,15 +11,10 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <time.h>
-#include <assert.h>
 
-#include "emu.h"
 #include "imgtool.h"
-#include "mess.h"
 #include "main.h"
-#include "fileio.h"
 #include "modules.h"
-
 /* ---------------------------------------------------------------------- */
 
 static void writeusage(FILE *f, int write_word_usage, const struct command *c, char *argv[])
@@ -908,11 +903,7 @@ static const struct command cmds[] =
 	{ "listdriveroptions",	cmd_listdriveroptions, "<format>", 1, 1, 0 }
 };
 
-#ifdef WIN32
-int CLIB_DECL utf8_main(int argc, char *argv[])
-#else
 int CLIB_DECL main(int argc, char *argv[])
-#endif
 {
 	int i;
 	int result;
@@ -932,7 +923,7 @@ int CLIB_DECL main(int argc, char *argv[])
 		for (i = 0; i < ARRAY_LENGTH(cmds); i++)
 		{
 			c = &cmds[i];
-			if (!mame_stricmp(c->name, argv[1]))
+			if (!core_stricmp(c->name, argv[1]))
 			{
 				/* check argument count */
 				if (c->minargs > (argc - 2))

@@ -7,35 +7,30 @@
 class ginganin_state : public driver_device
 {
 public:
-	ginganin_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	ginganin_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 	/* memory pointers */
-	UINT16 *    fgram;
-	UINT16 *    txtram;
-	UINT16 *    vregs;
-	UINT16 *    spriteram;
-//  UINT16 *    paletteram; // currently this uses generic palette handling
-	size_t      spriteram_size;
+	UINT16 *    m_fgram;
+	UINT16 *    m_txtram;
+	UINT16 *    m_vregs;
+	UINT16 *    m_spriteram;
+//  UINT16 *    m_paletteram; // currently this uses generic palette handling
+	size_t      m_spriteram_size;
 
 	/* video-related */
-	tilemap_t     *bg_tilemap, *fg_tilemap, *tx_tilemap;
-	int         layers_ctrl, flipscreen;
+	tilemap_t     *m_bg_tilemap;
+	tilemap_t     *m_fg_tilemap;
+	tilemap_t     *m_tx_tilemap;
+	int         m_layers_ctrl;
+	int         m_flipscreen;
 #ifdef MAME_DEBUG
-	int         posx, posy;
+	int         m_posx;
+	int         m_posy;
 #endif
-	/* sound-related */
-	UINT8       MC6840_index0;
-	UINT8       MC6840_register0;
-	UINT8       MC6840_index1;
-	UINT8       MC6840_register1;
-	int         S_TEMPO;
-	int         S_TEMPO_OLD;
-	int         MC6809_CTR;
-	int         MC6809_FLAG;
 
 	/* devices */
-	device_t *audiocpu;
+	device_t *m_audiocpu;
 };
 
 
@@ -47,4 +42,4 @@ WRITE16_HANDLER( ginganin_txtram16_w );
 WRITE16_HANDLER( ginganin_vregs16_w );
 
 VIDEO_START( ginganin );
-VIDEO_UPDATE( ginganin );
+SCREEN_UPDATE( ginganin );

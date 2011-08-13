@@ -12,10 +12,10 @@
 #include "emu.h"
 #include "tf20.h"
 #include "cpu/z80/z80.h"
-#include "devices/messram.h"
+#include "machine/ram.h"
 #include "machine/upd7201.h"
 #include "machine/upd765.h"
-#include "devices/flopdrv.h"
+#include "imagedev/flopdrv.h"
 
 
 /***************************************************************************
@@ -35,7 +35,7 @@ struct _tf20_state
 {
 	device_t *ram;
 	device_t *upd765a;
-	device_t *upd7201;
+	upd7201_device *upd7201;
 	device_t *floppy_0;
 	device_t *floppy_1;
 };
@@ -63,29 +63,29 @@ static TIMER_DEVICE_CALLBACK( serial_clock )
 {
 	tf20_state *tf20 = get_safe_token(timer.owner());
 
-	upd7201_rxca_w(tf20->upd7201, ASSERT_LINE);
-	upd7201_txca_w(tf20->upd7201, ASSERT_LINE);
-	upd7201_rxcb_w(tf20->upd7201, ASSERT_LINE);
-	upd7201_txcb_w(tf20->upd7201, ASSERT_LINE);
+	tf20->upd7201->rxca_w(ASSERT_LINE);
+	tf20->upd7201->txca_w(ASSERT_LINE);
+	tf20->upd7201->rxcb_w(ASSERT_LINE);
+	tf20->upd7201->txcb_w(ASSERT_LINE);
 }
 
 /* a read from this location disables the rom */
 static READ8_HANDLER( tf20_rom_disable )
 {
-	tf20_state *tf20 = get_safe_token(space->cpu->owner());
-	address_space *prg = cpu_get_address_space(space->cpu, ADDRESS_SPACE_PROGRAM);
+	tf20_state *tf20 = get_safe_token(space->device().owner());
+	address_space *prg = space->device().memory().space(AS_PROGRAM);
 
 	/* switch in ram */
-	memory_install_ram(prg, 0x0000, 0x7fff, 0, 0, messram_get_ptr(tf20->ram));
+	prg->install_ram(0x0000, 0x7fff, ram_get_ptr(tf20->ram));
 
 	return 0xff;
 }
 
 static READ8_HANDLER( tf20_dip_r )
 {
-	logerror("%s: tf20_dip_r\n", cpuexec_describe_context(space->machine));
+	logerror("%s: tf20_dip_r\n", space->machine().describe_context());
 
-	return input_port_read(space->machine, "tf20_dip");
+	return input_port_read(space->machine(), "tf20_dip");
 }
 
 static TIMER_CALLBACK( tf20_upd765_tc_reset )
@@ -95,19 +95,19 @@ static TIMER_CALLBACK( tf20_upd765_tc_reset )
 
 static READ8_DEVICE_HANDLER( tf20_upd765_tc_r )
 {
-	logerror("%s: tf20_upd765_tc_r\n", cpuexec_describe_context(device->machine));
+	logerror("%s: tf20_upd765_tc_r\n", device->machine().describe_context());
 
 	/* toggle tc on read */
 	upd765_tc_w(device, ASSERT_LINE);
-	timer_set(device->machine, attotime_zero, device, 0, tf20_upd765_tc_reset);
+	device->machine().scheduler().timer_set(attotime::zero, FUNC(tf20_upd765_tc_reset), 0, device);
 
 	return 0xff;
 }
 
 static WRITE8_HANDLER( tf20_fdc_control_w )
 {
-	tf20_state *tf20 = get_safe_token(space->cpu->owner());
-	logerror("%s: tf20_fdc_control_w %02x\n", cpuexec_describe_context(space->machine), data);
+	tf20_state *tf20 = get_safe_token(space->device().owner());
+	logerror("%s: tf20_fdc_control_w %02x\n", space->machine().describe_context(), data);
 
 	/* bit 0, motor on signal */
 	floppy_mon_w(tf20->floppy_0, !BIT(data, 0));
@@ -128,34 +128,34 @@ static IRQ_CALLBACK( tf20_irq_ack )
 READ_LINE_DEVICE_HANDLER( tf20_rxs_r )
 {
 	tf20_state *tf20 = get_safe_token(device);
-	logerror("%s: tf20_rxs_r\n", cpuexec_describe_context(device->machine));
+	logerror("%s: tf20_rxs_r\n", device->machine().describe_context());
 
-	return upd7201_txda_r(tf20->upd7201);
+	return tf20->upd7201->txda_r();
 }
 
 READ_LINE_DEVICE_HANDLER( tf20_pins_r )
 {
 	tf20_state *tf20 = get_safe_token(device);
-	logerror("%s: tf20_pins_r\n", cpuexec_describe_context(device->machine));
+	logerror("%s: tf20_pins_r\n", device->machine().describe_context());
 
-	return upd7201_dtra_r(tf20->upd7201);
+	return tf20->upd7201->dtra_r();
 }
 
 /* serial input signal (from host computer) */
 WRITE_LINE_DEVICE_HANDLER( tf20_txs_w )
 {
 	tf20_state *tf20 = get_safe_token(device);
-	logerror("%s: tf20_txs_w %u\n", cpuexec_describe_context(device->machine), state);
+	logerror("%s: tf20_txs_w %u\n", device->machine().describe_context(), state);
 
-	upd7201_rxda_w(tf20->upd7201, state);
+	tf20->upd7201->rxda_w(state);
 }
 
 WRITE_LINE_DEVICE_HANDLER( tf20_pouts_w )
 {
 	tf20_state *tf20 = get_safe_token(device);
-	logerror("%s: tf20_pouts_w %u\n", cpuexec_describe_context(device->machine), state);
+	logerror("%s: tf20_pouts_w %u\n", device->machine().describe_context(), state);
 
-	upd7201_ctsa_w(tf20->upd7201, state);
+	tf20->upd7201->ctsa_w(state);
 }
 
 #ifdef UNUSED_FUNCTION
@@ -163,34 +163,34 @@ WRITE_LINE_DEVICE_HANDLER( tf20_pouts_w )
 WRITE_LINE_DEVICE_HANDLER( tf20_txc_w )
 {
 	tf20_state *tf20 = get_safe_token(device);
-	logerror("%s: tf20_txc_w %u\n", cpuexec_describe_context(device->machine), state);
+	logerror("%s: tf20_txc_w %u\n", device->machine().describe_context(), state);
 
-	upd7201_rxda_w(tf20->upd7201, state);
+	tf20->upd7201->rxda_w(state);
 }
 
 /* serial input signal (from another terminal) */
 READ_LINE_DEVICE_HANDLER( tf20_rxc_r )
 {
 	tf20_state *tf20 = get_safe_token(device);
-	logerror("%s: tf20_rxc_r\n", cpuexec_describe_context(device->machine));
+	logerror("%s: tf20_rxc_r\n", device->machine().describe_context());
 
-	return upd7201_txda_r(tf20->upd7201);
+	return tf20->upd7201->txda_r();
 }
 
 WRITE_LINE_DEVICE_HANDLER( tf20_poutc_w )
 {
 	tf20_state *tf20 = get_safe_token(device);
-	logerror("%s: tf20_poutc_w %u\n", cpuexec_describe_context(device->machine), state);
+	logerror("%s: tf20_poutc_w %u\n", device->machine().describe_context(), state);
 
-	upd7201_ctsa_w(tf20->upd7201, state);
+	tf20->upd7201->ctsa_w(state);
 }
 
 READ_LINE_DEVICE_HANDLER( tf20_pinc_r )
 {
 	tf20_state *tf20 = get_safe_token(device);
-	logerror("%s: tf20_pinc_r\n", cpuexec_describe_context(device->machine));
+	logerror("%s: tf20_pinc_r\n", device->machine().describe_context());
 
-	return upd7201_dtra_r(tf20->upd7201);
+	return tf20->upd7201->dtra_r();
 }
 #endif
 
@@ -199,15 +199,15 @@ READ_LINE_DEVICE_HANDLER( tf20_pinc_r )
     ADDRESS MAPS
 *****************************************************************************/
 
-static ADDRESS_MAP_START( tf20_mem, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( tf20_mem, AS_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x7fff) AM_RAMBANK("bank21")
 	AM_RANGE(0x8000, 0xffff) AM_RAMBANK("bank22")
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( tf20_io, ADDRESS_SPACE_IO, 8 )
+static ADDRESS_MAP_START( tf20_io, AS_IO, 8 )
 	ADDRESS_MAP_UNMAP_HIGH
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0xf0, 0xf3) AM_DEVREADWRITE("3a", upd7201_ba_cd_r, upd7201_ba_cd_w)
+	AM_RANGE(0xf0, 0xf3) AM_DEVREADWRITE_MODERN("3a", upd7201_device, ba_cd_r, ba_cd_w)
 	AM_RANGE(0xf6, 0xf6) AM_READ(tf20_rom_disable)
 	AM_RANGE(0xf7, 0xf7) AM_READ(tf20_dip_r)
 	AM_RANGE(0xf8, 0xf8) AM_DEVREAD("5a", tf20_upd765_tc_r) AM_WRITE(tf20_fdc_control_w)
@@ -276,7 +276,7 @@ static const upd765_interface tf20_upd765a_intf =
 	{FLOPPY_0, FLOPPY_1, NULL, NULL}
 };
 
-static const floppy_config tf20_floppy_config =
+static const floppy_interface tf20_floppy_interface =
 {
 	DEVCB_NULL,
 	DEVCB_NULL,
@@ -285,6 +285,7 @@ static const floppy_config tf20_floppy_config =
 	DEVCB_NULL,
 	FLOPPY_STANDARD_5_25_DSDD_40,
 	FLOPPY_OPTIONS_NAME(default),
+	NULL,
 	NULL
 };
 
@@ -302,10 +303,10 @@ static MACHINE_CONFIG_FRAGMENT( tf20 )
 
 	/* upd7201 serial interface */
 	MCFG_UPD7201_ADD("3a", XTAL_CR1 / 2, tf20_upd7201_intf)
-	MCFG_TIMER_ADD_PERIODIC("serial_timer", serial_clock, HZ(XTAL_CR2 / 128))
+	MCFG_TIMER_ADD_PERIODIC("serial_timer", serial_clock, attotime::from_hz(XTAL_CR2 / 128))
 
 	/* 2 floppy drives */
-	MCFG_FLOPPY_2_DRIVES_ADD(tf20_floppy_config)
+	MCFG_FLOPPY_2_DRIVES_ADD(tf20_floppy_interface)
 MACHINE_CONFIG_END
 
 
@@ -327,9 +328,9 @@ static DEVICE_START( tf20 )
 {
 	tf20_state *tf20 = get_safe_token(device);
 	device_t *cpu = device->subdevice("tf20");
-	address_space *prg = cpu_get_address_space(cpu, ADDRESS_SPACE_PROGRAM);
+	address_space *prg = cpu->memory().space(AS_PROGRAM);
 
-	cpu_set_irq_callback(cpu, tf20_irq_ack);
+	device_set_irq_callback(cpu, tf20_irq_ack);
 
 	/* ram device */
 	tf20->ram = device->subdevice("ram");
@@ -340,21 +341,21 @@ static DEVICE_START( tf20 )
 
 	/* locate child devices */
 	tf20->upd765a = device->subdevice("5a");
-	tf20->upd7201 = device->subdevice("3a");
+	tf20->upd7201 = downcast<upd7201_device *>(device->subdevice("3a"));
 	tf20->floppy_0 = device->subdevice(FLOPPY_0);
 	tf20->floppy_1 = device->subdevice(FLOPPY_1);
 
 	/* enable second half of ram */
-	memory_install_ram(prg, 0x8000, 0xffff, 0, 0, messram_get_ptr(tf20->ram) + 0x8000);
+	prg->install_ram(0x8000, 0xffff, ram_get_ptr(tf20->ram) + 0x8000);
 }
 
 static DEVICE_RESET( tf20 )
 {
 	device_t *cpu = device->subdevice("tf20");
-	address_space *prg = cpu_get_address_space(cpu, ADDRESS_SPACE_PROGRAM);
+	address_space *prg = cpu->memory().space(AS_PROGRAM);
 
 	/* enable rom */
-	memory_install_rom(prg, 0x0000, 0x07ff, 0, 0x7800, cpu->region()->base());
+	prg->install_rom(0x0000, 0x07ff, 0, 0x7800, cpu->region()->base());
 }
 
 DEVICE_GET_INFO( tf20 )
@@ -376,6 +377,7 @@ DEVICE_GET_INFO( tf20 )
 
 		/* --- the following bits of info are returned as NULL-terminated strings --- */
 		case DEVINFO_STR_NAME:					strcpy(info->s, "TF-20");						break;
+		case DEVINFO_STR_SHORTNAME:				strcpy(info->s, "tf20");						break;
 		case DEVINFO_STR_FAMILY:				strcpy(info->s, "Floppy drive");				break;
 		case DEVINFO_STR_VERSION:				strcpy(info->s, "1.0");							break;
 		case DEVINFO_STR_SOURCE_FILE:			strcpy(info->s, __FILE__);						break;

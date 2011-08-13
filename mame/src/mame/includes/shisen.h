@@ -1,13 +1,13 @@
 class shisen_state : public driver_device
 {
 public:
-	shisen_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	shisen_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
-	int gfxbank;
-	tilemap_t *bg_tilemap;
-	UINT8 *paletteram;
-	UINT8 *videoram;
+	int m_gfxbank;
+	tilemap_t *m_bg_tilemap;
+	UINT8 *m_paletteram;
+	UINT8 *m_videoram;
 };
 
 
@@ -18,4 +18,4 @@ WRITE8_HANDLER( sichuan2_bankswitch_w );
 WRITE8_HANDLER( sichuan2_paletteram_w );
 
 VIDEO_START( sichuan2 );
-VIDEO_UPDATE( sichuan2 );
+SCREEN_UPDATE( sichuan2 );

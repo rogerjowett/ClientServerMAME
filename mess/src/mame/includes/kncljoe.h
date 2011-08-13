@@ -7,25 +7,27 @@
 class kncljoe_state : public driver_device
 {
 public:
-	kncljoe_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	kncljoe_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 	/* memory pointers */
-	UINT8 *    videoram;
-	UINT8 *    spriteram;
-	UINT8 *    scrollregs;
-	size_t     spriteram_size;
+	UINT8 *    m_videoram;
+	UINT8 *    m_spriteram;
+	UINT8 *    m_scrollregs;
+	size_t     m_spriteram_size;
 
 	/* video-related */
-	tilemap_t    *bg_tilemap;
-	int        tile_bank, sprite_bank;
-	int        flipscreen;
+	tilemap_t    *m_bg_tilemap;
+	int        m_tile_bank;
+	int			m_sprite_bank;
+	int        m_flipscreen;
 
 	/* misc */
-	UINT8      port1, port2;
+	UINT8      m_port1;
+	UINT8      m_port2;
 
 	/* devices */
-	device_t *soundcpu;
+	device_t *m_soundcpu;
 };
 
 
@@ -38,4 +40,4 @@ WRITE8_HANDLER(kncljoe_scroll_w);
 
 PALETTE_INIT( kncljoe );
 VIDEO_START( kncljoe );
-VIDEO_UPDATE( kncljoe );
+SCREEN_UPDATE( kncljoe );

@@ -4,34 +4,48 @@
 
         12/05/2009 Skeleton driver.
 
-	STATUS:
-	- It runs, keyboard works, you can enter data
+    STATUS:
+    - It runs, keyboard works, you can enter data
 
-	TODO:
-	- Proper artwork
-	- Fix interrupts
-	- Seems to crash when GO pressed (needs a subject-matter expert to test)
-	- Add load/dump facility (cassette port)
+    TODO:
+    - Proper artwork
+    - Fix interrupts
+    - Seems to crash when GO pressed (needs a subject-matter expert to test)
+    - Add load/dump facility (cassette port)
 
 ****************************************************************************/
+#define ADDRESS_MAP_MODERN
 
 #include "emu.h"
 #include "cpu/i8085/i8085.h"
 #include "sound/beep.h"
 #include "h8.lh"
 
+#define MACHINE_RESET_MEMBER(name) void name::machine_reset()
 
 class h8_state : public driver_device
 {
 public:
-	h8_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	h8_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag),
+	m_maincpu(*this, "maincpu"),
+	//m_cass(*this, CASSETTE_TAG),
+	m_beep(*this, BEEPER_TAG)
+	{ }
 
-	UINT8 digit;
-	UINT8 segment;
-	UINT8 irq_ctl;
-	device_t *beeper;
-	UINT8 ff_b;
+	required_device<cpu_device> m_maincpu;
+	//required_device<cassette_image_device> m_cass;
+	required_device<device_t> m_beep;
+	DECLARE_READ8_MEMBER(h8_f0_r);
+	DECLARE_WRITE8_MEMBER(h8_f0_w);
+	DECLARE_WRITE8_MEMBER(h8_f1_w);
+	DECLARE_WRITE8_MEMBER(h8_status_callback);
+	DECLARE_WRITE_LINE_MEMBER(h8_inte_callback);
+	UINT8 m_digit;
+	UINT8 m_segment;
+	UINT8 m_irq_ctl;
+	UINT8 m_ff_b;
+	virtual void machine_reset();
 };
 
 
@@ -42,12 +56,12 @@ public:
 
 static TIMER_DEVICE_CALLBACK( h8_irq_pulse )
 {
-	h8_state *state = timer.machine->driver_data<h8_state>();
-	if (state->irq_ctl & 1)
-		cpu_set_input_line_and_vector(timer.machine->device("maincpu"), INPUT_LINE_IRQ0, ASSERT_LINE, 0xcf);
+	h8_state *state = timer.machine().driver_data<h8_state>();
+	if (state->m_irq_ctl & 1)
+		device_set_input_line_and_vector(timer.machine().device("maincpu"), INPUT_LINE_IRQ0, ASSERT_LINE, 0xcf);
 }
 
-static READ8_HANDLER( h8_f0_r )
+READ8_MEMBER( h8_state::h8_f0_r )
 {
     // reads the keyboard
 
@@ -57,7 +71,7 @@ static READ8_HANDLER( h8_f0_r )
 
 	UINT8 i,keyin,data = 0xff;
 
-	keyin = input_port_read(space->machine, "X0");
+	keyin = input_port_read(machine(), "X0");
 	if (keyin != 0xff)
 	{
 		for (i = 1; i < 8; i++)
@@ -66,7 +80,7 @@ static READ8_HANDLER( h8_f0_r )
 		data &= 0xfe;
 	}
 
-	keyin = input_port_read(space->machine, "X1");
+	keyin = input_port_read(machine(), "X1");
 	if (keyin != 0xff)
 	{
 		for (i = 1; i < 8; i++)
@@ -77,9 +91,8 @@ static READ8_HANDLER( h8_f0_r )
 	return data;
 }
 
-static WRITE8_HANDLER( h8_f0_w )
+WRITE8_MEMBER( h8_state::h8_f0_w )
 {
-	h8_state *state = space->machine->driver_data<h8_state>();
     // this will always turn off int10 that was set by the timer
     // d0-d3 = digit select
     // d4 = int20 is allowed
@@ -87,21 +100,20 @@ static WRITE8_HANDLER( h8_f0_w )
     // d6 = int10 is allowed
     // d7 = beeper enable
 
-	state->digit = data & 15;
-	if (state->digit) output_set_digit_value(state->digit, state->segment);
+	m_digit = data & 15;
+	if (m_digit) output_set_digit_value(m_digit, m_segment);
 
 	output_set_value("mon_led",(data & 0x20) ? 0 : 1);
-	beep_set_state(state->beeper, (data & 0x80) ? 0 : 1);
+	beep_set_state(m_beep, (data & 0x80) ? 0 : 1);
 
-	cpu_set_input_line(space->machine->device("maincpu"), INPUT_LINE_IRQ0, CLEAR_LINE);
-	state->irq_ctl &= 0xf0;
-	if (data & 0x40) state->irq_ctl |= 1;
-	if (~data & 0x10) state->irq_ctl |= 2;
+	device_set_input_line(machine().device("maincpu"), INPUT_LINE_IRQ0, CLEAR_LINE);
+	m_irq_ctl &= 0xf0;
+	if (data & 0x40) m_irq_ctl |= 1;
+	if (~data & 0x10) m_irq_ctl |= 2;
 }
 
-static WRITE8_HANDLER( h8_f1_w )
+WRITE8_MEMBER( h8_state::h8_f1_w )
 {
-	h8_state *state = space->machine->driver_data<h8_state>();
     //d7 segment dot
     //d6 segment f
     //d5 segment e
@@ -111,17 +123,17 @@ static WRITE8_HANDLER( h8_f1_w )
     //d1 segment a
     //d0 segment g
 
-	state->segment = 0xff ^ BITSWAP8(data, 7, 0, 6, 5, 4, 3, 2, 1);
-	if (state->digit) output_set_digit_value(state->digit, state->segment);
+	m_segment = 0xff ^ BITSWAP8(data, 7, 0, 6, 5, 4, 3, 2, 1);
+	if (m_digit) output_set_digit_value(m_digit, m_segment);
 }
 
-static ADDRESS_MAP_START(h8_mem, ADDRESS_SPACE_PROGRAM, 8)
+static ADDRESS_MAP_START(h8_mem, AS_PROGRAM, 8, h8_state)
 	ADDRESS_MAP_UNMAP_HIGH
 	AM_RANGE(0x0000, 0x03ff) AM_ROM
 	AM_RANGE(0x2000, 0x9fff) AM_RAM
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( h8_io , ADDRESS_SPACE_IO, 8)
+static ADDRESS_MAP_START( h8_io, AS_IO, 8, h8_state)
 	ADDRESS_MAP_UNMAP_HIGH
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 	AM_RANGE(0xf0, 0xf0) AM_READWRITE(h8_f0_r,h8_f0_w)
@@ -155,60 +167,55 @@ static INPUT_PORTS_START( h8 )
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("@ REG") PORT_CODE(KEYCODE_R)
 INPUT_PORTS_END
 
-
-static MACHINE_RESET(h8)
+MACHINE_RESET_MEMBER(h8_state)
 {
-	h8_state *state = machine->driver_data<h8_state>();
-	state->beeper = machine->device("beep");
-	beep_set_frequency(state->beeper, H8_BEEP_FRQ);
+	beep_set_frequency(m_beep, H8_BEEP_FRQ);
 	output_set_value("pwr_led", 0);
-	state->irq_ctl = 1;
+	m_irq_ctl = 1;
 }
 
-static WRITE_LINE_DEVICE_HANDLER( h8_inte_callback )
+WRITE_LINE_MEMBER( h8_state::h8_inte_callback )
 {
-	h8_state *drvstate = device->machine->driver_data<h8_state>();
         // operate the ION LED
 	output_set_value("ion_led",(state) ? 0 : 1);
-	drvstate->irq_ctl &= 0x7f | ((state) ? 0 : 0x80);
+	m_irq_ctl &= 0x7f | ((state) ? 0 : 0x80);
 }
 
-static WRITE8_DEVICE_HANDLER( h8_status_callback )
+WRITE8_MEMBER( h8_state::h8_status_callback )
 {
-	h8_state *drvstate = device->machine->driver_data<h8_state>();
 /* This is rather messy, but basically there are 2 D flipflops, one drives the other,
 the data is /INTE while the clock is /M1. If the system is in Single Instruction mode,
 a int20 (output of 2nd flipflop) will occur after 4 M1 steps, to pause the running program.
 But, all of this can only occur if bit 5 of port F0 is low. */
 
 	UINT8 state = (data & I8085_STATUS_M1) ? 0 : 1;
-	UINT8 c,a = (drvstate->irq_ctl & 0x80) ? 1 : 0;
+	UINT8 c,a = (m_irq_ctl & 0x80) ? 1 : 0;
 
-	if (drvstate->irq_ctl & 2)
+	if (m_irq_ctl & 2)
 	{
 		if (!state) // rising pulse to push data through flipflops
 		{
-			c=drvstate->ff_b^1; // from /Q of 2nd flipflop
-			drvstate->ff_b=a; // from Q of 1st flipflop
+			c=m_ff_b^1; // from /Q of 2nd flipflop
+			m_ff_b=a; // from Q of 1st flipflop
 			if (c)
-				cpu_set_input_line_and_vector(device->machine->device("maincpu"), INPUT_LINE_IRQ0, ASSERT_LINE, 0xd7);
+				device_set_input_line_and_vector(machine().device("maincpu"), INPUT_LINE_IRQ0, ASSERT_LINE, 0xd7);
 		}
 	}
 	else
 	{ // flipflops are 'set'
 		c=0;
-		drvstate->ff_b=1;
+		m_ff_b=1;
 	}
 
-		
+
         // operate the RUN LED
-	output_set_value("run_led", (data & I8085_STATUS_M1) ? 0 : 1);
+	output_set_value("run_led", state);
 }
 
 static I8085_CONFIG( h8_cpu_config )
 {
-	DEVCB_HANDLER(h8_status_callback),		/* Status changed callback */
-	DEVCB_LINE(h8_inte_callback),			/* INTE changed callback */
+	DEVCB_DRIVER_MEMBER(h8_state, h8_status_callback),		/* Status changed callback */
+	DEVCB_DRIVER_LINE_MEMBER(h8_state, h8_inte_callback),			/* INTE changed callback */
 	DEVCB_NULL,					/* SID changed callback (I8085A only) */
 	DEVCB_NULL					/* SOD changed callback (I8085A only) */
 };
@@ -220,15 +227,14 @@ static MACHINE_CONFIG_START( h8, h8_state )
 	MCFG_CPU_IO_MAP(h8_io)
 	MCFG_CPU_CONFIG(h8_cpu_config)
 
-	MCFG_MACHINE_RESET(h8)
-	MCFG_TIMER_ADD_PERIODIC("h8_timer", h8_irq_pulse, HZ(H8_IRQ_PULSE) )
+	MCFG_TIMER_ADD_PERIODIC("h8_timer", h8_irq_pulse, attotime::from_hz(H8_IRQ_PULSE) )
 
 	/* video hardware */
 	MCFG_DEFAULT_LAYOUT(layout_h8)
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
-	MCFG_SOUND_ADD("beep", BEEP, 0)
+	MCFG_SOUND_ADD(BEEPER_TAG, BEEP, 0)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
 MACHINE_CONFIG_END
 
@@ -236,12 +242,11 @@ MACHINE_CONFIG_END
 ROM_START( h8 )
 	ROM_REGION( 0x10000, "maincpu", ROMREGION_ERASEFF )
 	ROM_LOAD( "2708_444-13_pam8.rom", 0x0000, 0x0400, CRC(e0745513) SHA1(0e170077b6086be4e5cd10c17e012c0647688c39))
+
 	ROM_REGION( 0x10000, "otherroms", ROMREGION_ERASEFF )
 	ROM_LOAD( "2708_444-13_pam8go.rom", 0x0000, 0x0400, CRC(9dbad129) SHA1(72421102b881706877f50537625fc2ab0b507752))
 	ROM_LOAD( "2716_444-13_pam8at.rom", 0x0000, 0x0800, CRC(fd95ddc1) SHA1(eb1f272439877239f745521139402f654e5403af))
-
 	ROM_LOAD( "2716_444-19_h17.rom", 0x0000, 0x0800, CRC(26e80ae3) SHA1(0c0ee95d7cb1a760f924769e10c0db1678f2435c))
-
 	ROM_LOAD( "2732_444-70_xcon8.rom", 0x0000, 0x1000, CRC(b04368f4) SHA1(965244277a3a8039a987e4c3593b52196e39b7e7))
 	ROM_LOAD( "2732_444-140_pam37.rom", 0x0000, 0x1000, CRC(53a540db) SHA1(90082d02ffb1d27e8172b11fff465bd24343486e))
 ROM_END

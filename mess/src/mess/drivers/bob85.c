@@ -6,34 +6,46 @@
         12/05/2009 Skeleton driver.
 
 ****************************************************************************/
+#define ADDRESS_MAP_MODERN
 
 #include "emu.h"
 #include "cpu/i8085/i8085.h"
-#include "devices/cassette.h"
+#include "imagedev/cassette.h"
 #include "bob85.lh"
 
 
 class bob85_state : public driver_device
 {
 public:
-	bob85_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	bob85_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag),
+	m_maincpu(*this, "maincpu"),
+	m_cass(*this, CASSETTE_TAG)
+	{ }
 
-	UINT8 prev_key;
-	UINT8 count_key;
+	required_device<cpu_device> m_maincpu;
+	required_device<cassette_image_device> m_cass;
+	DECLARE_READ8_MEMBER(bob85_keyboard_r);
+	DECLARE_WRITE8_MEMBER(bob85_7seg_w);
+	DECLARE_WRITE_LINE_MEMBER(sod_w);
+	DECLARE_READ_LINE_MEMBER(sid_r);
+	UINT8 m_prev_key;
+	UINT8 m_count_key;
 };
 
 
 
-static READ8_HANDLER(bob85_keyboard_r)
+READ8_MEMBER(bob85_state::bob85_keyboard_r)
 {
-	bob85_state *state = space->machine->driver_data<bob85_state>();
 	UINT8 retVal = 0;
-	UINT8 line0 = input_port_read(space->machine, "LINE0");
-	UINT8 line1 = input_port_read(space->machine, "LINE1");
-	UINT8 line2 = input_port_read(space->machine, "LINE2");
-	if (line0!=0) {
-		switch(line0) {
+	UINT8 line0 = input_port_read(machine(), "LINE0");
+	UINT8 line1 = input_port_read(machine(), "LINE1");
+	UINT8 line2 = input_port_read(machine(), "LINE2");
+
+	if (line0)
+	{
+		switch(line0)
+		{
 			case 0x01 : retVal = 0x80; break;
 			case 0x02 : retVal = 0x81; break;
 			case 0x04 : retVal = 0x82; break;
@@ -42,11 +54,14 @@ static READ8_HANDLER(bob85_keyboard_r)
 			case 0x20 : retVal = 0x85; break;
 			case 0x40 : retVal = 0x86; break;
 			case 0x80 : retVal = 0x87; break;
-			default : retVal = 0; break;
+			default : break;
 		}
 	}
-	if (line1!=0) {
-		switch(line1) {
+
+	if (line1)
+	{
+		switch(line1)
+		{
 			case 0x01 : retVal = 0x88; break;
 			case 0x02 : retVal = 0x89; break;
 			case 0x04 : retVal = 0x8A; break;
@@ -55,53 +70,62 @@ static READ8_HANDLER(bob85_keyboard_r)
 			case 0x20 : retVal = 0x8D; break;
 			case 0x40 : retVal = 0x8E; break;
 			case 0x80 : retVal = 0x8F; break;
-			default : retVal = 0; break;
+			default : break;
 		}
 	}
-	if (line2!=0) {
-		switch(line2) {
+
+	if (line2)
+	{
+		switch(line2)
+		{
 			case 0x01 : retVal |= 0x90; break;
 			case 0x02 : retVal |= 0xA0; break;
 			case 0x04 : retVal |= 0xB0; break;
 			case 0x08 : retVal |= 0xC0; break;
 			case 0x10 : retVal |= 0xD0; break;
 			case 0x20 : retVal |= 0xF0; break;
-			default :  break;
-		}
-	}
-	if (retVal != state->prev_key) {
-		state->prev_key = retVal;
-		state->count_key = 0;
-		return retVal;
-	} else {
-		if (state->count_key <1) {
-			state->count_key++;
-			return retVal;
-		} else {
-			return 0;
+			default : break;
 		}
 	}
 
-	if (retVal == 0) {
-		state->prev_key = 0;
-		state->count_key = 0;
+	if (retVal != m_prev_key)
+	{
+		m_prev_key = retVal;
+		m_count_key = 0;
+		return retVal;
+	}
+	else
+	{
+		if (m_count_key <1)
+		{
+			m_count_key++;
+			return retVal;
+		}
+		else
+			return 0;
+	}
+
+	if (retVal == 0)
+	{
+		m_prev_key = 0;
+		m_count_key = 0;
 	}
 
 	return retVal;
 }
 
-static WRITE8_HANDLER(bob85_7seg_w)
+WRITE8_MEMBER(bob85_state::bob85_7seg_w)
 {
-	output_set_digit_value(offset,BITSWAP8( data,3,2,1,0,7,6,5,4 ));
+	output_set_digit_value(offset, BITSWAP8( data,3,2,1,0,7,6,5,4 ));
 }
 
-static ADDRESS_MAP_START( bob85_mem, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( bob85_mem, AS_PROGRAM, 8, bob85_state )
 	ADDRESS_MAP_UNMAP_HIGH
 	AM_RANGE(0x0000, 0x02ff) AM_ROM
 	AM_RANGE(0x0600, 0x09ff) AM_RAM
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( bob85_io, ADDRESS_SPACE_IO, 8 )
+static ADDRESS_MAP_START( bob85_io, AS_IO, 8, bob85_state )
 	ADDRESS_MAP_UNMAP_HIGH
 	AM_RANGE(0x0a, 0x0a) AM_READ(bob85_keyboard_r)
 	AM_RANGE(0x0a, 0x0f) AM_WRITE(bob85_7seg_w)
@@ -143,46 +167,47 @@ static MACHINE_RESET(bob85)
 {
 }
 
-static const cassette_config bob85_cassette_config =
+static const cassette_interface bob85_cassette_interface =
 {
 	cassette_default_formats,
 	NULL,
 	(cassette_state)(CASSETTE_STOPPED | CASSETTE_MOTOR_ENABLED | CASSETTE_SPEAKER_MUTED),
+	NULL,
 	NULL
 };
 
-static WRITE_LINE_DEVICE_HANDLER( sod_w )
+WRITE_LINE_MEMBER( bob85_state::sod_w )
 {
-	cassette_output(device, state ? +1.0 : -1.0);
+	m_cass->output(state ? +1.0 : -1.0);
 }
 
-static READ_LINE_DEVICE_HANDLER( sid_r )
+READ_LINE_MEMBER( bob85_state::sid_r )
 {
-	return cassette_input(device) > 0.0;
+	return (m_cass)->input() > 0.0;
 }
 
 static I8085_CONFIG( cpu_config )
 {
 	DEVCB_NULL,				/* STATUS changed callback */
 	DEVCB_NULL,				/* INTE changed callback */
-	DEVCB_DEVICE_LINE("cassette", sid_r),	/* SID changed callback (I8085A only) */
-	DEVCB_DEVICE_LINE("cassette", sod_w)	/* SOD changed callback (I8085A only) */
+	DEVCB_DRIVER_LINE_MEMBER(bob85_state, sid_r),	/* SID changed callback (I8085A only) */
+	DEVCB_DRIVER_LINE_MEMBER(bob85_state, sod_w)	/* SOD changed callback (I8085A only) */
 };
 
 static MACHINE_CONFIG_START( bob85, bob85_state )
-    /* basic machine hardware */
-    MCFG_CPU_ADD("maincpu", I8085A, XTAL_5MHz)
-    MCFG_CPU_PROGRAM_MAP(bob85_mem)
-    MCFG_CPU_IO_MAP(bob85_io)
+	/* basic machine hardware */
+	MCFG_CPU_ADD("maincpu", I8085A, XTAL_5MHz)
+	MCFG_CPU_PROGRAM_MAP(bob85_mem)
+	MCFG_CPU_IO_MAP(bob85_io)
 	MCFG_CPU_CONFIG(cpu_config)
 
-    MCFG_MACHINE_RESET(bob85)
+	MCFG_MACHINE_RESET(bob85)
 
-    /* video hardware */
+	/* video hardware */
 	MCFG_DEFAULT_LAYOUT(layout_bob85)
 
 	// devices
-	MCFG_CASSETTE_ADD("cassette", bob85_cassette_config)
+	MCFG_CASSETTE_ADD(CASSETTE_TAG, bob85_cassette_interface)
 MACHINE_CONFIG_END
 
 /* ROM definition */
@@ -194,4 +219,4 @@ ROM_END
 /* Driver */
 
 /*    YEAR  NAME    PARENT  COMPAT   MACHINE    INPUT    INIT COMPANY   FULLNAME       FLAGS */
-COMP( 1984, bob85,  0,       0, 	bob85,	bob85,	 0, 	  "Josef Kratochvil",   "BOB-85",		GAME_NOT_WORKING | GAME_NO_SOUND)
+COMP( 1984, bob85,  0,       0, 	bob85,	bob85,	 0, 	  "Josef Kratochvil",   "BOB-85", GAME_NOT_WORKING | GAME_NO_SOUND)

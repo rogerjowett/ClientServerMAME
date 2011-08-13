@@ -2,20 +2,19 @@
  Contributors:
 
     Marat Fayzullin (MG source)
-    Charles Mac Donald
+    Charles MacDonald
     Mathis Rosenhauer
     Brad Oliver
     Michael Luong
 
  To do:
 
- - PSG control for Game Gear (needs custom SN76489 with stereo output for each channel)
  - SIO interface for Game Gear (needs netplay, I guess)
  - SMS lightgun support
  - LCD persistence emulation for GG
  - SMS 3D glass support
 
- The Game Gear SIO and PSG hardware are not emulated but have some
+ The Game Gear SIO hardware is not emulated but has some
  placeholders in 'machine/sms.c'
 
  Changes:
@@ -66,14 +65,14 @@ DC00      - Selection buttons #2, 9-16 (R)
 #include "sound/2413intf.h"
 #include "includes/sms.h"
 #include "video/smsvdp.h"
-#include "devices/cartslot.h"
+#include "imagedev/cartslot.h"
 
 #include "sms1.lh"
 
 #define MASTER_CLOCK_PAL	53203400	/* This might be a tiny bit too low */
 
 
-static ADDRESS_MAP_START( sms1_mem, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( sms1_mem, AS_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x03ff) AM_ROMBANK("bank1")					/* First 0x0400 part always points to first page */
 	AM_RANGE(0x0400, 0x3fff) AM_ROMBANK("bank2")					/* switchable rom bank */
 	AM_RANGE(0x4000, 0x5fff) AM_ROMBANK("bank3")					/* switchable rom bank */
@@ -86,7 +85,7 @@ static ADDRESS_MAP_START( sms1_mem, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0xfffc, 0xffff) AM_READWRITE(sms_mapper_r, sms_mapper_w)	/* Bankswitch control */
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( sms_mem, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( sms_mem, AS_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x03ff) AM_ROMBANK("bank1")					/* First 0x0400 part always points to first page */
 	AM_RANGE(0x0400, 0x3fff) AM_ROMBANK("bank2")					/* switchable rom bank */
 	AM_RANGE(0x4000, 0x5fff) AM_ROMBANK("bank3")					/* switchable rom bank */
@@ -98,7 +97,7 @@ static ADDRESS_MAP_START( sms_mem, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0xfffc, 0xffff) AM_READWRITE(sms_mapper_r, sms_mapper_w)	/* Bankswitch control */
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( sms_store_mem, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( sms_store_mem, AS_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x3fff) AM_ROM						/* BIOS */
 	AM_RANGE(0x4000, 0x47ff) AM_RAM						/* RAM */
 	AM_RANGE(0x6000, 0x7fff) AM_ROMBANK("bank10")					/* Cartridge/card peek area */
@@ -108,13 +107,13 @@ static ADDRESS_MAP_START( sms_store_mem, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0xdc00, 0xdc00) AM_READ(sms_store_select2)			/* Game selector port #2 */
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( sms_io, ADDRESS_SPACE_IO, 8 )
+static ADDRESS_MAP_START( sms_io, AS_IO, 8 )
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 	ADDRESS_MAP_UNMAP_HIGH
 	AM_RANGE(0x00, 0x00) AM_MIRROR(0x3e) AM_WRITE(sms_bios_w)
 	AM_RANGE(0x01, 0x01) AM_MIRROR(0x3e) AM_WRITE(sms_io_control_w)
 	AM_RANGE(0x40, 0x7f)                 AM_READ(sms_count_r)
-	AM_RANGE(0x40, 0x7f)                 AM_DEVWRITE("smsiii", sn76496_w)
+	AM_RANGE(0x40, 0x7f)                 AM_DEVWRITE("segapsg", sn76496_w)
 	AM_RANGE(0x80, 0x80) AM_MIRROR(0x3e) AM_DEVREADWRITE("sms_vdp", sms_vdp_data_r, sms_vdp_data_w)
 	AM_RANGE(0x81, 0x81) AM_MIRROR(0x3e) AM_DEVREADWRITE("sms_vdp", sms_vdp_ctrl_r, sms_vdp_ctrl_w)
 	AM_RANGE(0xc0, 0xc0) AM_MIRROR(0x1e) AM_READ(sms_input_port_0_r)
@@ -131,7 +130,7 @@ static ADDRESS_MAP_START( sms_io, ADDRESS_SPACE_IO, 8 )
 	AM_RANGE(0xf9, 0xf9) AM_MIRROR(0x06) AM_READ(sms_input_port_1_r)
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( gg_io, ADDRESS_SPACE_IO, 8 )
+static ADDRESS_MAP_START( gg_io, AS_IO, 8 )
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 	ADDRESS_MAP_UNMAP_HIGH
 	AM_RANGE(0x00, 0x00)                 AM_READ(gg_input_port_2_r)
@@ -346,7 +345,7 @@ static PALETTE_INIT( gamegear )
 
 
 
-static void sms_int_callback( running_machine *machine, int state )
+static void sms_int_callback( running_machine &machine, int state )
 {
 	cputag_set_input_line(machine, "maincpu", 0, state);
 }
@@ -407,30 +406,28 @@ static MACHINE_CONFIG_START( sms_ntsc_base, sms_state )
 	MCFG_CPU_PROGRAM_MAP(sms_mem)
 	MCFG_CPU_IO_MAP(sms_io)
 
-	MCFG_QUANTUM_TIME(HZ(60))
+	MCFG_QUANTUM_TIME(attotime::from_hz(60))
 
 	MCFG_MACHINE_START(sms)
 	MCFG_MACHINE_RESET(sms)
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
-	MCFG_SOUND_ADD("smsiii", SMSIII, XTAL_53_693175MHz/15)
+	MCFG_SOUND_ADD("segapsg", SEGAPSG, XTAL_53_693175MHz/15)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
 
 	MCFG_FRAGMENT_ADD( sms_cartslot )
 MACHINE_CONFIG_END
 
 static MACHINE_CONFIG_DERIVED( sms2_ntsc, sms_ntsc_base )
-
 	/* video hardware */
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
 	MCFG_SCREEN_RAW_PARAMS(XTAL_53_693175MHz/10, SMS_X_PIXELS, LBORDER_START + LBORDER_X_PIXELS - 2, LBORDER_START + LBORDER_X_PIXELS + 256 + 10, NTSC_Y_PIXELS, TBORDER_START + NTSC_224_TBORDER_Y_PIXELS, TBORDER_START + NTSC_224_TBORDER_Y_PIXELS + 224)
+	MCFG_SCREEN_UPDATE(sms)
 
 	MCFG_PALETTE_LENGTH(64+16)
 	MCFG_PALETTE_INIT(sms)
-
-	MCFG_VIDEO_UPDATE(sms)
 
 	MCFG_SMSVDP_ADD("sms_vdp", _315_5246_intf)
 MACHINE_CONFIG_END
@@ -445,14 +442,17 @@ static MACHINE_CONFIG_DERIVED( sms1_ntsc, sms_ntsc_base )
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
 	MCFG_SCREEN_RAW_PARAMS(XTAL_53_693175MHz/10, SMS_X_PIXELS, LBORDER_START + LBORDER_X_PIXELS - 2, LBORDER_START + LBORDER_X_PIXELS + 256 + 10, NTSC_Y_PIXELS, TBORDER_START + NTSC_224_TBORDER_Y_PIXELS, TBORDER_START + NTSC_224_TBORDER_Y_PIXELS + 224)
+	MCFG_SCREEN_UPDATE(sms1)
 
 	MCFG_SCREEN_ADD("left_lcd", LCD)	// This is needed for SegaScope Left LCD
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
 	MCFG_SCREEN_RAW_PARAMS(XTAL_53_693175MHz/10, SMS_X_PIXELS, LBORDER_START + LBORDER_X_PIXELS - 2, LBORDER_START + LBORDER_X_PIXELS + 256 + 10, NTSC_Y_PIXELS, TBORDER_START + NTSC_224_TBORDER_Y_PIXELS, TBORDER_START + NTSC_224_TBORDER_Y_PIXELS + 224)
+	MCFG_SCREEN_UPDATE(sms1)
 
 	MCFG_SCREEN_ADD("right_lcd", LCD)	// This is needed for SegaScope Right LCD
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
 	MCFG_SCREEN_RAW_PARAMS(XTAL_53_693175MHz/10, SMS_X_PIXELS, LBORDER_START + LBORDER_X_PIXELS - 2, LBORDER_START + LBORDER_X_PIXELS + 256 + 10, NTSC_Y_PIXELS, TBORDER_START + NTSC_224_TBORDER_Y_PIXELS, TBORDER_START + NTSC_224_TBORDER_Y_PIXELS + 224)
+	MCFG_SCREEN_UPDATE(sms1)
 
 	MCFG_DEFAULT_LAYOUT(layout_sms1)
 
@@ -460,7 +460,6 @@ static MACHINE_CONFIG_DERIVED( sms1_ntsc, sms_ntsc_base )
 	MCFG_PALETTE_INIT(sms)
 
 	MCFG_VIDEO_START(sms1)
-	MCFG_VIDEO_UPDATE(sms1)
 
 	MCFG_SMSVDP_ADD("sms_vdp", _315_5124_intf)
 MACHINE_CONFIG_END
@@ -513,14 +512,14 @@ static MACHINE_CONFIG_START( sms_pal_base, sms_state )
 	MCFG_CPU_PROGRAM_MAP(sms_mem)
 	MCFG_CPU_IO_MAP(sms_io)
 
-	MCFG_QUANTUM_TIME(HZ(60))
+	MCFG_QUANTUM_TIME(attotime::from_hz(60))
 
 	MCFG_MACHINE_START(sms)
 	MCFG_MACHINE_RESET(sms)
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
-	MCFG_SOUND_ADD("smsiii", SMSIII, MASTER_CLOCK_PAL/15)
+	MCFG_SOUND_ADD("segapsg", SEGAPSG, MASTER_CLOCK_PAL/15)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
 
 	MCFG_FRAGMENT_ADD( sms_cartslot )
@@ -532,11 +531,10 @@ static MACHINE_CONFIG_DERIVED( sms2_pal, sms_pal_base )
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
 	MCFG_SCREEN_RAW_PARAMS(MASTER_CLOCK_PAL/10, SMS_X_PIXELS, LBORDER_START + LBORDER_X_PIXELS - 2, LBORDER_START + LBORDER_X_PIXELS + 256 + 10, PAL_Y_PIXELS, TBORDER_START + PAL_240_TBORDER_Y_PIXELS, TBORDER_START + PAL_240_TBORDER_Y_PIXELS + 240)
+	MCFG_SCREEN_UPDATE(sms)
 
 	MCFG_PALETTE_LENGTH(64+16)
 	MCFG_PALETTE_INIT(sms)
-
-	MCFG_VIDEO_UPDATE(sms)
 
 	MCFG_SMSVDP_ADD("sms_vdp", _315_5246_intf)
 MACHINE_CONFIG_END
@@ -551,19 +549,20 @@ static MACHINE_CONFIG_DERIVED( sms1_pal, sms_pal_base )
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
 	MCFG_SCREEN_RAW_PARAMS(MASTER_CLOCK_PAL/10, SMS_X_PIXELS, LBORDER_START + LBORDER_X_PIXELS - 2, LBORDER_START + LBORDER_X_PIXELS + 256 + 10, PAL_Y_PIXELS, TBORDER_START + PAL_240_TBORDER_Y_PIXELS, TBORDER_START + PAL_240_TBORDER_Y_PIXELS + 240)
+	MCFG_SCREEN_UPDATE(sms1)
 
 	MCFG_SCREEN_ADD("left_lcd", LCD)	// This is needed for SegaScope Left LCD
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
 	MCFG_SCREEN_RAW_PARAMS(MASTER_CLOCK_PAL/10, SMS_X_PIXELS, LBORDER_START + LBORDER_X_PIXELS - 2, LBORDER_START + LBORDER_X_PIXELS + 256 + 10, PAL_Y_PIXELS, TBORDER_START + PAL_240_TBORDER_Y_PIXELS, TBORDER_START + PAL_240_TBORDER_Y_PIXELS + 240)
+	MCFG_SCREEN_UPDATE(sms1)
 
 	MCFG_SCREEN_ADD("right_lcd", LCD)	// This is needed for SegaScope Right LCD
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
 	MCFG_SCREEN_RAW_PARAMS(MASTER_CLOCK_PAL/10, SMS_X_PIXELS, LBORDER_START + LBORDER_X_PIXELS - 2, LBORDER_START + LBORDER_X_PIXELS + 256 + 10, PAL_Y_PIXELS, TBORDER_START + PAL_240_TBORDER_Y_PIXELS, TBORDER_START + PAL_240_TBORDER_Y_PIXELS + 240)
+	MCFG_SCREEN_UPDATE(sms1)
 
 	MCFG_PALETTE_LENGTH(64+16)
 	MCFG_PALETTE_INIT(sms)
-
-	MCFG_VIDEO_UPDATE(sms1)
 
 	MCFG_DEFAULT_LAYOUT(layout_sms1)
 
@@ -597,7 +596,7 @@ static MACHINE_CONFIG_START( gamegear, sms_state )
 	MCFG_CPU_PROGRAM_MAP(sms_mem)
 	MCFG_CPU_IO_MAP(gg_io)
 
-	MCFG_QUANTUM_TIME(HZ(60))
+	MCFG_QUANTUM_TIME(attotime::from_hz(60))
 
 	MCFG_MACHINE_START(sms)
 	MCFG_MACHINE_RESET(sms)
@@ -606,11 +605,12 @@ static MACHINE_CONFIG_START( gamegear, sms_state )
 	MCFG_SCREEN_ADD("screen", LCD)
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
 	MCFG_SCREEN_RAW_PARAMS(XTAL_53_693175MHz/10, SMS_X_PIXELS, LBORDER_START + LBORDER_X_PIXELS + 6*8, LBORDER_START + LBORDER_X_PIXELS + 26*8, NTSC_Y_PIXELS, TBORDER_START + NTSC_192_TBORDER_Y_PIXELS + 3*8, TBORDER_START + NTSC_192_TBORDER_Y_PIXELS + 21*8 )
+	MCFG_SCREEN_UPDATE(gamegear)
+
 	MCFG_PALETTE_LENGTH(4096)
 	MCFG_PALETTE_INIT(gamegear)
 
 	MCFG_VIDEO_START(gamegear)
-	MCFG_VIDEO_UPDATE(gamegear)
 
 	MCFG_SMSVDP_ADD("sms_vdp", _315_5378_intf)
 
@@ -633,9 +633,9 @@ ROM_START(sms1)
 	ROM_SYSTEM_BIOS( 0, "bios13", "US/European BIOS v1.3 (1986)" )
 	ROMX_LOAD("bios13fx.rom", 0x0000, 0x2000, CRC(0072ED54) SHA1(c315672807d8ddb8d91443729405c766dd95cae7), ROM_BIOS(1))
 	ROM_SYSTEM_BIOS( 1, "hangonsh", "US/European BIOS v2.4 with Hang On and Safari Hunt (1988)" )
-	ROMX_LOAD("hshbios.rom", 0x0000, 0x20000, CRC(91E93385) SHA1(9e179392cd416af14024d8f31c981d9ee9a64517), ROM_BIOS(2))
+	ROMX_LOAD("mpr-11459a.rom", 0x0000, 0x20000, CRC(91E93385) SHA1(9e179392cd416af14024d8f31c981d9ee9a64517), ROM_BIOS(2))
 	ROM_SYSTEM_BIOS( 2, "hangon", "US/European BIOS v3.4 with Hang On (1988)" )
-	ROMX_LOAD("hangbios.rom", 0x0000, 0x20000, CRC(8EDF7AC6) SHA1(51fd6d7990f62cd9d18c9ecfc62ed7936169107e), ROM_BIOS(3))
+	ROMX_LOAD("mpr-11458.rom", 0x0000, 0x20000, CRC(8EDF7AC6) SHA1(51fd6d7990f62cd9d18c9ecfc62ed7936169107e), ROM_BIOS(3))
 	ROM_SYSTEM_BIOS( 3, "missiled", "US/European BIOS v4.4 with Missile Defense 3D (1988)" )
 	ROMX_LOAD("missiled.rom", 0x0000, 0x20000, CRC(E79BB689) SHA1(aa92ae576ca670b00855e278378d89e9f85e0351), ROM_BIOS(4))
 	ROM_SYSTEM_BIOS( 4, "proto", "US Master System Prototype BIOS" )
@@ -648,7 +648,7 @@ ROM_START(sms)
 
 	ROM_REGION(0x20000, "user1", 0)
 	ROM_SYSTEM_BIOS( 0, "alexkidd", "US/European BIOS with Alex Kidd in Miracle World (1990)" )
-	ROMX_LOAD("akbios.rom", 0x0000, 0x20000, CRC(CF4A09EA) SHA1(3af7b66248d34eb26da40c92bf2fa4c73a46a051), ROM_BIOS(1))
+	ROMX_LOAD("mpr-12808.ic2", 0x0000, 0x20000, CRC(CF4A09EA) SHA1(3af7b66248d34eb26da40c92bf2fa4c73a46a051), ROM_BIOS(1)) /* "SEGA // MPR-12808 W63 // 9114E9004" @ IC2 */
 ROM_END
 
 ROM_START(smssdisp)
@@ -670,9 +670,9 @@ ROM_START(sms1pal)
 	ROM_SYSTEM_BIOS( 0, "bios13", "US/European BIOS v1.3 (1986)" )
 	ROMX_LOAD("bios13fx.rom", 0x0000, 0x2000, CRC(0072ED54) SHA1(c315672807d8ddb8d91443729405c766dd95cae7), ROM_BIOS(1))
 	ROM_SYSTEM_BIOS( 1, "hangonsh", "US/European BIOS v2.4 with Hang On and Safari Hunt (1988)" )
-	ROMX_LOAD("hshbios.rom", 0x0000, 0x20000, CRC(91E93385) SHA1(9e179392cd416af14024d8f31c981d9ee9a64517), ROM_BIOS(2))
+	ROMX_LOAD("mpr-11459a.rom", 0x0000, 0x20000, CRC(91E93385) SHA1(9e179392cd416af14024d8f31c981d9ee9a64517), ROM_BIOS(2))
 	ROM_SYSTEM_BIOS( 2, "hangon", "Sega Master System - US/European BIOS v3.4 with Hang On (1988)" )
-	ROMX_LOAD("hangbios.rom", 0x0000, 0x20000, CRC(8EDF7AC6) SHA1(51fd6d7990f62cd9d18c9ecfc62ed7936169107e), ROM_BIOS(3))
+	ROMX_LOAD("mpr-11458.rom", 0x0000, 0x20000, CRC(8EDF7AC6) SHA1(51fd6d7990f62cd9d18c9ecfc62ed7936169107e), ROM_BIOS(3))
 	ROM_SYSTEM_BIOS( 3, "missiled", "US/European BIOS v4.4 with Missile Defense 3D (1988)" )
 	ROMX_LOAD("missiled.rom", 0x0000, 0x20000, CRC(E79BB689) SHA1(aa92ae576ca670b00855e278378d89e9f85e0351), ROM_BIOS(4))
 ROM_END
@@ -682,8 +682,8 @@ ROM_START(smspal)
 	ROM_FILL(0x0000, 0x4000, 0xff)
 
 	ROM_REGION(0x40000, "user1", 0)
-	ROM_SYSTEM_BIOS( 0, "alexkidd", "US/European BIOS with Alex Kidd in Miracle World (1990)" )
-	ROMX_LOAD("akbios.rom", 0x0000, 0x20000, CRC(CF4A09EA) SHA1(3af7b66248d34eb26da40c92bf2fa4c73a46a051), ROM_BIOS(1))
+	ROM_SYSTEM_BIOS( 0, "alexkidd", "US/European BIOS with Alex Kidd in Miracle World (1990)" ) /* PCB Label: SEGA // IC BD M4Jr. PAL" Master System II with 314-5246 (ZIP) VDP and 314-5237 (DIP48) IO */
+	ROMX_LOAD("mpr-12808.ic2", 0x0000, 0x20000, CRC(CF4A09EA) SHA1(3af7b66248d34eb26da40c92bf2fa4c73a46a051), ROM_BIOS(1)) /* "SEGA // MPR-12808 W63 // 9114E9004" @ IC2 */
 	ROM_SYSTEM_BIOS( 1, "sonic", "European/Brazilian BIOS with Sonic the Hedgehog (1991)" )
 	ROMX_LOAD("sonbios.rom", 0x0000, 0x40000, CRC(81C3476B) SHA1(6aca0e3dffe461ba1cb11a86cd4caf5b97e1b8df), ROM_BIOS(2))
 ROM_END
@@ -693,13 +693,14 @@ ROM_START(sg1000m3)
 	ROM_FILL(0x0000, 0x4000, 0x00)
 ROM_END
 
-ROM_START(smsj)
+ROM_START(smsj) /* PCB Label: "SEGA(R) IC BOARD M4J MAIN // 837-6418"; has "YM2413 // 78 04 71 G" at IC10; Back of pcb has traces marked "171-5541 (C)SEGA 1987 MADE IN JAPAN"
+    see http://www.smspower.org/Development/JapaneseSMS837-6418 */
 	ROM_REGION(0x4000, "maincpu", 0)
 	ROM_FILL(0x0000, 0x4000, 0xff)
 
 	ROM_REGION(0x4000, "user1", 0)
 	ROM_SYSTEM_BIOS( 0, "jbios21", "Japanese BIOS v2.1 (1987)" )
-	ROMX_LOAD("jbios21.rom", 0x0000, 0x2000, CRC(48D44A13) SHA1(a8c1b39a2e41137835eda6a5de6d46dd9fadbaf2), ROM_BIOS(1))
+	ROMX_LOAD("mpr-11124.ic2", 0x0000, 0x2000, CRC(48D44A13) SHA1(a8c1b39a2e41137835eda6a5de6d46dd9fadbaf2), ROM_BIOS(1)) /* "SONY 7J06 // MPR-11124 // JAPAN 021" @ IC2 */
 ROM_END
 
 ROM_START(sms2kr)
@@ -729,17 +730,17 @@ ROM_END
 
   US
    - Sega Master System I (sms1)
-     - prototype bios - 1986
+     - prototype (M404) bios - 1986
      - without built-in game v1.3 - 1986
      - built-in Hang On/Safari Hunt v2.4 - 1988
      - built-in Hang On v3.4 - 1988
      - built-in Missile Defense 3-D v4.4 - 1988
      - built-in Hang On/Astro Warrior ????
-   - Sega Master System II (sms/sms2)
+   - Sega Master System II (sms)
      - built-in Alex Kidd in Miracle World - 1990
 
   JP
-   - Sega SG-1000 Mark III (smsm3)
+   - Sega SG-1000 Mark III (sg1000m3)
      - no bios
    - Sega Master System (I) (smsj)
      - without built-in game v2.1 - 1987
@@ -755,7 +756,7 @@ ROM_END
      - built-in Hang On v3.4 - 1988
      - built-in Missile Defense 3-D v4.4 - 1988
      - built-in Hang On/Astro Warrior ????
-   - Sega Master System II (sms2pal)
+   - Sega Master System II (smspal)
      - built-in Alex Kidd in Miracle World - 1990
      - built-in Sonic the Hedgehog - 1991
 

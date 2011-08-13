@@ -7,13 +7,12 @@
 #define MK68564_0_TAG	"u14"
 #define MK68564_1_TAG	"u15"
 #define MC68230L10_TAG	"u16"
-#define TERMINAL_TAG	"terminal"
 
 class msbc1_state : public driver_device
 {
 public:
-	msbc1_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	msbc1_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 	virtual void machine_reset();
 };

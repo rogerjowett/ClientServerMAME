@@ -27,33 +27,36 @@
 #include "machine/nvram.h"
 
 
-/*************************************
- *
- *  Globals
- *
- *************************************/
+enum state { IDLE, START, DATA, STOP1, STOP2 };
 
-static UINT8 palette[16][3];
-static int pal_addr;
-static int pal_idx;
+class jpmsys5_state : public driver_device
+{
+public:
+	jpmsys5_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
-static enum state { IDLE, START, DATA, STOP1, STOP2 } touch_state;
-static emu_timer *touch_timer;
-static int touch_data_count;
-static int touch_data[3];
-static int touch_shift_cnt;
+	UINT8 m_palette[16][3];
+	int m_pal_addr;
+	int m_pal_idx;
+	int m_touch_state;
+	emu_timer *m_touch_timer;
+	int m_touch_data_count;
+	int m_touch_data[3];
+	int m_touch_shift_cnt;
+	int m_lamp_strobe;
+	int m_mpxclk;
+	int m_muxram[255];
+	UINT8 m_a0_acia_dcd;
+	UINT8 m_a0_data_out;
+	UINT8 m_a0_data_in;
+	UINT8 m_a1_acia_dcd;
+	UINT8 m_a1_data_out;
+	UINT8 m_a1_data_in;
+	UINT8 m_a2_acia_dcd;
+	UINT8 m_a2_data_out;
+	UINT8 m_a2_data_in;
+};
 
-static UINT8 a0_acia_dcd;
-static UINT8 a0_data_out;
-static UINT8 a0_data_in;
-
-static UINT8 a1_acia_dcd;
-static UINT8 a1_data_out;
-static UINT8 a1_data_in;
-
-static UINT8 a2_acia_dcd;
-static UINT8 a2_data_out;
-static UINT8 a2_data_in;
 
 
 /*************************************
@@ -80,7 +83,7 @@ enum int_levels
  *
  *************************************/
 
-static void tms_interrupt(running_machine *machine, int state)
+static void tms_interrupt(running_machine &machine, int state)
 {
 	cputag_set_input_line(machine, "maincpu", INT_TMS34061, state);
 }
@@ -144,21 +147,22 @@ static READ16_HANDLER( sys5_tms34061_r )
 
 static WRITE16_HANDLER( ramdac_w )
 {
+	jpmsys5_state *state = space->machine().driver_data<jpmsys5_state>();
 	if (offset == 0)
 	{
-		pal_addr = data;
-		pal_idx = 0;
+		state->m_pal_addr = data;
+		state->m_pal_idx = 0;
 	}
 	else if (offset == 1)
 	{
-		palette[pal_addr][pal_idx] = data;
+		state->m_palette[state->m_pal_addr][state->m_pal_idx] = data;
 
-		if (++pal_idx == 3)
+		if (++state->m_pal_idx == 3)
 		{
 			/* Update the MAME palette */
-			palette_set_color_rgb(space->machine, pal_addr, pal6bit(palette[pal_addr][0]), pal6bit(palette[pal_addr][1]), pal6bit(palette[pal_addr][2]));
-			pal_addr++;
-			pal_idx = 0;
+			palette_set_color_rgb(space->machine(), state->m_pal_addr, pal6bit(state->m_palette[state->m_pal_addr][0]), pal6bit(state->m_palette[state->m_pal_addr][1]), pal6bit(state->m_palette[state->m_pal_addr][2]));
+			state->m_pal_addr++;
+			state->m_pal_idx = 0;
 		}
 	}
 	else
@@ -172,7 +176,7 @@ static VIDEO_START( jpmsys5v )
 	tms34061_start(machine, &tms34061intf);
 }
 
-static VIDEO_UPDATE( jpmsys5v )
+static SCREEN_UPDATE( jpmsys5v )
 {
 	int x, y;
 	struct tms34061_display state;
@@ -181,7 +185,7 @@ static VIDEO_UPDATE( jpmsys5v )
 
 	if (state.blanked)
 	{
-		bitmap_fill(bitmap, cliprect, get_black_pen(screen->machine));
+		bitmap_fill(bitmap, cliprect, get_black_pen(screen->machine()));
 		return 0;
 	}
 
@@ -195,14 +199,24 @@ static VIDEO_UPDATE( jpmsys5v )
 			UINT8 pen = src[(x-cliprect->min_x)>>1];
 
 			/* Draw two 4-bit pixels */
-			*dest++ = screen->machine->pens[(pen >> 4) & 0xf];
-			*dest++ = screen->machine->pens[pen & 0xf];
+			*dest++ = screen->machine().pens[(pen >> 4) & 0xf];
+			*dest++ = screen->machine().pens[pen & 0xf];
 		}
 	}
 
 	return 0;
 }
 
+static void sys5_draw_lamps(jpmsys5_state *state)
+{
+	int i;
+	for (i = 0; i <8; i++)
+	{
+		output_set_lamp_value( (16*state->m_lamp_strobe)+i,  (state->m_muxram[(4*state->m_lamp_strobe)] & (1 << i)) !=0);
+		output_set_lamp_value((16*state->m_lamp_strobe)+i+8, (state->m_muxram[(4*state->m_lamp_strobe) +1 ] & (1 << i)) !=0);
+		output_set_indexed_value("sys5led",(8*state->m_lamp_strobe)+i,(state->m_muxram[(4*state->m_lamp_strobe) +2 ] & (1 << i)) !=0);
+	}
+}
 
 /****************************************
  *
@@ -212,15 +226,15 @@ static VIDEO_UPDATE( jpmsys5v )
 
 static WRITE16_HANDLER( rombank_w )
 {
-	UINT8 *rom = space->machine->region("maincpu")->base();
+	UINT8 *rom = space->machine().region("maincpu")->base();
 	data &= 0x1f;
-	memory_set_bankptr(space->machine, "bank1", &rom[0x20000 + 0x20000 * data]);
+	memory_set_bankptr(space->machine(), "bank1", &rom[0x20000 + 0x20000 * data]);
 }
 
 static READ16_HANDLER( coins_r )
 {
 	if (offset == 2)
-		return input_port_read(space->machine, "COINS") << 8;
+		return input_port_read(space->machine(), "COINS") << 8;
 	else
 		return 0xffff;
 }
@@ -237,13 +251,14 @@ static READ16_HANDLER( unk_r )
 
 static WRITE16_HANDLER( mux_w )
 {
-	/* TODO: Lamps! */
+	jpmsys5_state *state = space->machine().driver_data<jpmsys5_state>();
+	state->m_muxram[offset]=data;
 }
 
 static READ16_HANDLER( mux_r )
 {
 	if (offset == 0x81/2)
-		return input_port_read(space->machine, "DSW");
+		return input_port_read(space->machine(), "DSW");
 
 	return 0xffff;
 }
@@ -263,7 +278,7 @@ static WRITE16_DEVICE_HANDLER( jpm_upd7759_w )
 	}
 	else
 	{
-		logerror("%s: upd7759: Unknown write to %x with %x\n", cpuexec_describe_context(device->machine),  offset, data);
+		logerror("%s: upd7759: Unknown write to %x with %x\n", device->machine().describe_context(),  offset, data);
 	}
 }
 
@@ -279,25 +294,25 @@ static READ16_DEVICE_HANDLER( jpm_upd7759_r )
  *
  *************************************/
 
-static ADDRESS_MAP_START( 68000_map, ADDRESS_SPACE_PROGRAM, 16 )
+static ADDRESS_MAP_START( 68000_map, AS_PROGRAM, 16 )
 	AM_RANGE(0x000000, 0x01ffff) AM_ROM
 	AM_RANGE(0x01fffe, 0x01ffff) AM_WRITE(rombank_w)
 	AM_RANGE(0x020000, 0x03ffff) AM_ROMBANK("bank1")
 	AM_RANGE(0x040000, 0x043fff) AM_RAM AM_SHARE("nvram")
 	AM_RANGE(0x046000, 0x046001) AM_WRITENOP
-	AM_RANGE(0x046020, 0x046021) AM_DEVREADWRITE8("acia6850_0", acia6850_stat_r, acia6850_ctrl_w, 0xff)
-	AM_RANGE(0x046022, 0x046023) AM_DEVREADWRITE8("acia6850_0", acia6850_data_r, acia6850_data_w, 0xff)
-	AM_RANGE(0x046040, 0x04604f) AM_DEVREADWRITE8("6840ptm", ptm6840_read, ptm6840_write, 0xff)
+	AM_RANGE(0x046020, 0x046021) AM_DEVREADWRITE8_MODERN("acia6850_0", acia6850_device, status_read, control_write, 0xff)
+	AM_RANGE(0x046022, 0x046023) AM_DEVREADWRITE8_MODERN("acia6850_0", acia6850_device, data_read, data_write, 0xff)
+	AM_RANGE(0x046040, 0x04604f) AM_DEVREADWRITE8_MODERN("6840ptm", ptm6840_device, read, write, 0xff)
 	AM_RANGE(0x046060, 0x046061) AM_READ_PORT("DIRECT") AM_WRITENOP
 	AM_RANGE(0x046062, 0x046063) AM_WRITENOP
 	AM_RANGE(0x046064, 0x046065) AM_WRITENOP
 	AM_RANGE(0x046066, 0x046067) AM_WRITENOP
-	AM_RANGE(0x046080, 0x046081) AM_DEVREADWRITE8("acia6850_1", acia6850_stat_r, acia6850_ctrl_w, 0xff)
-	AM_RANGE(0x046082, 0x046083) AM_DEVREADWRITE8("acia6850_1", acia6850_data_r, acia6850_data_w, 0xff)
+	AM_RANGE(0x046080, 0x046081) AM_DEVREADWRITE8_MODERN("acia6850_1", acia6850_device, status_read, control_write, 0xff)
+	AM_RANGE(0x046082, 0x046083) AM_DEVREADWRITE8_MODERN("acia6850_1", acia6850_device, data_read, data_write, 0xff)
 	AM_RANGE(0x046084, 0x046085) AM_READ(unk_r) // PIA?
 	AM_RANGE(0x046088, 0x046089) AM_READ(unk_r) // PIA?
-	AM_RANGE(0x04608c, 0x04608d) AM_DEVREADWRITE8("acia6850_2", acia6850_stat_r, acia6850_ctrl_w, 0xff)
-	AM_RANGE(0x04608e, 0x04608f) AM_DEVREADWRITE8("acia6850_2", acia6850_data_r, acia6850_data_w, 0xff)
+	AM_RANGE(0x04608c, 0x04608d) AM_DEVREADWRITE8_MODERN("acia6850_2", acia6850_device, status_read, control_write, 0xff)
+	AM_RANGE(0x04608e, 0x04608f) AM_DEVREADWRITE8_MODERN("acia6850_2", acia6850_device, data_read, data_write, 0xff)
 	AM_RANGE(0x0460a0, 0x0460a3) AM_DEVWRITE8("ym2413", ym2413_w, 0x00ff)
 	AM_RANGE(0x0460c0, 0x0460c1) AM_WRITENOP
 	AM_RANGE(0x0460e0, 0x0460e5) AM_WRITE(ramdac_w)
@@ -317,7 +332,8 @@ ADDRESS_MAP_END
 /* Serial bit transmission callback */
 static TIMER_CALLBACK( touch_cb )
 {
-	switch (touch_state)
+	jpmsys5_state *state = machine.driver_data<jpmsys5_state>();
+	switch (state->m_touch_state)
 	{
 		case IDLE:
 		{
@@ -325,38 +341,38 @@ static TIMER_CALLBACK( touch_cb )
 		}
 		case START:
 		{
-			touch_shift_cnt = 0;
-			a2_data_in = 0;
-			touch_state = DATA;
+			state->m_touch_shift_cnt = 0;
+			state->m_a2_data_in = 0;
+			state->m_touch_state = DATA;
 			break;
 		}
 		case DATA:
 		{
-			a2_data_in = (touch_data[touch_data_count] >> (touch_shift_cnt)) & 1;
+			state->m_a2_data_in = (state->m_touch_data[state->m_touch_data_count] >> (state->m_touch_shift_cnt)) & 1;
 
-			if (++touch_shift_cnt == 8)
-				touch_state = STOP1;
+			if (++state->m_touch_shift_cnt == 8)
+				state->m_touch_state = STOP1;
 
 			break;
 		}
 		case STOP1:
 		{
-			a2_data_in = 1;
-			touch_state = STOP2;
+			state->m_a2_data_in = 1;
+			state->m_touch_state = STOP2;
 			break;
 		}
 		case STOP2:
 		{
-			a2_data_in = 1;
+			state->m_a2_data_in = 1;
 
-			if (++touch_data_count == 3)
+			if (++state->m_touch_data_count == 3)
 			{
-				timer_reset(touch_timer, attotime_never);
-				touch_state = IDLE;
+				state->m_touch_timer->reset();
+				state->m_touch_state = IDLE;
 			}
 			else
 			{
-				touch_state = START;
+				state->m_touch_state = START;
 			}
 
 			break;
@@ -366,19 +382,20 @@ static TIMER_CALLBACK( touch_cb )
 
 static INPUT_CHANGED( touchscreen_press )
 {
+	jpmsys5_state *state = field.machine().driver_data<jpmsys5_state>();
 	if (newval == 0)
 	{
-		attotime rx_period = attotime_mul(ATTOTIME_IN_HZ(10000), 16);
+		attotime rx_period = attotime::from_hz(10000) * 16;
 
 		/* Each touch screen packet is 3 bytes */
-		touch_data[0] = 0x2a;
-		touch_data[1] = 0x7 - (input_port_read(field->port->machine, "TOUCH_Y") >> 5) + 0x30;
-		touch_data[2] = (input_port_read(field->port->machine, "TOUCH_X") >> 5) + 0x30;
+		state->m_touch_data[0] = 0x2a;
+		state->m_touch_data[1] = 0x7 - (input_port_read(field.machine(), "TOUCH_Y") >> 5) + 0x30;
+		state->m_touch_data[2] = (input_port_read(field.machine(), "TOUCH_X") >> 5) + 0x30;
 
 		/* Start sending the data to the 68000 serially */
-		touch_data_count = 0;
-		touch_state = START;
-		timer_adjust_periodic(touch_timer, rx_period, 0, rx_period);
+		state->m_touch_data_count = 0;
+		state->m_touch_state = START;
+		state->m_touch_timer->adjust(rx_period, 0, rx_period);
 	}
 }
 
@@ -461,14 +478,33 @@ INPUT_PORTS_END
 
 static WRITE_LINE_DEVICE_HANDLER( ptm_irq )
 {
-	cputag_set_input_line(device->machine, "maincpu", INT_6840PTM, state ? ASSERT_LINE : CLEAR_LINE);
+	cputag_set_input_line(device->machine(), "maincpu", INT_6840PTM, state ? ASSERT_LINE : CLEAR_LINE);
 }
+
+static WRITE8_DEVICE_HANDLER(u26_o1_callback)
+{
+	jpmsys5_state *state = device->machine().driver_data<jpmsys5_state>();
+	if (state->m_mpxclk !=data)
+	{
+		if (!data) //falling edge
+		{
+			state->m_lamp_strobe++;
+			if (state->m_lamp_strobe >15)
+			{
+				state->m_lamp_strobe =0;
+			}
+		}
+		sys5_draw_lamps(state);
+	}
+	state->m_mpxclk = data;
+}
+
 
 static const ptm6840_interface ptm_intf =
 {
 	1000000,
 	{ 0, 0, 0 },
-	{ DEVCB_NULL, DEVCB_NULL, DEVCB_NULL },
+	{ DEVCB_HANDLER(u26_o1_callback), DEVCB_NULL, DEVCB_NULL },
 	DEVCB_LINE(ptm_irq)
 };
 
@@ -481,24 +517,27 @@ static const ptm6840_interface ptm_intf =
 
 static WRITE_LINE_DEVICE_HANDLER( acia_irq )
 {
-	cputag_set_input_line(device->machine, "maincpu", INT_6850ACIA, state ? CLEAR_LINE : ASSERT_LINE);
+	cputag_set_input_line(device->machine(), "maincpu", INT_6850ACIA, state ? CLEAR_LINE : ASSERT_LINE);
 }
 
 /* Clocks are incorrect */
 
 static READ_LINE_DEVICE_HANDLER( a0_rx_r )
 {
-	return a0_data_in;
+	jpmsys5_state *state = device->machine().driver_data<jpmsys5_state>();
+	return state->m_a0_data_in;
 }
 
 static WRITE_LINE_DEVICE_HANDLER( a0_tx_w )
 {
-	a0_data_out = state;
+	jpmsys5_state *drvstate = device->machine().driver_data<jpmsys5_state>();
+	drvstate->m_a0_data_out = state;
 }
 
 static READ_LINE_DEVICE_HANDLER( a0_dcd_r )
 {
-	return a0_acia_dcd;
+	jpmsys5_state *state = device->machine().driver_data<jpmsys5_state>();
+	return state->m_a0_acia_dcd;
 }
 
 static ACIA6850_INTERFACE( acia0_if )
@@ -515,55 +554,61 @@ static ACIA6850_INTERFACE( acia0_if )
 
 static READ_LINE_DEVICE_HANDLER( a1_rx_r )
 {
-	return a1_data_in;
+	jpmsys5_state *state = device->machine().driver_data<jpmsys5_state>();
+	return state->m_a1_data_in;
 }
 
 static WRITE_LINE_DEVICE_HANDLER( a1_tx_w )
 {
-	a1_data_out = state;
+	jpmsys5_state *drvstate = device->machine().driver_data<jpmsys5_state>();
+	drvstate->m_a1_data_out = state;
 }
 
 static READ_LINE_DEVICE_HANDLER( a1_dcd_r )
 {
-	return a1_acia_dcd;
+	jpmsys5_state *state = device->machine().driver_data<jpmsys5_state>();
+	return state->m_a1_acia_dcd;
 }
 
 static ACIA6850_INTERFACE( acia1_if )
 {
 	10000,
 	10000,
-	DEVCB_LINE(a1_rx_r), /*&a1_data_in,*/
-	DEVCB_LINE(a1_tx_w), /*&a1_data_out,*/
+	DEVCB_LINE(a1_rx_r), /*&state->m_a1_data_in,*/
+	DEVCB_LINE(a1_tx_w), /*&state->m_a1_data_out,*/
 	DEVCB_NULL,
 	DEVCB_NULL,
-	DEVCB_LINE(a1_dcd_r), /*&a1_acia_dcd,*/
+	DEVCB_LINE(a1_dcd_r), /*&state->m_a1_acia_dcd,*/
 	DEVCB_LINE(acia_irq)
 };
 
 static READ_LINE_DEVICE_HANDLER( a2_rx_r )
 {
-	return a2_data_in;
+	jpmsys5_state *state = device->machine().driver_data<jpmsys5_state>();
+	return state->m_a2_data_in;
 }
 
 static WRITE_LINE_DEVICE_HANDLER( a2_tx_w )
 {
-	a2_data_out = state;
+	jpmsys5_state *drvstate = device->machine().driver_data<jpmsys5_state>();
+	drvstate->m_a2_data_out = state;
 }
 
 static READ_LINE_DEVICE_HANDLER( a2_dcd_r )
 {
-	return a2_acia_dcd;
+	jpmsys5_state *state = device->machine().driver_data<jpmsys5_state>();
+	return state->m_a2_acia_dcd;
 }
 
 static ACIA6850_INTERFACE( acia2_if )
 {
 	10000,
 	10000,
-	DEVCB_LINE(a2_rx_r), /*&a2_data_in,*/
-	DEVCB_LINE(a2_tx_w), /*&a2_data_out,*/
+	DEVCB_LINE(a2_rx_r), /*&state->m_a2_data_in,*/
+	DEVCB_LINE(a2_tx_w), /*&state->m_a2_data_out,*/
 	DEVCB_NULL,
 	DEVCB_NULL,
-	DEVCB_LINE(a2_dcd_r), /*&a2_acia_dcd,*/
+	DEVCB_LINE(a2_dcd_r), /*&state->m_a2_acia_dcd,*/
 	DEVCB_LINE(acia_irq)
 };
 
@@ -576,16 +621,18 @@ static ACIA6850_INTERFACE( acia2_if )
 
 static MACHINE_START( jpmsys5v )
 {
-	memory_set_bankptr(machine, "bank1", machine->region("maincpu")->base());
-	touch_timer = timer_alloc(machine, touch_cb, NULL);
+	jpmsys5_state *state = machine.driver_data<jpmsys5_state>();
+	memory_set_bankptr(machine, "bank1", machine.region("maincpu")->base());
+	state->m_touch_timer = machine.scheduler().timer_alloc(FUNC(touch_cb));
 }
 
 static MACHINE_RESET( jpmsys5v )
 {
-	timer_reset(touch_timer, attotime_never);
-	touch_state = IDLE;
-	a2_data_in = 1;
-	a2_acia_dcd = 0;
+	jpmsys5_state *state = machine.driver_data<jpmsys5_state>();
+	state->m_touch_timer->reset();
+	state->m_touch_state = IDLE;
+	state->m_a2_data_in = 1;
+	state->m_a2_acia_dcd = 0;
 }
 
 
@@ -595,7 +642,7 @@ static MACHINE_RESET( jpmsys5v )
  *
  *************************************/
 
-static MACHINE_CONFIG_START( jpmsys5v, driver_device )
+static MACHINE_CONFIG_START( jpmsys5v, jpmsys5_state )
 	MCFG_CPU_ADD("maincpu", M68000, 8000000)
 	MCFG_CPU_PROGRAM_MAP(68000_map)
 
@@ -611,9 +658,9 @@ static MACHINE_CONFIG_START( jpmsys5v, driver_device )
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
 	MCFG_SCREEN_RAW_PARAMS(XTAL_40MHz / 4, 676, 20*4, 147*4, 256, 0, 254)
+	MCFG_SCREEN_UPDATE(jpmsys5v)
 
 	MCFG_VIDEO_START(jpmsys5v)
-	MCFG_VIDEO_UPDATE(jpmsys5v)
 
 	MCFG_PALETTE_LENGTH(16)
 
@@ -686,3 +733,162 @@ ROM_END
 GAME( 1994, monopoly, 0,        jpmsys5v, monopoly, 0, ROT0, "JPM", "Monopoly",         0 )
 GAME( 1995, monoplcl, monopoly, jpmsys5v, monopoly, 0, ROT0, "JPM", "Monopoly Classic", 0 )
 GAME( 1995, monopldx, 0,        jpmsys5v, monopoly, 0, ROT0, "JPM", "Monopoly Deluxe",  0 )
+
+//AWP Skeleton driver
+#include "video/awpvid.h"
+#include "machine/steppers.h"
+#include "machine/roc10937.h"
+
+static ADDRESS_MAP_START( 68000_awp_map, AS_PROGRAM, 16 )
+	AM_RANGE(0x000000, 0x01ffff) AM_ROM
+	AM_RANGE(0x01fffe, 0x01ffff) AM_WRITE(rombank_w)
+	AM_RANGE(0x020000, 0x03ffff) AM_ROMBANK("bank1")
+	AM_RANGE(0x040000, 0x043fff) AM_RAM AM_SHARE("nvram")
+	AM_RANGE(0x046000, 0x046001) AM_WRITENOP
+	AM_RANGE(0x046020, 0x046021) AM_DEVREADWRITE8_MODERN("acia6850_0", acia6850_device, status_read, control_write, 0xff)
+	AM_RANGE(0x046022, 0x046023) AM_DEVREADWRITE8_MODERN("acia6850_0", acia6850_device, data_read, data_write, 0xff)
+	AM_RANGE(0x046040, 0x04604f) AM_DEVREADWRITE8_MODERN("6840ptm", ptm6840_device, read, write, 0xff)
+	AM_RANGE(0x046060, 0x046061) AM_READ_PORT("DIRECT") AM_WRITENOP
+	AM_RANGE(0x046062, 0x046063) AM_WRITENOP
+	AM_RANGE(0x046064, 0x046065) AM_WRITENOP
+	AM_RANGE(0x046066, 0x046067) AM_WRITENOP
+	AM_RANGE(0x046080, 0x046081) AM_DEVREADWRITE8_MODERN("acia6850_1", acia6850_device, status_read, control_write, 0xff)
+	AM_RANGE(0x046082, 0x046083) AM_DEVREADWRITE8_MODERN("acia6850_1", acia6850_device, data_read, data_write, 0xff)
+	AM_RANGE(0x046084, 0x046085) AM_READ(unk_r) // PIA?
+	AM_RANGE(0x046088, 0x046089) AM_READ(unk_r) // PIA?
+	AM_RANGE(0x04608c, 0x04608d) AM_DEVREADWRITE8_MODERN("acia6850_2", acia6850_device, status_read, control_write, 0xff)
+	AM_RANGE(0x04608e, 0x04608f) AM_DEVREADWRITE8_MODERN("acia6850_2", acia6850_device, data_read, data_write, 0xff)
+	AM_RANGE(0x0460a0, 0x0460a3) AM_DEVWRITE8("ym2413", ym2413_w, 0x00ff)
+	AM_RANGE(0x0460c0, 0x0460c1) AM_WRITENOP
+	AM_RANGE(0x048000, 0x04801f) AM_READWRITE(coins_r, coins_w)
+	AM_RANGE(0x04c000, 0x04c0ff) AM_READ(mux_r) AM_WRITE(mux_w)
+	AM_RANGE(0x04c100, 0x04c105) AM_DEVREADWRITE("upd7759", jpm_upd7759_r, jpm_upd7759_w)
+ADDRESS_MAP_END
+
+/*************************************
+ *
+ *  Port definitions
+ *
+ *************************************/
+
+static INPUT_PORTS_START( popeye )
+	PORT_START("DSW")
+	PORT_DIPNAME( 0x01, 0x01, "Change state to enter test" ) PORT_DIPLOCATION("SW2:1")
+	PORT_DIPSETTING(	0x01, DEF_STR( Off ) )
+	PORT_DIPSETTING(	0x00, DEF_STR( On ) )
+	PORT_DIPNAME( 0x02, 0x02, DEF_STR( Unused ) ) PORT_DIPLOCATION("SW2:2")
+	PORT_DIPSETTING(	0x02, DEF_STR( Off ) )
+	PORT_DIPSETTING(	0x00, DEF_STR( On ) )
+	PORT_DIPNAME( 0x04, 0x04, "Alarm" ) PORT_DIPLOCATION("SW2:3")
+	PORT_DIPSETTING(	0x04, "Discontinue alarm when jam is cleared" )
+	PORT_DIPSETTING(	0x00, "Continue alarm until back door open" )
+	PORT_DIPNAME( 0x08, 0x08, DEF_STR( Unused ) ) PORT_DIPLOCATION("SW2:4")
+	PORT_DIPSETTING(	0x08, DEF_STR( Off ) )
+	PORT_DIPSETTING(	0x00, DEF_STR( On ) )
+	PORT_DIPNAME( 0x10, 0x10, DEF_STR( Unused ) ) PORT_DIPLOCATION("SW2:5")
+	PORT_DIPSETTING(	0x10, DEF_STR( Off ) )
+	PORT_DIPSETTING(	0x00, DEF_STR( On ) )
+	PORT_DIPNAME( 0x20, 0x20, DEF_STR( Unused ) ) PORT_DIPLOCATION("SW2:6")
+	PORT_DIPSETTING(	0x20, DEF_STR( Off ) )
+	PORT_DIPSETTING(	0x00, DEF_STR( On ) )
+	PORT_DIPNAME( 0xc0, 0x00, "Payout Percentage" ) PORT_DIPLOCATION("SW2:7,8")
+	PORT_DIPSETTING(	0x00, "50%" )
+	PORT_DIPSETTING(	0x80, "45%" )
+	PORT_DIPSETTING(	0x40, "40%" )
+	PORT_DIPSETTING(	0xc0, "30%" )
+
+	PORT_START("DIRECT")
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_SERVICE ) PORT_NAME("Back door") PORT_CODE(KEYCODE_R) PORT_TOGGLE
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_SERVICE ) PORT_NAME("Cash door") PORT_CODE(KEYCODE_T) PORT_TOGGLE
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_SERVICE ) PORT_NAME("Refill key") PORT_CODE(KEYCODE_Y) PORT_TOGGLE
+	PORT_DIPNAME( 0x08, 0x08, DEF_STR ( Unknown ) )
+	PORT_DIPSETTING(	0x08, DEF_STR( Off ) )
+	PORT_DIPSETTING(	0x00, DEF_STR( On ) )
+	PORT_DIPNAME( 0x10, 0x10, DEF_STR ( Unknown ) )
+	PORT_DIPSETTING(	0x10, DEF_STR( Off ) )
+	PORT_DIPSETTING(	0x00, DEF_STR( On ) )
+	PORT_DIPNAME( 0x20, 0x20, DEF_STR ( Unknown ) )
+	PORT_DIPSETTING(	0x20, DEF_STR( Off ) )
+	PORT_DIPSETTING(	0x00, DEF_STR( On ) )
+	PORT_DIPNAME( 0x40, 0x40, "Reset" ) PORT_DIPLOCATION("SW1:1")
+	PORT_DIPSETTING(	0x40, DEF_STR( Off ) )
+	PORT_DIPSETTING(	0x00, DEF_STR( On ) )
+	PORT_DIPNAME( 0x80, 0x00, DEF_STR ( Unknown ) )
+	PORT_DIPSETTING(	0x80, DEF_STR( Off ) )
+	PORT_DIPSETTING(	0x00, DEF_STR( On ) )
+
+	PORT_START("COINS")
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_COIN1 ) PORT_NAME("10p")
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_COIN2 ) PORT_NAME("20p")
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_COIN3 ) PORT_NAME("50p")
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_COIN4 ) PORT_NAME("100p")
+	PORT_BIT( 0xc3, IP_ACTIVE_LOW, IPT_UNUSED )
+
+INPUT_PORTS_END
+
+/*************************************
+ *
+ *  Initialisation
+ *
+ *************************************/
+
+static MACHINE_START( jpmsys5 )
+{
+	memory_set_bankptr(machine, "bank1", machine.region("maincpu")->base());
+}
+
+static MACHINE_RESET( jpmsys5 )
+{
+	jpmsys5_state *state = machine.driver_data<jpmsys5_state>();
+	state->m_a2_data_in = 1;
+	state->m_a2_acia_dcd = 0;
+}
+
+/*************************************
+ *
+ *  Machine driver
+ *
+ *************************************/
+
+static MACHINE_CONFIG_START( jpmsys5, jpmsys5_state )
+	MCFG_CPU_ADD("maincpu", M68000, 8000000)
+	MCFG_CPU_PROGRAM_MAP(68000_awp_map)
+
+	MCFG_ACIA6850_ADD("acia6850_0", acia0_if)
+	MCFG_ACIA6850_ADD("acia6850_1", acia1_if)
+	MCFG_ACIA6850_ADD("acia6850_2", acia2_if)
+
+	MCFG_NVRAM_ADD_0FILL("nvram")
+
+	MCFG_MACHINE_START(jpmsys5)
+	MCFG_MACHINE_RESET(jpmsys5)
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+
+	MCFG_SOUND_ADD("upd7759", UPD7759, UPD7759_STANDARD_CLOCK)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
+
+	/* Earlier revisions use an SAA1099 */
+	MCFG_SOUND_ADD("ym2413", YM2413, 4000000 ) /* Unconfirmed */
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
+
+	/* 6840 PTM */
+	MCFG_PTM6840_ADD("6840ptm", ptm_intf)
+	MCFG_DEFAULT_LAYOUT(layout_awpvid16)
+MACHINE_CONFIG_END
+
+/*************************************
+ *
+ *  ROM definition(s)
+ *
+ *************************************/
+
+ROM_START( m_popeye )
+	ROM_REGION( 0x300000, "maincpu", 0 )
+	ROM_LOAD16_BYTE( "popeye_std_p1.bin", 0x000000, 0x10000, CRC(a8d5394c) SHA1(5be0cd8bc4cdb230a839f83e1297bc57dde20d94) )
+	ROM_LOAD16_BYTE( "popeye_std_p2.bin", 0x000001, 0x10000, CRC(5537afc2) SHA1(3e90fef908b80939c781a85a2ac9783de62d4122) )
+
+	ROM_REGION( 0x80000, "upd7759", 0 )
+	ROM_LOAD( "popsnd.bin", 0x00000, 0x80000, CRC(67378dbc) SHA1(83f87e35bb2c73a788c0ed778b33f3710eb95406) )
+ROM_END
+
+GAME( 1994, m_popeye, 0, jpmsys5, popeye, 0, ROT0, "JPM", "Popeye (20p/8 GBP Token)", GAME_NOT_WORKING )

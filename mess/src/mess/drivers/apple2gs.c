@@ -40,11 +40,13 @@
 
 ***************************************************************************/
 
+#define ADDRESS_MAP_MODERN
+
 #include "emu.h"
 #include "cpu/g65816/g65816.h"
 #include "includes/apple2.h"
 #include "machine/ay3600.h"
-#include "devices/flopdrv.h"
+#include "imagedev/flopdrv.h"
 #include "formats/ap2_dsk.h"
 #include "formats/ap_dsk35.h"
 #include "includes/apple2gs.h"
@@ -58,8 +60,7 @@
 #include "machine/8530scc.h"
 #include "sound/ay8910.h"
 #include "sound/speaker.h"
-#include "devices/cassette.h"
-#include "devices/messram.h"
+#include "machine/ram.h"
 #include "deprecat.h"
 
 static const gfx_layout apple2gs_text_layout =
@@ -152,48 +153,7 @@ static const es5503_interface apple2gs_es5503_interface =
 	NULL
 };
 
-#ifdef UNUSED_FUNCTION
-static void apple2gs_floppy35_getinfo(const mess_device_class *devclass, UINT32 state, union devinfo *info)
-{
-    // 3.5" floppy
-    switch(state)
-    {
-        case MESS_DEVINFO_INT_SONYDRIV_ALLOWABLE_SIZES:     info->i = SONY_FLOPPY_ALLOW400K | SONY_FLOPPY_ALLOW800K | SONY_FLOPPY_SUPPORT2IMG; break;
-
-        case MESS_DEVINFO_STR_NAME+0:                       strcpy(info->s = device_temp_str(), "slot5disk1"); break;
-        case MESS_DEVINFO_STR_NAME+1:                       strcpy(info->s = device_temp_str(), "slot5disk2"); break;
-        case MESS_DEVINFO_STR_SHORT_NAME+0:                 strcpy(info->s = device_temp_str(), "s5d1"); break;
-        case MESS_DEVINFO_STR_SHORT_NAME+1:                 strcpy(info->s = device_temp_str(), "s5d2"); break;
-        case MESS_DEVINFO_STR_DESCRIPTION+0:                    strcpy(info->s = device_temp_str(), "Slot 5 Disk #1"); break;
-        case MESS_DEVINFO_STR_DESCRIPTION+1:                    strcpy(info->s = device_temp_str(), "Slot 5 Disk #2"); break;
-
-        default:                                        sonydriv_device_getinfo(devclass, state, info); break;
-    }
-}
-
-
-
-static void apple2gs_floppy525_getinfo(const mess_device_class *devclass, UINT32 state, union devinfo *info)
-{
-    // 5.25" floppy
-    switch(state)
-    {
-        case MESS_DEVINFO_INT_APPLE525_SPINFRACT_DIVIDEND:  info->i = 15; break;
-        case MESS_DEVINFO_INT_APPLE525_SPINFRACT_DIVISOR:   info->i = 16; break;
-
-        case MESS_DEVINFO_STR_NAME+0:                       strcpy(info->s = device_temp_str(), "slot6disk1"); break;
-        case MESS_DEVINFO_STR_NAME+1:                       strcpy(info->s = device_temp_str(), "slot6disk2"); break;
-        case MESS_DEVINFO_STR_SHORT_NAME+0:                 strcpy(info->s = device_temp_str(), "s6d1"); break;
-        case MESS_DEVINFO_STR_SHORT_NAME+1:                 strcpy(info->s = device_temp_str(), "s6d2"); break;
-        case MESS_DEVINFO_STR_DESCRIPTION+0:                    strcpy(info->s = device_temp_str(), "Slot 6 Disk #1"); break;
-        case MESS_DEVINFO_STR_DESCRIPTION+1:                    strcpy(info->s = device_temp_str(), "Slot 6 Disk #2"); break;
-
-        default:                                        apple525_device_getinfo(devclass, state, info); break;
-    }
-}
-#endif
-
-static const floppy_config apple2gs_floppy35_floppy_config =
+static const floppy_interface apple2gs_floppy35_floppy_interface =
 {
 	DEVCB_NULL,
 	DEVCB_NULL,
@@ -202,10 +162,11 @@ static const floppy_config apple2gs_floppy35_floppy_config =
 	DEVCB_NULL,
 	FLOPPY_STANDARD_5_25_DSHD,
 	FLOPPY_OPTIONS_NAME(apple35_iigs),
+	"floppy_3_5",
 	NULL
 };
 
-static const floppy_config apple2gs_floppy525_floppy_config =
+static const floppy_interface apple2gs_floppy525_floppy_interface =
 {
 	DEVCB_NULL,
 	DEVCB_NULL,
@@ -214,18 +175,12 @@ static const floppy_config apple2gs_floppy525_floppy_config =
 	DEVCB_NULL,
 	FLOPPY_STANDARD_5_25_DSHD,
 	FLOPPY_OPTIONS_NAME(apple2),
+	"floppy_5_25",
 	NULL
 };
 
-static const cassette_config apple2gs_cassette_config =
-{
-	cassette_default_formats,
-	NULL,
-	(cassette_state)(CASSETTE_STOPPED),
-	NULL
-};
 
-static ADDRESS_MAP_START( apple2gs_map, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( apple2gs_map, AS_PROGRAM, 8, apple2gs_state )
 	/* nothing in the address map - everything is added dynamically */
 ADDRESS_MAP_END
 
@@ -242,7 +197,7 @@ static MACHINE_CONFIG_START( apple2gs, apple2gs_state )
 	MCFG_CPU_ADD("maincpu", G65816, APPLE2GS_14M/5)
 	MCFG_CPU_PROGRAM_MAP(apple2gs_map)
 	MCFG_CPU_VBLANK_INT_HACK(apple2_interrupt, 192/8)
-	MCFG_QUANTUM_TIME(HZ(60))
+	MCFG_QUANTUM_TIME(attotime::from_hz(60))
 
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(60)
@@ -250,6 +205,8 @@ static MACHINE_CONFIG_START( apple2gs, apple2gs_state )
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(704, 262)	// 640+32+32 for the borders
 	MCFG_SCREEN_VISIBLE_AREA(0,703,0,230)
+	MCFG_SCREEN_UPDATE( apple2gs )
+
 	MCFG_PALETTE_LENGTH( 16+256 )
 	MCFG_GFXDECODE( apple2gs )
 
@@ -258,7 +215,6 @@ static MACHINE_CONFIG_START( apple2gs, apple2gs_state )
 
 	MCFG_PALETTE_INIT( apple2gs )
 	MCFG_VIDEO_START( apple2gs )
-	MCFG_VIDEO_UPDATE( apple2gs )
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
@@ -290,21 +246,29 @@ static MACHINE_CONFIG_START( apple2gs, apple2gs_state )
 	/* SCC */
 	MCFG_SCC8530_ADD("scc", APPLE2GS_14M/2)
 
-	MCFG_FLOPPY_APPLE_2_DRIVES_ADD(apple2gs_floppy525_floppy_config,15,16)
-	MCFG_FLOPPY_SONY_2_DRIVES_ADDITIONAL_ADD(apple2gs_floppy35_floppy_config)
+	MCFG_FLOPPY_APPLE_2_DRIVES_ADD(apple2gs_floppy525_floppy_interface,15,16)
+	MCFG_FLOPPY_SONY_2_DRIVES_ADDITIONAL_ADD(apple2gs_floppy35_floppy_interface)
 
 	MCFG_NVRAM_HANDLER( apple2gs )
 
-	MCFG_CASSETTE_ADD( "cassette", apple2gs_cassette_config )
-
 	/* internal ram */
-	MCFG_RAM_ADD("messram")
-	MCFG_RAM_DEFAULT_SIZE("2M")
-	MCFG_RAM_EXTRA_OPTIONS("64K")
+	MCFG_RAM_ADD(RAM_TAG)
+	MCFG_RAM_DEFAULT_SIZE("2M")      // 1M on board + 1M in the expansion slot was common for ROM 03
+	MCFG_RAM_EXTRA_OPTIONS("1M,3M,4M,5M,6M,7M,8M")
 	MCFG_RAM_DEFAULT_VALUE(0x00)
+
+	MCFG_SOFTWARE_LIST_ADD("flop35_list","apple2gs")
+    MCFG_SOFTWARE_LIST_COMPATIBLE_ADD("flop525_list", "apple2")
 MACHINE_CONFIG_END
 
+static MACHINE_CONFIG_DERIVED( apple2gsr1, apple2gs )
+	MCFG_MACHINE_START( apple2gsr1 )
 
+    MCFG_RAM_MODIFY(RAM_TAG)
+	MCFG_RAM_DEFAULT_SIZE("1280K")  // 256K on board + 1M in the expansion slot was common for ROM 01
+	MCFG_RAM_EXTRA_OPTIONS("256K,512K,768K,1M,2M,3M,4M,5M,6M,7M,8M")
+	MCFG_RAM_DEFAULT_VALUE(0x00)
+MACHINE_CONFIG_END
 
 /***************************************************************************
 
@@ -376,14 +340,14 @@ ROM_END
 
 static DRIVER_INIT(apple2gs)
 {
-	apple2gs_state *state = machine->driver_data<apple2gs_state>();
-	es5503_set_base(machine->device("es5503"), state->docram);
-	state_save_register_global_array(machine, state->docram);
+	apple2gs_state *state = machine.driver_data<apple2gs_state>();
+	es5503_set_base(machine.device("es5503"), state->m_docram);
+	state->save_item(NAME(state->m_docram));
 }
 
 /*    YEAR  NAME      PARENT    COMPAT  MACHINE   INPUT       INIT      COMPANY            FULLNAME */
 COMP( 1989, apple2gs, 0,        apple2, apple2gs, apple2gs,   apple2gs, "Apple Computer", "Apple IIgs (ROM03)", 0 )
 COMP( 198?, apple2gsr3p, apple2gs, 0,   apple2gs, apple2gs,   apple2gs, "Apple Computer", "Apple IIgs (ROM03 prototype)", GAME_NOT_WORKING )
 COMP( 1989, apple2gsr3lp, apple2gs, 0,  apple2gs, apple2gs,   apple2gs, "Apple Computer", "Apple IIgs (ROM03 late prototype?)", GAME_NOT_WORKING )
-COMP( 1987, apple2gsr1, apple2gs, 0,    apple2gs, apple2gs,   apple2gs, "Apple Computer", "Apple IIgs (ROM01)", 0 )
-COMP( 1986, apple2gsr0, apple2gs, 0,    apple2gs, apple2gs,   apple2gs, "Apple Computer", "Apple IIgs (ROM00)", 0 )
+COMP( 1987, apple2gsr1, apple2gs, 0,    apple2gsr1, apple2gs,   apple2gs, "Apple Computer", "Apple IIgs (ROM01)", 0 )
+COMP( 1986, apple2gsr0, apple2gs, 0,    apple2gsr1, apple2gs,   apple2gs, "Apple Computer", "Apple IIgs (ROM00)", 0 )

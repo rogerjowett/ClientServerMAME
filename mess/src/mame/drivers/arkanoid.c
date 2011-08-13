@@ -563,7 +563,7 @@ DIP locations verified for:
 
 /* Memory Maps */
 
-static ADDRESS_MAP_START( arkanoid_map, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( arkanoid_map, AS_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0xbfff) AM_ROM
 	AM_RANGE(0xc000, 0xc7ff) AM_RAM
 	AM_RANGE(0xd000, 0xd001) AM_DEVWRITE("aysnd", ay8910_address_data_w)
@@ -572,13 +572,13 @@ static ADDRESS_MAP_START( arkanoid_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0xd00c, 0xd00c) AM_READ_PORT("SYSTEM")		/* 2 bits from the 68705 */
 	AM_RANGE(0xd010, 0xd010) AM_READ_PORT("BUTTONS") AM_WRITE(watchdog_reset_w)
 	AM_RANGE(0xd018, 0xd018) AM_READWRITE(arkanoid_Z80_mcu_r, arkanoid_Z80_mcu_w)  /* input from the 68705 */
-	AM_RANGE(0xe000, 0xe7ff) AM_RAM_WRITE(arkanoid_videoram_w) AM_BASE_MEMBER(arkanoid_state, videoram)
-	AM_RANGE(0xe800, 0xe83f) AM_RAM AM_BASE_SIZE_MEMBER(arkanoid_state, spriteram, spriteram_size)
+	AM_RANGE(0xe000, 0xe7ff) AM_RAM_WRITE(arkanoid_videoram_w) AM_BASE_MEMBER(arkanoid_state, m_videoram)
+	AM_RANGE(0xe800, 0xe83f) AM_RAM AM_BASE_SIZE_MEMBER(arkanoid_state, m_spriteram, m_spriteram_size)
 	AM_RANGE(0xe840, 0xefff) AM_RAM
 	AM_RANGE(0xf000, 0xffff) AM_READNOP	/* fixes instant death in final level */
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( bootleg_map, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( bootleg_map, AS_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0xbfff) AM_ROM
 	AM_RANGE(0xc000, 0xc7ff) AM_RAM
 	AM_RANGE(0xd000, 0xd000) AM_DEVWRITE("aysnd", ay8910_address_w)
@@ -587,13 +587,13 @@ static ADDRESS_MAP_START( bootleg_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0xd00c, 0xd00c) AM_READ_PORT("SYSTEM")
 	AM_RANGE(0xd010, 0xd010) AM_READ_PORT("BUTTONS") AM_WRITE(watchdog_reset_w)
 	AM_RANGE(0xd018, 0xd018) AM_READ_PORT("MUX") AM_WRITENOP
-	AM_RANGE(0xe000, 0xe7ff) AM_RAM_WRITE(arkanoid_videoram_w) AM_BASE_MEMBER(arkanoid_state, videoram)
-	AM_RANGE(0xe800, 0xe83f) AM_RAM AM_BASE_SIZE_MEMBER(arkanoid_state, spriteram, spriteram_size)
+	AM_RANGE(0xe000, 0xe7ff) AM_RAM_WRITE(arkanoid_videoram_w) AM_BASE_MEMBER(arkanoid_state, m_videoram)
+	AM_RANGE(0xe800, 0xe83f) AM_RAM AM_BASE_SIZE_MEMBER(arkanoid_state, m_spriteram, m_spriteram_size)
 	AM_RANGE(0xe840, 0xefff) AM_RAM
 	AM_RANGE(0xf000, 0xffff) AM_READNOP	/* fixes instant death in final level */
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( hexa_map, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( hexa_map, AS_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x7fff) AM_ROM
 	AM_RANGE(0x8000, 0xbfff) AM_ROMBANK("bank1")
 	AM_RANGE(0xc000, 0xc7ff) AM_RAM
@@ -601,10 +601,29 @@ static ADDRESS_MAP_START( hexa_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0xd000, 0xd001) AM_DEVWRITE("aysnd", ay8910_address_data_w)
 	AM_RANGE(0xd008, 0xd008) AM_WRITE(hexa_d008_w)
 	AM_RANGE(0xd010, 0xd010) AM_WRITE(watchdog_reset_w)	/* or IRQ acknowledge, or both */
-	AM_RANGE(0xe000, 0xe7ff) AM_RAM_WRITE(arkanoid_videoram_w) AM_BASE_SIZE_MEMBER(arkanoid_state, videoram, videoram_size)
+	AM_RANGE(0xe000, 0xe7ff) AM_RAM_WRITE(arkanoid_videoram_w) AM_BASE_SIZE_MEMBER(arkanoid_state, m_videoram, m_videoram_size)
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( mcu_map, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( brixian_map, AS_PROGRAM, 8 )
+	AM_RANGE(0x0000, 0xbfff) AM_ROM
+	AM_RANGE(0xc000, 0xc7ff) AM_RAM
+	AM_RANGE(0xd000, 0xd000) AM_DEVWRITE("aysnd", ay8910_address_w)
+	AM_RANGE(0xd001, 0xd001) AM_DEVREADWRITE("aysnd", ay8910_r, ay8910_data_w)
+	AM_RANGE(0xd008, 0xd008) AM_WRITE(arkanoid_d008_w)	/* gfx bank, flip screen etc. */
+	AM_RANGE(0xd00c, 0xd00c) AM_READ_PORT("SYSTEM")
+	AM_RANGE(0xd010, 0xd010) AM_READ_PORT("BUTTONS") AM_WRITE(watchdog_reset_w)
+	AM_RANGE(0xd018, 0xd018) AM_READ_PORT("MUX") AM_WRITENOP
+	AM_RANGE(0xe000, 0xe7ff) AM_RAM_WRITE(arkanoid_videoram_w) AM_BASE_MEMBER(arkanoid_state, m_videoram)
+	AM_RANGE(0xe800, 0xe83f) AM_RAM AM_BASE_SIZE_MEMBER(arkanoid_state, m_spriteram, m_spriteram_size)
+	AM_RANGE(0xe840, 0xefff) AM_RAM
+	AM_RANGE(0xf000, 0xffff) AM_READNOP	/* fixes instant death in final level */
+// Interesting locations:
+// c105=0a @ title displays each piece
+// c110=01 - Title, 02 - Start Game, 04 - Select Stage
+ADDRESS_MAP_END
+
+
+static ADDRESS_MAP_START( mcu_map, AS_PROGRAM, 8 )
 	ADDRESS_MAP_GLOBAL_MASK(0x7ff)
 	AM_RANGE(0x0000, 0x0000) AM_READWRITE(arkanoid_68705_port_a_r, arkanoid_68705_port_a_w)
 	AM_RANGE(0x0001, 0x0001) AM_READ_PORT("MUX")
@@ -858,6 +877,56 @@ static INPUT_PORTS_START( hexa )
 	PORT_DIPSETTING(    0x80, DEF_STR( On ) )
 INPUT_PORTS_END
 
+static INPUT_PORTS_START( brixian )
+    	PORT_START("SYSTEM")
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_UNKNOWN )
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_UNKNOWN )
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_UNKNOWN )
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_UNKNOWN )
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN )
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_UNKNOWN )
+	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_COIN2 )
+	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_COIN1 )
+
+	PORT_START("BUTTONS")
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_START1 )
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_JOYSTICK_UP ) PORT_4WAY
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_JOYSTICK_DOWN ) PORT_4WAY
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_JOYSTICK_LEFT ) PORT_4WAY
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_JOYSTICK_RIGHT ) PORT_4WAY
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_BUTTON1 )
+	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_BUTTON2 )
+	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_BUTTON3 )
+
+	PORT_START("MUX")
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_START2 )
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_JOYSTICK_UP ) PORT_4WAY PORT_PLAYER(2)
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_JOYSTICK_DOWN ) PORT_4WAY PORT_PLAYER(2)
+	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_JOYSTICK_LEFT ) PORT_4WAY PORT_PLAYER(2)
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_JOYSTICK_RIGHT ) PORT_4WAY PORT_PLAYER(2)
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_BUTTON1 ) PORT_PLAYER(2)
+	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_BUTTON2 ) PORT_PLAYER(2)
+	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_BUTTON3 ) PORT_PLAYER(2)
+
+	PORT_START("DSW")
+	PORT_DIPNAME( 0x0f, 0x01, DEF_STR( Lives ) ) PORT_DIPLOCATION("SW1:1,2,3,4")
+	PORT_DIPSETTING(    0x00, "2" )
+	PORT_DIPSETTING(    0x01, "3" )
+	PORT_DIPSETTING(    0x03, "4" )
+	PORT_DIPSETTING(    0x07, "5" )
+	PORT_DIPSETTING(    0x0f, "6" )
+	PORT_DIPNAME( 0x30, 0x00, "Speed of Elevator" ) PORT_DIPLOCATION("SW1:5,6")
+	PORT_DIPSETTING(    0x00, "Slow" )
+	PORT_DIPSETTING(    0x30, "Fast" )
+	PORT_DIPNAME( 0xc0, 0x40, "Time Left" ) PORT_DIPLOCATION("SW1:7,8")
+	PORT_DIPSETTING(    0x00, "Half" )
+	PORT_DIPSETTING(    0x40, DEF_STR( Normal ) )
+	PORT_DIPSETTING(    0xc0, "Double" )
+
+	PORT_START("UNUSED")
+	PORT_BIT( 0xff, IP_ACTIVE_LOW, IPT_UNUSED )
+INPUT_PORTS_END
+
 /***************************************************************************/
 
 /* Graphics Layouts */
@@ -914,47 +983,47 @@ static const ay8910_interface hexa_ay8910_config =
 
 static MACHINE_START( arkanoid )
 {
-	arkanoid_state *state = machine->driver_data<arkanoid_state>();
+	arkanoid_state *state = machine.driver_data<arkanoid_state>();
 
-	state->mcu = machine->device("mcu");
+	state->m_mcu = machine.device("mcu");
 
-	state_save_register_global(machine, state->bootleg_cmd);
+	state->save_item(NAME(state->m_bootleg_cmd));
 
-	state_save_register_global(machine, state->paddle_select);
-	state_save_register_global(machine, state->z80write);
-	state_save_register_global(machine, state->fromz80);
-	state_save_register_global(machine, state->m68705write);
-	state_save_register_global(machine, state->toz80);
+	state->save_item(NAME(state->m_paddle_select));
+	state->save_item(NAME(state->m_z80write));
+	state->save_item(NAME(state->m_fromz80));
+	state->save_item(NAME(state->m_m68705write));
+	state->save_item(NAME(state->m_toz80));
 
-	state_save_register_global(machine, state->port_a_in);
-	state_save_register_global(machine, state->port_a_out);
-	state_save_register_global(machine, state->ddr_a);
+	state->save_item(NAME(state->m_port_a_in));
+	state->save_item(NAME(state->m_port_a_out));
+	state->save_item(NAME(state->m_ddr_a));
 
-	state_save_register_global(machine, state->port_c_out);
-	state_save_register_global(machine, state->ddr_c);
+	state->save_item(NAME(state->m_port_c_out));
+	state->save_item(NAME(state->m_ddr_c));
 
-	state_save_register_global(machine, state->gfxbank);
-	state_save_register_global(machine, state->palettebank);
+	state->save_item(NAME(state->m_gfxbank));
+	state->save_item(NAME(state->m_palettebank));
 }
 
 static MACHINE_RESET( arkanoid )
 {
-	arkanoid_state *state = machine->driver_data<arkanoid_state>();
+	arkanoid_state *state = machine.driver_data<arkanoid_state>();
 
-	state->port_a_in = 0;
-	state->port_a_out = 0;
-	state->z80write = 0;
-	state->m68705write = 0;
+	state->m_port_a_in = 0;
+	state->m_port_a_out = 0;
+	state->m_z80write = 0;
+	state->m_m68705write = 0;
 
-	state->bootleg_cmd = 0;
-	state->paddle_select = 0;
-	state->fromz80 = 0;
-	state->toz80 = 0;
-	state->ddr_a = 0;
-	state->ddr_c = 0;
-	state->port_c_out = 0;
-	state->gfxbank = 0;
-	state->palettebank = 0;
+	state->m_bootleg_cmd = 0;
+	state->m_paddle_select = 0;
+	state->m_fromz80 = 0;
+	state->m_toz80 = 0;
+	state->m_ddr_a = 0;
+	state->m_ddr_c = 0;
+	state->m_port_c_out = 0;
+	state->m_gfxbank = 0;
+	state->m_palettebank = 0;
 }
 
 static MACHINE_CONFIG_START( arkanoid, arkanoid_state )
@@ -967,7 +1036,7 @@ static MACHINE_CONFIG_START( arkanoid, arkanoid_state )
 	MCFG_CPU_ADD("mcu", M68705, XTAL_12MHz/4) /* verified on pcb */
 	MCFG_CPU_PROGRAM_MAP(mcu_map)
 
-	MCFG_QUANTUM_TIME(HZ(6000))					// 100 CPU slices per second to synchronize between the MCU and the main CPU
+	MCFG_QUANTUM_TIME(attotime::from_hz(6000))					// 100 CPU slices per second to synchronize between the MCU and the main CPU
 
 	MCFG_MACHINE_START(arkanoid)
 	MCFG_MACHINE_RESET(arkanoid)
@@ -979,12 +1048,13 @@ static MACHINE_CONFIG_START( arkanoid, arkanoid_state )
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(32*8, 32*8)
 	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_UPDATE(arkanoid)
+
 	MCFG_GFXDECODE(arkanoid)
 	MCFG_PALETTE_LENGTH(512)
 
 	MCFG_PALETTE_INIT(RRRR_GGGG_BBBB)
 	MCFG_VIDEO_START(arkanoid)
-	MCFG_VIDEO_UPDATE(arkanoid)
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
@@ -1012,13 +1082,13 @@ static MACHINE_CONFIG_START( hexa, arkanoid_state )
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(32*8, 32*8)
 	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_UPDATE(hexa)
 
 	MCFG_GFXDECODE(hexa)
 	MCFG_PALETTE_LENGTH(256)
 
 	MCFG_PALETTE_INIT(RRRR_GGGG_BBBB)
 	MCFG_VIDEO_START(arkanoid)
-	MCFG_VIDEO_UPDATE(hexa)
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
@@ -1037,6 +1107,16 @@ static MACHINE_CONFIG_DERIVED( bootleg, arkanoid )
 	MCFG_DEVICE_REMOVE("mcu")
 MACHINE_CONFIG_END
 
+// todo
+static MACHINE_CONFIG_DERIVED( brixian, arkanoid )
+
+	/* basic machine hardware */
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_PROGRAM_MAP(brixian_map)
+	MCFG_CPU_VBLANK_INT("screen", irq0_line_hold)
+
+	MCFG_DEVICE_REMOVE("mcu")
+MACHINE_CONFIG_END
 
 /***************************************************************************/
 
@@ -1440,37 +1520,57 @@ ROM_START( hexa )
 	ROM_LOAD( "hexa.002",     0x0200, 0x0100, CRC(ff15366c) SHA1(7feaf1c768bfe76432fb80991585e13d95960b34) )
 ROM_END
 
+ROM_START( brixian )
+	ROM_REGION( 0x18000, "maincpu", 0 )
+	ROM_LOAD( "b1.bin",      0x00000, 0x8000, CRC(3d167d09) SHA1(1d5bd098b655b8d2f956cfcb718213915bee3e41) )
+	ROM_LOAD( "e7.bin",      0x08000, 0x2000, CRC(9e3707ab) SHA1(a04fb4824239f8ed1ef1de2f3c0f9d749320b2ba) ) // this is near a 6116 RAM bank, unknown purpose
+
+	ROM_REGION( 0x18000, "gfx1", 0 )
+	ROM_LOAD( "b4.bin",      0x00000, 0x8000, CRC(34a7a693) SHA1(793fa6dd065a158bedcd0fdc494cc8fc793ae8be) )
+	ROM_LOAD( "c4.bin",      0x08000, 0x8000, CRC(d422eda5) SHA1(4874b57ec8a8aa29937f5ccc2a734ffeb7834d8a) )
+	ROM_LOAD( "e4.bin",      0x10000, 0x8000, CRC(9b2e79d6) SHA1(8a40e0ef2a792efc37ea50eec01cf3fb5a3e3215) )
+
+	ROM_REGION( 0x0600, "proms", 0 )
+	ROM_LOAD( "n82s131n.6l", 0x0000, 0x0200, CRC(0fa51a5b) SHA1(8c5cb69fbff8a3ba90f945c35f72754f9cc8f18c) )
+	ROM_LOAD( "n82s131n.6p", 0x0200, 0x0200, CRC(d833ad33) SHA1(a7c17c96a670916e7102afc94dc2f0cb0455f0ce) )
+	ROM_LOAD( "n82s131n.6m", 0x0400, 0x0200, CRC(05297649) SHA1(35f99cf8dddd66e26e2110619eb46bd6ccff41df) )
+
+	ROM_REGION( 0x0800, "mcu", 0 )
+	ROM_LOAD( "68705p5", 0x0000, 0x0800, NO_DUMP ) // this appears to be providing ~0x200 bytes of code at c600, like most semicom games.
+ROM_END
+
+
 
 /* Driver Initialization */
 
-static void arkanoid_bootleg_init( running_machine *machine )
+static void arkanoid_bootleg_init( running_machine &machine )
 {
-	memory_install_read8_handler(cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM), 0xf000, 0xf000, 0, 0, arkanoid_bootleg_f000_r );
-	memory_install_read8_handler(cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM), 0xf002, 0xf002, 0, 0, arkanoid_bootleg_f002_r );
-	memory_install_write8_handler(cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM), 0xd018, 0xd018, 0, 0, arkanoid_bootleg_d018_w );
-	memory_install_read8_handler(cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM), 0xd008, 0xd008, 0, 0, arkanoid_bootleg_d008_r );
+	machine.device("maincpu")->memory().space(AS_PROGRAM)->install_legacy_read_handler(0xf000, 0xf000, FUNC(arkanoid_bootleg_f000_r) );
+	machine.device("maincpu")->memory().space(AS_PROGRAM)->install_legacy_read_handler(0xf002, 0xf002, FUNC(arkanoid_bootleg_f002_r) );
+	machine.device("maincpu")->memory().space(AS_PROGRAM)->install_legacy_write_handler(0xd018, 0xd018, FUNC(arkanoid_bootleg_d018_w) );
+	machine.device("maincpu")->memory().space(AS_PROGRAM)->install_legacy_read_handler(0xd008, 0xd008, FUNC(arkanoid_bootleg_d008_r) );
 }
 
 static DRIVER_INIT( arkangc )
 {
-	arkanoid_state *state = machine->driver_data<arkanoid_state>();
-	state->bootleg_id = ARKANGC;
+	arkanoid_state *state = machine.driver_data<arkanoid_state>();
+	state->m_bootleg_id = ARKANGC;
 	arkanoid_bootleg_init(machine);
 }
 
 static DRIVER_INIT( arkangc2 )
 {
-	arkanoid_state *state = machine->driver_data<arkanoid_state>();
-	state->bootleg_id = ARKANGC2;
+	arkanoid_state *state = machine.driver_data<arkanoid_state>();
+	state->m_bootleg_id = ARKANGC2;
 	arkanoid_bootleg_init(machine);
 }
 
 static DRIVER_INIT( block2 )
 {
-	arkanoid_state *state = machine->driver_data<arkanoid_state>();
+	arkanoid_state *state = machine.driver_data<arkanoid_state>();
 	// the graphics on this bootleg have the data scrambled
 	int tile;
-	UINT8* srcgfx = machine->region("gfx1")->base();
+	UINT8* srcgfx = machine.region("gfx1")->base();
 	UINT8* buffer = auto_alloc_array(machine, UINT8, 0x18000);
 
 	for (tile = 0; tile < 0x3000; tile++)
@@ -1497,42 +1597,42 @@ static DRIVER_INIT( block2 )
 
 	auto_free(machine, buffer);
 
-	state->bootleg_id = BLOCK2;
+	state->m_bootleg_id = BLOCK2;
 	arkanoid_bootleg_init(machine);
 }
 
 static DRIVER_INIT( arkblock )
 {
-	arkanoid_state *state = machine->driver_data<arkanoid_state>();
-	state->bootleg_id = ARKBLOCK;
+	arkanoid_state *state = machine.driver_data<arkanoid_state>();
+	state->m_bootleg_id = ARKBLOCK;
 	arkanoid_bootleg_init(machine);
 }
 
 static DRIVER_INIT( arkbloc2 )
 {
-	arkanoid_state *state = machine->driver_data<arkanoid_state>();
-	state->bootleg_id = ARKBLOC2;
+	arkanoid_state *state = machine.driver_data<arkanoid_state>();
+	state->m_bootleg_id = ARKBLOC2;
 	arkanoid_bootleg_init(machine);
 }
 
 static DRIVER_INIT( arkgcbl )
 {
-	arkanoid_state *state = machine->driver_data<arkanoid_state>();
-	state->bootleg_id = ARKGCBL;
+	arkanoid_state *state = machine.driver_data<arkanoid_state>();
+	state->m_bootleg_id = ARKGCBL;
 	arkanoid_bootleg_init(machine);
 }
 
 static DRIVER_INIT( paddle2 )
 {
-	arkanoid_state *state = machine->driver_data<arkanoid_state>();
-	state->bootleg_id = PADDLE2;
+	arkanoid_state *state = machine.driver_data<arkanoid_state>();
+	state->m_bootleg_id = PADDLE2;
 	arkanoid_bootleg_init(machine);
 }
 
 
 static DRIVER_INIT( tetrsark )
 {
-	UINT8 *ROM = machine->region("maincpu")->base();
+	UINT8 *ROM = machine.region("maincpu")->base();
 	int x;
 
 	for (x = 0; x < 0x8000; x++)
@@ -1540,13 +1640,13 @@ static DRIVER_INIT( tetrsark )
 		ROM[x] = ROM[x] ^ 0x94;
 	}
 
-	memory_install_write8_handler(cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM), 0xd008, 0xd008, 0, 0, tetrsark_d008_w );
+	machine.device("maincpu")->memory().space(AS_PROGRAM)->install_legacy_write_handler(0xd008, 0xd008, FUNC(tetrsark_d008_w) );
 }
 
 
 static DRIVER_INIT( hexa )
 {
-	UINT8 *RAM = machine->region("maincpu")->base();
+	UINT8 *RAM = machine.region("maincpu")->base();
 #if 0
 
 
@@ -1586,3 +1686,4 @@ GAME( 1986, arktayt2,   arkanoid, bootleg,  arktayt2, 0,        ROT90, "bootleg 
 GAME( 1987, arkatour,   arkanoid, arkanoid, arkanoid, 0,        ROT90, "Taito America Corporation (Romstar license)", "Tournament Arkanoid (US)", GAME_SUPPORTS_SAVE )
 GAME( 19??, tetrsark,   0,        bootleg,  tetrsark, tetrsark, ROT0,  "D.R. Korea", "Tetris (D.R. Korea)", GAME_SUPPORTS_SAVE )
 GAME( 199?, hexa,       0,        hexa,     hexa,     hexa,     ROT0,  "D.R. Korea", "Hexa", GAME_IMPERFECT_SOUND | GAME_SUPPORTS_SAVE )
+GAME( 1993, brixian,    0,        brixian,  brixian,  0,        ROT0,  "Cheil Computer System", "Brixian", GAME_SUPPORTS_SAVE|GAME_NOT_WORKING )

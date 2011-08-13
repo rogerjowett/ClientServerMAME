@@ -6,7 +6,6 @@
 
 ***************************************************************************/
 
-#include "emu.h"
 #include "modules.h"
 
 #ifndef MODULES_RECURSIVE
@@ -92,7 +91,7 @@ MODULE(amiga_floppy)
 MODULE(concept)
 MODULE(mac_mfs)
 MODULE(mac_hfs)
-MODULE(mess_hd)
+MODULE(hd)
 MODULE(rsdos)
 MODULE(vzdos)
 MODULE(os9)

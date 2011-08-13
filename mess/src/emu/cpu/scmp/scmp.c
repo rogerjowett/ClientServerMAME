@@ -386,9 +386,9 @@ static void execute_one(scmp_state *cpustate, int opcode)
 			// Shift, Rotate, Serial I/O Instructions
 			case 0x19:	// SIO
 						cpustate->icount -= 5;
-						devcb_call_write_line(&cpustate->sout_func, cpustate->ER & 0x01);
+						cpustate->sout_func(cpustate->ER & 0x01);
 						cpustate->ER >>= 1;
-						cpustate->ER |= devcb_call_read_line(&cpustate->sin_func) ? 0x80 : 0x00;
+						cpustate->ER |= cpustate->sin_func() ? 0x80 : 0x00;
 						break;
 			case 0x1c:	// SR
 						cpustate->icount -= 5;
@@ -412,8 +412,8 @@ static void execute_one(scmp_state *cpustate, int opcode)
 			// Single Byte Miscellaneous Instructions
 			case 0x00:	// HALT
 						cpustate->icount -= 8;
-						devcb_call_write_line(&cpustate->halt_func, 1);
-						devcb_call_write_line(&cpustate->halt_func, 0);
+						cpustate->halt_func(1);
+						cpustate->halt_func(0);
 						break;
 			case 0x02:	// CCL
 						cpustate->icount -= 5;
@@ -434,14 +434,14 @@ static void execute_one(scmp_state *cpustate, int opcode)
 			case 0x06:	// CSA
 						cpustate->icount -= 5;
 						cpustate->SR &= 0xcf; // clear SA and SB flags
-						cpustate->SR |= devcb_call_read_line(&cpustate->sensea_func) ? 0x10 : 0x00;
-						cpustate->SR |= devcb_call_read_line(&cpustate->senseb_func) ? 0x20 : 0x00;
+						cpustate->SR |= cpustate->sensea_func() ? 0x10 : 0x00;
+						cpustate->SR |= cpustate->senseb_func() ? 0x20 : 0x00;
 						cpustate->AC = cpustate->SR;
 						break;
 			case 0x07:	// CAS
 						cpustate->icount -= 6;
 						cpustate->SR = cpustate->AC;
-						devcb_call_write8(&cpustate->flag_out_func, 0, cpustate->SR & 0x07);
+						cpustate->flag_out_func(0, cpustate->SR & 0x07);
 						break;
 			case 0x08:	// NOP
 						cpustate->icount -= 5;
@@ -477,7 +477,7 @@ static CPU_EXECUTE( scmp )
 
 	do
 	{
-		if ((cpustate->SR & 0x08) && (devcb_call_read_line(&cpustate->sensea_func))) {
+		if ((cpustate->SR & 0x08) && (cpustate->sensea_func())) {
 			take_interrupt(cpustate);
 		}
 		debugger_instruction_hook(device, cpustate->PC.d);
@@ -494,8 +494,8 @@ static CPU_INIT( scmp )
 {
 	scmp_state *cpustate = get_safe_token(device);
 
-	if (device->baseconfig().static_config() != NULL)
-		cpustate->config = *(scmp_config *)device->baseconfig().static_config();
+	if (device->static_config() != NULL)
+		cpustate->config = *(scmp_config *)device->static_config();
 
 	/* set up the state table */
 	{
@@ -518,20 +518,20 @@ static CPU_INIT( scmp )
 	cpustate->direct = &cpustate->program->direct();
 
 	/* resolve callbacks */
-	devcb_resolve_write8(&cpustate->flag_out_func, &cpustate->config.flag_out_func, device);
-	devcb_resolve_write_line(&cpustate->sout_func, &cpustate->config.sout_func, device);
-	devcb_resolve_read_line(&cpustate->sin_func, &cpustate->config.sin_func, device);
-	devcb_resolve_read_line(&cpustate->sensea_func, &cpustate->config.sensea_func, device);
-	devcb_resolve_read_line(&cpustate->senseb_func, &cpustate->config.senseb_func, device);
-	devcb_resolve_write_line(&cpustate->halt_func, &cpustate->config.halt_func, device);
+	cpustate->flag_out_func.resolve(cpustate->config.flag_out_func, *device);
+	cpustate->sout_func.resolve(cpustate->config.sout_func, *device);
+	cpustate->sin_func.resolve(cpustate->config.sin_func, *device);
+	cpustate->sensea_func.resolve(cpustate->config.sensea_func, *device);
+	cpustate->senseb_func.resolve(cpustate->config.senseb_func, *device);
+	cpustate->halt_func.resolve(cpustate->config.halt_func, *device);
 
-	state_save_register_device_item(device, 0, cpustate->PC);
-	state_save_register_device_item(device, 0, cpustate->P1);
-	state_save_register_device_item(device, 0, cpustate->P2);
-	state_save_register_device_item(device, 0, cpustate->P3);
-	state_save_register_device_item(device, 0, cpustate->AC);
-	state_save_register_device_item(device, 0, cpustate->ER);
-	state_save_register_device_item(device, 0, cpustate->SR);
+	device->save_item(NAME(cpustate->PC));
+	device->save_item(NAME(cpustate->P1));
+	device->save_item(NAME(cpustate->P2));
+	device->save_item(NAME(cpustate->P3));
+	device->save_item(NAME(cpustate->AC));
+	device->save_item(NAME(cpustate->ER));
+	device->save_item(NAME(cpustate->SR));
 }
 
 
@@ -615,17 +615,17 @@ CPU_GET_INFO( scmp )
 		case CPUINFO_INT_MIN_CYCLES:					info->i = 5;							break;
 		case CPUINFO_INT_MAX_CYCLES:					info->i = 131593;						break; // DLY instruction max time
 
-		case DEVINFO_INT_DATABUS_WIDTH + ADDRESS_SPACE_PROGRAM:			info->i = 8;							break;
-		case DEVINFO_INT_ADDRBUS_WIDTH + ADDRESS_SPACE_PROGRAM: 		info->i = 16;							break;
-		case DEVINFO_INT_ADDRBUS_SHIFT + ADDRESS_SPACE_PROGRAM: 		info->i = 0;							break;
+		case DEVINFO_INT_DATABUS_WIDTH + AS_PROGRAM:			info->i = 8;							break;
+		case DEVINFO_INT_ADDRBUS_WIDTH + AS_PROGRAM:		info->i = 16;							break;
+		case DEVINFO_INT_ADDRBUS_SHIFT + AS_PROGRAM:		info->i = 0;							break;
 
-		case DEVINFO_INT_DATABUS_WIDTH + ADDRESS_SPACE_DATA:			info->i = 0;							break;
-		case DEVINFO_INT_ADDRBUS_WIDTH + ADDRESS_SPACE_DATA:			info->i = 0;							break;
-		case DEVINFO_INT_ADDRBUS_SHIFT + ADDRESS_SPACE_DATA:			info->i = 0;							break;
+		case DEVINFO_INT_DATABUS_WIDTH + AS_DATA:			info->i = 0;							break;
+		case DEVINFO_INT_ADDRBUS_WIDTH + AS_DATA:			info->i = 0;							break;
+		case DEVINFO_INT_ADDRBUS_SHIFT + AS_DATA:			info->i = 0;							break;
 
-		case DEVINFO_INT_DATABUS_WIDTH + ADDRESS_SPACE_IO:				info->i = 0;							break;
-		case DEVINFO_INT_ADDRBUS_WIDTH + ADDRESS_SPACE_IO:				info->i = 0;							break;
-		case DEVINFO_INT_ADDRBUS_SHIFT + ADDRESS_SPACE_IO:				info->i = 0;							break;
+		case DEVINFO_INT_DATABUS_WIDTH + AS_IO:				info->i = 0;							break;
+		case DEVINFO_INT_ADDRBUS_WIDTH + AS_IO:				info->i = 0;							break;
+		case DEVINFO_INT_ADDRBUS_SHIFT + AS_IO:				info->i = 0;							break;
 
 		/* --- the following bits of info are returned as pointers to functions --- */
 		case CPUINFO_FCT_SET_INFO:		info->setinfo = CPU_SET_INFO_NAME(scmp);				break;

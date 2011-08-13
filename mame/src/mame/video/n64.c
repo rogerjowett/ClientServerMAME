@@ -27,7 +27,7 @@ TODO:
 #include "includes/n64.h"
 #include "video/n64.h"
 
-#define LOG_RDP_EXECUTION		1
+#define LOG_RDP_EXECUTION		0
 
 static FILE *rdp_exec;
 
@@ -182,7 +182,7 @@ void Processor::VideoUpdate16(bitmap_t *bitmap)
 				/*
                 if (gamma_dither)
                 {
-                    dith = screen->machine->rand() & 0x3f;
+                    dith = screen->machine().rand() & 0x3f;
                 }
                 if (gamma)
                 {
@@ -349,7 +349,7 @@ void Processor::TCDiv(INT32 ss, INT32 st, INT32 sw, INT32* sss, INT32* sst)
 	}
 	//compute clamp flags
 	int under_s = 0;
-	int under_t = 0;
+//  int under_t = 0;
 	int over_s = 0;
 	int over_t = 0;
 
@@ -369,7 +369,7 @@ void Processor::TCDiv(INT32 ss, INT32 st, INT32 sw, INT32* sss, INT32* sst)
 	{
 		if (tprod & (1 << 29))
 		{
-			under_t = 1;
+//          under_t = 1;
 		}
 		else
 		{
@@ -412,7 +412,7 @@ void Processor::ColorCombiner1Cycle(bool noisecompute)
 {
 	if (noisecompute)
 	{
-		m_noise_color.i.r = m_noise_color.i.g = m_noise_color.i.b = m_machine->rand() & 0xff; // Not accurate...
+		m_noise_color.i.r = m_noise_color.i.g = m_noise_color.i.b = machine().rand() & 0xff; // Not accurate...
 	}
 
 	m_pixel_color.i.r = ColorCombinerEquation(*m_color_inputs.combiner_rgbsub_a_r[1],*m_color_inputs.combiner_rgbsub_b_r[1],*m_color_inputs.combiner_rgbmul_r[1],*m_color_inputs.combiner_rgbadd_r[1]);
@@ -428,7 +428,7 @@ void Processor::ColorCombiner2Cycle(bool noisecompute)
 {
 	if (noisecompute)
 	{
-		m_noise_color.i.r = m_noise_color.i.g = m_noise_color.i.b = m_machine->rand() & 0xff; // HACK
+		m_noise_color.i.r = m_noise_color.i.g = m_noise_color.i.b = machine().rand() & 0xff; // HACK
 	}
 
 	m_combined_color.i.r = ColorCombinerEquation(*m_color_inputs.combiner_rgbsub_a_r[0],*m_color_inputs.combiner_rgbsub_b_r[0],*m_color_inputs.combiner_rgbmul_r[0],*m_color_inputs.combiner_rgbadd_r[0]);
@@ -939,7 +939,7 @@ void Processor::GetDitherValues(int x, int y, int* cdith, int* adith)
 		break;
 	case 2:
 		*cdith = s_magic_matrix[dithindex];
-		*adith = m_machine->rand() & 7;
+		*adith = machine().rand() & 7;
 		break;
 	case 3:
 		*cdith = s_magic_matrix[dithindex];
@@ -954,26 +954,26 @@ void Processor::GetDitherValues(int x, int y, int* cdith, int* adith)
 		break;
 	case 6:
 		*cdith = s_bayer_matrix[dithindex];
-		*adith = m_machine->rand() & 7;
+		*adith = machine().rand() & 7;
 		break;
 	case 7:
 		*cdith = s_bayer_matrix[dithindex];
 		*adith = 0;
 		break;
 	case 8:
-		*cdith = m_machine->rand() & 7;
+		*cdith = machine().rand() & 7;
 		*adith = s_magic_matrix[dithindex];
 		break;
 	case 9:
-		*cdith = m_machine->rand() & 7;
+		*cdith = machine().rand() & 7;
 		*adith = (~s_magic_matrix[dithindex]) & 7;
 		break;
 	case 10:
-		*cdith = m_machine->rand() & 7;
+		*cdith = machine().rand() & 7;
 		*adith = (*cdith + 17) & 7;
 		break;
 	case 11:
-		*cdith = m_machine->rand() & 7;
+		*cdith = machine().rand() & 7;
 		*adith = 0;
 		break;
 	case 12:
@@ -1733,15 +1733,15 @@ void N64::RDP::Processor::Dasm(char *buffer)
 
 /*****************************************************************************/
 
-N64::RDP::Triangle::Triangle(running_machine *machine, bool shade, bool texture, bool zbuffer, bool rect, bool flip)
+N64::RDP::Triangle::Triangle(running_machine &machine, bool shade, bool texture, bool zbuffer, bool rect, bool flip)
 {
 	InitFromData(machine, shade, texture, zbuffer, rect, flip);
 }
 
-void N64::RDP::Triangle::InitFromData(running_machine *machine, bool shade, bool texture, bool zbuffer, bool rect, bool flip)
+void N64::RDP::Triangle::InitFromData(running_machine &machine, bool shade, bool texture, bool zbuffer, bool rect, bool flip)
 {
-	m_machine = machine;
-	m_rdp = &(machine->driver_data<_n64_state>())->m_rdp;
+	m_machine = &machine;
+	m_rdp = &(machine.driver_data<_n64_state>())->m_rdp;
 	m_cmd_data = rect ? m_rdp->GetTempRectData() : m_rdp->GetCommandData();
 	m_misc_state = m_rdp->GetMiscState();
 	m_shade = shade;
@@ -2261,7 +2261,7 @@ void N64::RDP::Triangle::Draw()
 
 void N64::RDP::Processor::Triangle(bool shade, bool texture, bool zbuffer)
 {
-	N64::RDP::Triangle tri(m_machine, shade, texture, zbuffer, false, false);
+	N64::RDP::Triangle tri(*m_machine, shade, texture, zbuffer, false, false);
 	tri.Draw();
 }
 
@@ -2361,7 +2361,7 @@ void N64::RDP::Processor::CmdTexRect(UINT32 w1, UINT32 w2)
 	ewdata[39] = 0;//dwdy frac
 	memset(&ewdata[40], 0, 4 * sizeof(UINT32));//depth
 
-	N64::RDP::Triangle tri(m_machine, true, true, false, true, false);
+	N64::RDP::Triangle tri(*m_machine, true, true, false, true, false);
 	tri.Draw();
 }
 
@@ -2421,7 +2421,7 @@ void N64::RDP::Processor::CmdTexRectFlip(UINT32 w1, UINT32 w2)
 	ewdata[39] = 0;//dwdy frac
 	memset(&ewdata[40], 0, 4 * sizeof(UINT32));//depth
 
-	N64::RDP::Triangle tri(m_machine, true, true, false, true, false);
+	N64::RDP::Triangle tri(*m_machine, true, true, false, true, false);
 	tri.Draw();
 }
 
@@ -2442,7 +2442,7 @@ void N64::RDP::Processor::CmdSyncTile(UINT32 w1, UINT32 w2)
 
 void N64::RDP::Processor::CmdSyncFull(UINT32 w1, UINT32 w2)
 {
-	dp_full_sync(m_machine);
+	dp_full_sync(*m_machine);
 }
 
 void N64::RDP::Processor::CmdSetKeyGB(UINT32 w1, UINT32 w2)
@@ -2783,18 +2783,18 @@ void N64::RDP::Processor::CmdLoadTile(UINT32 w1, UINT32 w2)
 
 	INT32 width = (sh - sl) + 1;
 	INT32 height = (th - tl) + 1;
-
-	int topad;
-	if (m_misc_state.m_ti_size < 3)
-	{
-		topad = (width * m_misc_state.m_ti_size) & 0x7;
-	}
-	else
-	{
-		topad = (width << 2) & 0x7;
-	}
-	topad = 0; // ????
-
+/*
+    int topad;
+    if (m_misc_state.m_ti_size < 3)
+    {
+        topad = (width * m_misc_state.m_ti_size) & 0x7;
+    }
+    else
+    {
+        topad = (width << 2) & 0x7;
+    }
+    topad = 0; // ????
+*/
 	switch (m_misc_state.m_ti_size)
 	{
 		case PIXEL_SIZE_8BIT:
@@ -2931,7 +2931,7 @@ void N64::RDP::Processor::CmdFillRect(UINT32 w1, UINT32 w2)
 	ewdata[7] = 0;//dxmdy, dxmdy frac
 	memset(&ewdata[8], 0, 36 * sizeof(UINT32));//shade, texture, depth
 
-	N64::RDP::Triangle tri(m_machine, false, false, false, true, false);
+	N64::RDP::Triangle tri(*m_machine, false, false, false, true, false);
 	tri.Draw();
 }
 
@@ -3245,7 +3245,7 @@ void N64::RDP::Processor::ProcessList()
 
 VIDEO_START(n64)
 {
-	_n64_state *state = machine->driver_data<_n64_state>();
+	_n64_state *state = machine.driver_data<_n64_state>();
 
 	state->m_rdp.SetMachine(machine);
 	state->m_rdp.InitInternalState();
@@ -3267,9 +3267,9 @@ VIDEO_START(n64)
 	}
 }
 
-VIDEO_UPDATE(n64)
+SCREEN_UPDATE(n64)
 {
-	_n64_state *state = screen->machine->driver_data<_n64_state>();
+	_n64_state *state = screen->machine().driver_data<_n64_state>();
 
     int height = state->m_rdp.GetMiscState()->m_fb_height;
 	//UINT16 *frame_buffer = (UINT16*)&rdram[(n64_vi_origin & 0xffffff) >> 2];

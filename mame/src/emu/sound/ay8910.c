@@ -105,7 +105,6 @@ has twice the steps, happening twice as fast.
 ***************************************************************************/
 
 #include "emu.h"
-#include "streams.h"
 #include "ay8910.h"
 
 /*************************************
@@ -477,7 +476,7 @@ static void ay8910_write_reg(ay8910_context *psg, int r, int v)
 		case AY_ECOARSE:
 			#ifdef MAME_DEBUG
 			if ( (v & 0x0f) > 0)
-				popmessage("Write to ECoarse register detected - please inform www.mametesters.org");
+				popmessage("ECoarse");
 			#endif
 			/* No action required */
 			break;
@@ -486,14 +485,14 @@ static void ay8910_write_reg(ay8910_context *psg, int r, int v)
 			    ((psg->last_enable & 0x40) != (psg->regs[AY_ENABLE] & 0x40)))
 			{
 				/* write out 0xff if port set to input */
-				devcb_call_write8(&psg->portAwrite, 0, (psg->regs[AY_ENABLE] & 0x40) ? psg->regs[AY_PORTA] : 0xff);
+				psg->portAwrite(0, (psg->regs[AY_ENABLE] & 0x40) ? psg->regs[AY_PORTA] : 0xff);
 			}
 
 			if ((psg->last_enable == -1) ||
 			    ((psg->last_enable & 0x80) != (psg->regs[AY_ENABLE] & 0x80)))
 			{
 				/* write out 0xff if port set to input */
-				devcb_call_write8(&psg->portBwrite, 0, (psg->regs[AY_ENABLE] & 0x80) ? psg->regs[AY_PORTB] : 0xff);
+				psg->portBwrite(0, (psg->regs[AY_ENABLE] & 0x80) ? psg->regs[AY_PORTB] : 0xff);
 			}
 
 			psg->last_enable = psg->regs[AY_ENABLE];
@@ -501,7 +500,7 @@ static void ay8910_write_reg(ay8910_context *psg, int r, int v)
 		case AY_ESHAPE:
 			#ifdef MAME_DEBUG
 			if ( (v & 0x0f) > 0)
-				popmessage("Write to EShape register detected - please inform www.mametesters.org");
+				popmessage("EShape");
 			#endif
 			psg->attack = (psg->regs[AY_ESHAPE] & 0x04) ? psg->env_step_mask : 0x00;
 			if ((psg->regs[AY_ESHAPE] & 0x08) == 0)
@@ -522,8 +521,8 @@ static void ay8910_write_reg(ay8910_context *psg, int r, int v)
 		case AY_PORTA:
 			if (psg->regs[AY_ENABLE] & 0x40)
 			{
-				if (psg->portAwrite.write)
-					devcb_call_write8(&psg->portAwrite, 0, psg->regs[AY_PORTA]);
+				if (!psg->portAwrite.isnull())
+					psg->portAwrite(0, psg->regs[AY_PORTA]);
 				else
 					logerror("warning - write %02x to 8910 '%s' Port A\n",psg->regs[AY_PORTA],psg->device->tag());
 			}
@@ -535,8 +534,8 @@ static void ay8910_write_reg(ay8910_context *psg, int r, int v)
 		case AY_PORTB:
 			if (psg->regs[AY_ENABLE] & 0x80)
 			{
-				if (psg->portBwrite.write)
-					devcb_call_write8(&psg->portBwrite, 0, psg->regs[AY_PORTB]);
+				if (!psg->portBwrite.isnull())
+					psg->portBwrite(0, psg->regs[AY_PORTB]);
 				else
 					logerror("warning - write %02x to 8910 '%s' Port B\n",psg->regs[AY_PORTB],psg->device->tag());
 			}
@@ -705,25 +704,25 @@ static void build_mixer_table(ay8910_context *psg)
 
 static void ay8910_statesave(ay8910_context *psg, device_t *device)
 {
-	state_save_register_device_item(device, 0, psg->register_latch);
-	state_save_register_device_item_array(device, 0, psg->regs);
-	state_save_register_device_item(device, 0, psg->last_enable);
+	device->save_item(NAME(psg->register_latch));
+	device->save_item(NAME(psg->regs));
+	device->save_item(NAME(psg->last_enable));
 
-	state_save_register_device_item_array(device, 0, psg->count);
-	state_save_register_device_item(device, 0, psg->count_noise);
-	state_save_register_device_item(device, 0, psg->count_env);
+	device->save_item(NAME(psg->count));
+	device->save_item(NAME(psg->count_noise));
+	device->save_item(NAME(psg->count_env));
 
-	state_save_register_device_item(device, 0, psg->env_volume);
+	device->save_item(NAME(psg->env_volume));
 
-	state_save_register_device_item_array(device, 0, psg->output);
-	state_save_register_device_item(device, 0, psg->output_noise);
+	device->save_item(NAME(psg->output));
+	device->save_item(NAME(psg->output_noise));
 
-	state_save_register_device_item(device, 0, psg->env_step);
-	state_save_register_device_item(device, 0, psg->hold);
-	state_save_register_device_item(device, 0, psg->alternate);
-	state_save_register_device_item(device, 0, psg->attack);
-	state_save_register_device_item(device, 0, psg->holding);
-	state_save_register_device_item(device, 0, psg->rng);
+	device->save_item(NAME(psg->env_step));
+	device->save_item(NAME(psg->hold));
+	device->save_item(NAME(psg->alternate));
+	device->save_item(NAME(psg->attack));
+	device->save_item(NAME(psg->holding));
+	device->save_item(NAME(psg->rng));
 }
 
 /*************************************
@@ -739,14 +738,14 @@ void *ay8910_start_ym(void *infoptr, device_type chip_type, device_t *device, in
 	ay8910_context *info = (ay8910_context *)infoptr;
 
 	if (info == NULL)
-		info = auto_alloc_clear(device->machine, ay8910_context);
+		info = auto_alloc_clear(device->machine(), ay8910_context);
 
 	info->device = device;
 	info->intf = intf;
-	devcb_resolve_read8(&info->portAread, &intf->portAread, device);
-	devcb_resolve_read8(&info->portBread, &intf->portBread, device);
-	devcb_resolve_write8(&info->portAwrite, &intf->portAwrite, device);
-	devcb_resolve_write8(&info->portBwrite, &intf->portBwrite, device);
+	info->portAread.resolve(intf->portAread, *device);
+	info->portBread.resolve(intf->portBread, *device);
+	info->portAwrite.resolve(intf->portAwrite, *device);
+	info->portBwrite.resolve(intf->portBwrite, *device);
 	if ((info->intf->flags & AY8910_SINGLE_OUTPUT) != 0)
 	{
 		logerror("AY-3-8910/YM2149 using single output!\n");
@@ -776,7 +775,7 @@ void *ay8910_start_ym(void *infoptr, device_type chip_type, device_t *device, in
 
 	/* The envelope is pacing twice as fast for the YM2149 as for the AY-3-8910,    */
 	/* This handled by the step parameter. Consequently we use a divider of 8 here. */
-	info->channel = stream_create(device, 0, info->streams, device->clock() / 8, info, ay8910_update);
+	info->channel = device->machine().sound().stream_alloc(*device, 0, info->streams, device->clock() / 8, info, ay8910_update);
 
 	ay8910_set_clock_ym(info,device->clock());
 	ay8910_statesave(info, device);
@@ -833,13 +832,13 @@ void ay8910_set_volume(device_t *device,int channel,int volume)
 
 	for (ch = 0; ch < psg->streams; ch++)
 		if (channel == ch || psg->streams == 1 || channel == ALL_8910_CHANNELS)
-			stream_set_output_gain(psg->channel, ch, volume / 100.0);
+			psg->channel->set_output_gain(ch, volume / 100.0);
 }
 
 void ay8910_set_clock_ym(void *chip, int clock)
 {
 	ay8910_context *psg = (ay8910_context *)chip;
-	stream_set_sample_rate(psg->channel, clock / 8 );
+	psg->channel->set_sample_rate( clock / 8 );
 }
 
 void ay8910_write_ym(void *chip, int addr, int data)
@@ -854,7 +853,7 @@ void ay8910_write_ym(void *chip, int addr, int data)
 		if (r == AY_ESHAPE || psg->regs[r] != data)
 		{
 			/* update the output buffer before changing the register */
-			stream_update(psg->channel);
+			psg->channel->update();
 		}
 
 		ay8910_write_reg(psg,r,data);
@@ -874,7 +873,7 @@ int ay8910_read_ym(void *chip)
 	if (r > 15) return 0;
 
 	/* There are no state dependent register in the AY8910! */
-	/* stream_update(psg->channel); */
+	/* psg->channel->update(); */
 
 	switch (r)
 	{
@@ -885,18 +884,18 @@ int ay8910_read_ym(void *chip)
            even if the port is set as output, we still need to return the external
            data. Some games, like kidniki, need this to work.
          */
-		if (psg->portAread.read)
-			psg->regs[AY_PORTA] = devcb_call_read8(&psg->portAread, 0);
+		if (!psg->portAread.isnull())
+			psg->regs[AY_PORTA] = psg->portAread(0);
 		else
-			logerror("%s: warning - read 8910 '%s' Port A\n",cpuexec_describe_context(psg->device->machine),psg->device->tag());
+			logerror("%s: warning - read 8910 '%s' Port A\n",psg->device->machine().describe_context(),psg->device->tag());
 		break;
 	case AY_PORTB:
 		if ((psg->regs[AY_ENABLE] & 0x80) != 0)
 			logerror("warning: read from 8910 '%s' Port B set as output\n",psg->device->tag());
-		if (psg->portBread.read)
-			psg->regs[AY_PORTB] = devcb_call_read8(&psg->portBread, 0);
+		if (!psg->portBread.isnull())
+			psg->regs[AY_PORTB] = psg->portBread(0);
 		else
-			logerror("%s: warning - read 8910 '%s' Port B\n",cpuexec_describe_context(psg->device->machine),psg->device->tag());
+			logerror("%s: warning - read 8910 '%s' Port B\n",psg->device->machine().describe_context(),psg->device->tag());
 		break;
 	}
 
@@ -930,7 +929,7 @@ static DEVICE_START( ay8910 )
 		AY8910_DEFAULT_LOADS,
 		DEVCB_NULL, DEVCB_NULL, DEVCB_NULL, DEVCB_NULL
 	};
-	const ay8910_interface *intf = (device->baseconfig().static_config() ? (const ay8910_interface *)device->baseconfig().static_config() : &generic_ay8910);
+	const ay8910_interface *intf = (device->static_config() ? (const ay8910_interface *)device->static_config() : &generic_ay8910);
 	ay8910_start_ym(get_safe_token(device), AY8910, device, device->clock(), intf);
 }
 
@@ -942,7 +941,7 @@ static DEVICE_START( ym2149 )
 		AY8910_DEFAULT_LOADS,
 		DEVCB_NULL, DEVCB_NULL, DEVCB_NULL, DEVCB_NULL
 	};
-	const ay8910_interface *intf = (device->baseconfig().static_config() ? (const ay8910_interface *)device->baseconfig().static_config() : &generic_ay8910);
+	const ay8910_interface *intf = (device->static_config() ? (const ay8910_interface *)device->static_config() : &generic_ay8910);
 	ay8910_start_ym(get_safe_token(device), YM2149, device, device->clock(), intf);
 }
 

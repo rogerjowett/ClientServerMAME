@@ -7,25 +7,26 @@
 #define Z80SIO_TAG		"z80sio"
 #define Z80PIO1_TAG		"z80pio1"
 #define Z80PIO2_TAG		"z80pio2"
-#define CASSETTE_TAG	"cassette"
+
+#include "imagedev/cassette.h"
 
 class amu880_state : public driver_device
 {
 public:
-	amu880_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config),
+	amu880_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag),
 		  m_cassette(*this, CASSETTE_TAG),
 		  m_key_d6(0),
 		  m_key_d7(0),
 		  m_key_a8(1)
 	{ }
 
-	required_device<device_t> m_cassette;
+	required_device<cassette_image_device> m_cassette;
 
 	virtual void machine_start();
 
 	virtual void video_start();
-	virtual bool video_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect);
+	virtual bool screen_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect);
 
 	DECLARE_READ8_MEMBER( keyboard_r );
 

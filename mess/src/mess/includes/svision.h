@@ -31,22 +31,22 @@ typedef struct
 class svision_state : public driver_device
 {
 public:
-	svision_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	svision_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
-	UINT8 *videoram;
-	UINT8 *reg;
-	device_t *sound;
-	int *dma_finished;
-	svision_t svision;
-	svision_pet_t pet;
-	tvlink_t tvlink;
+	UINT8 *m_videoram;
+	UINT8 *m_reg;
+	device_t *m_sound;
+	int *m_dma_finished;
+	svision_t m_svision;
+	svision_pet_t m_pet;
+	tvlink_t m_tvlink;
 };
 
 
 /*----------- defined in drivers/svision.c -----------*/
 
-void svision_irq( running_machine *machine );
+void svision_irq( running_machine &machine );
 
 
 /*----------- defined in audio/svision.c -----------*/

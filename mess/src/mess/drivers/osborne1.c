@@ -38,18 +38,18 @@ TODO:
 #include "cpu/z80/z80.h"
 #include "cpu/z80/z80daisy.h"
 #include "sound/beep.h"
-#include "devices/flopdrv.h"
+#include "imagedev/flopdrv.h"
 #include "formats/basicdsk.h"
 #include "machine/wd17xx.h"
 #include "machine/6821pia.h"
-#include "devices/messram.h"
+#include "machine/ram.h"
 #include "includes/osborne1.h"
 
 
 #define MAIN_CLOCK	15974400
 
 
-static ADDRESS_MAP_START( osborne1_mem, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( osborne1_mem, AS_PROGRAM, 8 )
 	AM_RANGE( 0x0000, 0x0FFF ) AM_READ_BANK("bank1") AM_WRITE( osborne1_0000_w )
 	AM_RANGE( 0x1000, 0x1FFF ) AM_READ_BANK("bank2") AM_WRITE( osborne1_1000_w )
 	AM_RANGE( 0x2000, 0x2FFF ) AM_READWRITE( osborne1_2000_r, osborne1_2000_w )
@@ -59,7 +59,7 @@ static ADDRESS_MAP_START( osborne1_mem, ADDRESS_SPACE_PROGRAM, 8 )
 ADDRESS_MAP_END
 
 
-static ADDRESS_MAP_START( osborne1_io, ADDRESS_SPACE_IO, 8 )
+static ADDRESS_MAP_START( osborne1_io, AS_IO, 8 )
 	ADDRESS_MAP_UNMAP_HIGH
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 	AM_RANGE( 0x00, 0x03 ) AM_WRITE( osborne1_bankswitch_w )
@@ -176,31 +176,31 @@ static const z80_daisy_config osborne1_daisy_chain[] =
  *
  */
 static FLOPPY_OPTIONS_START(osborne1 )
-	FLOPPY_OPTION( osd, "img", "Osborne single density", basicdsk_identify_default, basicdsk_construct_default,
+	FLOPPY_OPTION( osd, "img", "Osborne single density", basicdsk_identify_default, basicdsk_construct_default, NULL,
 		HEADS([1])
 		TRACKS([40])
 		SECTORS([10])
 		SECTOR_LENGTH([256])
 		FIRST_SECTOR_ID([1]))
-	FLOPPY_OPTION( odd, "img", "Osborne double density", basicdsk_identify_default, basicdsk_construct_default,
+	FLOPPY_OPTION( odd, "img", "Osborne double density", basicdsk_identify_default, basicdsk_construct_default, NULL,
 		HEADS([1])
 		TRACKS([40])
 		SECTORS([5])
 		SECTOR_LENGTH([1024])
 		FIRST_SECTOR_ID([1]))
-	FLOPPY_OPTION( ibm, "img", "IBM Personal Computer", basicdsk_identify_default, basicdsk_construct_default,
+	FLOPPY_OPTION( ibm, "img", "IBM Personal Computer", basicdsk_identify_default, basicdsk_construct_default, NULL,
 		HEADS([1])
 		TRACKS([40])
 		SECTORS([8])
 		SECTOR_LENGTH([512])
 		FIRST_SECTOR_ID([1]))
-	FLOPPY_OPTION( xerox, "img", "Xerox 820 Computer", basicdsk_identify_default, basicdsk_construct_default,
+	FLOPPY_OPTION( xerox, "img", "Xerox 820 Computer", basicdsk_identify_default, basicdsk_construct_default, NULL,
 		HEADS([1])
 		TRACKS([40])
 		SECTORS([18])
 		SECTOR_LENGTH([128])
 		FIRST_SECTOR_ID([1]))
-	FLOPPY_OPTION( dec, "img", "DEC 1820 double density", basicdsk_identify_default, basicdsk_construct_default,
+	FLOPPY_OPTION( dec, "img", "DEC 1820 double density", basicdsk_identify_default, basicdsk_construct_default, NULL,
 		HEADS([1])
 		TRACKS([40])
 		SECTORS([9])
@@ -208,7 +208,7 @@ static FLOPPY_OPTIONS_START(osborne1 )
 		FIRST_SECTOR_ID([1]))
 FLOPPY_OPTIONS_END
 
-static const floppy_config osborne1_floppy_config =
+static const floppy_interface osborne1_floppy_interface =
 {
 	DEVCB_NULL,
 	DEVCB_NULL,
@@ -217,6 +217,7 @@ static const floppy_config osborne1_floppy_config =
 	DEVCB_NULL,
 	FLOPPY_STANDARD_5_25_SSDD_40,
 	FLOPPY_OPTIONS_NAME(osborne1),
+	NULL,
 	NULL
 };
 
@@ -251,14 +252,16 @@ static MACHINE_CONFIG_START( osborne1, osborne1_state )
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_FORMAT( BITMAP_FORMAT_INDEXED16 )
 	MCFG_SCREEN_RAW_PARAMS( MAIN_CLOCK/2, 512, 0, 416, 260, 0, 240 )
+	MCFG_SCREEN_UPDATE( generic_bitmapped )
+
 	MCFG_VIDEO_START( generic_bitmapped )
-	MCFG_VIDEO_UPDATE( generic_bitmapped )
+
 	MCFG_GFXDECODE(osborne1)
 	MCFG_PALETTE_LENGTH( 3 )
 	MCFG_PALETTE_INIT( osborne1 )
 
 	MCFG_SPEAKER_STANDARD_MONO( "mono" )
-	MCFG_SOUND_ADD( "beep", BEEP, 0 )
+	MCFG_SOUND_ADD( BEEPER_TAG, BEEP, 0 )
 	MCFG_SOUND_ROUTE( ALL_OUTPUTS, "mono", 1.00 )
 
 	MCFG_PIA6821_ADD( "pia_0", osborne1_ieee_pia_config )
@@ -266,10 +269,10 @@ static MACHINE_CONFIG_START( osborne1, osborne1_state )
 
 	MCFG_MB8877_ADD("mb8877", default_wd17xx_interface_2_drives )
 
-	MCFG_FLOPPY_2_DRIVES_ADD(osborne1_floppy_config)
+	MCFG_FLOPPY_2_DRIVES_ADD(osborne1_floppy_interface)
 
 	/* internal ram */
-	MCFG_RAM_ADD("messram")
+	MCFG_RAM_ADD(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("68K")	/* 64KB Main RAM and 4Kbit video attribute RAM */
 MACHINE_CONFIG_END
 

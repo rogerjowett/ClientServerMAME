@@ -7,17 +7,17 @@
 class markham_state : public driver_device
 {
 public:
-	markham_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	markham_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 	/* memory pointers */
-	UINT8 *    videoram;
-	UINT8 *    spriteram;
-	UINT8 *    xscroll;
-	size_t     spriteram_size;
+	UINT8 *    m_videoram;
+	UINT8 *    m_spriteram;
+	UINT8 *    m_xscroll;
+	size_t     m_spriteram_size;
 
 	/* video-related */
-	tilemap_t  *bg_tilemap;
+	tilemap_t  *m_bg_tilemap;
 };
 
 
@@ -28,4 +28,4 @@ WRITE8_HANDLER( markham_flipscreen_w );
 
 PALETTE_INIT( markham );
 VIDEO_START( markham );
-VIDEO_UPDATE( markham );
+SCREEN_UPDATE( markham );

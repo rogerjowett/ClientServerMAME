@@ -54,7 +54,6 @@
 #include "winutf8.h"
 #include "strconv.h"
 #include "window.h"
-#include "winmain.h"
 
 #include "resource.h"
 #include "resource.hm"
@@ -78,10 +77,7 @@
 #include "directdraw.h"
 #include "directinput.h"
 #include "dijoystick.h"     /* For DIJoystick avalibility. */
-
-#ifdef MESS
 #include "messui.h"
-#endif // MESS
 
 #ifdef _MSC_VER
 #define snprintf _snprintf
@@ -312,8 +308,9 @@ static BOOL             GameCheck(void);
 static BOOL             FolderCheck(void);
 
 static void             ToggleScreenShot(void);
+static void             ToggleSoftware(void);
 static void             AdjustMetrics(void);
-//static void             EnablePlayOptions(int nIndex, core_options *o);
+//static void             EnablePlayOptions(int nIndex, windows_options *o);
 
 /* Icon routines */
 static DWORD            GetShellLargeIconSize(void);
@@ -506,8 +503,8 @@ static PDIRWATCHER s_pWatcher;
 /* use a joystick subsystem in the gui? */
 static const struct OSDJoystick* g_pJoyGUI = NULL;
 
-/* store current keyboard state (in internal codes) here */
-static input_code keyboard_state[ 2048 ]; /* __code_max #defines the number of internal key_codes */
+/* store current keyboard state (in bools) here */
+static bool keyboard_state[4096]; /* __code_max #defines the number of internal key_codes */
 
 /* search */
 static char g_SearchText[256];
@@ -640,41 +637,42 @@ typedef struct
 
 static const GUISequence GUISequenceControl[]=
 {
-	{"gui_key_up",                SEQ_DEF_0,    ID_UI_UP,           Get_ui_key_up },
-	{"gui_key_down",              SEQ_DEF_0,    ID_UI_DOWN,         Get_ui_key_down },
-	{"gui_key_left",              SEQ_DEF_0,    ID_UI_LEFT,         Get_ui_key_left },
-	{"gui_key_right",             SEQ_DEF_0,    ID_UI_RIGHT,        Get_ui_key_right },
-	{"gui_key_start",             SEQ_DEF_0,    ID_UI_START,        Get_ui_key_start },
-	{"gui_key_pgup",              SEQ_DEF_0,    ID_UI_PGUP,         Get_ui_key_pgup },
-	{"gui_key_pgdwn",             SEQ_DEF_0,    ID_UI_PGDOWN,       Get_ui_key_pgdwn },
-	{"gui_key_home",              SEQ_DEF_0,    ID_UI_HOME,         Get_ui_key_home },
-	{"gui_key_end",               SEQ_DEF_0,    ID_UI_END,          Get_ui_key_end },
-	{"gui_key_ss_change",         SEQ_DEF_0,    IDC_SSFRAME,        Get_ui_key_ss_change },
-	{"gui_key_history_up",        SEQ_DEF_0,    ID_UI_HISTORY_UP,   Get_ui_key_history_up },
-	{"gui_key_history_down",      SEQ_DEF_0,    ID_UI_HISTORY_DOWN, Get_ui_key_history_down },
+	{"gui_key_up",                input_seq(),    ID_UI_UP,           Get_ui_key_up },
+	{"gui_key_down",              input_seq(),    ID_UI_DOWN,         Get_ui_key_down },
+	{"gui_key_left",              input_seq(),    ID_UI_LEFT,         Get_ui_key_left },
+	{"gui_key_right",             input_seq(),    ID_UI_RIGHT,        Get_ui_key_right },
+	{"gui_key_start",             input_seq(),    ID_UI_START,        Get_ui_key_start },
+	{"gui_key_pgup",              input_seq(),    ID_UI_PGUP,         Get_ui_key_pgup },
+	{"gui_key_pgdwn",             input_seq(),    ID_UI_PGDOWN,       Get_ui_key_pgdwn },
+	{"gui_key_home",              input_seq(),    ID_UI_HOME,         Get_ui_key_home },
+	{"gui_key_end",               input_seq(),    ID_UI_END,          Get_ui_key_end },
+	{"gui_key_ss_change",         input_seq(),    IDC_SSFRAME,        Get_ui_key_ss_change },
+	{"gui_key_history_up",        input_seq(),    ID_UI_HISTORY_UP,   Get_ui_key_history_up },
+	{"gui_key_history_down",      input_seq(),    ID_UI_HISTORY_DOWN, Get_ui_key_history_down },
 
-	{"gui_key_context_filters",    SEQ_DEF_0,    ID_CONTEXT_FILTERS,       Get_ui_key_context_filters },
-	{"gui_key_select_random",      SEQ_DEF_0,    ID_CONTEXT_SELECT_RANDOM, Get_ui_key_select_random },
-	{"gui_key_game_audit",         SEQ_DEF_0,    ID_GAME_AUDIT,            Get_ui_key_game_audit },
-	{"gui_key_game_properties",    SEQ_DEF_0,    ID_GAME_PROPERTIES,       Get_ui_key_game_properties },
-	{"gui_key_help_contents",      SEQ_DEF_0,    ID_HELP_CONTENTS,         Get_ui_key_help_contents },
-	{"gui_key_update_gamelist",    SEQ_DEF_0,    ID_UPDATE_GAMELIST,       Get_ui_key_update_gamelist },
-	{"gui_key_view_folders",       SEQ_DEF_0,    ID_VIEW_FOLDERS,          Get_ui_key_view_folders },
-	{"gui_key_view_fullscreen",    SEQ_DEF_0,    ID_VIEW_FULLSCREEN,       Get_ui_key_view_fullscreen },
-	{"gui_key_view_pagetab",       SEQ_DEF_0,    ID_VIEW_PAGETAB,          Get_ui_key_view_pagetab },
-	{"gui_key_view_picture_area",  SEQ_DEF_0,    ID_VIEW_PICTURE_AREA,     Get_ui_key_view_picture_area },
-	{"gui_key_view_status",        SEQ_DEF_0,    ID_VIEW_STATUS,           Get_ui_key_view_status },
-	{"gui_key_view_toolbars",      SEQ_DEF_0,    ID_VIEW_TOOLBARS,         Get_ui_key_view_toolbars },
+	{"gui_key_context_filters",    input_seq(),    ID_CONTEXT_FILTERS,       Get_ui_key_context_filters },
+	{"gui_key_select_random",      input_seq(),    ID_CONTEXT_SELECT_RANDOM, Get_ui_key_select_random },
+	{"gui_key_game_audit",         input_seq(),    ID_GAME_AUDIT,            Get_ui_key_game_audit },
+	{"gui_key_game_properties",    input_seq(),    ID_GAME_PROPERTIES,       Get_ui_key_game_properties },
+	{"gui_key_help_contents",      input_seq(),    ID_HELP_CONTENTS,         Get_ui_key_help_contents },
+	{"gui_key_update_gamelist",    input_seq(),    ID_UPDATE_GAMELIST,       Get_ui_key_update_gamelist },
+	{"gui_key_view_folders",       input_seq(),    ID_VIEW_FOLDERS,          Get_ui_key_view_folders },
+	{"gui_key_view_fullscreen",    input_seq(),    ID_VIEW_FULLSCREEN,       Get_ui_key_view_fullscreen },
+	{"gui_key_view_pagetab",       input_seq(),    ID_VIEW_PAGETAB,          Get_ui_key_view_pagetab },
+	{"gui_key_view_picture_area",  input_seq(),    ID_VIEW_PICTURE_AREA,     Get_ui_key_view_picture_area },
+	{"gui_key_view_software_area", input_seq(),    ID_VIEW_SOFTWARE_AREA,    Get_ui_key_view_software_area },
+	{"gui_key_view_status",        input_seq(),    ID_VIEW_STATUS,           Get_ui_key_view_status },
+	{"gui_key_view_toolbars",      input_seq(),    ID_VIEW_TOOLBARS,         Get_ui_key_view_toolbars },
 
-	{"gui_key_view_tab_cabinet",     SEQ_DEF_0,  ID_VIEW_TAB_CABINET,       Get_ui_key_view_tab_cabinet },
-	{"gui_key_view_tab_cpanel",      SEQ_DEF_0,  ID_VIEW_TAB_CONTROL_PANEL, Get_ui_key_view_tab_cpanel },
-	{"gui_key_view_tab_flyer",       SEQ_DEF_0,  ID_VIEW_TAB_FLYER,         Get_ui_key_view_tab_flyer },
-	{"gui_key_view_tab_history",     SEQ_DEF_0,  ID_VIEW_TAB_HISTORY,       Get_ui_key_view_tab_history },
-	{"gui_key_view_tab_marquee",     SEQ_DEF_0,  ID_VIEW_TAB_MARQUEE,       Get_ui_key_view_tab_marquee },
-	{"gui_key_view_tab_screenshot",  SEQ_DEF_0,  ID_VIEW_TAB_SCREENSHOT,    Get_ui_key_view_tab_screenshot },
-	{"gui_key_view_tab_title",       SEQ_DEF_0,  ID_VIEW_TAB_TITLE,         Get_ui_key_view_tab_title },
-	{"gui_key_view_tab_pcb",         SEQ_DEF_0,  ID_VIEW_TAB_PCB,   	    Get_ui_key_view_tab_pcb },
-	{"gui_key_quit",                 SEQ_DEF_0,  ID_FILE_EXIT,              Get_ui_key_quit },
+	{"gui_key_view_tab_cabinet",     input_seq(),  ID_VIEW_TAB_CABINET,       Get_ui_key_view_tab_cabinet },
+	{"gui_key_view_tab_cpanel",      input_seq(),  ID_VIEW_TAB_CONTROL_PANEL, Get_ui_key_view_tab_cpanel },
+	{"gui_key_view_tab_flyer",       input_seq(),  ID_VIEW_TAB_FLYER,         Get_ui_key_view_tab_flyer },
+	{"gui_key_view_tab_history",     input_seq(),  ID_VIEW_TAB_HISTORY,       Get_ui_key_view_tab_history },
+	{"gui_key_view_tab_marquee",     input_seq(),  ID_VIEW_TAB_MARQUEE,       Get_ui_key_view_tab_marquee },
+	{"gui_key_view_tab_screenshot",  input_seq(),  ID_VIEW_TAB_SCREENSHOT,    Get_ui_key_view_tab_screenshot },
+	{"gui_key_view_tab_title",       input_seq(),  ID_VIEW_TAB_TITLE,         Get_ui_key_view_tab_title },
+	{"gui_key_view_tab_pcb",         input_seq(),  ID_VIEW_TAB_PCB, 	    Get_ui_key_view_tab_pcb },
+	{"gui_key_quit",                 input_seq(),  ID_FILE_EXIT,              Get_ui_key_quit },
 };
 
 
@@ -714,6 +712,7 @@ static int          *icon_index = NULL; /* for custom per-game icons */
 static const TBBUTTON tbb[] =
 {
 	{0, ID_VIEW_FOLDERS,    TBSTATE_ENABLED, TBSTYLE_CHECK,      {0, 0}, 0, 0},
+	{1, ID_VIEW_SOFTWARE_AREA,TBSTATE_ENABLED, TBSTYLE_CHECK,      {0, 0}, 0, 1},
 	{1, ID_VIEW_PICTURE_AREA,TBSTATE_ENABLED, TBSTYLE_CHECK,      {0, 0}, 0, 1},
 	{0, 0,                  TBSTATE_ENABLED, TBSTYLE_SEP,        {0, 0}, 0, 0},
 	{2, ID_VIEW_LARGE_ICON, TBSTATE_ENABLED, TBSTYLE_CHECKGROUP, {0, 0}, 0, 2},
@@ -728,11 +727,12 @@ static const TBBUTTON tbb[] =
 
 #define NUM_TOOLBUTTONS (sizeof(tbb) / sizeof(tbb[0]))
 
-#define NUM_TOOLTIPS 8
+#define NUM_TOOLTIPS 9
 
 static const TCHAR szTbStrings[NUM_TOOLTIPS + 1][30] =
 {
 	TEXT("Toggle Folder List"),
+	TEXT("Toggle Software List"),
 	TEXT("Toggle Screen Shot"),
 	TEXT("Large Icons"),
 	TEXT("Small Icons"),
@@ -746,6 +746,7 @@ static const TCHAR szTbStrings[NUM_TOOLTIPS + 1][30] =
 static const int CommandToString[] =
 {
 	ID_VIEW_FOLDERS,
+	ID_VIEW_SOFTWARE_AREA,
 	ID_VIEW_PICTURE_AREA,
 	ID_VIEW_LARGE_ICON,
 	ID_VIEW_SMALL_ICON,
@@ -760,10 +761,8 @@ static const int CommandToString[] =
 static const int s_nPickers[] =
 {
 	IDC_LIST
-#ifdef MESS
 	,IDC_SWLIST
 	,IDC_SOFTLIST
-#endif
 };
 
 
@@ -790,11 +789,9 @@ static ResizeItem main_resize_items[] =
 	{ RA_ID,   { IDC_SSPICTURE },FALSE,	RA_RIGHT | RA_BOTTOM | RA_TOP,     NULL },
 	{ RA_ID,   { IDC_HISTORY },  TRUE,	RA_RIGHT | RA_BOTTOM | RA_TOP,     NULL },
 	{ RA_ID,   { IDC_SSTAB },    FALSE,	RA_RIGHT | RA_TOP,                 NULL },
-#ifdef MESS
 	{ RA_ID,   { IDC_SWLIST },    TRUE,	RA_RIGHT | RA_BOTTOM | RA_TOP,     NULL },
 	{ RA_ID,   { IDC_SOFTLIST },  TRUE,	RA_RIGHT | RA_BOTTOM | RA_TOP,     NULL },
 	{ RA_ID,   { IDC_SPLITTER3 },FALSE,	RA_RIGHT | RA_BOTTOM | RA_TOP,     NULL },
-#endif /* MESS */
 	{ RA_END,  { 0 },            FALSE, 0,                                 NULL }
 };
 
@@ -872,98 +869,46 @@ extern const LPCTSTR column_names[COLUMN_MAX] =
 /***************************************************************************
     External functions
  ***************************************************************************/
-#if 0
-static void CopyOptions(core_options *pDestOpts, core_options *pSourceOpts)
-{
-	options_enumerator *enumerator;
-	const char *option_name;
-	const char *option_value;
-
-	enumerator = options_enumerator_begin(pSourceOpts);
-	if (enumerator != NULL)
-	{
-		while((option_name = options_enumerator_next(enumerator)) != NULL)
-		{
-			option_value = options_get_string(pSourceOpts, option_name);
-			if (option_value != NULL)
-			{
-				dprintf("CopyOptions(): Copying %s = \"%s\"\n", option_name, option_value);
-				options_set_string(pDestOpts, option_name, option_value, OPTION_PRIORITY_CMDLINE);
-			}
-		}
-		options_enumerator_free(enumerator);
-	}
-}
-
-static BOOL WaitWithMessageLoop(HANDLE hEvent)
-{
-	DWORD dwRet;
-	MSG   msg;
-
-	while (1)
-	{
-		dwRet = MsgWaitForMultipleObjects(1, &hEvent, FALSE, INFINITE, QS_ALLINPUT);
-
-		if (dwRet == WAIT_OBJECT_0)
-			return TRUE;
-
-		if (dwRet != WAIT_OBJECT_0 + 1)
-			break;
-
-		while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
-		{
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
-			if (WaitForSingleObject(hEvent, 0) == WAIT_OBJECT_0)
-				return TRUE;
-		}
-	}
-	return FALSE;
-}
-#endif
-
 static DWORD RunMAME(int nGameIndex, const play_options *playopts)
 {
 	time_t start, end;
 	double elapsedtime;
 	DWORD dwExitCode = 0;
 	int i;
-	core_options *mame_opts;
-
+	windows_options mame_opts;
+	astring error_string;
 	// set up MAME options
-	mame_opts = mame_options_init(mame_win_options);
+//  mame_opts = mame_options_init(mame_win_options);
 
 	// Tell mame were to get the INIs
-	options_set_string(mame_opts, OPTION_INIPATH, GetIniDir(), OPTION_PRIORITY_CMDLINE);
+	mame_opts.set_value(OPTION_INIPATH, GetIniDir(), OPTION_PRIORITY_CMDLINE,error_string);
 
 	// add image specific device options
-	image_add_device_options(mame_opts, drivers[nGameIndex]);
+	mame_opts.set_system_name(driver_list::driver(nGameIndex).name);
 
 	// set any specified play options
 	if (playopts != NULL)
 	{
 		if (playopts->record != NULL)
-			options_set_string(mame_opts, OPTION_RECORD, playopts->record, OPTION_PRIORITY_CMDLINE);
+			mame_opts.set_value(OPTION_RECORD, playopts->record, OPTION_PRIORITY_CMDLINE,error_string);
 		if (playopts->playback != NULL)
-			options_set_string(mame_opts, OPTION_PLAYBACK, playopts->playback, OPTION_PRIORITY_CMDLINE);
+			mame_opts.set_value(OPTION_PLAYBACK, playopts->playback, OPTION_PRIORITY_CMDLINE,error_string);
 		if (playopts->state != NULL)
-			options_set_string(mame_opts, OPTION_STATE, playopts->state, OPTION_PRIORITY_CMDLINE);
+			mame_opts.set_value(OPTION_STATE, playopts->state, OPTION_PRIORITY_CMDLINE,error_string);
 		if (playopts->wavwrite != NULL)
-			options_set_string(mame_opts, OPTION_WAVWRITE, playopts->wavwrite, OPTION_PRIORITY_CMDLINE);
+			mame_opts.set_value(OPTION_WAVWRITE, playopts->wavwrite, OPTION_PRIORITY_CMDLINE,error_string);
 		if (playopts->mngwrite != NULL)
-			options_set_string(mame_opts, OPTION_MNGWRITE, playopts->mngwrite, OPTION_PRIORITY_CMDLINE);
+			mame_opts.set_value(OPTION_MNGWRITE, playopts->mngwrite, OPTION_PRIORITY_CMDLINE,error_string);
 		if (playopts->aviwrite != NULL)
-			options_set_string(mame_opts, OPTION_AVIWRITE, playopts->aviwrite, OPTION_PRIORITY_CMDLINE);
+			mame_opts.set_value(OPTION_AVIWRITE, playopts->aviwrite, OPTION_PRIORITY_CMDLINE,error_string);
 	}
 
-	#ifdef MESS
 	if (g_szSelectedSoftware[0] && g_szSelectedDevice[0]) {
-			options_set_string(mame_opts, g_szSelectedDevice, g_szSelectedSoftware, OPTION_PRIORITY_CMDLINE);
-			// Add params and clear so next start of driver is without parameters			
+			mame_opts.set_value(g_szSelectedDevice, g_szSelectedSoftware, OPTION_PRIORITY_CMDLINE,error_string);
+			// Add params and clear so next start of driver is without parameters
 			g_szSelectedSoftware[0] = 0;
 			g_szSelectedDevice[0] = 0;
 	}
-	#endif	
 	// Mame will parse all the needed .ini files.
 
 	// prepare MAME32 to run the game
@@ -973,11 +918,11 @@ static DWORD RunMAME(int nGameIndex, const play_options *playopts)
 		Picker_ClearIdle(GetDlgItem(hMain, s_nPickers[i]));
 
 	// run the emulation
-	options_set_string(mame_opts, OPTION_GAMENAME, drivers[nGameIndex]->name, OPTION_PRIORITY_CMDLINE);
+	//mame_opts.set_value(OPTION_SYSTEMNAME, driver_list::driver(nGameIndex).name, OPTION_PRIORITY_CMDLINE,error_string);
 	// Time the game run.
 	time(&start);
 	windows_osd_interface osd;
-	mame_execute(osd, mame_opts);
+	mame_execute(mame_opts, osd);
 	// Calc the duration
 	time(&end);
 	elapsedtime = end - start;
@@ -1025,7 +970,7 @@ int MameUIMain(HINSTANCE    hInstance,
 		for (i = 0; i < __argc; i++)
 			osd_free(utf8_argv[i]);
 		free(utf8_argv);
-		
+
 		exit(rc);
 	}
 	if (!Win32UI_init(hInstance, lpCmdLine, nCmdShow))
@@ -1176,10 +1121,6 @@ static HICON FormatICOInMemoryToHICON(PBYTE ptrBuffer, UINT nBufferSize)
 
 	IconImage.lpBits = &ptrBuffer[nBufferIndex];
 	nBufferIndex += lpIDE->dwBytesInRes;
-#if 0  // Not sure we want odd sized icons.
-	hIcon = CreateIconFromResourceEx(IconImage.lpBits, IconImage.dwNumBytes, TRUE, 0x00030000,
-			(*(LPBITMAPINFOHEADER)(IconImage.lpBits)).biWidth, (*(LPBITMAPINFOHEADER)(IconImage.lpBits)).biHeight/2, 0 );
-#endif
 	/* It failed, odds are good we're on NT so try the non-Ex way */
 	if (hIcon == NULL)
 	{
@@ -1317,6 +1258,83 @@ static void ResizeTreeAndListViews(BOOL bResizeHidden)
 			nLastWidth += nLeftWindowWidth + SPLITTER_WIDTH;
 		}
 	}
+}
+
+void UpdateSoftware(void)
+{
+	RECT rect;
+	//int  nWidth;
+
+	/* first time through can't do this stuff */
+	if (hwndList == NULL)
+		return;
+
+	/* Size the List Control in the Picker */
+	GetClientRect(hMain, &rect);
+
+	if (bShowStatusBar)
+		rect.bottom -= bottomMargin;
+	if (bShowToolBar)
+		rect.top += topMargin;
+
+	if (GetShowSoftware())
+	{
+		//nWidth = nSplitterOffset[GetSplitterCount() - 1];
+		CheckMenuItem(GetMenu(hMain),ID_VIEW_SOFTWARE_AREA, MF_CHECKED);
+		ToolBar_CheckButton(s_hToolBar, ID_VIEW_SOFTWARE_AREA, MF_CHECKED);
+	}
+	else
+	{
+		//nWidth = rect.right;
+		CheckMenuItem(GetMenu(hMain),ID_VIEW_SOFTWARE_AREA, MF_UNCHECKED);
+		ToolBar_CheckButton(s_hToolBar, ID_VIEW_SOFTWARE_AREA, MF_UNCHECKED);
+	}
+
+	ResizeTreeAndListViews(FALSE);
+
+	if (GetShowSoftware())
+	{
+		int nTab;
+		HWND hwndSoftwarePicker;
+		HWND hwndSoftwareDevView;
+		HWND hwndSoftwareList;
+
+		ShowWindow(GetDlgItem(hMain,IDC_SWTAB),SW_SHOW);
+
+		hwndSoftwarePicker = GetDlgItem(GetMainWindow(), IDC_SWLIST);
+		hwndSoftwareDevView = GetDlgItem(GetMainWindow(), IDC_SWDEVVIEW);
+		hwndSoftwareList = GetDlgItem(GetMainWindow(), IDC_SOFTLIST);
+
+		nTab = TabView_GetCurrentTab(GetDlgItem(GetMainWindow(), IDC_SWTAB));
+
+		switch(nTab)
+		{
+			case 0:
+				ShowWindow(hwndSoftwarePicker, SW_SHOW);
+				ShowWindow(hwndSoftwareDevView, SW_HIDE);
+				ShowWindow(hwndSoftwareList, SW_HIDE);
+				break;
+
+			case 1:
+				ShowWindow(hwndSoftwarePicker, SW_HIDE);
+				ShowWindow(hwndSoftwareDevView, SW_SHOW);
+				ShowWindow(hwndSoftwareList, SW_HIDE);
+				break;
+			case 2:
+				ShowWindow(hwndSoftwarePicker, SW_HIDE);
+				ShowWindow(hwndSoftwareDevView, SW_HIDE);
+				ShowWindow(hwndSoftwareList, SW_SHOW);
+				break;
+		}
+	}
+	else
+	{
+		ShowWindow(GetDlgItem(hMain,IDC_SWLIST),SW_HIDE);
+		ShowWindow(GetDlgItem(hMain,IDC_SWDEVVIEW),SW_HIDE);
+		ShowWindow(GetDlgItem(hMain,IDC_SOFTLIST),SW_HIDE);
+		ShowWindow(GetDlgItem(hMain,IDC_SWTAB),SW_HIDE);
+	}
+
 }
 
 /* Adjust the list view and screenshot button based on GetShowScreenShot() */
@@ -1505,6 +1523,7 @@ void ResizePickerControls(HWND hWnd)
 
 }
 
+
 char *ModifyThe(const char *str)
 {
 	static int  bufno = 0;
@@ -1592,7 +1611,7 @@ int GetParentRomSetIndex(const game_driver *driver)
 
 	if( nParentIndex >= 0)
 	{
-		if ((drivers[nParentIndex]->flags & GAME_IS_BIOS_ROOT) == 0)
+		if ((driver_list::driver(nParentIndex).flags & GAME_IS_BIOS_ROOT) == 0)
 			return nParentIndex;
 	}
 
@@ -1606,7 +1625,7 @@ int GetGameNameIndex(const char *name)
 	key.name = name;
 
 	// uses our sorted array of driver names to get the index in log time
-	driver_index_info = (driver_data_type*)bsearch(&key,sorted_drivers,driver_list_get_count(drivers),sizeof(driver_data_type),
+	driver_index_info = (driver_data_type*)bsearch(&key,sorted_drivers,driver_list::total(),sizeof(driver_data_type),
 								DriverDataCompareFunc);
 
 	if (driver_index_info == NULL)
@@ -1749,18 +1768,18 @@ static BOOL Win32UI_init(HINSTANCE hInstance, LPWSTR lpCmdLine, int nCmdShow)
 	mameui_pool = pool_alloc_lib(memory_error);
 
 	// custom per-game icons
-	icon_index = (int*)pool_malloc_lib(mameui_pool, sizeof(int) * driver_list_get_count(drivers));
-	memset(icon_index, '\0', sizeof(int) * driver_list_get_count(drivers));
+	icon_index = (int*)pool_malloc_lib(mameui_pool, sizeof(int) * driver_list::total());
+	memset(icon_index, '\0', sizeof(int) * driver_list::total());
 
 	// sorted list of drivers by name
-	sorted_drivers = (driver_data_type *) pool_malloc_lib(mameui_pool, sizeof(driver_data_type) * driver_list_get_count(drivers));
-	memset(sorted_drivers, '\0', sizeof(driver_data_type) * driver_list_get_count(drivers));
-	for (i = 0; i < driver_list_get_count(drivers); i++)
+	sorted_drivers = (driver_data_type *) pool_malloc_lib(mameui_pool, sizeof(driver_data_type) * driver_list::total());
+	memset(sorted_drivers, '\0', sizeof(driver_data_type) * driver_list::total());
+	for (i = 0; i < driver_list::total(); i++)
 	{
-		sorted_drivers[i].name = drivers[i]->name;
+		sorted_drivers[i].name = driver_list::driver(i).name;
 		sorted_drivers[i].index = i;
 	}
-	qsort(sorted_drivers, driver_list_get_count(drivers), sizeof(driver_data_type), DriverDataCompareFunc);
+	qsort(sorted_drivers, driver_list::total(), sizeof(driver_data_type), DriverDataCompareFunc);
 
 	// set up window class
 	wndclass.style		   = CS_HREDRAW | CS_VREDRAW;
@@ -1776,9 +1795,7 @@ static BOOL Win32UI_init(HINSTANCE hInstance, LPWSTR lpCmdLine, int nCmdShow)
 
 	RegisterClass(&wndclass);
 
-#ifdef MESS
 	DevView_RegisterClass();
-#endif //MESS
 
 	InitCommonControls();
 
@@ -1965,9 +1982,7 @@ static BOOL Win32UI_init(HINSTANCE hInstance, LPWSTR lpCmdLine, int nCmdShow)
 	dprintf("did init tree\n");
 
 	/* Initialize listview columns */
-#ifdef MESS
 	InitMessPicker();
-#endif
 	InitListView();
 	SetFocus(hwndList);
 
@@ -1993,25 +2008,13 @@ static BOOL Win32UI_init(HINSTANCE hInstance, LPWSTR lpCmdLine, int nCmdShow)
 	}
 
 	AdjustMetrics();
+	UpdateSoftware();
 	UpdateScreenShot();
 
 	hAccel = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDA_TAB_KEYS));
 
 	/* clear keyboard state */
 	KeyboardStateClear();
-
-	#if 0
-	for (i = 0; i < NUM_GUI_SEQUENCES; i++)
-	{
-		const input_seq *is1;
-		input_seq *is2;
-		is1 = &(GUISequenceControl[i].is);
-		is2 = GUISequenceControl[i].getiniptr();
-		// FIXME
-		//input_seq_copy(is1, is2);
-		//dprintf("seq =%s is: %4i %4i %4i %4i\n",GUISequenceControl[i].name, (*is1)[0], (*is1)[1], (*is1)[2], (*is1)[3]);
-	}
-	#endif
 
 	if (GetJoyGUI() == TRUE)
 	{
@@ -2100,10 +2103,8 @@ static BOOL Win32UI_init(HINSTANCE hInstance, LPWSTR lpCmdLine, int nCmdShow)
 
 static void Win32UI_exit()
 {
-	#ifdef MESS
 	MySoftwareListClose();
-	#endif
-	
+
     if (g_bDoBroadcast == TRUE)
     {
         ATOM a = GlobalAddAtom(TEXT(""));
@@ -2300,7 +2301,7 @@ static LRESULT CALLBACK MameWindowProc(HWND hWnd, UINT message, WPARAM wParam, L
 
 			/* Save the users current game options and default game */
 			nItem = Picker_GetSelectedItem(hwndList);
-			SetDefaultGame(ModifyThe(drivers[nItem]->name));
+			SetDefaultGame(ModifyThe(driver_list::driver(nItem).name));
 
 			/* hide window to prevent orphan empty rectangles on the taskbar */
 			/* ShowWindow(hWnd,SW_HIDE); */
@@ -2445,11 +2446,11 @@ static LRESULT CALLBACK MameWindowProc(HWND hWnd, UINT message, WPARAM wParam, L
 				if (s)
 					*s = '\0';
 
-				for (nGameIndex = 0; drivers[nGameIndex]; nGameIndex++)
+				for (nGameIndex = 0; nGameIndex  < driver_list::total(); nGameIndex++)
 				{
-					for (nParentIndex = nGameIndex; nGameIndex == -1; nParentIndex = GetParentIndex(drivers[nParentIndex]))
+					for (nParentIndex = nGameIndex; nGameIndex == -1; nParentIndex = GetParentIndex(&driver_list::driver(nParentIndex)))
 					{
-						if (!mame_stricmp(drivers[nParentIndex]->name, szFileName))
+						if (!mame_stricmp(driver_list::driver(nParentIndex).name, szFileName))
 						{
 							if (pfnGetAuditResults(nGameIndex) != UNKNOWN)
 							{
@@ -2634,7 +2635,7 @@ static BOOL FolderCheck(void)
 			ProgressBarStepParam(i, nCount);
 	}
 	ProgressBarHide();
-	pDescription = ModifyThe(drivers[Picker_GetSelectedItem(hwndList)]->description);
+	pDescription = ModifyThe(driver_list::driver(Picker_GetSelectedItem(hwndList)).description);
 	SetStatusBarText(0, pDescription);
 	UpdateStatusBar();
 	return TRUE;
@@ -2650,7 +2651,7 @@ static BOOL GameCheck(void)
 	if (game_index == 0)
 		ProgressBarShow();
 
-	if (game_index >= driver_list_get_count(drivers))
+	if (game_index >= driver_list::total())
 	{
 		bDoGameCheck = FALSE;
 		ProgressBarHide();
@@ -2710,7 +2711,7 @@ static BOOL OnIdle(HWND hWnd)
 	// in case it's not found, get it back
 	driver_index = Picker_GetSelectedItem(hwndList);
 
-	pDescription = ModifyThe(drivers[driver_index]->description);
+	pDescription = ModifyThe(driver_list::driver(driver_index).description);
 	SetStatusBarText(0, pDescription);
 	idle_work = FALSE;
 	UpdateStatusBar();
@@ -2866,13 +2867,13 @@ static void ProgressBarShow()
 	RECT rect;
 	int  widths[2] = {150, -1};
 
-	if (driver_list_get_count(drivers) < 100)
-		progBarStep = 100 / driver_list_get_count(drivers);
+	if (driver_list::total() < 100)
+		progBarStep = 100 / driver_list::total();
 	else
-		progBarStep = (driver_list_get_count(drivers) / 100);
+		progBarStep = (driver_list::total() / 100);
 
 	SendMessage(hStatusBar, SB_SETPARTS, (WPARAM)2, (LPARAM)(LPINT)widths);
-	SendMessage(hProgWnd, PBM_SETRANGE, 0, (LPARAM)MAKELONG(0, driver_list_get_count(drivers)));
+	SendMessage(hProgWnd, PBM_SETRANGE, 0, (LPARAM)MAKELONG(0, driver_list::total()));
 	SendMessage(hProgWnd, PBM_SETSTEP, (WPARAM)progBarStep, 0);
 	SendMessage(hProgWnd, PBM_SETPOS, 0, 0);
 
@@ -2957,7 +2958,7 @@ static void ProgressBarStepParam(int iGameIndex, int nGameCount)
 
 static void ProgressBarStep()
 {
-	ProgressBarStepParam(game_index, driver_list_get_count(drivers));
+	ProgressBarStepParam(game_index, driver_list::total());
 }
 
 static HWND InitProgressBar(HWND hParent)
@@ -3238,11 +3239,9 @@ static void EnableSelection(int nGame)
 	HMENU			hMenu = GetMenu(hMain);
 	TCHAR*          t_description;
 
-#ifdef MESS
 	MyFillSoftwareList(nGame, FALSE);
-#endif
 
-	t_description = tstring_from_utf8(ConvertAmpersandString(ModifyThe(drivers[nGame]->description)));
+	t_description = tstring_from_utf8(ConvertAmpersandString(ModifyThe(driver_list::driver(nGame).description)));
 	if( !t_description )
 		return;
 
@@ -3254,7 +3253,7 @@ static void EnableSelection(int nGame)
 	mmi.cch 	   = _tcslen(mmi.dwTypeData);
 	SetMenuItemInfo(hMenu, ID_FILE_PLAY, FALSE, &mmi);
 
-	pText = ModifyThe(drivers[nGame]->description);
+	pText = ModifyThe(driver_list::driver(nGame).description);
 	SetStatusBarText(0, pText);
 	/* Add this game's status to the status bar */
 	pText = GameInfoStatus(nGame, FALSE);
@@ -3271,7 +3270,7 @@ static void EnableSelection(int nGame)
 
 	if (bProgressShown && bListReady == TRUE)
 	{
-		SetDefaultGame(ModifyThe(drivers[nGame]->name));
+		SetDefaultGame(ModifyThe(driver_list::driver(nGame).name));
 	}
 	have_selection = TRUE;
 
@@ -3343,31 +3342,12 @@ static LPCSTR GetCloneParentName(int nItem)
 
 	if (DriverIsClone(nItem) == TRUE)
 	{
-		nParentIndex = GetParentIndex(drivers[nItem]);
+		nParentIndex = GetParentIndex(&driver_list::driver(nItem));
 		if( nParentIndex >= 0)
-			return ModifyThe(drivers[nParentIndex]->description);
+			return ModifyThe(driver_list::driver(nParentIndex).description);
 	}
 	return "";
 }
-
-#if 0
-static BOOL PickerHitTest(HWND hWnd)
-{
-	RECT			rect;
-	POINTS			p;
-	DWORD			res = GetMessagePos();
-	LVHITTESTINFO	htInfo;
-
-	ZeroMemory(&htInfo,sizeof(LVHITTESTINFO));
-	p = MAKEPOINTS(res);
-	GetWindowRect(hWnd, &rect);
-	htInfo.pt.x = p.x - rect.left;
-	htInfo.pt.y = p.y - rect.top;
-	ListView_HitTest(hWnd, &htInfo);
-
-	return (! (htInfo.flags & LVHT_NOWHERE));
-}
-#endif
 
 static BOOL TreeViewNotify(LPNMHDR nm)
 {
@@ -3387,6 +3367,7 @@ static BOOL TreeViewNotify(LPNMHDR nm)
 			if (bListReady)
 			{
 				ResetListView();
+				MessUpdateSoftwareList();
 				UpdateScreenShot();
 			}
 		}
@@ -3480,30 +3461,29 @@ static int GUI_seq_pressed(const input_seq *seq)
 	int invert = 0;
 	int count = 0;
 
-	for (codenum = 0; codenum < ARRAY_LENGTH(seq->code); codenum++)
+	for (codenum = 0; codenum < ARRAY_LENGTH(seq); codenum++)
 	{
-		input_code code = seq->code[codenum];
+		input_code code = (*seq)[codenum];
 
-		switch (code)
+		if (code == input_seq::not_code)
+			invert = !invert;
+
+		else if (code == input_seq::or_code)
 		{
-			case SEQCODE_OR :
-				if (res && count)
-					return 1;
-				res = 1;
-				count = 0;
-				break;
-			case SEQCODE_NOT :
-				invert = !invert;
-				break;
-			default:
-				if (res)
-				{
-					int pressed = keyboard_state[code];
-					if ((pressed != 0) == invert)
-						res = 0;
-				}
-				invert = 0;
-				++count;
+			if (res && count)
+				return 1;
+			res = 1;
+			count = 0;
+		}
+		else
+		{
+			if (res)
+			{
+				if ((keyboard_state[(int)(code.item_id())] != 0) == invert)
+					res = 0;
+			}
+			invert = 0;
+			++count;
 		}
 	}
 	return res && count;
@@ -3546,7 +3526,7 @@ static void KeyboardStateClear(void)
 static void KeyboardKeyDown(int syskey, int vk_code, int special)
 {
 	int i, found = 0;
-	input_code icode = 0;
+	int icode = 0;
 	int special_code = (special >> 24) & 1;
 	int scancode = (special>>16) & 0xff;
 
@@ -3564,13 +3544,13 @@ static void KeyboardKeyDown(int syskey, int vk_code, int special)
 			switch(vk_code)
 			{
 			case VK_MENU:
-				icode = KEYCODE_RALT;
+				icode = (int)(KEYCODE_RALT.item_id());
 				break;
 			case VK_CONTROL:
-				icode = KEYCODE_RCONTROL;
+				icode = (int)(KEYCODE_RCONTROL.item_id());
 				break;
 			case VK_SHIFT:
-				icode = KEYCODE_RSHIFT;
+				icode = (int)(KEYCODE_RSHIFT.item_id());
 				break;
 			}
 		}
@@ -3579,13 +3559,13 @@ static void KeyboardKeyDown(int syskey, int vk_code, int special)
 			switch(vk_code)
 			{
 			case VK_MENU:
-				icode = KEYCODE_LALT;
+				icode = (int)(KEYCODE_LALT.item_id());
 				break;
 			case VK_CONTROL:
-				icode = KEYCODE_LCONTROL;
+				icode = (int)(KEYCODE_LCONTROL.item_id());
 				break;
 			case VK_SHIFT:
-				icode = KEYCODE_LSHIFT;
+				icode = (int)(KEYCODE_LSHIFT.item_id());
 				break;
 			}
 		}
@@ -3609,14 +3589,14 @@ static void KeyboardKeyDown(int syskey, int vk_code, int special)
 		return;
 	}
 	dprintf("VK_code pressed found =  %i, sys=%i, mame_keycode=%i special=%08x\n", vk_code, syskey, icode, special);
-	keyboard_state[icode] = 1;
+	keyboard_state[icode] = true;
 	check_for_GUI_action();
 }
 
 static void KeyboardKeyUp(int syskey, int vk_code, int special)
 {
 	int i, found = 0;
-	input_code icode = 0;
+	int icode = 0;
 	int special_code = (special >> 24) & 1;
 	int scancode = (special>>16) & 0xff;
 
@@ -3634,13 +3614,13 @@ static void KeyboardKeyUp(int syskey, int vk_code, int special)
 			switch(vk_code)
 			{
 			case VK_MENU:
-				icode = KEYCODE_RALT;
+				icode = (int)(KEYCODE_RALT.item_id());
 				break;
 			case VK_CONTROL:
-				icode = KEYCODE_RCONTROL;
+				icode = (int)(KEYCODE_RCONTROL.item_id());
 				break;
 			case VK_SHIFT:
-				icode = KEYCODE_RSHIFT;
+				icode = (int)(KEYCODE_RSHIFT.item_id());
 				break;
 			}
 		}
@@ -3649,13 +3629,13 @@ static void KeyboardKeyUp(int syskey, int vk_code, int special)
 			switch(vk_code)
 			{
 			case VK_MENU:
-				icode = KEYCODE_LALT;
+				icode = (int)(KEYCODE_LALT.item_id());
 				break;
 			case VK_CONTROL:
-				icode = KEYCODE_LCONTROL;
+				icode = (int)(KEYCODE_LCONTROL.item_id());
 				break;
 			case VK_SHIFT:
-				icode = KEYCODE_LSHIFT;
+				icode = (int)(KEYCODE_LSHIFT.item_id());
 				break;
 			}
 		}
@@ -3678,7 +3658,7 @@ static void KeyboardKeyUp(int syskey, int vk_code, int special)
 		//MessageBox(NULL,"keyup message arrived not processed","TitleBox",MB_OK);
 		return;
 	}
-	keyboard_state[icode] = 0;
+	keyboard_state[icode] = false;
 	dprintf("VK_code released found=  %i, sys=%i, mame_keycode=%i special=%08x\n", vk_code, syskey, icode, special );
 	check_for_GUI_action();
 }
@@ -3810,14 +3790,6 @@ static void PollGUIJoystick()
 	}
 }
 
-#if 0
-static void PressKey(HWND hwnd, UINT vk)
-{
-	SendMessage(hwnd, WM_KEYDOWN, vk, 0);
-	SendMessage(hwnd, WM_KEYUP,   vk, 0xc0000000);
-}
-#endif
-
 static void SetView(int menu_id)
 {
 	BOOL force_reset = FALSE;
@@ -3871,7 +3843,7 @@ static void ResetListView()
 	b_res = ListView_DeleteAllItems(hwndList);
 
 	// hint to have it allocate it all at once
-	ListView_SetItemCount(hwndList,driver_list_get_count(drivers));
+	ListView_SetItemCount(hwndList,driver_list::total());
 
 	lvi.mask = LVIF_TEXT | LVIF_IMAGE | LVIF_PARAM;
 	lvi.stateMask = 0;
@@ -3922,7 +3894,7 @@ static void UpdateGameList(BOOL bUpdateRomAudit, BOOL bUpdateSampleAudit)
 {
 	int i;
 
-	for (i = 0; i < driver_list_get_count(drivers); i++)
+	for (i = 0; i < driver_list::total(); i++)
 	{
 		if (bUpdateRomAudit && DriverUsesRoms(i))
 			SetRomAuditResults(i, UNKNOWN);
@@ -4407,7 +4379,6 @@ static BOOL MameCommand(HWND hwnd,int id, HWND hwndCtl, UINT codeNotify)
 		{
 			folder = GetFolderByName(FOLDER_SOURCE, GetDriverFilename(Picker_GetSelectedItem(hwndList)) );
 			InitPropertyPage(hInst, hwnd, GetSelectedPickItemIcon(), OPTIONS_GAME, folder->m_nFolderId, Picker_GetSelectedItem(hwndList));
-#ifdef MESS
 			{
 				extern BOOL g_bModifiedSoftwarePaths;
 				if (g_bModifiedSoftwarePaths) {
@@ -4415,7 +4386,6 @@ static BOOL MameCommand(HWND hwnd,int id, HWND hwndCtl, UINT codeNotify)
 					MessUpdateSoftwareList();
 				}
 			}
-#endif
 		}
 		/* Just in case the toggle MMX on/off */
 		UpdateStatusBar();
@@ -4474,6 +4444,10 @@ static BOOL MameCommand(HWND hwnd,int id, HWND hwndCtl, UINT codeNotify)
 		ToggleScreenShot();
 		break;
 
+	case ID_VIEW_SOFTWARE_AREA :
+		ToggleSoftware();
+		break;
+
 	case ID_UPDATE_GAMELIST:
 		UpdateGameList(TRUE, TRUE);
 		break;
@@ -4501,9 +4475,7 @@ static BOOL MameCommand(HWND hwnd,int id, HWND hwndCtl, UINT codeNotify)
 			int  nResult;
 			BOOL bUpdateRoms;
 			BOOL bUpdateSamples;
-#ifdef MESS
 			BOOL bUpdateSoftware;
-#endif
 
 			nResult = DialogBox(GetModuleHandle(NULL),
 								MAKEINTRESOURCE(IDD_DIRECTORIES),
@@ -4514,12 +4486,10 @@ static BOOL MameCommand(HWND hwnd,int id, HWND hwndCtl, UINT codeNotify)
 
 			bUpdateRoms    = ((nResult & DIRDLG_ROMS)	 == DIRDLG_ROMS)	? TRUE : FALSE;
 			bUpdateSamples = ((nResult & DIRDLG_SAMPLES) == DIRDLG_SAMPLES) ? TRUE : FALSE;
-#ifdef MESS
 			bUpdateSoftware = ((nResult & DIRDLG_SOFTWARE) == DIRDLG_SOFTWARE) ? TRUE : FALSE;
 
 			if (bUpdateSoftware)
 				MessUpdateSoftwareList();
-#endif /* MESS */
 
 			if (s_pWatcher)
 			{
@@ -4758,11 +4728,7 @@ static BOOL MameCommand(HWND hwnd,int id, HWND hwndCtl, UINT codeNotify)
 				return FALSE;
 			}
 		}
-#ifdef MESS
 		return MessCommand(hwnd, id, hwndCtl, codeNotify);
-#else
-		break;
-#endif
 	}
 
 	return FALSE;
@@ -4835,17 +4801,11 @@ static const TCHAR *GamePicker_GetItemString(HWND hwndPicker, int nItem, int nCo
 	{
 		case COLUMN_GAMES:
 			/* Driver description */
-			utf8_s = ModifyThe(drivers[nItem]->description);
+			utf8_s = ModifyThe(driver_list::driver(nItem).description);
 			break;
 		case COLUMN_ORIENTATION:
 			utf8_s = DriverIsVertical(nItem) ? "Vertical" : "Horizontal";
 			break;
-#if 0
-		case COLUMN_ROMS:
-			/* Has Roms */
-			utf8_s = GetAuditString(GetRomAuditResults(nItem));
-			break;
-#endif
 		case COLUMN_SAMPLES:
 			/* Samples */
 			if (DriverUsesSamples(nItem))
@@ -4854,7 +4814,7 @@ static const TCHAR *GamePicker_GetItemString(HWND hwndPicker, int nItem, int nCo
 
 		case COLUMN_DIRECTORY:
 			/* Driver name (directory) */
-			utf8_s = drivers[nItem]->name;
+			utf8_s = driver_list::driver(nItem).name;
 			break;
 
 		case COLUMN_SRCDRIVERS:
@@ -4870,7 +4830,7 @@ static const TCHAR *GamePicker_GetItemString(HWND hwndPicker, int nItem, int nCo
 
 		case COLUMN_TYPE:
 			{
-				machine_config config(*drivers[nItem]);
+				machine_config config(*&driver_list::driver(nItem),MameUIGlobal());
 				/* Vector/Raster */
 				if (isDriverVector(&config))
 					s = TEXT("Vector");
@@ -4896,12 +4856,12 @@ static const TCHAR *GamePicker_GetItemString(HWND hwndPicker, int nItem, int nCo
 
 		case COLUMN_MANUFACTURER:
 			/* Manufacturer */
-			utf8_s = drivers[nItem]->manufacturer;
+			utf8_s = driver_list::driver(nItem).manufacturer;
 			break;
 
 		case COLUMN_YEAR:
 			/* Year */
-			utf8_s = drivers[nItem]->year;
+			utf8_s = driver_list::driver(nItem).year;
 			break;
 
 		case COLUMN_CLONE:
@@ -4927,17 +4887,17 @@ static const TCHAR *GamePicker_GetItemString(HWND hwndPicker, int nItem, int nCo
 static void GamePicker_LeavingItem(HWND hwndPicker, int nItem)
 {
 	// leaving item
-	// printf("leaving %s\n",drivers[nItem]->name);
+	// printf("leaving %s\n",driver_list::driver(nItem).name);
 }
 
 static void GamePicker_EnteringItem(HWND hwndPicker, int nItem)
 {
 	TCHAR* t_description;
 	ATOM a;
-	// printf("entering %s\n",drivers[nItem]->name);
+	// printf("entering %s\n",driver_list::driver(nItem).name);
 	if (g_bDoBroadcast == TRUE)
 	{
-		t_description = tstring_from_utf8(drivers[nItem]->description);
+		t_description = tstring_from_utf8(driver_list::driver(nItem).description);
 		if( !t_description )
 			return;
 		a = GlobalAddAtom(t_description);
@@ -4947,14 +4907,12 @@ static void GamePicker_EnteringItem(HWND hwndPicker, int nItem)
 	}
 
 	EnableSelection(nItem);
-#ifdef MESS
 	MessReadMountedSoftware(nItem);
-#endif
 }
 
 static int GamePicker_FindItemParent(HWND hwndPicker, int nItem)
 {
-	return GetParentRomSetIndex(drivers[nItem]);
+	return GetParentRomSetIndex(&driver_list::driver(nItem));
 }
 
 /* Initialize the Picker and List controls */
@@ -5032,16 +4990,16 @@ static void AddDriverIcon(int nItem,int default_icon_index)
 	if (icon_index[nItem] == 1 || icon_index[nItem] == 3)
 		return;
 
-	hIcon = LoadIconFromFile((char *)drivers[nItem]->name);
+	hIcon = LoadIconFromFile((char *)driver_list::driver(nItem).name);
 	if (hIcon == NULL)
 	{
-		nParentIndex = GetParentIndex(drivers[nItem]);
+		nParentIndex = GetParentIndex(&driver_list::driver(nItem));
 		if( nParentIndex >= 0)
 		{
-			hIcon = LoadIconFromFile((char *)drivers[nParentIndex]->name);
-			nParentIndex = GetParentIndex(drivers[nParentIndex]);
+			hIcon = LoadIconFromFile((char *)driver_list::driver(nParentIndex).name);
+			nParentIndex = GetParentIndex(&driver_list::driver(nParentIndex));
 			if (hIcon == NULL && nParentIndex >= 0)
-				hIcon = LoadIconFromFile((char *)drivers[nParentIndex]->name);
+				hIcon = LoadIconFromFile((char *)driver_list::driver(nParentIndex).name);
 		}
 	}
 
@@ -5068,7 +5026,7 @@ static void DestroyIcons(void)
 	if (icon_index != NULL)
 	{
 		int i;
-		for (i=0;i<driver_list_get_count(drivers);i++)
+		for (i=0;i<driver_list::total();i++)
 			icon_index[i] = 0; // these are indices into hSmall
 	}
 
@@ -5097,7 +5055,7 @@ static void ReloadIcons(void)
 
 	if (icon_index != NULL)
 	{
-		for (i=0;i<driver_list_get_count(drivers);i++)
+		for (i=0;i<driver_list::total();i++)
 			icon_index[i] = 0; // these are indices into hSmall
 	}
 
@@ -5181,11 +5139,7 @@ static void CreateIcons(void)
 	int icon_count;
 	DWORD dwStyle;
 	int i;
-#ifdef MESS
-	int grow = 3000;
-#else
 	int grow = 5000;
-#endif
 
 	icon_count = 0;
 	while(g_iconData[icon_count].icon_name)
@@ -5209,7 +5163,7 @@ static void CreateIcons(void)
 		win_message_box_utf8(hwndList, "Cannot allocate small icon image list", "Allocation error - Exiting", IDOK);
 		PostQuitMessage(0);
 	}
-	
+
 	hLarge = ImageList_Create(dwLargeIconSize, dwLargeIconSize,
 							  ILC_COLORDDB | ILC_MASK, icon_count, icon_count + grow);
 
@@ -5227,9 +5181,7 @@ static void CreateIcons(void)
 	// restore our view
 	SetWindowLong(hwndList,GWL_STYLE,dwStyle);
 
-#ifdef MESS
 	CreateMessIcons();
-#endif
 
 	// Now set up header specific stuff
 	hHeaderImages = ImageList_Create(8,8,ILC_COLORDDB | ILC_MASK,2,2);
@@ -5254,12 +5206,12 @@ static int GamePicker_Compare(HWND hwndPicker, int index1, int index2, int sort_
 	int nTemp1, nTemp2;
 
 #ifdef DEBUG
-	if (strcmp(drivers[index1]->name,"1941") == 0 && strcmp(drivers[index2]->name,"1942") == 0)
+	if (strcmp(driver_list::driver(index1).name,"1941") == 0 && strcmp(driver_list::driver(index2).name,"1942") == 0)
 	{
 		dprintf("comparing 1941, 1942\n");
 	}
 
-	if (strcmp(drivers[index1]->name,"1942") == 0 && strcmp(drivers[index2]->name,"1941") == 0)
+	if (strcmp(driver_list::driver(index1).name,"1942") == 0 && strcmp(driver_list::driver(index2).name,"1941") == 0)
 	{
 		dprintf("comparing 1942, 1941\n");
 	}
@@ -5268,47 +5220,14 @@ static int GamePicker_Compare(HWND hwndPicker, int index1, int index2, int sort_
 	switch (sort_subitem)
 	{
 	case COLUMN_GAMES:
-		return mame_stricmp(ModifyThe(drivers[index1]->description),
-						ModifyThe(drivers[index2]->description));
+		return mame_stricmp(ModifyThe(driver_list::driver(index1).description),
+						ModifyThe(driver_list::driver(index2).description));
 
 	case COLUMN_ORIENTATION:
 		nTemp1 = DriverIsVertical(index1) ? 1 : 0;
 		nTemp2 = DriverIsVertical(index2) ? 1 : 0;
 		value = nTemp1 - nTemp2;
 		break;
-#if 0
-	case COLUMN_ROMS:
-		nTemp1 = GetRomAuditResults(index1);
-		nTemp2 = GetRomAuditResults(index2);
-
-		if (IsAuditResultKnown(nTemp1) == FALSE && IsAuditResultKnown(nTemp2) == FALSE)
-			return GamePicker_Compare(hwndPicker, index1, index2, COLUMN_GAMES);
-
-		if (IsAuditResultKnown(nTemp1) == FALSE)
-		{
-			value = 1;
-			break;
-		}
-
-		if (IsAuditResultKnown(nTemp2) == FALSE)
-		{
-			value = -1;
-			break;
-		}
-
-		// ok, both are known
-		if (IsAuditResultYes(nTemp1) && IsAuditResultYes(nTemp2))
-			return GamePicker_Compare(hwndPicker, index1, index2, COLUMN_GAMES);
-
-		if (IsAuditResultNo(nTemp1) && IsAuditResultNo(nTemp2))
-			return GamePicker_Compare(hwndPicker, index1, index2, COLUMN_GAMES);
-
-		if (IsAuditResultYes(nTemp1) && IsAuditResultNo(nTemp2))
-			value = -1;
-		else
-			value = 1;
-		break;
-#endif
 	case COLUMN_SAMPLES:
 		nTemp1 = -1;
 		if (DriverUsesSamples(index1))
@@ -5343,7 +5262,7 @@ static int GamePicker_Compare(HWND hwndPicker, int index1, int index2, int sort_
 		break;
 
 	case COLUMN_DIRECTORY:
-		value = mame_stricmp(drivers[index1]->name, drivers[index2]->name);
+		value = mame_stricmp(driver_list::driver(index1).name, driver_list::driver(index2).name);
 		break;
 
 	case COLUMN_SRCDRIVERS:
@@ -5358,9 +5277,9 @@ static int GamePicker_Compare(HWND hwndPicker, int index1, int index2, int sort_
 
 	case COLUMN_TYPE:
 		{
-			machine_config config1(*drivers[index1]);
-			machine_config config2(*drivers[index2]);
-			
+			machine_config config1(driver_list::driver(index1),MameUIGlobal());
+			machine_config config2(driver_list::driver(index2),MameUIGlobal());
+
 			value = isDriverVector(&config1) - isDriverVector(&config2);
 		}
 		break;
@@ -5374,11 +5293,11 @@ static int GamePicker_Compare(HWND hwndPicker, int index1, int index2, int sort_
 	   break;
 
 	case COLUMN_MANUFACTURER:
-		value = mame_stricmp(drivers[index1]->manufacturer, drivers[index2]->manufacturer);
+		value = mame_stricmp(driver_list::driver(index1).manufacturer, driver_list::driver(index2).manufacturer);
 		break;
 
 	case COLUMN_YEAR:
-		value = mame_stricmp(drivers[index1]->year, drivers[index2]->year);
+		value = mame_stricmp(driver_list::driver(index1).year, driver_list::driver(index2).year);
 		break;
 
 	case COLUMN_CLONE:
@@ -5407,8 +5326,8 @@ static int GamePicker_Compare(HWND hwndPicker, int index1, int index2, int sort_
 		value = GamePicker_Compare(hwndPicker, index1, index2, COLUMN_GAMES);
 	}
 #ifdef DEBUG
-	if ((strcmp(drivers[index1]->name,"1941") == 0 && strcmp(drivers[index2]->name,"1942") == 0) ||
-		(strcmp(drivers[index1]->name,"1942") == 0 && strcmp(drivers[index2]->name,"1941") == 0))
+	if ((strcmp(driver_list::driver(index1).name,"1941") == 0 && strcmp(driver_list::driver(index2).name,"1942") == 0) ||
+		(strcmp(driver_list::driver(index1).name,"1942") == 0 && strcmp(driver_list::driver(index2).name,"1941") == 0))
 		dprintf("result: %i\n",value);
 #endif
 
@@ -5644,12 +5563,11 @@ static void MamePlayBackGame()
 
 	nGame = Picker_GetSelectedItem(hwndList);
 	if (nGame != -1)
-		strcpy(filename, drivers[nGame]->name);
+		strcpy(filename, driver_list::driver(nGame).name);
 
 	if (CommonFileDialog(GetOpenFileName, filename, FILETYPE_INPUT_FILES))
 	{
 		file_error fileerr;
-		mame_file* pPlayBack;
 		char drive[_MAX_DRIVE];
 		char dir[_MAX_DIR];
 		char bare_fname[_MAX_FNAME];
@@ -5666,7 +5584,8 @@ static void MamePlayBackGame()
 		if (path[strlen(path)-1] == '\\')
 			path[strlen(path)-1] = 0; // take off trailing back slash
 
-		fileerr = mame_fopen_options(MameUIGlobal(), SEARCHPATH_INPUTLOG, fname, OPEN_FLAG_READ, &pPlayBack);
+		emu_file pPlayBack(MameUIGlobal().input_directory(), OPEN_FLAG_READ);
+		fileerr = pPlayBack.open(fname);
 		if (fileerr != FILERR_NONE)
 		{
 			MameMessageBox("Could not open '%s' as a valid input file.", filename);
@@ -5674,40 +5593,35 @@ static void MamePlayBackGame()
 		}
 
 		// check for game name embedded in .inp header
-		if (pPlayBack)
+		int i;
+		inp_header ihdr;
+
+		/* read the header and verify that it is a modern version; if not, print an error */
+		if (pPlayBack.read(&ihdr, sizeof(inp_header)) != sizeof(inp_header))
 		{
-			int i;
-			inp_header ihdr;
+			MameMessageBox("Input file is corrupt or invalid (missing header)");
+			return;
+		}
 
-			/* read the header and verify that it is a modern version; if not, print an error */
-			if (mame_fread(pPlayBack, &ihdr, sizeof(inp_header)) != sizeof(inp_header))
-			{
-				MameMessageBox("Input file is corrupt or invalid (missing header)");
-				return;
-			}
+		if (memcmp("MAMEINP\0", ihdr.header, 8) != 0)
+		{
+			MameMessageBox("Input file invalid or in an older, unsupported format");
+			return;
+		}
+		if (ihdr.majversion != INP_HEADER_MAJVERSION)
+		{
+			MameMessageBox("Input file format version mismatch");
+			return;
+		}
 
-			if (memcmp("MAMEINP\0", ihdr.header, 8) != 0)
+		for (i = 0; i < driver_list::total(); i++) // find game and play it
+		{
+			if (strcmp(driver_list::driver(i).name, ihdr.gamename) == 0)
 			{
-				MameMessageBox("Input file invalid or in an older, unsupported format");
-				return;
-			}
-			if (ihdr.majversion != INP_HEADER_MAJVERSION)
-			{
-				MameMessageBox("Input file format version mismatch");
-				return;
-			}
-
-			for (i = 0; drivers[i] != 0; i++) // find game and play it
-			{
-				if (strcmp(drivers[i]->name, ihdr.gamename) == 0)
-				{
-					nGame = i;
-					break;
-				}
+				nGame = i;
+				break;
 			}
 		}
-		mame_fclose(pPlayBack);
-
 		memset(&playopts, 0, sizeof(playopts));
 		playopts.playback = fname;
 		MamePlayGameWithOptions(nGame, &playopts);
@@ -5726,12 +5640,11 @@ static void MameLoadState()
 	nGame = Picker_GetSelectedItem(hwndList);
 	if (nGame != -1)
 	{
-		strcpy(filename, drivers[nGame]->name);
-		strcpy(selected_filename, drivers[nGame]->name);
+		strcpy(filename, driver_list::driver(nGame).name);
+		strcpy(selected_filename, driver_list::driver(nGame).name);
 	}
 	if (CommonFileDialog(GetOpenFileName, filename, FILETYPE_SAVESTATE_FILES))
 	{
-		mame_file* pSaveState;
 		char drive[_MAX_DRIVE];
 		char dir[_MAX_DIR];
 		char ext[_MAX_EXT];
@@ -5740,7 +5653,7 @@ static void MameLoadState()
 		char fname[MAX_PATH];
 		char bare_fname[_MAX_FNAME];
 		char *state_fname;
-		int rc;
+		//int rc;
 
 		_splitpath(filename, drive, dir, bare_fname, ext);
 
@@ -5772,19 +5685,18 @@ static void MameLoadState()
 			state_fname = fname;
 		}
 #endif // MESS
-
-		mame_fopen_options(MameUIGlobal(), SEARCHPATH_STATE, state_fname, OPEN_FLAG_READ, &pSaveState);
-		if (pSaveState == NULL)
+		emu_file pSaveState(MameUIGlobal().state_directory(), OPEN_FLAG_READ);
+		file_error fileerr = pSaveState.open(state_fname);
+		if (fileerr != FILERR_NONE)
 		{
 			MameMessageBox("Could not open '%s' as a valid savestate file.", filename);
 			return;
 		}
 
 		// call the MAME core function to check the save state file
-		rc = state_save_check_file(NULL, pSaveState, selected_filename, MameMessageBox);
-		mame_fclose(pSaveState);
-		if (rc)
-			return;
+		//rc = state_manager::check_file(NULL, pSaveState, selected_filename, MameMessageBox);
+		//if (rc)
+//          return;
 
 		memset(&playopts, 0, sizeof(playopts));
 #ifdef MESS
@@ -5812,7 +5724,7 @@ static void MamePlayRecordGame()
 	*filename = 0;
 
 	nGame = Picker_GetSelectedItem(hwndList);
-	strcpy(filename, drivers[nGame]->name);
+	strcpy(filename, driver_list::driver(nGame).name);
 
 	if (CommonFileDialog(GetSaveFileName, filename, FILETYPE_INPUT_FILES))
 	{
@@ -5854,7 +5766,7 @@ static void MamePlayRecordWave()
 	play_options playopts;
 
 	nGame = Picker_GetSelectedItem(hwndList);
-	strcpy(filename, drivers[nGame]->name);
+	strcpy(filename, driver_list::driver(nGame).name);
 
 	if (CommonFileDialog(GetSaveFileName, filename, FILETYPE_WAVE_FILES))
 	{
@@ -5870,7 +5782,7 @@ static void MamePlayRecordMNG()
 	char filename[MAX_PATH] = { 0, };
 
 	nGame = Picker_GetSelectedItem(hwndList);
-	strcpy(filename, drivers[nGame]->name);
+	strcpy(filename, driver_list::driver(nGame).name);
 
 	if (CommonFileDialog(GetSaveFileName, filename, FILETYPE_MNG_FILES))
 	{
@@ -5900,7 +5812,7 @@ static void MamePlayRecordAVI()
 	char filename[MAX_PATH] = { 0, };
 
 	nGame = Picker_GetSelectedItem(hwndList);
-	strcpy(filename, drivers[nGame]->name);
+	strcpy(filename, driver_list::driver(nGame).name);
 
 	if (CommonFileDialog(GetSaveFileName, filename, FILETYPE_AVI_FILES))
 	{
@@ -5930,10 +5842,8 @@ static void MamePlayGameWithOptions(int nGame, const play_options *playopts)
 	DWORD dwExitCode;
 	BOOL res;
 
-#ifdef MESS
 	if (!MessApproveImageList(hMain, nGame))
 		return;
-#endif
 
 	if (g_pJoyGUI != NULL)
 		KillTimer(hMain, JOYGUI_TIMER);
@@ -5981,6 +5891,20 @@ static void ToggleScreenShot(void)
 	/* Redraw list view */
 	if (hBackground != NULL && showScreenShot)
 		InvalidateRect(hwndList, NULL, FALSE);
+}
+
+static void ToggleSoftware(void)
+{
+#ifdef MESS
+	BOOL showSoftware = GetShowSoftware();
+
+	SetShowSoftware((showSoftware) ? FALSE : TRUE);
+	UpdateSoftware();
+
+	/* Redraw list view */
+	if (hBackground != NULL && showSoftware)
+		InvalidateRect(hwndList, NULL, FALSE);
+#endif
 }
 
 static void AdjustMetrics(void)
@@ -6054,13 +5978,6 @@ static void AdjustMetrics(void)
 	SetWindowArea(&area);
 	SetWindowPos(hMain, 0, area.x, area.y, area.width, area.height, SWP_NOZORDER | SWP_SHOWWINDOW | SWP_NOACTIVATE);
 }
-
-#if 0
-/* Adjust options - tune them to the currently selected game */
-static void EnablePlayOptions(int nIndex, core_options *o)
-{
-}
-#endif
 
 int FindIconIndex(int nIconResource)
 {
@@ -6222,7 +6139,7 @@ static void UpdateMenu(HMENU hMenu)
 
 	if (have_selection)
 	{
-		t_description = tstring_from_utf8(ConvertAmpersandString(ModifyThe(drivers[nGame]->description)));
+		t_description = tstring_from_utf8(ConvertAmpersandString(ModifyThe(driver_list::driver(nGame).description)));
 		if( !t_description )
 			return;
 

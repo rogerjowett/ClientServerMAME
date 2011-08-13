@@ -7,6 +7,9 @@
 #ifndef __ABC80__
 #define __ABC80__
 
+#include "machine/ram.h"
+#include "imagedev/cassette.h"
+
 #define ABC80_XTAL		11980800.0
 
 #define ABC80_HTOTAL	384
@@ -43,31 +46,27 @@
 #define Z80PIO_TAG		"cd67"
 #define SN76477_TAG		"g8"
 #define ABCBUS_TAG		"abcbus"
-#define CASSETTE_TAG	"cassette"
-#define RS232_TAG		"rs232"
 
 class abc80_state : public driver_device
 {
 public:
-	abc80_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config),
+	abc80_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag),
 		  m_maincpu(*this, Z80_TAG),
 		  m_pio(*this, Z80PIO_TAG),
-		  m_rs232(*this, RS232_TAG),
 		  m_cassette(*this, CASSETTE_TAG),
-		  m_ram(*this, "messram")
+		  m_ram(*this, RAM_TAG)
 	{ }
 
 	required_device<cpu_device> m_maincpu;
 	required_device<device_t> m_pio;
-	required_device<device_t> m_rs232;
-	required_device<device_t> m_cassette;
+	required_device<cassette_image_device> m_cassette;
 	required_device<device_t> m_ram;
 
 	virtual void machine_start();
 
 	virtual void video_start();
-	virtual bool video_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect);
+	virtual bool screen_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect);
 
 	void update_screen(bitmap_t *bitmap, const rectangle *cliprect);
 

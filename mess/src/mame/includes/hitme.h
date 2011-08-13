@@ -15,17 +15,17 @@
 class hitme_state : public driver_device
 {
 public:
-	hitme_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	hitme_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 	/* memory pointers */
-	UINT8 *  videoram;
+	UINT8 *  m_videoram;
 
 	/* video-related */
-	tilemap_t  *tilemap;
+	tilemap_t  *m_tilemap;
 
 	/* misc */
-	attotime timeout_time;
+	attotime m_timeout_time;
 };
 
 

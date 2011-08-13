@@ -10,7 +10,6 @@
 
     TODO:
 
-    - print time$/date$ stalls
     - uPD3301 attributes
     - PCG1000
     - Intel 8251
@@ -22,23 +21,38 @@
 
 */
 
-#include "emu.h"
 #include "includes/pc8001.h"
-#include "cpu/z80/z80.h"
-#include "devices/cassette.h"
-#include "devices/messram.h"
-#include "machine/i8257.h"
-#include "machine/ctronics.h"
-#include "machine/i8214.h"
-#include "machine/i8255a.h"
-#include "machine/msm8251.h"
-#include "machine/upd1990a.h"
-#include "video/upd3301.h"
-#include "sound/speaker.h"
 
 /* Read/Write Handlers */
 
-static WRITE8_HANDLER( port30_w )
+WRITE8_MEMBER( pc8001_state::port10_w )
+{
+	/*
+
+        bit     description
+
+        0       RTC C0
+        1       RTC C1
+        2       RTC C2
+        3       RTC DATA IN
+        4
+        5
+        6
+        7
+
+    */
+
+	// RTC
+	m_rtc->c0_w(BIT(data, 0));
+	m_rtc->c1_w(BIT(data, 1));
+	m_rtc->c2_w(BIT(data, 2));
+	m_rtc->data_in_w(BIT(data, 3));
+
+	// centronics
+	centronics_data_w(m_centronics, 0, data);
+}
+
+WRITE8_MEMBER( pc8001_state::port30_w )
 {
 	/*
 
@@ -55,19 +69,17 @@ static WRITE8_HANDLER( port30_w )
 
     */
 
-	pc8001_state *state = space->machine->driver_data<pc8001_state>();
-
 	/* characters per line */
-	state->width80 = BIT(data, 0);
+	m_width80 = BIT(data, 0);
 
 	/* color mode */
-	state->color = BIT(data, 1);
+	m_color = BIT(data, 1);
 
 	/* cassette motor */
-	cassette_change_state(state->cassette, BIT(data, 3) ? CASSETTE_MOTOR_ENABLED : CASSETTE_MOTOR_DISABLED, CASSETTE_MASK_MOTOR);
+	m_cassette->change_state(BIT(data,3) ? CASSETTE_MOTOR_ENABLED : CASSETTE_MOTOR_DISABLED, CASSETTE_MASK_MOTOR);
 }
 
-static WRITE8_HANDLER( pc8001mk2_port31_w )
+WRITE8_MEMBER( pc8001mk2_state::port31_w )
 {
 	/*
 
@@ -87,13 +99,13 @@ static WRITE8_HANDLER( pc8001mk2_port31_w )
 
 /* Memory Maps */
 
-static ADDRESS_MAP_START( pc8001_mem, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( pc8001_mem, AS_PROGRAM, 8, pc8001_state )
 	AM_RANGE(0x0000, 0x5fff) AM_RAMBANK("bank1")
 	AM_RANGE(0x6000, 0x7fff) AM_RAMBANK("bank2")
 	AM_RANGE(0x8000, 0xffff) AM_RAMBANK("bank3")
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( pc8001_io, ADDRESS_SPACE_IO, 8 )
+static ADDRESS_MAP_START( pc8001_io, AS_IO, 8, pc8001_state )
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 	ADDRESS_MAP_UNMAP_HIGH
 	AM_RANGE(0x00, 0x00) AM_READ_PORT("KEY0")
@@ -106,13 +118,13 @@ static ADDRESS_MAP_START( pc8001_io, ADDRESS_SPACE_IO, 8 )
 	AM_RANGE(0x07, 0x07) AM_READ_PORT("KEY7")
 	AM_RANGE(0x08, 0x08) AM_READ_PORT("KEY8")
 	AM_RANGE(0x09, 0x09) AM_READ_PORT("KEY9")
-	AM_RANGE(0x10, 0x10) AM_MIRROR(0x0f) AM_WRITE_PORT("W10") /* also AM_DEVWRITE(CENTRONICS_TAG, centronics_data_w)*/
-	AM_RANGE(0x20, 0x20) AM_MIRROR(0x0e) AM_DEVREADWRITE(I8251_TAG, msm8251_data_r, msm8251_data_w)
-	AM_RANGE(0x21, 0x21) AM_MIRROR(0x0e) AM_DEVREADWRITE(I8251_TAG, msm8251_status_r, msm8251_control_w)
+	AM_RANGE(0x10, 0x10) AM_MIRROR(0x0f) AM_WRITE(port10_w)
+	AM_RANGE(0x20, 0x20) AM_MIRROR(0x0e) AM_DEVREADWRITE_LEGACY(I8251_TAG, msm8251_data_r, msm8251_data_w)
+	AM_RANGE(0x21, 0x21) AM_MIRROR(0x0e) AM_DEVREADWRITE_LEGACY(I8251_TAG, msm8251_status_r, msm8251_control_w)
 	AM_RANGE(0x30, 0x30) AM_MIRROR(0x0f) AM_WRITE(port30_w)
 	AM_RANGE(0x40, 0x40) AM_MIRROR(0x0f) AM_READ_PORT("R40") AM_WRITE_PORT("W40")
-	AM_RANGE(0x50, 0x51) AM_DEVREADWRITE(UPD3301_TAG, upd3301_r, upd3301_w)
-	AM_RANGE(0x60, 0x68) AM_DEVREADWRITE(I8257_TAG, i8257_r, i8257_w)
+	AM_RANGE(0x50, 0x51) AM_DEVREADWRITE(UPD3301_TAG, upd3301_device, read, write)
+	AM_RANGE(0x60, 0x68) AM_DEVREADWRITE_LEGACY(I8257_TAG, i8257_r, i8257_w)
 //  AM_RANGE(0x70, 0x7f) unused
 //  AM_RANGE(0x80, 0x80) AM_MIRROR(0x0f) AM_WRITE(pc8011_ext0_w)
 //  AM_RANGE(0x90, 0x90) AM_MIRROR(0x0f) AM_WRITE(pc8011_ext1_w)
@@ -121,13 +133,13 @@ static ADDRESS_MAP_START( pc8001_io, ADDRESS_SPACE_IO, 8 )
 //  AM_RANGE(0xb1, 0xb1) AM_WRITE(pc8011_gpio8_w)
 //  AM_RANGE(0xb2, 0xb2) AM_READ(pc8011_gpio4_r)
 //  AM_RANGE(0xb3, 0xb3) AM_WRITE(pc8011_gpio4_w)
-//  AM_RANGE(0xc0, 0xc0) AM_DEVREADWRITE(PC8011_CH1_I8251_TAG, msm8251_data_r, msm8251_data_w)
-//  AM_RANGE(0xc1, 0xc1) AM_DEVREADWRITE(PC8011_CH1_I8251_TAG, msm8251_status_r, msm8251_control_w)
-//  AM_RANGE(0xc2, 0xc2) AM_DEVREADWRITE(PC8011_CH2_I8251_TAG, msm8251_data_r, msm8251_data_w)
-//  AM_RANGE(0xc3, 0xc3) AM_DEVREADWRITE(PC8011_CH2_I8251_TAG, msm8251_status_r, msm8251_control_w)
+//  AM_RANGE(0xc0, 0xc0) AM_DEVREADWRITE_LEGACY(PC8011_CH1_I8251_TAG, msm8251_data_r, msm8251_data_w)
+//  AM_RANGE(0xc1, 0xc1) AM_DEVREADWRITE_LEGACY(PC8011_CH1_I8251_TAG, msm8251_status_r, msm8251_control_w)
+//  AM_RANGE(0xc2, 0xc2) AM_DEVREADWRITE_LEGACY(PC8011_CH2_I8251_TAG, msm8251_data_r, msm8251_data_w)
+//  AM_RANGE(0xc3, 0xc3) AM_DEVREADWRITE_LEGACY(PC8011_CH2_I8251_TAG, msm8251_status_r, msm8251_control_w)
 //  AM_RANGE(0xc8, 0xc8) RS-232 output enable?
 //  AM_RANGE(0xca, 0xca) RS-232 output disable?
-//  AM_RANGE(0xd0, 0xd3) AM_DEVREADWRITE(PC8011_IEEE488_I8255A_TAG, i8255a_r, i8255a_w)
+//  AM_RANGE(0xd0, 0xd3) AM_DEVREADWRITE_LEGACY(PC8011_IEEE488_I8255A_TAG, i8255a_r, i8255a_w)
 //  AM_RANGE(0xd8, 0xd8) AM_READ(pc8011_ieee488_control_signal_input_r)
 //  AM_RANGE(0xda, 0xda) AM_READ(pc8011_ieee488_bus_address_mode_r)
 //  AM_RANGE(0xdc, 0xdc) AM_WRITE(pc8011_ieee488_nrfd_w)
@@ -137,22 +149,22 @@ static ADDRESS_MAP_START( pc8001_io, ADDRESS_SPACE_IO, 8 )
 //  AM_RANGE(0xe6, 0xe6) AM_WRITE(irq_mask_w)
 //  AM_RANGE(0xe7, 0xe7) AM_WRITE(pc8012_memory_mode_w)
 //  AM_RANGE(0xe8, 0xfb) unused
-	AM_RANGE(0xfc, 0xff) AM_DEVREADWRITE(I8255A_TAG, i8255a_r, i8255a_w)
+	AM_RANGE(0xfc, 0xff) AM_DEVREADWRITE(I8255A_TAG, i8255_device, read, write)
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( pc8001mk2_mem, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( pc8001mk2_mem, AS_PROGRAM, 8, pc8001mk2_state )
 	AM_RANGE(0x0000, 0x5fff) AM_RAMBANK("bank1")
 	AM_RANGE(0x6000, 0x7fff) AM_RAMBANK("bank2")
 	AM_RANGE(0x8000, 0xbfff) AM_RAMBANK("bank3")
 	AM_RANGE(0xc000, 0xffff) AM_RAMBANK("bank4")
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( pc8001mk2_io, ADDRESS_SPACE_IO, 8 )
+static ADDRESS_MAP_START( pc8001mk2_io, AS_IO, 8, pc8001mk2_state )
 	AM_IMPORT_FROM(pc8001_io)
-	AM_RANGE(0x30, 0x30) AM_WRITE(port30_w)
-	AM_RANGE(0x31, 0x31) AM_WRITE(pc8001mk2_port31_w)
-//  AM_RANGE(0x5c, 0x5c) AM_WRITE(pc8001mk2_gram_on_w)
-//  AM_RANGE(0x5f, 0x5f) AM_WRITE(pc8001mk2_gram_off_w)
+	AM_RANGE(0x30, 0x30) AM_WRITE_BASE(pc8001_state, port30_w)
+	AM_RANGE(0x31, 0x31) AM_WRITE(port31_w)
+//  AM_RANGE(0x5c, 0x5c) AM_WRITE(gram_on_w)
+//  AM_RANGE(0x5f, 0x5f) AM_WRITE(gram_off_w)
 //  AM_RANGE(0xe8, 0xe8) kanji_address_lo_w, kanji_data_lo_r
 //  AM_RANGE(0xe9, 0xe9) kanji_address_hi_w, kanji_data_hi_r
 //  AM_RANGE(0xea, 0xea) kanji_readout_start_w
@@ -269,31 +281,24 @@ static INPUT_PORTS_START( pc8001 )
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_F4)								PORT_CHAR(UCHAR_MAMEKEY(F4))
 	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_F5)								PORT_CHAR(UCHAR_MAMEKEY(F5))
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_SPACE)							PORT_CHAR(' ')
-	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_ESC)								PORT_CHAR(UCHAR_MAMEKEY(ESC))
+	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_ESC)							PORT_CHAR(UCHAR_MAMEKEY(ESC))
 
 	PORT_START("DSW1")
-
-	PORT_START("W10")
-	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_OUTPUT ) PORT_WRITE_LINE_DEVICE(UPD1990A_TAG, upd1990a_c0_w)
-	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_OUTPUT ) PORT_WRITE_LINE_DEVICE(UPD1990A_TAG, upd1990a_c1_w)
-	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_OUTPUT ) PORT_WRITE_LINE_DEVICE(UPD1990A_TAG, upd1990a_c2_w)
-	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_OUTPUT ) PORT_WRITE_LINE_DEVICE(UPD1990A_TAG, upd1990a_data_in_w)
-	PORT_BIT( 0xf0, IP_ACTIVE_HIGH, IPT_UNUSED )
 
 	PORT_START("R40")
 	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_SPECIAL ) PORT_READ_LINE_DEVICE(CENTRONICS_TAG, centronics_busy_r)
 	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_SPECIAL ) PORT_READ_LINE_DEVICE(CENTRONICS_TAG, centronics_ack_r)
 	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_SPECIAL ) // CMT CDIN
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_SPECIAL ) // EXP /EXTON
-	PORT_BIT( 0x10, IP_ACTIVE_HIGH, IPT_SPECIAL ) PORT_READ_LINE_DEVICE(UPD1990A_TAG, upd1990a_data_out_r)
-	PORT_BIT( 0x20, IP_ACTIVE_HIGH, IPT_SPECIAL ) PORT_READ_LINE_DEVICE(UPD3301_TAG, upd3301_vrtc_r)
+	PORT_BIT( 0x10, IP_ACTIVE_HIGH, IPT_SPECIAL ) PORT_READ_LINE_DEVICE_MEMBER(UPD1990A_TAG, upd1990a_device, data_out_r)
+	PORT_BIT( 0x20, IP_ACTIVE_HIGH, IPT_SPECIAL ) PORT_READ_LINE_DEVICE_MEMBER(UPD3301_TAG, upd3301_device, vrtc_r)
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_UNUSED )
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_UNUSED )
 
 	PORT_START("W40")
 	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_OUTPUT ) PORT_WRITE_LINE_DEVICE(CENTRONICS_TAG, centronics_strobe_w)
-	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_OUTPUT ) PORT_WRITE_LINE_DEVICE(UPD1990A_TAG, upd1990a_stb_w)
-	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_OUTPUT ) PORT_WRITE_LINE_DEVICE(UPD1990A_TAG, upd1990a_clk_w)
+	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_OUTPUT ) PORT_WRITE_LINE_DEVICE_MEMBER(UPD1990A_TAG, upd1990a_device, stb_w)
+	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_OUTPUT ) PORT_WRITE_LINE_DEVICE_MEMBER(UPD1990A_TAG, upd1990a_device, clk_w)
 	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_OUTPUT ) // CRT /CLDS CLK
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNUSED )
 	PORT_BIT( 0x20, IP_ACTIVE_HIGH, IPT_OUTPUT ) PORT_WRITE_LINE_DEVICE(SPEAKER_TAG, speaker_level_w)
@@ -307,19 +312,15 @@ static PALETTE_INIT( pc8001 )
 {
 }
 
-static VIDEO_START( pc8001 )
+void pc8001_state::video_start()
 {
-	pc8001_state *state = machine->driver_data<pc8001_state>();
-
-	/* find memory regions */
-	state->char_rom = machine->region("chargen")->base();
+	// find memory regions
+	m_char_rom = machine().region("chargen")->base();
 }
 
-static VIDEO_UPDATE( pc8001 )
+bool pc8001_state::screen_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect)
 {
-	pc8001_state *state = screen->machine->driver_data<pc8001_state>();
-
-	upd3301_update(state->upd3301, bitmap, cliprect);
+	m_crtc->update_screen(&bitmap, &cliprect);
 
 	return 0;
 }
@@ -328,15 +329,15 @@ static VIDEO_UPDATE( pc8001 )
 
 static UPD3301_DISPLAY_PIXELS( pc8001_display_pixels )
 {
-	pc8001_state *state = device->machine->driver_data<pc8001_state>();
+	pc8001_state *state = device->machine().driver_data<pc8001_state>();
 
-	UINT8 data = state->char_rom[(cc << 3) | lc];
+	UINT8 data = state->m_char_rom[(cc << 3) | lc];
 	int i;
 
 	if (lc >= 8) return;
 	if (csr) data = 0xff;
 
-	if (state->width80)
+	if (state->m_width80)
 	{
 		for (i = 0; i < 8; i++)
 		{
@@ -376,16 +377,22 @@ static UPD3301_INTERFACE( pc8001_upd3301_intf )
 
 /* 8251 Interface */
 
-static const msm8251_interface pc8001_8251_intf =
+static const msm8251_interface uart_intf =
 {
-	NULL,
-	NULL,
-	NULL
+	DEVCB_NULL,
+	DEVCB_NULL,
+	DEVCB_NULL,
+	DEVCB_NULL,
+	DEVCB_NULL,
+	DEVCB_NULL,
+	DEVCB_NULL,
+	DEVCB_NULL,
+	DEVCB_NULL
 };
 
 /* 8255 Interface */
 
-static I8255A_INTERFACE( pc8001_8255_intf )
+static I8255A_INTERFACE( ppi_intf )
 {
 	DEVCB_NULL,
 	DEVCB_NULL,
@@ -397,28 +404,46 @@ static I8255A_INTERFACE( pc8001_8255_intf )
 
 /* 8257 Interface */
 
-static WRITE_LINE_DEVICE_HANDLER( hrq_w )
+WRITE_LINE_MEMBER( pc8001_state::hrq_w )
 {
 	/* HACK - this should be connected to the BUSREQ line of Z80 */
-	cputag_set_input_line(device->machine, Z80_TAG, INPUT_LINE_HALT, state);
+	m_maincpu->set_input_line(INPUT_LINE_HALT, state);
 
 	/* HACK - this should be connected to the BUSACK line of Z80 */
-	i8257_hlda_w(device, state);
+	i8257_hlda_w(m_dma, state);
 }
 
-static UINT8 memory_read_byte(address_space *space, offs_t address) { return space->read_byte(address); }
-static void memory_write_byte(address_space *space, offs_t address, UINT8 data) { space->write_byte(address, data); }
-
-static I8257_INTERFACE( pc8001_8257_intf )
+WRITE8_MEMBER( pc8001_state::dma_mem_w )
 {
-	DEVCB_LINE(hrq_w),
+	//if (channel == 2)
+	{
+		m_crtc->dack_w(space, offset, data);
+	}
+}
+
+READ8_MEMBER( pc8001_state::dma_io_r )
+{
+	address_space *program = m_maincpu->memory().space(AS_PROGRAM);
+
+	return program->read_byte(offset);
+}
+
+WRITE8_MEMBER( pc8001_state::dma_io_w )
+{
+	address_space *program = m_maincpu->memory().space(AS_PROGRAM);
+
+	program->write_byte(offset, data);
+}
+
+static I8257_INTERFACE( dmac_intf )
+{
+	DEVCB_DRIVER_LINE_MEMBER(pc8001_state, hrq_w),
 	DEVCB_NULL,
 	DEVCB_NULL,
-	{ DEVCB_NULL, DEVCB_NULL, DEVCB_NULL, DEVCB_NULL },
-	{ DEVCB_NULL, DEVCB_NULL, DEVCB_DEVICE_HANDLER(UPD3301_TAG, upd3301_dack_w), DEVCB_NULL },
-	I8257_MEMORY_HANDLER(Z80_TAG, PROGRAM, memory_read_byte),
-	I8257_MEMORY_HANDLER(Z80_TAG, PROGRAM, memory_write_byte),
-	{ DEVCB_NULL, DEVCB_NULL, DEVCB_NULL, DEVCB_NULL }
+	DEVCB_NULL,
+	DEVCB_DRIVER_MEMBER(pc8001_state, dma_mem_w),
+	{ DEVCB_DRIVER_MEMBER(pc8001_state, dma_io_r), DEVCB_DRIVER_MEMBER(pc8001_state, dma_io_r), DEVCB_DRIVER_MEMBER(pc8001_state, dma_io_r), DEVCB_DRIVER_MEMBER(pc8001_state, dma_io_r) },
+	{ DEVCB_DRIVER_MEMBER(pc8001_state, dma_io_w), DEVCB_DRIVER_MEMBER(pc8001_state, dma_io_w), DEVCB_DRIVER_MEMBER(pc8001_state, dma_io_w), DEVCB_DRIVER_MEMBER(pc8001_state, dma_io_w) },
 };
 
 /* uPD1990A Interface */
@@ -431,89 +456,76 @@ static UPD1990A_INTERFACE( pc8001_upd1990a_intf )
 
 /* Machine Initialization */
 
-static MACHINE_START( pc8001 )
+void pc8001_state::machine_start()
 {
-	pc8001_state *state = machine->driver_data<pc8001_state>();
-	address_space *program = cputag_get_address_space(machine, Z80_TAG, ADDRESS_SPACE_PROGRAM);
-	device_t *messram = machine->device("messram");
-
-	/* look up devices */
-	state->i8257 = machine->device(I8257_TAG);
-	state->upd1990a = machine->device(UPD1990A_TAG);
-	state->upd3301 = machine->device(UPD3301_TAG);
-	state->speaker = machine->device(SPEAKER_TAG);
-	state->cassette = machine->device(CASSETTE_TAG);
-	state->centronics = machine->device(CENTRONICS_TAG);
+	address_space *program = m_maincpu->memory().space(AS_PROGRAM);
 
 	/* initialize RTC */
-	upd1990a_cs_w(state->upd1990a, 1);
-	upd1990a_oe_w(state->upd1990a, 1);
+	m_rtc->cs_w(1);
+	m_rtc->oe_w(1);
 
 	/* initialize DMA */
-	i8257_ready_w(state->i8257, 1);
+	i8257_ready_w(m_dma, 1);
 
 	/* setup memory banking */
-	memory_configure_bank(machine, "bank1", 1, 1, machine->region("n80")->base(), 0);
-	memory_install_read_bank(program, 0x0000, 0x5fff, 0, 0, "bank1");
-	memory_unmap_write(program, 0x0000, 0x5fff, 0, 0);
+	UINT8 *ram = ram_get_ptr(m_ram);
 
-	switch (messram_get_size(messram))
+	memory_configure_bank(machine(), "bank1", 1, 1, machine().region("n80")->base(), 0);
+	program->install_read_bank(0x0000, 0x5fff, "bank1");
+	program->unmap_write(0x0000, 0x5fff);
+
+	switch (ram_get_size(m_ram))
 	{
 	case 16*1024:
-		memory_configure_bank(machine, "bank3", 0, 1, messram_get_ptr(messram), 0);
-		memory_unmap_readwrite(program, 0x6000, 0xbfff, 0, 0);
-		memory_unmap_readwrite(program, 0x8000, 0xbfff, 0, 0);
-		memory_install_readwrite_bank(program, 0xc000, 0xffff, 0, 0, "bank3");
+		memory_configure_bank(machine(), "bank3", 0, 1, ram, 0);
+		program->unmap_readwrite(0x6000, 0xbfff);
+		program->unmap_readwrite(0x8000, 0xbfff);
+		program->install_readwrite_bank(0xc000, 0xffff, "bank3");
 		break;
 
 	case 32*1024:
-		memory_configure_bank(machine, "bank3", 0, 1, messram_get_ptr(messram), 0);
-		memory_unmap_readwrite(program, 0x6000, 0xbfff, 0, 0);
-		memory_install_readwrite_bank(program, 0x8000, 0xffff, 0, 0, "bank3");
+		memory_configure_bank(machine(), "bank3", 0, 1, ram, 0);
+		program->unmap_readwrite(0x6000, 0xbfff);
+		program->install_readwrite_bank(0x8000, 0xffff, "bank3");
 		break;
 
 	case 64*1024:
-		memory_configure_bank(machine, "bank1", 0, 1, messram_get_ptr(messram), 0);
-		memory_configure_bank(machine, "bank2", 0, 1, messram_get_ptr(messram) + 0x6000, 0);
-		memory_configure_bank(machine, "bank3", 0, 1, messram_get_ptr(messram) + 0x8000, 0);
-		memory_install_readwrite_bank(program, 0x0000, 0x5fff, 0, 0, "bank1");
-		memory_install_readwrite_bank(program, 0x6000, 0xbfff, 0, 0, "bank2");
-		memory_install_readwrite_bank(program, 0x8000, 0xffff, 0, 0, "bank3");
-		memory_set_bank(machine, "bank2", 0);
+		memory_configure_bank(machine(), "bank1", 0, 1, ram, 0);
+		memory_configure_bank(machine(), "bank2", 0, 1, ram + 0x6000, 0);
+		memory_configure_bank(machine(), "bank3", 0, 1, ram + 0x8000, 0);
+		program->install_readwrite_bank(0x0000, 0x5fff, "bank1");
+		program->install_readwrite_bank(0x6000, 0xbfff, "bank2");
+		program->install_readwrite_bank(0x8000, 0xffff, "bank3");
+		memory_set_bank(machine(), "bank2", 0);
 		break;
 	}
 
-	memory_set_bank(machine, "bank1", 1);
-	memory_set_bank(machine, "bank3", 0);
+	memory_set_bank(machine(), "bank1", 1);
+	memory_set_bank(machine(), "bank3", 0);
 
 	/* register for state saving */
-//  state_save_register_global(machine, state->);
-}
-
-static MACHINE_START( pc8001mk2 )
-{
-	MACHINE_START_CALL(pc8001);
+	save_item(NAME(m_width80));
+	save_item(NAME(m_color));
 }
 
 /* Cassette Configuration */
 
-static const cassette_config pc8001_cassette_config =
+static const cassette_interface pc8001_cassette_interface =
 {
 	cassette_default_formats,
 	NULL,
 	(cassette_state)(CASSETTE_STOPPED | CASSETTE_MOTOR_ENABLED | CASSETTE_SPEAKER_MUTED),
+	NULL,
 	NULL
 };
 
 /* Machine Drivers */
 
 static MACHINE_CONFIG_START( pc8001, pc8001_state )
-
 	/* basic machine hardware */
 	MCFG_CPU_ADD(Z80_TAG, Z80, 4000000)
 	MCFG_CPU_PROGRAM_MAP(pc8001_mem)
 	MCFG_CPU_IO_MAP(pc8001_io)
-	MCFG_MACHINE_START(pc8001)
 
 	/* video hardware */
 	MCFG_SCREEN_ADD(SCREEN_TAG, RASTER)
@@ -526,8 +538,42 @@ static MACHINE_CONFIG_START( pc8001, pc8001_state )
 	MCFG_PALETTE_LENGTH(8)
 	MCFG_PALETTE_INIT(pc8001)
 
-	MCFG_VIDEO_START(pc8001)
-	MCFG_VIDEO_UPDATE(pc8001)
+	/* sound hardware */
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD(SPEAKER_TAG, SPEAKER_SOUND, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+
+	/* devices */
+	MCFG_MSM8251_ADD(I8251_TAG, uart_intf)
+	MCFG_I8255A_ADD(I8255A_TAG, ppi_intf)
+	MCFG_I8257_ADD(I8257_TAG, 4000000, dmac_intf)
+	MCFG_UPD1990A_ADD(UPD1990A_TAG, XTAL_32_768kHz, pc8001_upd1990a_intf)
+	MCFG_UPD3301_ADD(UPD3301_TAG, 14318180, pc8001_upd3301_intf)
+
+	MCFG_CENTRONICS_ADD(CENTRONICS_TAG, standard_centronics)
+	MCFG_CASSETTE_ADD(CASSETTE_TAG, pc8001_cassette_interface)
+
+	MCFG_RAM_ADD(RAM_TAG)
+	MCFG_RAM_DEFAULT_SIZE("16K")
+	MCFG_RAM_EXTRA_OPTIONS("32K,64K")
+MACHINE_CONFIG_END
+
+static MACHINE_CONFIG_START( pc8001mk2, pc8001mk2_state )
+	/* basic machine hardware */
+	MCFG_CPU_ADD(Z80_TAG, Z80, 4000000)
+	MCFG_CPU_PROGRAM_MAP(pc8001mk2_mem)
+	MCFG_CPU_IO_MAP(pc8001mk2_io)
+
+	/* video hardware */
+	MCFG_SCREEN_ADD(SCREEN_TAG, RASTER)
+	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(640, 220)
+	MCFG_SCREEN_VISIBLE_AREA(0, 640-1, 0, 200-1)
+
+	MCFG_PALETTE_LENGTH(8)
+	MCFG_PALETTE_INIT(pc8001)
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
@@ -535,28 +581,16 @@ static MACHINE_CONFIG_START( pc8001, pc8001_state )
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
 	/* devices */
-	MCFG_MSM8251_ADD(I8251_TAG, pc8001_8251_intf)
-	MCFG_I8255A_ADD(I8255A_TAG, pc8001_8255_intf)
-	MCFG_I8257_ADD(I8257_TAG, 4000000, pc8001_8257_intf)
+	MCFG_MSM8251_ADD(I8251_TAG, uart_intf)
+	MCFG_I8255A_ADD(I8255A_TAG, ppi_intf)
+	MCFG_I8257_ADD(I8257_TAG, 4000000, dmac_intf)
 	MCFG_UPD1990A_ADD(UPD1990A_TAG, XTAL_32_768kHz, pc8001_upd1990a_intf)
 	MCFG_UPD3301_ADD(UPD3301_TAG, 14318180, pc8001_upd3301_intf)
 
 	MCFG_CENTRONICS_ADD(CENTRONICS_TAG, standard_centronics)
-	MCFG_CASSETTE_ADD(CASSETTE_TAG, pc8001_cassette_config)
+	MCFG_CASSETTE_ADD(CASSETTE_TAG, pc8001_cassette_interface)
 
-	MCFG_RAM_ADD("messram")
-	MCFG_RAM_DEFAULT_SIZE("16K")
-	MCFG_RAM_EXTRA_OPTIONS("32K,64K")
-MACHINE_CONFIG_END
-
-static MACHINE_CONFIG_DERIVED( pc8001mk2, pc8001 )
-
-	MCFG_CPU_MODIFY(Z80_TAG)
-	MCFG_CPU_PROGRAM_MAP(pc8001mk2_mem)
-	MCFG_CPU_IO_MAP(pc8001mk2_io)
-	MCFG_MACHINE_START(pc8001mk2)
-
-	MCFG_RAM_MODIFY("messram")
+	MCFG_RAM_ADD(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("64K")
 MACHINE_CONFIG_END
 

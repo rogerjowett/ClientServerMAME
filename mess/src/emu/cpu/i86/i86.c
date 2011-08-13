@@ -114,29 +114,29 @@ static UINT8 parity_table[256];
 static void i8086_state_register(device_t *device)
 {
 	i8086_state *cpustate = get_safe_token(device);
-	state_save_register_device_item_array(device, 0, cpustate->regs.w);
-	state_save_register_device_item(device, 0, cpustate->pc);
-	state_save_register_device_item(device, 0, cpustate->prevpc);
-	state_save_register_device_item_array(device, 0, cpustate->base);
-	state_save_register_device_item_array(device, 0, cpustate->sregs);
-	state_save_register_device_item(device, 0, cpustate->flags);
-	state_save_register_device_item(device, 0, cpustate->AuxVal);
-	state_save_register_device_item(device, 0, cpustate->OverVal);
-	state_save_register_device_item(device, 0, cpustate->SignVal);
-	state_save_register_device_item(device, 0, cpustate->ZeroVal);
-	state_save_register_device_item(device, 0, cpustate->CarryVal);
-	state_save_register_device_item(device, 0, cpustate->DirVal);
-	state_save_register_device_item(device, 0, cpustate->ParityVal);
-	state_save_register_device_item(device, 0, cpustate->TF);
-	state_save_register_device_item(device, 0, cpustate->IF);
-	state_save_register_device_item(device, 0, cpustate->MF);
-	state_save_register_device_item(device, 0, cpustate->int_vector);
-	state_save_register_device_item(device, 0, cpustate->nmi_state);
-	state_save_register_device_item(device, 0, cpustate->irq_state);
-	state_save_register_device_item(device, 0, cpustate->extra_cycles);
-	state_save_register_device_item(device, 0, cpustate->halted);
-	state_save_register_device_item(device, 0, cpustate->test_state);	/* PJB 03/05 */
-	state_save_register_device_item(device, 0, cpustate->rep_in_progress);	/* PJB 03/05 */
+	device->save_item(NAME(cpustate->regs.w));
+	device->save_item(NAME(cpustate->pc));
+	device->save_item(NAME(cpustate->prevpc));
+	device->save_item(NAME(cpustate->base));
+	device->save_item(NAME(cpustate->sregs));
+	device->save_item(NAME(cpustate->flags));
+	device->save_item(NAME(cpustate->AuxVal));
+	device->save_item(NAME(cpustate->OverVal));
+	device->save_item(NAME(cpustate->SignVal));
+	device->save_item(NAME(cpustate->ZeroVal));
+	device->save_item(NAME(cpustate->CarryVal));
+	device->save_item(NAME(cpustate->DirVal));
+	device->save_item(NAME(cpustate->ParityVal));
+	device->save_item(NAME(cpustate->TF));
+	device->save_item(NAME(cpustate->IF));
+	device->save_item(NAME(cpustate->MF));
+	device->save_item(NAME(cpustate->int_vector));
+	device->save_item(NAME(cpustate->nmi_state));
+	device->save_item(NAME(cpustate->irq_state));
+	device->save_item(NAME(cpustate->extra_cycles));
+	device->save_item(NAME(cpustate->halted));
+	device->save_item(NAME(cpustate->test_state));	/* PJB 03/05 */
+	device->save_item(NAME(cpustate->rep_in_progress));	/* PJB 03/05 */
 }
 
 static CPU_INIT( i8086 )
@@ -220,12 +220,12 @@ static CPU_INIT( i80186 )
 	CPU_INIT_CALL(i8086);
 
 	/* resolve callbacks */
-	i80186_interface *intf = (i80186_interface *) device->baseconfig().static_config();
+	i80186_interface *intf = (i80186_interface *) device->static_config();
 
 	if (intf != NULL)
 	{
-		devcb_resolve_write_line(&cpustate->out_tmrout0_func, &intf->out_tmrout0_func, device);
-		devcb_resolve_write_line(&cpustate->out_tmrout1_func, &intf->out_tmrout1_func, device);
+		cpustate->out_tmrout0_func.resolve(intf->out_tmrout0_func, *device);
+		cpustate->out_tmrout1_func.resolve(intf->out_tmrout1_func, *device);
 	}
 }
 
@@ -242,7 +242,7 @@ static CPU_RESET( i8086 )
 	cpustate->direct = &cpustate->program->direct();
 	cpustate->io = device->space(AS_IO);
 
-	cpustate->sregs[CS] = 0xf000;
+	cpustate->sregs[CS] = 0xffff;
 	cpustate->base[CS] = SegBase(CS);
 	cpustate->pc = 0xffff0 & AMASK;
 	ExpandFlags(cpustate->flags);
@@ -495,21 +495,21 @@ static CPU_EXPORT_STRING( i8086 )
 		case STATE_GENFLAGS:
 			cpustate->flags = CompressFlags();
 			string.printf("%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c",
-					cpustate->flags & 0x8000 ? '?' : '.',
-					cpustate->flags & 0x4000 ? '?' : '.',
-					cpustate->flags & 0x2000 ? '?' : '.',
-					cpustate->flags & 0x1000 ? '?' : '.',
+					cpustate->flags & 0x8000 ? '1' : '.',
+					cpustate->flags & 0x4000 ? '1' : '.',
+					cpustate->flags & 0x2000 ? '1' : '.',
+					cpustate->flags & 0x1000 ? '1' : '.',
 					cpustate->flags & 0x0800 ? 'O' : '.',
 					cpustate->flags & 0x0400 ? 'D' : '.',
 					cpustate->flags & 0x0200 ? 'I' : '.',
 					cpustate->flags & 0x0100 ? 'T' : '.',
 					cpustate->flags & 0x0080 ? 'S' : '.',
 					cpustate->flags & 0x0040 ? 'Z' : '.',
-					cpustate->flags & 0x0020 ? '?' : '.',
+					cpustate->flags & 0x0020 ? '0' : '.',
 					cpustate->flags & 0x0010 ? 'A' : '.',
-					cpustate->flags & 0x0008 ? '?' : '.',
+					cpustate->flags & 0x0008 ? '0' : '.',
 					cpustate->flags & 0x0004 ? 'P' : '.',
-					cpustate->flags & 0x0002 ? 'N' : '.',
+					cpustate->flags & 0x0002 ? '1' : '.',
 					cpustate->flags & 0x0001 ? 'C' : '.');
 			break;
 
@@ -561,15 +561,15 @@ CPU_GET_INFO( i8086 )
 		case CPUINFO_INT_MIN_CYCLES:					info->i = 1;							break;
 		case CPUINFO_INT_MAX_CYCLES:					info->i = 50;							break;
 
-		case DEVINFO_INT_DATABUS_WIDTH + ADDRESS_SPACE_PROGRAM:	info->i = 16;					break;
-		case DEVINFO_INT_ADDRBUS_WIDTH + ADDRESS_SPACE_PROGRAM: info->i = 20;					break;
-		case DEVINFO_INT_ADDRBUS_SHIFT + ADDRESS_SPACE_PROGRAM: info->i = 0;					break;
-		case DEVINFO_INT_DATABUS_WIDTH + ADDRESS_SPACE_DATA:	info->i = 0;					break;
-		case DEVINFO_INT_ADDRBUS_WIDTH + ADDRESS_SPACE_DATA:	info->i = 0;					break;
-		case DEVINFO_INT_ADDRBUS_SHIFT + ADDRESS_SPACE_DATA:	info->i = 0;					break;
-		case DEVINFO_INT_DATABUS_WIDTH + ADDRESS_SPACE_IO:		info->i = 16;					break;
-		case DEVINFO_INT_ADDRBUS_WIDTH + ADDRESS_SPACE_IO:		info->i = 16;					break;
-		case DEVINFO_INT_ADDRBUS_SHIFT + ADDRESS_SPACE_IO:		info->i = 0;					break;
+		case DEVINFO_INT_DATABUS_WIDTH + AS_PROGRAM:	info->i = 16;					break;
+		case DEVINFO_INT_ADDRBUS_WIDTH + AS_PROGRAM: info->i = 20;					break;
+		case DEVINFO_INT_ADDRBUS_SHIFT + AS_PROGRAM: info->i = 0;					break;
+		case DEVINFO_INT_DATABUS_WIDTH + AS_DATA:	info->i = 0;					break;
+		case DEVINFO_INT_ADDRBUS_WIDTH + AS_DATA:	info->i = 0;					break;
+		case DEVINFO_INT_ADDRBUS_SHIFT + AS_DATA:	info->i = 0;					break;
+		case DEVINFO_INT_DATABUS_WIDTH + AS_IO:		info->i = 16;					break;
+		case DEVINFO_INT_ADDRBUS_WIDTH + AS_IO:		info->i = 16;					break;
+		case DEVINFO_INT_ADDRBUS_SHIFT + AS_IO:		info->i = 0;					break;
 
 		case CPUINFO_INT_INPUT_STATE + 0:				info->i = cpustate->irq_state;					break;
 		case CPUINFO_INT_INPUT_STATE + INPUT_LINE_NMI:	info->i = cpustate->nmi_state;					break;
@@ -610,8 +610,8 @@ CPU_GET_INFO( i8088 )
 	switch (state)
 	{
 		/* --- the following bits of info are returned as 64-bit signed integers --- */
-		case DEVINFO_INT_DATABUS_WIDTH + ADDRESS_SPACE_PROGRAM:	info->i = 8;					break;
-		case DEVINFO_INT_DATABUS_WIDTH + ADDRESS_SPACE_IO:		info->i = 8;					break;
+		case DEVINFO_INT_DATABUS_WIDTH + AS_PROGRAM:	info->i = 8;					break;
+		case DEVINFO_INT_DATABUS_WIDTH + AS_IO:		info->i = 8;					break;
 
 		/* --- the following bits of info are returned as pointers to data or functions --- */
 		case CPUINFO_FCT_INIT:							info->init = CPU_INIT_NAME(i8088);		break;
@@ -678,8 +678,8 @@ CPU_GET_INFO( i80188 )
 	switch (state)
 	{
 		/* --- the following bits of info are returned as 64-bit signed integers --- */
-		case DEVINFO_INT_DATABUS_WIDTH + ADDRESS_SPACE_PROGRAM:	info->i = 8;					break;
-		case DEVINFO_INT_DATABUS_WIDTH + ADDRESS_SPACE_IO:		info->i = 8;					break;
+		case DEVINFO_INT_DATABUS_WIDTH + AS_PROGRAM:	info->i = 8;					break;
+		case DEVINFO_INT_DATABUS_WIDTH + AS_IO:		info->i = 8;					break;
 
 		/* --- the following bits of info are returned as pointers to data or functions --- */
 		case CPUINFO_FCT_INIT:							info->init = CPU_INIT_NAME(i8088);		break;

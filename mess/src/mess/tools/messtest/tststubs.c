@@ -4,8 +4,6 @@
 #endif
 
 #include <stdlib.h>
-#include "emu.h"
-#include "osdepend.h"
 void osd_set_mastervolume(int attenuation)
 {
 }
@@ -22,12 +20,12 @@ void osd_mess_options_init(core_options *options)
 {
 }
 
-void osd_init_debugger(running_machine *machine)
+void osd_init_debugger(running_machine &machine)
 {
 }
 
 #ifdef UNUSED_FUNCTION
-void osd_paste(running_machine *machine)
+void osd_paste(running_machine &machine)
 {
 }
 #endif

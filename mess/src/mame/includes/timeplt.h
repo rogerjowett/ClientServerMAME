@@ -7,23 +7,23 @@
 class timeplt_state : public driver_device
 {
 public:
-	timeplt_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	timeplt_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 	/* memory pointers */
-	UINT8 *  videoram;
-	UINT8 *  colorram;
-	UINT8 *  spriteram;
-	UINT8 *  spriteram2;
+	UINT8 *  m_videoram;
+	UINT8 *  m_colorram;
+	UINT8 *  m_spriteram;
+	UINT8 *  m_spriteram2;
 
 	/* video-related */
-	tilemap_t  *bg_tilemap;
+	tilemap_t  *m_bg_tilemap;
 
 	/* misc */
-	UINT8    nmi_enable;
+	UINT8    m_nmi_enable;
 
 	/* devices */
-	cpu_device *maincpu;
+	cpu_device *m_maincpu;
 };
 
 
@@ -37,4 +37,4 @@ WRITE8_HANDLER( timeplt_flipscreen_w );
 PALETTE_INIT( timeplt );
 VIDEO_START( timeplt );
 VIDEO_START( chkun );
-VIDEO_UPDATE( timeplt );
+SCREEN_UPDATE( timeplt );

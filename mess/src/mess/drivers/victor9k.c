@@ -6,7 +6,7 @@
       of the Commodore drives (designed by Chuck Peddle)
 
     Skeleton driver
-	
+
 ***************************************************************************/
 
 /*
@@ -23,36 +23,20 @@
 
 */
 
-#define ADDRESS_MAP_MODERN
-
-#include "emu.h"
-#include "cpu/i86/i86.h"
-#include "cpu/mcs48/mcs48.h"
-#include "devices/flopdrv.h"
-#include "devices/messram.h"
-#include "machine/ctronics.h"
-#include "machine/6522via.h"
-#include "machine/ieee488.h"
-#include "machine/mc6852.h"
-#include "machine/pit8253.h"
-#include "machine/pic8259.h"
-#include "machine/upd7201.h"
-#include "sound/hc55516.h"
-#include "video/mc6845.h"
 #include "includes/victor9k.h"
 
 /* Memory Maps */
 
-static ADDRESS_MAP_START( victor9k_mem, ADDRESS_SPACE_PROGRAM, 8, victor9k_state )
+static ADDRESS_MAP_START( victor9k_mem, AS_PROGRAM, 8, victor9k_state )
 //  AM_RANGE(0x00000, 0xdffff) AM_RAM
 	AM_RANGE(0xe0000, 0xe0001) AM_DEVREADWRITE_LEGACY(I8259A_TAG, pic8259_r, pic8259_w)
 	AM_RANGE(0xe0020, 0xe0023) AM_DEVREADWRITE_LEGACY(I8253_TAG, pit8253_r, pit8253_w)
-	AM_RANGE(0xe0040, 0xe0043) AM_DEVREADWRITE_LEGACY(UPD7201_TAG, upd7201_cd_ba_r, upd7201_cd_ba_w)
-	AM_RANGE(0xe8000, 0xe8000) AM_DEVREADWRITE_LEGACY(HD46505S_TAG, mc6845_status_r, mc6845_address_w)
-	AM_RANGE(0xe8001, 0xe8001) AM_DEVREADWRITE_LEGACY(HD46505S_TAG, mc6845_register_r, mc6845_register_w)
+	AM_RANGE(0xe0040, 0xe0043) AM_DEVREADWRITE(UPD7201_TAG, upd7201_device, cd_ba_r, cd_ba_w)
+	AM_RANGE(0xe8000, 0xe8000) AM_DEVREADWRITE(HD46505S_TAG, mc6845_device, status_r, address_w)
+	AM_RANGE(0xe8001, 0xe8001) AM_DEVREADWRITE(HD46505S_TAG, mc6845_device, register_r, register_w)
 	AM_RANGE(0xe8020, 0xe802f) AM_DEVREADWRITE(M6522_1_TAG, via6522_device, read, write)
 	AM_RANGE(0xe8040, 0xe804f) AM_DEVREADWRITE(M6522_2_TAG, via6522_device, read, write)
-	AM_RANGE(0xe8060, 0xe8061) AM_DEVREADWRITE_LEGACY(MC6852_TAG, mc6852_r, mc6852_w)
+	AM_RANGE(0xe8060, 0xe8061) AM_DEVREADWRITE(MC6852_TAG, mc6852_device, read, write)
 	AM_RANGE(0xe8080, 0xe808f) AM_DEVREADWRITE(M6522_3_TAG, via6522_device, read, write)
 	AM_RANGE(0xe80a0, 0xe80af) AM_DEVREADWRITE(M6522_4_TAG, via6522_device, read, write)
 	AM_RANGE(0xe80c0, 0xe80cf) AM_DEVREADWRITE(M6522_6_TAG, via6522_device, read, write)
@@ -61,14 +45,14 @@ static ADDRESS_MAP_START( victor9k_mem, ADDRESS_SPACE_PROGRAM, 8, victor9k_state
 	AM_RANGE(0xfe000, 0xfffff) AM_ROM AM_REGION(I8088_TAG, 0)
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( floppy_io, ADDRESS_SPACE_IO, 8, victor9k_state )
+static ADDRESS_MAP_START( floppy_io, AS_IO, 8, victor9k_state )
 //  AM_RANGE(MCS48_PORT_P1, MCS48_PORT_P1)
 //  AM_RANGE(MCS48_PORT_P2, MCS48_PORT_P2)
 //  AM_RANGE(MCS48_PORT_T1, MCS48_PORT_T1)
 //  AM_RANGE(MCS48_PORT_BUS, MCS48_PORT_BUS)
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( keyboard_io, ADDRESS_SPACE_IO, 8, victor9k_state )
+static ADDRESS_MAP_START( keyboard_io, AS_IO, 8, victor9k_state )
 //  AM_RANGE(MCS48_PORT_P1, MCS48_PORT_P1)
 //  AM_RANGE(MCS48_PORT_P2, MCS48_PORT_P2)
 //  AM_RANGE(MCS48_PORT_T1, MCS48_PORT_T1)
@@ -78,15 +62,6 @@ ADDRESS_MAP_END
 /* Input Ports */
 
 static INPUT_PORTS_START( victor9k )
-	PORT_START("IEEE488")
-	PORT_BIT(0x01, IP_ACTIVE_HIGH, IPT_SPECIAL) PORT_READ_LINE_DEVICE(IEEE488_TAG, ieee488_dav_r)
-	PORT_BIT(0x02, IP_ACTIVE_HIGH, IPT_SPECIAL) PORT_READ_LINE_DEVICE(IEEE488_TAG, ieee488_eoi_r)
-	PORT_BIT(0x04, IP_ACTIVE_HIGH, IPT_SPECIAL) PORT_READ_LINE_DEVICE(IEEE488_TAG, ieee488_ren_r)
-	PORT_BIT(0x08, IP_ACTIVE_HIGH, IPT_SPECIAL) PORT_READ_LINE_DEVICE(IEEE488_TAG, ieee488_atn_r)
-	PORT_BIT(0x10, IP_ACTIVE_HIGH, IPT_SPECIAL) PORT_READ_LINE_DEVICE(IEEE488_TAG, ieee488_ifc_r)
-	PORT_BIT(0x20, IP_ACTIVE_HIGH, IPT_SPECIAL) PORT_READ_LINE_DEVICE(IEEE488_TAG, ieee488_srq_r)
-	PORT_BIT(0x40, IP_ACTIVE_HIGH, IPT_SPECIAL) PORT_READ_LINE_DEVICE(IEEE488_TAG, ieee488_nrfd_r)
-	PORT_BIT(0x80, IP_ACTIVE_HIGH, IPT_SPECIAL) PORT_READ_LINE_DEVICE(IEEE488_TAG, ieee488_ndac_r)
 INPUT_PORTS_END
 
 /* Video */
@@ -98,8 +73,8 @@ INPUT_PORTS_END
 
 static MC6845_UPDATE_ROW( victor9k_update_row )
 {
-	victor9k_state *state = device->machine->driver_data<victor9k_state>();
-	address_space *program = cpu_get_address_space(state->m_maincpu, ADDRESS_SPACE_PROGRAM);
+	victor9k_state *state = device->machine().driver_data<victor9k_state>();
+	address_space *program = state->m_maincpu->memory().space(AS_PROGRAM);
 
 	if (BIT(ma, 13))
 	{
@@ -151,9 +126,9 @@ static const mc6845_interface hd46505s_intf =
 	NULL
 };
 
-bool victor9k_state::video_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect)
+bool victor9k_state::screen_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect)
 {
-	mc6845_update(m_crtc, &bitmap, &cliprect);
+	m_crtc->update(&bitmap, &cliprect);
 
 	return 0;
 }
@@ -206,7 +181,9 @@ static const struct pit8253_config pit_intf =
 
 static const struct pic8259_interface pic_intf =
 {
-	DEVCB_CPU_INPUT_LINE(I8088_TAG, INPUT_LINE_IRQ0)
+	DEVCB_CPU_INPUT_LINE(I8088_TAG, INPUT_LINE_IRQ0),
+	DEVCB_LINE_VCC,
+	DEVCB_NULL
 };
 
 /* NEC uPD7201 Interface */
@@ -286,7 +263,53 @@ WRITE8_MEMBER( victor9k_state::via1_pa_w )
 
     */
 
-	ieee488_dio_w(m_ieee488, m_via1, data);
+	m_ieee488->dio_w(data);
+}
+
+READ8_MEMBER( victor9k_state::via1_pb_r )
+{
+	/*
+
+        bit     description
+
+        PB0     DAV
+        PB1     EOI
+        PB2     REN
+        PB3     ATN
+        PB4     IFC
+        PB5     SRQ
+        PB6     NRFD
+        PB7     NDAC
+
+    */
+
+	UINT8 data = 0;
+
+	/* data valid */
+	data |= m_ieee488->dav_r();
+
+	/* end or identify */
+	data |= m_ieee488->eoi_r() << 1;
+
+	/* remote enable */
+	data |= m_ieee488->ren_r() << 2;
+
+	/* attention */
+	data |= m_ieee488->atn_r() << 3;
+
+	/* interface clear */
+	data |= m_ieee488->ifc_r() << 4;
+
+	/* service request */
+	data |= m_ieee488->srq_r() << 5;
+
+	/* not ready for data */
+	data |= m_ieee488->nrfd_r() << 6;
+
+	/* data not accepted */
+	data |= m_ieee488->ndac_r() << 7;
+
+	return data;
 }
 
 WRITE8_MEMBER( victor9k_state::via1_pb_w )
@@ -307,28 +330,28 @@ WRITE8_MEMBER( victor9k_state::via1_pb_w )
     */
 
 	/* data valid */
-	ieee488_dav_w(m_ieee488, m_via1, BIT(data, 0));
+	m_ieee488->dav_w(BIT(data, 0));
 
 	/* end or identify */
-	ieee488_eoi_w(m_ieee488, m_via1, BIT(data, 1));
+	m_ieee488->eoi_w(BIT(data, 1));
 
 	/* remote enable */
-	ieee488_ren_w(m_ieee488, m_via1, BIT(data, 2));
+	m_ieee488->ren_w(BIT(data, 2));
 
 	/* attention */
-	ieee488_atn_w(m_ieee488, m_via1, BIT(data, 3));
+	m_ieee488->atn_w(BIT(data, 3));
 
 	/* interface clear */
-	ieee488_ifc_w(m_ieee488, m_via1, BIT(data, 4));
+	m_ieee488->ifc_w(BIT(data, 4));
 
 	/* service request */
-	ieee488_srq_w(m_ieee488, m_via1, BIT(data, 5));
+	m_ieee488->srq_w(BIT(data, 5));
 
 	/* not ready for data */
-	ieee488_nrfd_w(m_ieee488, m_via1, BIT(data, 6));
+	m_ieee488->nrfd_w(BIT(data, 6));
 
 	/* data not accepted */
-	ieee488_ndac_w(m_ieee488, m_via1, BIT(data, 7));
+	m_ieee488->ndac_w(BIT(data, 7));
 }
 
 WRITE_LINE_MEMBER( victor9k_state::codec_vol_w )
@@ -344,11 +367,11 @@ WRITE_LINE_MEMBER( victor9k_state::via1_irq_w )
 
 static const via6522_interface via1_intf =
 {
-	DEVCB_DEVICE_HANDLER(IEEE488_TAG, ieee488_dio_r),
-	DEVCB_INPUT_PORT("IEEE488"),
-	DEVCB_DEVICE_LINE(IEEE488_TAG, ieee488_nrfd_r),
+	DEVCB_DEVICE_MEMBER(IEEE488_TAG, ieee488_device, dio_r),
+	DEVCB_DRIVER_MEMBER(victor9k_state, via1_pb_r),
+	DEVCB_DEVICE_LINE_MEMBER(IEEE488_TAG, ieee488_device, nrfd_r),
 	DEVCB_NULL,
-	DEVCB_DEVICE_LINE(IEEE488_TAG, ieee488_ndac_r),
+	DEVCB_DEVICE_LINE_MEMBER(IEEE488_TAG, ieee488_device, ndac_r),
 	DEVCB_NULL,
 
 	DEVCB_DRIVER_MEMBER(victor9k_state, via1_pa_w),
@@ -530,8 +553,8 @@ WRITE8_MEMBER( victor9k_state::via3_pb_w )
     */
 
 	/* codec clock output */
-	mc6852_rx_clk_w(m_ssda, BIT(data, 7));
-	mc6852_tx_clk_w(m_ssda, BIT(data, 7));
+	m_ssda->rx_clk_w(BIT(data, 7));
+	m_ssda->tx_clk_w(BIT(data, 7));
 }
 
 WRITE_LINE_MEMBER( victor9k_state::via3_irq_w )
@@ -798,7 +821,7 @@ WRITE8_MEMBER( victor9k_state::via6_pb_w )
     */
 
 	/* motor speed controller reset */
-	cpu_set_input_line(m_fdc_cpu, INPUT_LINE_RESET, BIT(data, 2));
+	device_set_input_line(m_fdc_cpu, INPUT_LINE_RESET, BIT(data, 2));
 
 	/* stepper enable A */
 	m_se[0] = BIT(data, 6);
@@ -843,7 +866,7 @@ static const via6522_interface via6_intf =
 
 /* Floppy Configuration */
 
-static const floppy_config victor9k_floppy_config =
+static const floppy_interface victor9k_floppy_interface =
 {
 	DEVCB_NULL,
 	DEVCB_NULL,
@@ -852,6 +875,7 @@ static const floppy_config victor9k_floppy_config =
 	DEVCB_NULL,
 	FLOPPY_STANDARD_5_25_DSQD,
 	FLOPPY_OPTIONS_NAME(default),
+	NULL,
 	NULL
 };
 
@@ -859,15 +883,26 @@ static const floppy_config victor9k_floppy_config =
 
 static IEEE488_DAISY( ieee488_daisy )
 {
-	{ M6522_1_TAG, DEVCB_NULL, DEVCB_NULL, DEVCB_DEVICE_LINE_MEMBER(M6522_1_TAG, via6522_device, write_ca1), DEVCB_DEVICE_LINE_MEMBER(M6522_1_TAG, via6522_device, write_ca2) },
 	{ NULL }
+};
+
+static IEEE488_INTERFACE( ieee488_intf )
+{
+	DEVCB_NULL,
+	DEVCB_NULL,
+	DEVCB_DEVICE_LINE_MEMBER(M6522_1_TAG, via6522_device, write_ca1),
+	DEVCB_DEVICE_LINE_MEMBER(M6522_1_TAG, via6522_device, write_ca2),
+	DEVCB_NULL,
+	DEVCB_NULL,
+	DEVCB_NULL,
+	DEVCB_NULL
 };
 
 /* Machine Initialization */
 
 static IRQ_CALLBACK( victor9k_irq_callback )
 {
-	victor9k_state *state = device->machine->driver_data<victor9k_state>();
+	victor9k_state *state = device->machine().driver_data<victor9k_state>();
 
 	return pic8259_acknowledge(state->m_pic);
 }
@@ -875,14 +910,14 @@ static IRQ_CALLBACK( victor9k_irq_callback )
 void victor9k_state::machine_start()
 {
 	/* set interrupt callback */
-	cpu_set_irq_callback(m_maincpu, victor9k_irq_callback);
+	device_set_irq_callback(m_maincpu, victor9k_irq_callback);
 
 	/* memory banking */
-	address_space *program = cpu_get_address_space(m_maincpu, ADDRESS_SPACE_PROGRAM);
-	UINT8 *ram = messram_get_ptr(m_ram);
-	int ram_size = messram_get_size(m_ram);
+	address_space *program = m_maincpu->memory().space(AS_PROGRAM);
+	UINT8 *ram = ram_get_ptr(m_ram);
+	int ram_size = ram_get_size(m_ram);
 
-	memory_install_ram(program, 0x00000, ram_size - 1, 0, 0, ram);
+	program->install_ram(0x00000, ram_size - 1, ram);
 }
 
 /* Machine Driver */
@@ -918,7 +953,7 @@ static MACHINE_CONFIG_START( victor9k, victor9k_state )
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
 	/* devices */
-	MCFG_IEEE488_ADD(IEEE488_TAG, ieee488_daisy)
+	MCFG_IEEE488_CONFIG_ADD(ieee488_daisy, ieee488_intf)
 	MCFG_PIC8259_ADD(I8259A_TAG, pic_intf)
 	MCFG_PIT8253_ADD(I8253_TAG, pit_intf)
 	MCFG_UPD7201_ADD(UPD7201_TAG, XTAL_30MHz/30, mpsc_intf)
@@ -929,10 +964,10 @@ static MACHINE_CONFIG_START( victor9k, victor9k_state )
 	MCFG_VIA6522_ADD(M6522_4_TAG, XTAL_30MHz/30, via4_intf)
 	MCFG_VIA6522_ADD(M6522_5_TAG, XTAL_30MHz/30, via5_intf)
 	MCFG_VIA6522_ADD(M6522_6_TAG, XTAL_30MHz/30, via6_intf)
-	MCFG_FLOPPY_2_DRIVES_ADD(victor9k_floppy_config)
+	MCFG_FLOPPY_2_DRIVES_ADD(victor9k_floppy_interface)
 
 	/* internal ram */
-	MCFG_RAM_ADD("messram")
+	MCFG_RAM_ADD(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("128K")
 	MCFG_RAM_EXTRA_OPTIONS("256K,384K,512K,640K,768K,896K")
 MACHINE_CONFIG_END

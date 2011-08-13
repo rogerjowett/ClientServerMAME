@@ -7,24 +7,30 @@
 class cbasebal_state : public driver_device
 {
 public:
-	cbasebal_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	cbasebal_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 	/* memory pointers */
-	UINT8 *    spriteram;
-//  UINT8 *    paletteram;    // currently this uses generic palette handling
-	size_t     spriteram_size;
+	UINT8 *    m_spriteram;
+//  UINT8 *    m_paletteram;    // currently this uses generic palette handling
+	size_t     m_spriteram_size;
 
 	/* video-related */
-	tilemap_t    *fg_tilemap, *bg_tilemap;
-	UINT8      *textram, *scrollram;
-	UINT8      scroll_x[2], scroll_y[2];
-	int        tilebank, spritebank;
-	int        text_on, bg_on, obj_on;
-	int        flipscreen;
+	tilemap_t    *m_fg_tilemap;
+	tilemap_t    *m_bg_tilemap;
+	UINT8      *m_textram;
+	UINT8      *m_scrollram;
+	UINT8      m_scroll_x[2];
+	UINT8      m_scroll_y[2];
+	int        m_tilebank;
+	int        m_spritebank;
+	int        m_text_on;
+	int        m_bg_on;
+	int        m_obj_on;
+	int        m_flipscreen;
 
 	/* misc */
-	UINT8      rambank;
+	UINT8      m_rambank;
 };
 
 /*----------- defined in video/cbasebal.c -----------*/
@@ -38,4 +44,4 @@ WRITE8_HANDLER( cbasebal_scrollx_w );
 WRITE8_HANDLER( cbasebal_scrolly_w );
 
 VIDEO_START( cbasebal );
-VIDEO_UPDATE( cbasebal );
+SCREEN_UPDATE( cbasebal );

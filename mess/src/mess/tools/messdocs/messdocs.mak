@@ -27,8 +27,7 @@ HHC = @-hhc
 #-------------------------------------------------
 
 MESSDOCS_OBJS = \
-	$(MESSOBJ)/tools/messdocs/messdocs.o	\
-	$(MESS_TOOLS)/toolerr.o					\
+	$(MESSOBJ)/tools/messdocs/messdocs.o
 
 
 
@@ -36,7 +35,7 @@ MESSDOCS_OBJS = \
 # rules to build the messdocs executable
 #-------------------------------------------------
 
-$(OBJ)/build/$(MESSDOCS): $(MESSDOCS_OBJS) $(LIBEMU) $(LIBUTIL) $(LIBOCORE) $(EXPAT)
+$(OBJ)/build/$(MESSDOCS): $(MESSDOCS_OBJS) $(LIBUTIL) $(LIBOCORE) $(EXPAT)
 	@echo Linking $@...
 	$(LD) $(LDFLAGS) $^ $(LIBS) $(EXPAT) -o $@
 
@@ -51,4 +50,4 @@ help: maketree $(MESSHELP)
 $(MESSHELP): $(OBJ)/build/$(MESSDOCS) sysinfo.dat
 	$(subst /,\,$(OBJ)/build/$(MESSDOCS)) docs/wintoc.xml $(HELPOBJ)
 	$(HHC) $(subst /,\\,$(HELPOBJ))\\mess.hhp
-	@cp $(HELPOBJ)/$(MESSHELP) $@
+	@copy $(subst /,\,$(HELPOBJ)/$(MESSHELP) $@)

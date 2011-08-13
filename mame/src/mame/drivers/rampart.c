@@ -24,9 +24,10 @@
 
 #include "emu.h"
 #include "cpu/m68000/m68000.h"
-#include "includes/rampart.h"
 #include "sound/okim6295.h"
 #include "sound/2413intf.h"
+#include "video/atarimo.h"
+#include "includes/rampart.h"
 
 
 #define MASTER_CLOCK		XTAL_14_31818MHz
@@ -38,10 +39,10 @@
  *
  *************************************/
 
-static void update_interrupts(running_machine *machine)
+static void update_interrupts(running_machine &machine)
 {
-	rampart_state *state = machine->driver_data<rampart_state>();
-	cputag_set_input_line(machine, "maincpu", 4, state->scanline_int_state ? ASSERT_LINE : CLEAR_LINE);
+	rampart_state *state = machine.driver_data<rampart_state>();
+	cputag_set_input_line(machine, "maincpu", 4, state->m_scanline_int_state ? ASSERT_LINE : CLEAR_LINE);
 }
 
 
@@ -49,7 +50,7 @@ static void scanline_update(screen_device &screen, int scanline)
 {
 	/* generate 32V signals */
 	if ((scanline & 32) == 0)
-		atarigen_scanline_int_gen(screen.machine->device("maincpu"));
+		atarigen_scanline_int_gen(screen.machine().device("maincpu"));
 }
 
 
@@ -68,12 +69,12 @@ static MACHINE_START( rampart )
 
 static MACHINE_RESET( rampart )
 {
-	rampart_state *state = machine->driver_data<rampart_state>();
+	rampart_state *state = machine.driver_data<rampart_state>();
 
 	atarigen_eeprom_reset(state);
 	atarigen_slapstic_reset(state);
 	atarigen_interrupt_reset(state, update_interrupts);
-	atarigen_scanline_timer_reset(*machine->primary_screen, scanline_update, 32);
+	atarigen_scanline_timer_reset(*machine.primary_screen, scanline_update, 32);
 }
 
 
@@ -107,19 +108,19 @@ static WRITE16_HANDLER( latch_w )
 	{
 		if (data & 0x1000)
 			logerror("Color bank set to 1!\n");
-		coin_counter_w(space->machine, 0, (data >> 9) & 1);
-		coin_counter_w(space->machine, 1, (data >> 8) & 1);
+		coin_counter_w(space->machine(), 0, (data >> 9) & 1);
+		coin_counter_w(space->machine(), 1, (data >> 8) & 1);
 	}
 
 	/* lower byte being modified? */
 	if (ACCESSING_BITS_0_7)
 	{
-		atarigen_set_oki6295_vol(space->machine, (data & 0x0020) ? 100 : 0);
+		atarigen_set_oki6295_vol(space->machine(), (data & 0x0020) ? 100 : 0);
 		if (!(data & 0x0010))
-			devtag_reset(space->machine, "oki");
-		atarigen_set_ym2413_vol(space->machine, ((data >> 1) & 7) * 100 / 7);
+			devtag_reset(space->machine(), "oki");
+		atarigen_set_ym2413_vol(space->machine(), ((data >> 1) & 7) * 100 / 7);
 		if (!(data & 0x0001))
-			devtag_reset(space->machine, "ymsnd");
+			devtag_reset(space->machine(), "ymsnd");
 	}
 }
 
@@ -132,16 +133,16 @@ static WRITE16_HANDLER( latch_w )
  *************************************/
 
 /* full memory map deduced from schematics and GALs */
-static ADDRESS_MAP_START( main_map, ADDRESS_SPACE_PROGRAM, 16 )
+static ADDRESS_MAP_START( main_map, AS_PROGRAM, 16 )
 	ADDRESS_MAP_GLOBAL_MASK(0x7fffff)
 	AM_RANGE(0x000000, 0x0fffff) AM_ROM
 	AM_RANGE(0x140000, 0x147fff) AM_MIRROR(0x438000) AM_ROM /* slapstic goes here */
-	AM_RANGE(0x200000, 0x21ffff) AM_RAM AM_BASE_MEMBER(rampart_state, bitmap)
+	AM_RANGE(0x200000, 0x21ffff) AM_RAM AM_BASE_MEMBER(rampart_state, m_bitmap)
 	AM_RANGE(0x220000, 0x3bffff) AM_WRITENOP	/* the code blasts right through this when initializing */
 	AM_RANGE(0x3c0000, 0x3c07ff) AM_MIRROR(0x019800) AM_RAM_WRITE(atarigen_expanded_666_paletteram_w) AM_BASE_GENERIC(paletteram)
-	AM_RANGE(0x3e0000, 0x3e07ff) AM_MIRROR(0x010000) AM_RAM_WRITE(atarimo_0_spriteram_w) AM_BASE(&atarimo_0_spriteram)
+	AM_RANGE(0x3e0000, 0x3e07ff) AM_MIRROR(0x010000) AM_READWRITE(atarimo_0_spriteram_r, atarimo_0_spriteram_w)
 	AM_RANGE(0x3e0800, 0x3e3f3f) AM_MIRROR(0x010000) AM_RAM
-	AM_RANGE(0x3e3f40, 0x3e3f7f) AM_MIRROR(0x010000) AM_RAM_WRITE(atarimo_0_slipram_w) AM_BASE(&atarimo_0_slipram)
+	AM_RANGE(0x3e3f40, 0x3e3f7f) AM_MIRROR(0x010000) AM_READWRITE(atarimo_0_slipram_r, atarimo_0_slipram_w)
 	AM_RANGE(0x3e3f80, 0x3effff) AM_MIRROR(0x010000) AM_RAM
 	AM_RANGE(0x460000, 0x460001) AM_MIRROR(0x019ffe) AM_DEVREADWRITE8_MODERN("oki", okim6295_device, read, write, 0xff00)
 	AM_RANGE(0x480000, 0x480003) AM_MIRROR(0x019ffc) AM_DEVWRITE8("ymsnd", ym2413_w, 0xff00)
@@ -363,9 +364,9 @@ static MACHINE_CONFIG_START( rampart, rampart_state )
 	/* note: these parameters are from published specs, not derived */
 	/* the board uses an SOS-2 chip to generate video signals */
 	MCFG_SCREEN_RAW_PARAMS(MASTER_CLOCK/2, 456, 0+12, 336+12, 262, 0, 240)
+	MCFG_SCREEN_UPDATE(rampart)
 
 	MCFG_VIDEO_START(rampart)
-	MCFG_VIDEO_UPDATE(rampart)
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
@@ -479,10 +480,10 @@ ROM_END
 
 static DRIVER_INIT( rampart )
 {
-	UINT8 *rom = machine->region("maincpu")->base();
+	UINT8 *rom = machine.region("maincpu")->base();
 
 	memcpy(&rom[0x140000], &rom[0x40000], 0x8000);
-	atarigen_slapstic_init(machine->device("maincpu"), 0x140000, 0x438000, 118);
+	atarigen_slapstic_init(machine.device("maincpu"), 0x140000, 0x438000, 118);
 }
 
 

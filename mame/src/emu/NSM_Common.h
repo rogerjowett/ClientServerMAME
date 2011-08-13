@@ -26,6 +26,24 @@
 
 using namespace std;
 
+int zlibGetMaxCompressedSize(int origSize);
+int lzmaGetMaxCompressedSize(int origSize);
+
+void lzmaCompress(
+  unsigned char* destBuf,
+  int &destSize,
+  unsigned char *srcBuf,
+  int srcSize,
+  int compressionLevel
+  );
+
+void lzmaUncompress(
+  unsigned char* destBuf,
+  int destSize,
+  unsigned char *srcBuf,
+  int srcSize
+  );
+
 enum OrderingChannelType
 {
     ORDERING_CHANNEL_CLIENT_INPUTS,
@@ -43,7 +61,6 @@ enum CustomPacketType
     ID_INITIAL_SYNC_COMPLETE,
     ID_RESYNC_PARTIAL,
     ID_RESYNC_COMPLETE,
-    ID_CONST_DATA,
     ID_SETTINGS,
     ID_REJECT_NEW_HOST,
 	ID_ACCEPT_NEW_HOST,
@@ -55,8 +72,6 @@ enum CustomPacketType
 
 class Client;
 class Server;
-
-#define MAX_ZLIB_BUF_SIZE (1024*1024*64)
 
 class MemoryBlock
 {
@@ -110,26 +125,26 @@ protected:
 
     int secondsBetweenSync;
 
-    vector<MemoryBlock> constBlocks;
-
-	vector<MemoryBlock> blocks,staleBlocks,xorBlocks;
+	vector<MemoryBlock> blocks,staleBlocks;
 
 	z_stream strm;
 
     int selfPeerID;
 
-    std::map<RakNet::SystemAddress,int> peerIDs;
+    std::map<RakNet::RakNetGUID,int> peerIDs;
 
     string username;
     std::map<int,string> peerNames;
 
     map<int,vector< string > > peerInputs;
-    map<RakNet::SystemAddress,vector< string > > unknownPeerInputs;
+    map<RakNet::RakNetGUID,vector< string > > unknownPeerInputs;
     map<int,vector< string > > oldPeerInputs;
 
     RakNet::TimeUS startupTime;
 
 public:
+
+    Common() {}
 
     Common(string _username);
 
@@ -144,29 +159,17 @@ public:
 
     void setSecondsBetweenSync(int _secondsBetweenSync);
 
-    void addConstBlock(unsigned char *tmpdata,int size);
-
 	int getNumBlocks()
 	{
 		return int(blocks.size());
 	}
 
-    int getNumConstBlocks()
-    {
-        return int(constBlocks.size());
-    }
-
-    MemoryBlock* getConstBlock(int i)
-    {
-        return &constBlocks[i];
-    }
-
-    void destroyConstBlock(int i);
-
 	MemoryBlock getMemoryBlock(int i)
 	{
 		return blocks[i];
 	}
+
+	bool hasPeerWithID(int peerID);
 
 	string getLatencyString(int peerID);
 
@@ -175,10 +178,7 @@ public:
     vector<int> getPeerIDs();
 
     //Note, this doesn't include yourself
-    int getNumOtherPeers()
-    {
-        return int(peerIDs.size())-1;
-    }
+    int getNumOtherPeers();
 
     int getOtherPeerID(int a);
 

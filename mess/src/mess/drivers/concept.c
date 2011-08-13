@@ -31,20 +31,20 @@
 #include "emu.h"
 #include "cpu/m68000/m68000.h"
 #include "includes/concept.h"
-#include "devices/flopdrv.h"
+#include "imagedev/flopdrv.h"
 #include "formats/basicdsk.h"
-#include "devices/harddriv.h"
+#include "imagedev/harddriv.h"
 #include "machine/mm58274c.h"
 #include "machine/wd17xx.h"
 
-static ADDRESS_MAP_START(concept_memmap, ADDRESS_SPACE_PROGRAM, 16)
+static ADDRESS_MAP_START(concept_memmap, AS_PROGRAM, 16)
 	AM_RANGE(0x000000, 0x000007) AM_ROM AM_REGION("maincpu", 0x010000)	/* boot ROM mirror */
 	AM_RANGE(0x000008, 0x000fff) AM_RAM										/* static RAM */
 	AM_RANGE(0x010000, 0x011fff) AM_ROM AM_REGION("maincpu", 0x010000)	/* boot ROM */
 	AM_RANGE(0x020000, 0x021fff) AM_ROM										/* macsbugs ROM (optional) */
 	AM_RANGE(0x030000, 0x03ffff) AM_READWRITE(concept_io_r,concept_io_w)	/* I/O space */
 
-	AM_RANGE(0x080000, 0x0fffff) AM_RAM AM_BASE_MEMBER(concept_state, videoram)/* AM_RAMBANK(2) */	/* DRAM */
+	AM_RANGE(0x080000, 0x0fffff) AM_RAM AM_BASE_MEMBER(concept_state, m_videoram)/* AM_RAMBANK(2) */	/* DRAM */
 ADDRESS_MAP_END
 
 /* init with simple, fixed, B/W palette */
@@ -61,7 +61,7 @@ static const mm58274c_interface concept_mm58274c_interface =
 static FLOPPY_OPTIONS_START(concept)
 #if 1
 	/* SSSD 8" */
-	FLOPPY_OPTION(concept, "img", "Corvus Concept 8\" SSSD disk image", basicdsk_identify_default, basicdsk_construct_default,
+	FLOPPY_OPTION(concept, "img", "Corvus Concept 8\" SSSD disk image", basicdsk_identify_default, basicdsk_construct_default, NULL,
 		HEADS([1])
 		TRACKS([77])
 		SECTORS([26])
@@ -69,7 +69,7 @@ static FLOPPY_OPTIONS_START(concept)
 		FIRST_SECTOR_ID([1]))
 #elif 0
 	/* SSDD 8" (according to ROMs) */
-	FLOPPY_OPTION(concept, "img", "Corvus Concept 8\" SSDD disk image", basicdsk_identify_default, basicdsk_construct_default,
+	FLOPPY_OPTION(concept, "img", "Corvus Concept 8\" SSDD disk image", basicdsk_identify_default, basicdsk_construct_default, NULL,
 		HEADS([1])
 		TRACKS([77])
 		SECTORS([26])
@@ -77,7 +77,7 @@ static FLOPPY_OPTIONS_START(concept)
 		FIRST_SECTOR_ID([1]))
 #elif 0
 	/* Apple II DSDD 5"1/4 (according to ROMs) */
-	FLOPPY_OPTION(concept, "img", "Corvus Concept Apple II 5\"1/4 DSDD disk image", basicdsk_identify_default, basicdsk_construct_default,
+	FLOPPY_OPTION(concept, "img", "Corvus Concept Apple II 5\"1/4 DSDD disk image", basicdsk_identify_default, basicdsk_construct_default, NULL,
 		HEADS([2])
 		TRACKS([35])
 		SECTORS([16])
@@ -85,14 +85,14 @@ static FLOPPY_OPTIONS_START(concept)
 		FIRST_SECTOR_ID([1]))
 #elif 0
 	/* actual formats found */
-	FLOPPY_OPTION(concept, "img", "Corvus Concept 5\"1/4 DSDD disk image (256-byte sectors)", basicdsk_identify_default, basicdsk_construct_default,
+	FLOPPY_OPTION(concept, "img", "Corvus Concept 5\"1/4 DSDD disk image (256-byte sectors)", basicdsk_identify_default, basicdsk_construct_default, NULL,
 		HEADS([2])
 		TRACKS([80])
 		SECTORS([16])
 		SECTOR_LENGTH([256])
 		FIRST_SECTOR_ID([1]))
 #else
-	FLOPPY_OPTION(concept, "img", "Corvus Concept 5\"1/4 DSDD disk image (512-byte sectors)", basicdsk_identify_default, basicdsk_construct_default,
+	FLOPPY_OPTION(concept, "img", "Corvus Concept 5\"1/4 DSDD disk image (512-byte sectors)", basicdsk_identify_default, basicdsk_construct_default, NULL,
 		HEADS([2])
 		TRACKS([80])
 		SECTORS([9])
@@ -101,7 +101,7 @@ static FLOPPY_OPTIONS_START(concept)
 #endif
 FLOPPY_OPTIONS_END
 
-static const floppy_config concept_floppy_config =
+static const floppy_interface concept_floppy_interface =
 {
 	DEVCB_NULL,
 	DEVCB_NULL,
@@ -110,6 +110,7 @@ static const floppy_config concept_floppy_config =
 	DEVCB_NULL,
 	FLOPPY_STANDARD_5_25_DSHD,
 	FLOPPY_OPTIONS_NAME(concept),
+	NULL,
 	NULL
 };
 
@@ -120,7 +121,7 @@ static MACHINE_CONFIG_START( concept, concept_state )
 	MCFG_CPU_PROGRAM_MAP(concept_memmap)
 	MCFG_CPU_VBLANK_INT("screen", concept_interrupt)
 
-	MCFG_QUANTUM_TIME(HZ(60))
+	MCFG_QUANTUM_TIME(attotime::from_hz(60))
 	MCFG_MACHINE_START(concept)
 
 	/* video hardware */
@@ -131,11 +132,12 @@ static MACHINE_CONFIG_START( concept, concept_state )
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(720, 560)
 	MCFG_SCREEN_VISIBLE_AREA(0, 720-1, 0, 560-1)
+	MCFG_SCREEN_UPDATE(concept)
+
 	MCFG_PALETTE_LENGTH(2)
 	MCFG_PALETTE_INIT(black_and_white)
 
 	MCFG_VIDEO_START(concept)
-	MCFG_VIDEO_UPDATE(concept)
 
 	/* no sound? */
 
@@ -147,9 +149,9 @@ static MACHINE_CONFIG_START( concept, concept_state )
 	/* via */
 	MCFG_VIA6522_ADD("via6522_0", 1022750, concept_via6522_intf)
 
-	MCFG_WD179X_ADD("wd179x", concept_wd17xx_interface )
+	MCFG_FD1793_ADD("wd179x", concept_wd17xx_interface )
 
-	MCFG_FLOPPY_4_DRIVES_ADD(concept_floppy_config)
+	MCFG_FLOPPY_4_DRIVES_ADD(concept_floppy_interface)
 MACHINE_CONFIG_END
 
 

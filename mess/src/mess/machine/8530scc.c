@@ -15,7 +15,7 @@
     PARAMETERS
 ***************************************************************************/
 
-#define LOG_SCC	0
+#define LOG_SCC	(0)
 
 
 
@@ -84,15 +84,19 @@ struct _scc8530_t
 
 INLINE scc8530_t *get_token(device_t *device)
 {
+	assert(device != NULL);
 	assert(device->type() == SCC8530);
+
 	return (scc8530_t *) downcast<legacy_device_base *>(device)->token();
 }
 
 
 INLINE const scc8530_interface *get_interface(device_t *device)
 {
+	assert(device != NULL);
 	assert(device->type() == SCC8530);
-	return (const scc8530_interface *) downcast<const legacy_device_config_base &>(device->baseconfig()).inline_config();
+
+	return (const scc8530_interface *) downcast<const legacy_device_base *>(device)->inline_config();
 }
 
 
@@ -179,7 +183,7 @@ static void scc8530_resetchannel(scc8530_t *scc, int ch)
 	scc->channel[ch].txUnderrun = 1;
 	scc->channel[ch].baudtimer = timersave;
 
-	timer_adjust_oneshot(scc->channel[ch].baudtimer, attotime_never, ch);
+	scc->channel[ch].baudtimer->adjust(attotime::never, ch);
 }
 
 /*-------------------------------------------------
@@ -192,7 +196,16 @@ static TIMER_CALLBACK( scc8530_baud_expire )
 	scc8530_t *scc = get_token(device);
 	sccChan *pChan = &scc->channel[param];
 	int brconst = pChan->reg_val[13]<<8 | pChan->reg_val[14];
-	int rate = scc->clock / brconst;
+	int rate;
+
+	if (brconst)
+	{
+		rate = scc->clock / brconst;
+	}
+	else
+	{
+		rate = 0;
+	}
 
 	// is baud counter IRQ enabled on this channel?
 	// always flag pending in case it's enabled after this
@@ -208,7 +221,14 @@ static TIMER_CALLBACK( scc8530_baud_expire )
 	}
 
 	// reset timer according to current register values
-	timer_adjust_periodic(pChan->baudtimer, ATTOTIME_IN_HZ(rate), param, ATTOTIME_IN_HZ(rate));
+	if (rate)
+	{
+		pChan->baudtimer->adjust(attotime::from_hz(rate), param, attotime::from_hz(rate));
+	}
+	else
+	{
+		pChan->baudtimer->adjust(attotime::never, param, attotime::never);
+	}
 }
 
 /*-------------------------------------------------
@@ -221,8 +241,8 @@ static DEVICE_START( scc8530 )
 	memset(scc, 0, sizeof(*scc));
 	scc->clock = device->clock();
 
-	scc->channel[0].baudtimer = timer_alloc(device->machine, scc8530_baud_expire, (void *)device);
-	scc->channel[1].baudtimer = timer_alloc(device->machine, scc8530_baud_expire, (void *)device);
+	scc->channel[0].baudtimer = device->machine().scheduler().timer_alloc(FUNC(scc8530_baud_expire), (void *)device);
+	scc->channel[1].baudtimer = device->machine().scheduler().timer_alloc(FUNC(scc8530_baud_expire), (void *)device);
 }
 
 
@@ -426,7 +446,7 @@ static void scc_putreg(device_t *device, int ch, int data)
 				int brconst = pChan->reg_val[13]<<8 | pChan->reg_val[14];
 				int rate = scc->clock / brconst;
 
-				timer_adjust_periodic(pChan->baudtimer, ATTOTIME_IN_HZ(rate), ch, ATTOTIME_IN_HZ(rate));
+				pChan->baudtimer->adjust(attotime::from_hz(rate), ch, attotime::from_hz(rate));
 			}
 			break;
 
@@ -675,3 +695,66 @@ DEVICE_GET_INFO( scc8530 )
 }
 
 DEFINE_LEGACY_DEVICE(SCC8530, scc8530);
+
+/*
+
+AppleTalk check:
+
+SCC: port B reg 9 write 0x40      Channel Reset B
+SCC: port B reg 4 write 0x20      SDLC mode
+SCC: port B reg 10 write 0xe0     CRC preset + FM0
+SCC: port B reg 6 write 0x00      SDLC address
+SCC: port B reg 7 write 0x7e      SDLC flag
+SCC: port B reg 12 write 0x06     baud rate low
+SCC: port B reg 13 write 0x00     baud rate high
+SCC: port B reg 14 write 0xc0     Set FM mode
+SCC: port B reg 3 write 0xdd      Rx 8 bits, enter hunt mode, CRC enable, address search mode, Rx enable
+SCC: port B reg 2 write 0x00      interrupt vector 0
+SCC: port B reg 15 write 0x08     DCD interrupt enable
+SCC: port B reg 1 write 0x09      Rx IRQ on first char or special, ext int enable
+SCC: port B reg 9 write 0x0a      Master IRQ enable, no-vector mode
+SCC: port B reg 11 write 0x70     Rx clock = DPLL output, Tx clock = BR generator
+SCC: port B reg 14 write 0x21     Enter search mode, BR generator enable
+SCC: port B reg 5 write 0x60      Tx 8 bits/char
+SCC: port B reg 6 write 0x2a      SDLC address
+SCC: port B reg 0 read 0x00
+SCC: port B reg 15 write 0x88     DCD interrupt enable, break/abort interrupt enable
+
+(repeats)
+SCC: port B reg 1 read 0x09
+SCC: port B reg 3 write 0xd0
+SCC: port B reg 3 write 0xdd      Rx 8 bits, enter hunt mode, CRC enable, address search mode, Rx enable
+SCC: port B reg 15 write 0x08     DCD interrupt enable
+SCC: port B reg 0 read 0x00
+SCC: port B reg 15 write 0x88
+
+System 7:
+
+SCC: port B reg 9 write 0x40      Channel Reset B
+SCC: port B reg 4 write 0x20      SDLC mode
+SCC: port B reg 10 write 0xe0     CRC preset + FM0
+SCC: port B reg 6 write 0x00      SDLC address
+SCC: port B reg 7 write 0x7e      SDLC flag
+SCC: port B reg 12 write 0x06     baud rate low
+SCC: port B reg 13 write 0x00     baud rate high
+SCC: port B reg 14 write 0xc0     Set FM mode
+SCC: port B reg 3 write 0xdd      Rx 8 bits, enter hunt mode, CRC enable, address search mode, Rx enable
+SCC: port B reg 2 write 0x00      interrupt vector 0
+SCC: port B reg 15 write 0x08     DCD interrupt enable
+SCC: port B reg 1 write 0x09      Rx IRQ on first char or special, ext int enable
+SCC: port B reg 9 write 0x0a      Master IRQ enable, no-vector mode
+SCC: port B reg 11 write 0x70     Rx clock = DPLL output, Tx clock = BR generator
+SCC: port B reg 14 write 0x21     Enter search mode, BR generator enable
+SCC: port B reg 5 write 0x60      Tx 8 bits/char
+SCC: port B reg 6 write 0x01      SDLC address
+SCC: port B reg 3 write 0xdd      Rx 8 bits, enter hunt mode, CRC enable, address search mode, Rx enable
+
+(repeats)
+
+SCC: port B reg 0 read 0x00
+SCC: port B reg 15 write 0x88     DCD interrupt enable, break/abort interrupt enable
+SCC: port B reg 15 write 0x08     DCD interrupt enable
+SCC: port B reg 1 read 0x09   Rx IRQ on first char or special, ext int enable
+SCC: port B reg 3 write 0xdd      Rx 8 bits, enter hunt mode, CRC enable, address search mode, Rx enable
+
+*/

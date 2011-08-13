@@ -52,12 +52,14 @@
 
 #define MAPPER_CRU_BASE 0x2700
 
-#define MAP8_SRAM (void*)1
-#define MAP8_ROM0 (void*)2
-#define MAP8_ROM1 (void*)3
-#define MAP8_ROM1A (void*)4
-#define MAP8_DRAM (void*)5
-#define MAP8_INTS (void*)6
+/* Pseudo devices which are not implemented by a proper device. We use these
+constants in the read/write functions. */
+#define MAP8_SRAM (void*)1L
+#define MAP8_ROM0 (void*)2L
+#define MAP8_ROM1 (void*)3L
+#define MAP8_ROM1A (void*)4L
+#define MAP8_DRAM (void*)5L
+#define MAP8_INTS (void*)6L
 
 typedef struct _log_addressed_device
 {
@@ -153,7 +155,8 @@ typedef struct _mapper8_state
 INLINE mapper8_state *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
-	assert(downcast<legacy_device_base *>(device)->token() != NULL);
+	assert(device->type() == MAPPER8);
+
 	return (mapper8_state *)downcast<legacy_device_base *>(device)->token();
 }
 
@@ -532,7 +535,7 @@ static DEVICE_START( mapper8 )
 	mapper8_state *mapper = get_safe_token(device);
 	mapper->sram = (UINT8*)malloc(SRAM_SIZE);
 	mapper->dram = (UINT8*)malloc(DRAM_SIZE);
-	mapper->rom = device->machine->region("maincpu")->base();
+	mapper->rom = device->machine().region("maincpu")->base();
 
 	memset(mapper->sram, 0x00, SRAM_SIZE);
 	memset(mapper->dram, 0x00, DRAM_SIZE);
@@ -554,11 +557,14 @@ static DEVICE_START( mapper8 )
 	mapper->ioport = device->siblingdevice("peribox");
 	assert(mapper->ioport != NULL);
 
-	mapper8_dev_config *cons = (mapper8_dev_config*)device->baseconfig().static_config();
+	mapper8_dev_config *cons = (mapper8_dev_config*)device->static_config();
 
 	mapper->logindex = 0;
 	mapper->physindex = 0;
 
+	/* String values of the pseudo constants, used in the configuration.
+    Here we replace the device names by their pointers and the pseudo device
+    names by their constants MAP8_SRAM ... MAP8_INTS. */
 	static const char *const list[6] = { SRAMNAME, ROM0NAME, ROM1NAME, ROM1ANAME, DRAMNAME, INTSNAME };
 	while (!done)
 	{
@@ -567,13 +573,15 @@ static DEVICE_START( mapper8 )
 			done = TRUE;
 		else
 		{
-			for (int j=1; (j < 7) && (dev == NULL); j++)
+			for (long j=1; (j < 7) && (dev == NULL); j++)
 			{
+				// Pseudo devices are enumerated as 1 ... 6 (see MAP8_SRAM etc.)
 				if (strcmp(cons[i].name, list[j-1])==0)
 					dev = (void *)j;
 			}
 			if (dev==NULL)
-				dev = device->machine->device(cons[i].name);
+				// Real devices use their address to be accessed
+				dev = device->machine().device(cons[i].name);
 
 			if (dev!=NULL)
 			{

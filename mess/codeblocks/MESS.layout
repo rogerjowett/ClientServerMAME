@@ -1,0 +1,355 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_layout_file>
+	<ActiveTarget name="Debug" />
+	<File name="..\src\build\file2str.c" open="0" top="0" tabpos="46">
+		<Cursor position="629" topLine="13" />
+	</File>
+	<File name="..\src\build\png2bdc.c" open="0" top="0" tabpos="24">
+		<Cursor position="3550" topLine="113" />
+	</File>
+	<File name="..\src\build\verinfo.c" open="1" top="0" tabpos="1">
+		<Cursor position="6429" topLine="226" />
+	</File>
+	<File name="..\src\emu\NSM_Client.c" open="1" top="0" tabpos="3">
+		<Cursor position="12879" topLine="359" />
+	</File>
+	<File name="..\src\emu\NSM_Client.h" open="0" top="0" tabpos="19">
+		<Cursor position="931" topLine="31" />
+	</File>
+	<File name="..\src\emu\NSM_Common.c" open="0" top="0" tabpos="26">
+		<Cursor position="0" topLine="0" />
+	</File>
+	<File name="..\src\emu\NSM_Common.h" open="0" top="0" tabpos="37">
+		<Cursor position="3550" topLine="182" />
+	</File>
+	<File name="..\src\emu\NSM_Server.c" open="0" top="0" tabpos="8">
+		<Cursor position="12669" topLine="375" />
+	</File>
+	<File name="..\src\emu\NSM_Server.h" open="0" top="0" tabpos="17">
+		<Cursor position="1155" topLine="35" />
+	</File>
+	<File name="..\src\emu\attotime.h" open="0" top="0" tabpos="0">
+		<Cursor position="4981" topLine="88" />
+	</File>
+	<File name="..\src\emu\audit.c" open="0" top="0" tabpos="0">
+		<Cursor position="11737" topLine="363" />
+	</File>
+	<File name="..\src\emu\clifront.c" open="0" top="0" tabpos="0">
+		<Cursor position="30688" topLine="894" />
+	</File>
+	<File name="..\src\emu\cpu\alph8201\alph8201.c" open="0" top="0" tabpos="10">
+		<Cursor position="8652" topLine="278" />
+	</File>
+	<File name="..\src\emu\cpu\cop400\cop400.c" open="0" top="0" tabpos="3">
+		<Cursor position="42118" topLine="798" />
+	</File>
+	<File name="..\src\emu\cpu\drcbec.c" open="0" top="0" tabpos="0">
+		<Cursor position="28446" topLine="775" />
+	</File>
+	<File name="..\src\emu\cpu\drcuml.c" open="0" top="0" tabpos="0">
+		<Cursor position="63855" topLine="1759" />
+	</File>
+	<File name="..\src\emu\cpu\drcuml.h" open="1" top="0" tabpos="9">
+		<Cursor position="1288" topLine="30" />
+	</File>
+	<File name="..\src\emu\cpu\drcumlsh.h" open="0" top="0" tabpos="0">
+		<Cursor position="6382" topLine="93" />
+	</File>
+	<File name="..\src\emu\cpu\i4004\i4004.c" open="0" top="0" tabpos="4">
+		<Cursor position="12844" topLine="415" />
+	</File>
+	<File name="..\src\emu\cpu\i8008\i8008.c" open="0" top="0" tabpos="5">
+		<Cursor position="14968" topLine="494" />
+	</File>
+	<File name="..\src\emu\cpu\i8085\i8085.c" open="0" top="0" tabpos="6">
+		<Cursor position="42585" topLine="946" />
+	</File>
+	<File name="..\src\emu\cpu\i86\i86.c" open="0" top="0" tabpos="7">
+		<Cursor position="5689" topLine="144" />
+	</File>
+	<File name="..\src\emu\cpu\m6502\tdeco16.c" open="0" top="0" tabpos="42">
+		<Cursor position="10522" topLine="261" />
+	</File>
+	<File name="..\src\emu\cpu\m68000\m68kcpu.c" open="0" top="0" tabpos="8">
+		<Cursor position="64592" topLine="1492" />
+	</File>
+	<File name="..\src\emu\cpu\m68000\m68kdasm.c" open="0" top="0" tabpos="23">
+		<Cursor position="1519" topLine="26" />
+	</File>
+	<File name="..\src\emu\cpu\m6805\6805dasm.c" open="0" top="0" tabpos="0">
+		<Cursor position="1027" topLine="21" />
+	</File>
+	<File name="..\src\emu\cpu\mcs48\mcs48.c" open="0" top="0" tabpos="9">
+		<Cursor position="39674" topLine="837" />
+	</File>
+	<File name="..\src\emu\cpu\mips\mips3.c" open="0" top="0" tabpos="7">
+		<Cursor position="29092" topLine="1088" />
+	</File>
+	<File name="..\src\emu\cpu\rsp\rsp.c" open="0" top="0" tabpos="2">
+		<Cursor position="6072" topLine="123" />
+	</File>
+	<File name="..\src\emu\cpu\rsp\rsp.h" open="1" top="0" tabpos="8">
+		<Cursor position="505" topLine="3" />
+	</File>
+	<File name="..\src\emu\cpu\rsp\rsp_dasm.c" open="0" top="0" tabpos="6">
+		<Cursor position="15625" topLine="298" />
+	</File>
+	<File name="..\src\emu\cpu\rsp\rspdrc.c" open="1" top="0" tabpos="6">
+		<Cursor position="990" topLine="15" />
+	</File>
+	<File name="..\src\emu\cpu\scmp\scmp.c" open="0" top="0" tabpos="10">
+		<Cursor position="14487" topLine="470" />
+	</File>
+	<File name="..\src\emu\cpu\tms34010\tms34010.c" open="0" top="0" tabpos="11">
+		<Cursor position="21360" topLine="605" />
+	</File>
+	<File name="..\src\emu\cpu\x86emit.h" open="1" top="0" tabpos="10">
+		<Cursor position="1120" topLine="21" />
+	</File>
+	<File name="..\src\emu\cpu\z180\z180.c" open="0" top="0" tabpos="12">
+		<Cursor position="66392" topLine="1921" />
+	</File>
+	<File name="..\src\emu\cpu\z80\z80.c" open="0" top="0" tabpos="13">
+		<Cursor position="198900" topLine="3449" />
+	</File>
+	<File name="..\src\emu\cpu\z80\z80daisy.c" open="0" top="0" tabpos="14">
+		<Cursor position="5952" topLine="156" />
+	</File>
+	<File name="..\src\emu\cpu\z8\z8.c" open="0" top="0" tabpos="15">
+		<Cursor position="22152" topLine="615" />
+	</File>
+	<File name="..\src\emu\debug\debugcpu.c" open="0" top="0" tabpos="16">
+		<Cursor position="55148" topLine="1664" />
+	</File>
+	<File name="..\src\emu\devcpu.h" open="0" top="0" tabpos="7">
+		<Cursor position="12126" topLine="213" />
+	</File>
+	<File name="..\src\emu\devimage.c" open="0" top="0" tabpos="24">
+		<Cursor position="13354" topLine="363" />
+	</File>
+	<File name="..\src\emu\devintrf.h" open="0" top="0" tabpos="20">
+		<Cursor position="14607" topLine="396" />
+	</File>
+	<File name="..\src\emu\diimage.c" open="0" top="0" tabpos="15">
+		<Cursor position="19990" topLine="589" />
+	</File>
+	<File name="..\src\emu\diimage.h" open="0" top="0" tabpos="23">
+		<Cursor position="9563" topLine="211" />
+	</File>
+	<File name="..\src\emu\dinvram.h" open="0" top="0" tabpos="15">
+		<Cursor position="3129" topLine="66" />
+	</File>
+	<File name="..\src\emu\emu.h" open="0" top="0" tabpos="19">
+		<Cursor position="3004" topLine="66" />
+	</File>
+	<File name="..\src\emu\emualloc.h" open="0" top="0" tabpos="6">
+		<Cursor position="4922" topLine="114" />
+	</File>
+	<File name="..\src\emu\emucore.h" open="1" top="0" tabpos="7">
+		<Cursor position="1633" topLine="67" />
+	</File>
+	<File name="..\src\emu\emuopts.c" open="0" top="0" tabpos="2">
+		<Cursor position="13506" topLine="144" />
+	</File>
+	<File name="..\src\emu\emuopts.h" open="0" top="0" tabpos="32">
+		<Cursor position="1490" topLine="27" />
+	</File>
+	<File name="..\src\emu\fileio.c" open="0" top="0" tabpos="11">
+		<Cursor position="14759" topLine="492" />
+	</File>
+	<File name="..\src\emu\fileio.h" open="0" top="0" tabpos="10">
+		<Cursor position="1978" topLine="41" />
+	</File>
+	<File name="..\src\emu\image.c" open="0" top="0" tabpos="17">
+		<Cursor position="9058" topLine="287" />
+	</File>
+	<File name="..\src\emu\info.c" open="0" top="0" tabpos="43">
+		<Cursor position="10140" topLine="322" />
+	</File>
+	<File name="..\src\emu\inptport.c" open="0" top="0" tabpos="4">
+		<Cursor position="105429" topLine="2753" />
+	</File>
+	<File name="..\src\emu\inptport.h" open="0" top="0" tabpos="5">
+		<Cursor position="2676" topLine="100" />
+	</File>
+	<File name="..\src\emu\inpttype.h" open="0" top="0" tabpos="44">
+		<Cursor position="82597" topLine="565" />
+	</File>
+	<File name="..\src\emu\input.c" open="0" top="0" tabpos="48">
+		<Cursor position="0" topLine="0" />
+	</File>
+	<File name="..\src\emu\inputseq.c" open="0" top="0" tabpos="6">
+		<Cursor position="5598" topLine="185" />
+	</File>
+	<File name="..\src\emu\inputseq.h" open="0" top="0" tabpos="39">
+		<Cursor position="2281" topLine="60" />
+	</File>
+	<File name="..\src\emu\machine.c" open="1" top="0" tabpos="2">
+		<Cursor position="20871" topLine="568" />
+	</File>
+	<File name="..\src\emu\machine.h" open="0" top="0" tabpos="20">
+		<Cursor position="5937" topLine="149" />
+	</File>
+	<File name="..\src\emu\machine\eeprom.c" open="0" top="0" tabpos="16">
+		<Cursor position="10373" topLine="290" />
+	</File>
+	<File name="..\src\emu\machine\generic.c" open="0" top="0" tabpos="7">
+		<Cursor position="12366" topLine="366" />
+	</File>
+	<File name="..\src\emu\machine\generic.h" open="0" top="0" tabpos="9">
+		<Cursor position="1978" topLine="61" />
+	</File>
+	<File name="..\src\emu\machine\idectrl.c" open="0" top="0" tabpos="17">
+		<Cursor position="53568" topLine="1784" />
+	</File>
+	<File name="..\src\emu\mame.c" open="0" top="0" tabpos="47">
+		<Cursor position="0" topLine="0" />
+	</File>
+	<File name="..\src\emu\memory.c" open="0" top="0" tabpos="8">
+		<Cursor position="27034" topLine="659" />
+	</File>
+	<File name="..\src\emu\memory.h" open="0" top="0" tabpos="0">
+		<Cursor position="2536" topLine="88" />
+	</File>
+	<File name="..\src\emu\romload.c" open="0" top="0" tabpos="18">
+		<Cursor position="434" topLine="0" />
+	</File>
+	<File name="..\src\emu\romload.h" open="0" top="0" tabpos="19">
+		<Cursor position="1220" topLine="20" />
+	</File>
+	<File name="..\src\emu\softlist.c" open="0" top="0" tabpos="16">
+		<Cursor position="38698" topLine="1389" />
+	</File>
+	<File name="..\src\emu\sound\es5506.c" open="0" top="0" tabpos="3">
+		<Cursor position="3475" topLine="91" />
+	</File>
+	<File name="..\src\emu\timer.c" open="0" top="0" tabpos="25">
+		<Cursor position="4413" topLine="110" />
+	</File>
+	<File name="..\src\emu\ui.c" open="0" top="0" tabpos="4">
+		<Cursor position="15779" topLine="450" />
+	</File>
+	<File name="..\src\emu\validity.c" open="0" top="0" tabpos="11">
+		<Cursor position="642" topLine="9" />
+	</File>
+	<File name="..\src\emu\video.c" open="0" top="0" tabpos="21">
+		<Cursor position="1705" topLine="21" />
+	</File>
+	<File name="..\src\emu\video\vector.c" open="0" top="0" tabpos="5">
+		<Cursor position="1434" topLine="27" />
+	</File>
+	<File name="..\src\emu\video\vooddefs.h" open="1" top="0" tabpos="4">
+		<Cursor position="55149" topLine="1386" />
+	</File>
+	<File name="..\src\lib\miniupnpc-1.4.20100609\upnpc.c" open="1" top="0" tabpos="11">
+		<Cursor position="0" topLine="0" />
+	</File>
+	<File name="..\src\lib\util\corefile.c" open="0" top="0" tabpos="13">
+		<Cursor position="3226" topLine="83" />
+	</File>
+	<File name="..\src\lib\util\corefile.h" open="0" top="0" tabpos="12">
+		<Cursor position="2635" topLine="52" />
+	</File>
+	<File name="..\src\lib\util\options.c" open="0" top="0" tabpos="28">
+		<Cursor position="23682" topLine="769" />
+	</File>
+	<File name="..\src\lib\util\zippath.c" open="0" top="0" tabpos="29">
+		<Cursor position="5633" topLine="227" />
+	</File>
+	<File name="..\src\lib\util\zippath.h" open="0" top="0" tabpos="28">
+		<Cursor position="1232" topLine="11" />
+	</File>
+	<File name="..\src\mame\drivers\expro02.c" open="0" top="0" tabpos="14">
+		<Cursor position="19465" topLine="527" />
+	</File>
+	<File name="..\src\mame\includes\n64.h" open="0" top="0" tabpos="9">
+		<Cursor position="332" topLine="0" />
+	</File>
+	<File name="..\src\mame\machine\n64.c" open="1" top="1" tabpos="12">
+		<Cursor position="0" topLine="0" />
+	</File>
+	<File name="..\src\mame\machine\snes.c" open="0" top="0" tabpos="50">
+		<Cursor position="0" topLine="0" />
+	</File>
+	<File name="..\src\mame\machine\snesdsp1.c" open="0" top="0" tabpos="0">
+		<Cursor position="59387" topLine="1688" />
+	</File>
+	<File name="..\src\mame\video\equites.c" open="0" top="0" tabpos="0">
+		<Cursor position="1635" topLine="46" />
+	</File>
+	<File name="..\src\mame\video\n64.c" open="0" top="0" tabpos="12">
+		<Cursor position="2570" topLine="95" />
+	</File>
+	<File name="..\src\mess\devices\aescart.c" open="0" top="0" tabpos="0">
+		<Cursor position="19017" topLine="569" />
+	</File>
+	<File name="..\src\mess\devices\cartslot.c" open="0" top="0" tabpos="21">
+		<Cursor position="14693" topLine="482" />
+	</File>
+	<File name="..\src\mess\devices\cartslot.h" open="0" top="0" tabpos="20">
+		<Cursor position="506" topLine="2" />
+	</File>
+	<File name="..\src\mess\devices\microdrv.c" open="0" top="0" tabpos="18">
+		<Cursor position="241" topLine="0" />
+	</File>
+	<File name="..\src\mess\devices\multcart.c" open="0" top="0" tabpos="22">
+		<Cursor position="14000" topLine="454" />
+	</File>
+	<File name="..\src\mess\devices\ti99cart.c" open="0" top="0" tabpos="0">
+		<Cursor position="8626" topLine="237" />
+	</File>
+	<File name="..\src\mess\drivers\genesis.c" open="0" top="0" tabpos="0">
+		<Cursor position="7974" topLine="256" />
+	</File>
+	<File name="..\src\mess\drivers\n64.c" open="0" top="0" tabpos="4">
+		<Cursor position="7485" topLine="184" />
+	</File>
+	<File name="..\src\mess\drivers\nes.c" open="0" top="0" tabpos="0">
+		<Cursor position="6536" topLine="112" />
+	</File>
+	<File name="..\src\mess\drivers\snes.c" open="0" top="0" tabpos="3">
+		<Cursor position="5465" topLine="158" />
+	</File>
+	<File name="..\src\mess\formats\nes_dsk.c" open="0" top="0" tabpos="0">
+		<Cursor position="1538" topLine="40" />
+	</File>
+	<File name="..\src\mess\includes\nes.h" open="0" top="0" tabpos="1">
+		<Cursor position="2679" topLine="67" />
+	</File>
+	<File name="..\src\mess\machine\nes.c" open="0" top="0" tabpos="2">
+		<Cursor position="1248" topLine="32" />
+	</File>
+	<File name="..\src\mess\machine\serial.c" open="0" top="0" tabpos="27">
+		<Cursor position="15945" topLine="628" />
+	</File>
+	<File name="..\src\mess\machine\smartmed.c" open="0" top="0" tabpos="26">
+		<Cursor position="8181" topLine="275" />
+	</File>
+	<File name="..\src\mess\machine\snescart.c" open="0" top="0" tabpos="25">
+		<Cursor position="23655" topLine="687" />
+	</File>
+	<File name="..\src\mess\tools\imgtool\stubs.c" open="0" top="0" tabpos="14">
+		<Cursor position="736" topLine="12" />
+	</File>
+	<File name="..\src\mess\tools\messtest\testmess.c" open="0" top="0" tabpos="2">
+		<Cursor position="24717" topLine="1022" />
+	</File>
+	<File name="..\src\osd\osdcore.h" open="0" top="0" tabpos="25">
+		<Cursor position="3249" topLine="71" />
+	</File>
+	<File name="..\src\osd\sdl\sdlfile.c" open="0" top="0" tabpos="22">
+		<Cursor position="686" topLine="9" />
+	</File>
+	<File name="..\src\osd\windows\winfile.c" open="0" top="0" tabpos="34">
+		<Cursor position="3688" topLine="91" />
+	</File>
+	<File name="..\src\osd\windows\winmain.c" open="0" top="0" tabpos="10">
+		<Cursor position="29513" topLine="791" />
+	</File>
+	<File name="..\src\osd\windows\wintime.c" open="0" top="0" tabpos="27">
+		<Cursor position="3854" topLine="110" />
+	</File>
+	<File name="..\src\osd\winui\mui_opts.c" open="0" top="0" tabpos="12">
+		<Cursor position="39303" topLine="1237" />
+	</File>
+</CodeBlocks_layout_file>

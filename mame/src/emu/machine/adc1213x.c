@@ -65,7 +65,7 @@ INLINE const adc12138_interface *get_interface(device_t *device)
 {
 	assert(device != NULL);
 	assert((device->type() == ADC12130) || (device->type() == ADC12132) || (device->type() == ADC12138));
-	return (const adc12138_interface *) device->baseconfig().static_config();
+	return (const adc12138_interface *) device->static_config();
 }
 
 
@@ -319,18 +319,18 @@ static DEVICE_START( adc12138 )
 	adc1213x->input_callback_r = intf->input_callback_r;
 
 	/* register for state saving */
-	state_save_register_device_item(device, 0, adc1213x->cycle);
-	state_save_register_device_item(device, 0, adc1213x->data_out);
-	state_save_register_device_item(device, 0, adc1213x->data_in);
-	state_save_register_device_item(device, 0, adc1213x->conv_mode);
-	state_save_register_device_item(device, 0, adc1213x->auto_cal);
-	state_save_register_device_item(device, 0, adc1213x->auto_zero);
-	state_save_register_device_item(device, 0, adc1213x->acq_time);
-	state_save_register_device_item(device, 0, adc1213x->data_out_sign);
-	state_save_register_device_item(device, 0, adc1213x->mode);
-	state_save_register_device_item(device, 0, adc1213x->input_shift_reg);
-	state_save_register_device_item(device, 0, adc1213x->output_shift_reg);
-	state_save_register_device_item(device, 0, adc1213x->end_conv);
+	device->save_item(NAME(adc1213x->cycle));
+	device->save_item(NAME(adc1213x->data_out));
+	device->save_item(NAME(adc1213x->data_in));
+	device->save_item(NAME(adc1213x->conv_mode));
+	device->save_item(NAME(adc1213x->auto_cal));
+	device->save_item(NAME(adc1213x->auto_zero));
+	device->save_item(NAME(adc1213x->acq_time));
+	device->save_item(NAME(adc1213x->data_out_sign));
+	device->save_item(NAME(adc1213x->mode));
+	device->save_item(NAME(adc1213x->input_shift_reg));
+	device->save_item(NAME(adc1213x->output_shift_reg));
+	device->save_item(NAME(adc1213x->end_conv));
 }
 
 

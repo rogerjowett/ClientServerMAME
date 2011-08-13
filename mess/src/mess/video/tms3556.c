@@ -14,7 +14,7 @@
 #include "emu.h"
 #include "tms3556.h"
 
-static struct
+typedef struct
 {
 	/* registers */
 	UINT8 controlRegs[8];
@@ -27,13 +27,13 @@ static struct
 	/* memory */
 	UINT8 *vram;
 	int vram_size;
-    /* scanline counter */
+	/* scanline counter */
 	int scanline;
-    /* blinking */
-    int blink, blink_count;
-    /* background color for current line */
-    int bg_color;
-    /* current offset in name table */
+	/* blinking */
+	int blink, blink_count;
+	/* background color for current line */
+	int bg_color;
+	/* current offset in name table */
 	int name_offset;
 	/* c/g flag (mixed mode only) */
 	int cg_flag;
@@ -42,7 +42,8 @@ static struct
 	int char_line_counter;
 	/* double height phase flags (one per horizontal character position) */
 	int dbl_h_phase[40];
-} vdp;
+} vdp_t;
+static vdp_t vdp;
 
 #define TOP_BORDER 1
 #define BOTTOM_BORDER 1
@@ -207,11 +208,11 @@ MACHINE_CONFIG_FRAGMENT( tms3556 )
 	MCFG_SCREEN_SIZE(TOTAL_WIDTH, TOTAL_HEIGHT*2)
 	MCFG_SCREEN_VISIBLE_AREA(0, TOTAL_WIDTH-1, 0, TOTAL_HEIGHT*2-1)
 #endif
+	MCFG_SCREEN_UPDATE(generic_bitmapped)
 	MCFG_PALETTE_LENGTH(8)
 	MCFG_PALETTE_INIT(tms3556)
 
 	MCFG_VIDEO_START(generic_bitmapped)
-	MCFG_VIDEO_UPDATE(generic_bitmapped)
 MACHINE_CONFIG_END
 
 
@@ -239,7 +240,7 @@ static PALETTE_INIT( tms3556 )
 
     tms3556 core init (called at video init time)
 */
-void tms3556_init(running_machine *machine, int vram_size)
+void tms3556_init(running_machine &machine, int vram_size)
 {
 	memset(&vdp, 0, sizeof (vdp));
 
@@ -618,7 +619,7 @@ static void tms3556_interrupt_start_vblank(void)
 
     scanline handler
 */
-void tms3556_interrupt(running_machine *machine)
+void tms3556_interrupt(running_machine &machine)
 {
 	/* check for start of vblank */
 	if (vdp.scanline == 310)	/*no idea what the real value is*/
@@ -628,7 +629,7 @@ void tms3556_interrupt(running_machine *machine)
 	if ((vdp.scanline >= 0) && (vdp.scanline < TOTAL_HEIGHT))
 	{
 		//if (!video_skip_this_frame())
-			tms3556_draw_line(machine->generic.tmpbitmap, vdp.scanline);
+			tms3556_draw_line(machine.generic.tmpbitmap, vdp.scanline);
 	}
 
 	if (++vdp.scanline == 313)

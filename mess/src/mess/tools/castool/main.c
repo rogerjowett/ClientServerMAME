@@ -15,11 +15,7 @@
 #include <time.h>
 #include <assert.h>
 
-#include "emu.h"
-#include "mess.h"
-#include "fileio.h"
-
-#include "devices/cassette.h"
+#include "corestr.h"
 
 #include "formats/a26_cas.h"
 #include "formats/apf_apt.h"
@@ -30,7 +26,7 @@
 #include "formats/fmsx_cas.h"
 #include "formats/gtp_cas.h"
 #include "formats/hect_tap.h"
-#include "formats/jupi_tap.h"
+#include "formats/ace_tap.h"
 #include "formats/kim1_cas.h"
 #include "formats/lviv_lvt.h"
 #include "formats/mz_cas.h"
@@ -66,7 +62,7 @@ const struct SupportedCassetteFormats formats[] = {
 	{"fmxs", fmsx_cassette_formats             ,"MSX"},
 	{"gtp", gtp_cassette_formats               ,"Galaksija"},
 	{"hector", hector_cassette_formats         ,"Hector - k7 : classical, FOR : forth cassette "},
-	{"jupiter", jupiter_cassette_formats       ,"Jupiter"},
+	{"jupiter", ace_cassette_formats           ,"Jupiter"},
 	{"kim1", kim1_cassette_formats             ,"KIM-1"},
 	{"lviv", lviv_lvt_format                   ,"Lviv"},
 	{"mz", mz700_cassette_formats              ,"Sharp MZ"},
@@ -134,7 +130,7 @@ int CLIB_DECL main(int argc, char *argv[])
 
 	if (argc > 1)
 	{
-		if (!mame_stricmp("convert", argv[1]))
+		if (!core_stricmp("convert", argv[1]))
 		{
 			// convert command
 			if (argc!=5) {
@@ -143,7 +139,7 @@ int CLIB_DECL main(int argc, char *argv[])
 				return -1;
 			} else {
 				for (i = 0; formats[i].name; i++) {
-					if (mame_stricmp(formats[i].name,argv[2])==0) {
+					if (core_stricmp(formats[i].name,argv[2])==0) {
 						selected_formats = formats[i].formats;
 						found = 1;
 					}
@@ -162,7 +158,7 @@ int CLIB_DECL main(int argc, char *argv[])
 					return -1;
 				}
 
-				if (cassette_open_choices(NULL, f, &stdio_ioprocs, get_extension(argv[3]), selected_formats, CASSETTE_FLAG_READONLY, &cassette))	{
+				if (cassette_open_choices(f, &stdio_ioprocs, get_extension(argv[3]), selected_formats, CASSETTE_FLAG_READONLY, &cassette))	{
 					fprintf(stderr, "Invalid format of input file.\n");
 					fclose(f);
 					return -1;

@@ -4,13 +4,11 @@
 
 **************************************************************************/
 
-#include "midyunit.h"
-
 class midtunit_state : public driver_device
 {
 public:
-	midtunit_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config),
+	midtunit_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag),
 		  m_nvram(*this, "nvram") { }
 
 	required_shared_ptr<UINT16>	m_nvram;
@@ -40,6 +38,8 @@ WRITE16_HANDLER( midtunit_sound_w );
 
 /*----------- defined in video/midtunit.c -----------*/
 
+extern UINT8 *	midtunit_gfx_rom;
+extern size_t	midtunit_gfx_rom_size;
 extern UINT8 midtunit_gfx_rom_large;
 
 VIDEO_START( midtunit );

@@ -7,27 +7,29 @@
 class pandoras_state : public driver_device
 {
 public:
-	pandoras_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	pandoras_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 	/* memory pointers */
-	UINT8 *    videoram;
-	UINT8 *    colorram;
-	UINT8 *    spriteram;
+	UINT8 *    m_videoram;
+	UINT8 *    m_colorram;
+	UINT8 *    m_spriteram;
 
 	/* video-related */
-	tilemap_t     *layer0;
-	int         flipscreen;
+	tilemap_t     *m_layer0;
+	int         m_flipscreen;
 
-	int irq_enable_a, irq_enable_b;
-	int firq_old_data_a, firq_old_data_b;
-	int i8039_status;
+	int m_irq_enable_a;
+	int m_irq_enable_b;
+	int m_firq_old_data_a;
+	int m_firq_old_data_b;
+	int m_i8039_status;
 
 	/* devices */
-	cpu_device *maincpu;
-	cpu_device *subcpu;
-	cpu_device *audiocpu;
-	cpu_device *mcu;
+	cpu_device *m_maincpu;
+	cpu_device *m_subcpu;
+	cpu_device *m_audiocpu;
+	cpu_device *m_mcu;
 };
 
 
@@ -41,5 +43,5 @@ WRITE8_HANDLER( pandoras_flipscreen_w );
 WRITE8_HANDLER( pandoras_scrolly_w );
 
 VIDEO_START( pandoras );
-VIDEO_UPDATE( pandoras );
+SCREEN_UPDATE( pandoras );
 

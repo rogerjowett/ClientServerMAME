@@ -7,18 +7,19 @@
 class mrdo_state : public driver_device
 {
 public:
-	mrdo_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	mrdo_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 	/* memory pointers */
-	UINT8 *    bgvideoram;
-	UINT8 *    fgvideoram;
-	UINT8 *    spriteram;
-	size_t     spriteram_size;
+	UINT8 *    m_bgvideoram;
+	UINT8 *    m_fgvideoram;
+	UINT8 *    m_spriteram;
+	size_t     m_spriteram_size;
 
 	/* video-related */
-	tilemap_t *bg_tilemap, *fg_tilemap;
-	int       flipscreen;
+	tilemap_t *m_bg_tilemap;
+	tilemap_t *m_fg_tilemap;
+	int       m_flipscreen;
 };
 
 
@@ -32,4 +33,4 @@ WRITE8_HANDLER( mrdo_flipscreen_w );
 
 PALETTE_INIT( mrdo );
 VIDEO_START( mrdo );
-VIDEO_UPDATE( mrdo );
+SCREEN_UPDATE( mrdo );

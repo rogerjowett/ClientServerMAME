@@ -28,25 +28,29 @@ protected:
     RakNet::TimeUS timeBeforeSync;
 
 public:
+    Client() {}
+
 	Client(string _username);
 
-    ~Client();
+    void shutdown();
 
 	MemoryBlock createMemoryBlock(int size);
 
-	MemoryBlock createMemoryBlock(unsigned char* ptr,int size);
+	vector<MemoryBlock> createMemoryBlock(unsigned char* ptr,int size);
 
 	bool initializeConnection(unsigned short selfPort,const char *hostname,unsigned short port,running_machine *machine);
 
 	void updateSyncCheck();
 
-    std::pair<bool,bool> syncAndUpdate(running_machine *machine);
+    bool sync(running_machine *machine);
 
-    void loadInitialData(unsigned char *data,int size);
+    void revert(running_machine *machine);
+
+    bool update(running_machine *machine);
+
+    void loadInitialData(unsigned char *data,int size,running_machine *machine);
 
     bool resync(unsigned char *data,int size,running_machine *machine);
-
-    void addConstData(unsigned char *data,int size);
 
 	void checkMatch(Server *server);
 

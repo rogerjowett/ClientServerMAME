@@ -1,8 +1,8 @@
 /**********************************************************************
 
-    Commodore 64H165 Gate Array emulation
+    Commodore 64H156 Gate Array emulation
 
-    Used in 1541B/1541C/1541-II/1571
+    Used in 1541B/1541C/1541-II/1551/1571
 
     Copyright MESS Team.
     Visit http://mamedev.org for licensing and usage restrictions.
@@ -55,72 +55,131 @@
 
 **********************************************************************/
 
-#ifndef __64H156__
-#define __64H156__
+#pragma once
 
-#include "devcb.h"
+#ifndef __C64H156__
+#define __C64H156__
 
-/***************************************************************************
-    MACROS / CONSTANTS
-***************************************************************************/
+#define ADDRESS_MAP_MODERN
 
-DECLARE_LEGACY_DEVICE(C64H156, c64h156);
+#include "emu.h"
+#include "imagedev/flopdrv.h"
+#include "formats/d64_dsk.h"
+#include "formats/g64_dsk.h"
 
-#define MCFG_64H156_ADD(_tag, _clock, _intrf) \
+
+
+//**************************************************************************
+//  INTERFACE CONFIGURATION MACROS
+//**************************************************************************
+
+#define MCFG_64H156_ADD(_tag, _clock, _config) \
 	MCFG_DEVICE_ADD(_tag, C64H156, _clock) \
-	MCFG_DEVICE_CONFIG(_intrf)
+	MCFG_DEVICE_CONFIG(_config)
 
-#define C64H156_INTERFACE(name) \
-	const c64h156_interface (name)=
+#define C64H156_INTERFACE(_name) \
+	const c64h156_interface (_name) =
 
-/***************************************************************************
-    TYPE DEFINITIONS
-***************************************************************************/
 
-typedef struct _c64h156_interface c64h156_interface;
-struct _c64h156_interface
+
+//**************************************************************************
+//  TYPE DEFINITIONS
+//**************************************************************************
+
+// ======================> c64h156_interface
+
+struct c64h156_interface
 {
-	devcb_write_line	out_atn_func;
-	devcb_write_line	out_sync_func;
-	devcb_write_line	out_byte_func;
+	devcb_write_line	m_out_atn_cb;
+	devcb_write_line	m_out_sync_cb;
+	devcb_write_line	m_out_byte_cb;
 };
 
-/***************************************************************************
-    PROTOTYPES
-***************************************************************************/
+// ======================> c64h156_device
 
-/* parallel data */
-READ8_DEVICE_HANDLER( c64h156_yb_r );
-WRITE8_DEVICE_HANDLER( c64h156_yb_w );
+class c64h156_device :  public device_t,
+						public c64h156_interface
+{
+public:
+    // construction/destruction
+    c64h156_device(const machine_config &mconfig, const char *tag, device_t *owner, UINT32 clock);
 
-/* sync mark detected */
-READ_LINE_DEVICE_HANDLER( c64h156_sync_r );
+	DECLARE_READ8_MEMBER( yb_r );
+	DECLARE_WRITE8_MEMBER( yb_w );
+	DECLARE_WRITE_LINE_MEMBER( test_w );
+	DECLARE_WRITE_LINE_MEMBER( accl_w );
+	DECLARE_READ_LINE_MEMBER( sync_r );
+	DECLARE_READ_LINE_MEMBER( byte_r );
+	DECLARE_WRITE_LINE_MEMBER( mtr_w );
+	DECLARE_WRITE_LINE_MEMBER( oe_w );
+	DECLARE_WRITE_LINE_MEMBER( soe_w );
+	DECLARE_READ_LINE_MEMBER( atn_r );
+	DECLARE_WRITE_LINE_MEMBER( atni_w );
+	DECLARE_WRITE_LINE_MEMBER( atna_w );
 
-/* byte ready */
-READ_LINE_DEVICE_HANDLER( c64h156_byte_r );
+	void stp_w(int data);
+	void ds_w(int data);
+	void set_side(int side);
 
-/* stepper driver */
-void c64h156_stp_w(device_t *device, int data);
+	void on_disk_changed();
 
-/* stepper motor */
-WRITE_LINE_DEVICE_HANDLER( c64h156_mtr_w );
+protected:
+    // device-level overrides
+    virtual void device_start();
+	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr);
+    virtual void device_config_complete();
 
-/* density select */
-void c64h156_ds_w(device_t *device, int data);
+	inline void set_atn_line();
+	inline void set_sync_line();
+	inline void set_byte_line();
+	inline void read_current_track();
+	inline void spindle_motor(int mtr);
+	inline void step_motor(int mtr, int stp);
+	inline void receive_bit();
 
-/* */
-WRITE_LINE_DEVICE_HANDLER( c64h156_ted_w );
+private:
+	devcb_resolved_write_line	m_out_atn_func;
+	devcb_resolved_write_line	m_out_sync_func;
+	devcb_resolved_write_line	m_out_byte_func;
 
-/* mode select */
-WRITE_LINE_DEVICE_HANDLER( c64h156_oe_w );
+	required_device<device_t> m_image;
 
-/* byte input enable */
-WRITE_LINE_DEVICE_HANDLER( c64h156_soe_w );
+	// motors
+	int m_stp;								// stepper motor phase
+	int m_mtr;								// spindle motor on
 
-/* attention input */
-WRITE_LINE_DEVICE_HANDLER( c64h156_atni_w );
+	// track
+	int m_side;								// disk side
+	UINT8 m_track_buffer[G64_BUFFER_SIZE];	// track data buffer
+	int m_track_len;						// track length
+	offs_t m_buffer_pos;					// current byte position within track buffer
+	int m_bit_pos;							// current bit position within track buffer byte
+	int m_bit_count;						// current data byte bit counter
+	UINT16 m_data;							// data shift register
+	UINT8 m_yb;								// GCR data byte
 
-/* attention acknowledge */
-WRITE_LINE_DEVICE_HANDLER( c64h156_atna_w );
+	// signals
+	int m_accl;								// 1/2 MHz select
+	int m_ds;								// density select
+	int m_soe;								// s? output enable
+	int m_byte;								// byte ready
+	int m_oe;								// output enable (0 = write, 1 = read)
+	int m_sync;								// sync character found
+
+	// IEC
+	int m_atni;								// attention input
+	int m_atna;								// attention acknowledge
+
+	// timers
+	emu_timer *m_bit_timer;
+
+};
+
+
+
+// device type definition
+extern const device_type C64H156;
+
+
 
 #endif

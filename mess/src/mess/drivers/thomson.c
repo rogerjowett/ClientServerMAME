@@ -72,9 +72,9 @@
 #include "machine/6821pia.h"
 #include "machine/wd17xx.h"
 #include "machine/ctronics.h"
-#include "devices/flopdrv.h"
+#include "imagedev/flopdrv.h"
 #include "formats/basicdsk.h"
-#include "devices/messram.h"
+#include "machine/ram.h"
 #include "machine/serial.h"
 
 
@@ -316,7 +316,7 @@ They can run the same software and accept the same devices and extensions.
 
 /* ------------ address maps ------------ */
 
-static ADDRESS_MAP_START ( to7, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START ( to7, AS_PROGRAM, 8 )
 
      AM_RANGE ( 0x0000, 0x3fff ) AM_READ_BANK ( THOM_CART_BANK ) AM_WRITE(to7_cartridge_w ) /* 4 * 16 KB */
      AM_RANGE ( 0x4000, 0x5fff ) AM_READ_BANK ( THOM_VRAM_BANK ) AM_WRITE(to7_vram_w )
@@ -325,13 +325,13 @@ static ADDRESS_MAP_START ( to7, ADDRESS_SPACE_PROGRAM, 8 )
      AM_RANGE ( 0xc000, 0xdfff ) AM_NOP       /*  8 KB (for extension) */
      AM_RANGE ( 0xe000, 0xe7bf ) AM_ROMBANK   ( THOM_FLOP_BANK )
      AM_RANGE ( 0xe7c0, 0xe7c7 ) AM_DEVREADWRITE("mc6846", mc6846_r, mc6846_w)
-     AM_RANGE ( 0xe7c8, 0xe7cb ) AM_DEVREADWRITE ( "pia_0", pia6821_alt_r,  pia6821_alt_w )
-     AM_RANGE ( 0xe7cc, 0xe7cf ) AM_DEVREADWRITE ( "pia_1", pia6821_alt_r,  pia6821_alt_w )
+     AM_RANGE ( 0xe7c8, 0xe7cb ) AM_DEVREADWRITE_MODERN( "pia_0", pia6821_device, read_alt, write_alt )
+     AM_RANGE ( 0xe7cc, 0xe7cf ) AM_DEVREADWRITE_MODERN( "pia_1", pia6821_device, read_alt, write_alt )
      AM_RANGE ( 0xe7d0, 0xe7df ) AM_READWRITE ( to7_floppy_r, to7_floppy_w )
-     AM_RANGE ( 0xe7e0, 0xe7e3 ) AM_DEVREADWRITE ( "pia_2", pia6821_alt_r, pia6821_alt_w )
+     AM_RANGE ( 0xe7e0, 0xe7e3 ) AM_DEVREADWRITE_MODERN( "pia_2", pia6821_device, read_alt, write_alt )
      AM_RANGE ( 0xe7e8, 0xe7eb ) AM_DEVREADWRITE("acia",  acia_6551_r, acia_6551_w )
      AM_RANGE ( 0xe7f2, 0xe7f3 ) AM_READWRITE ( to7_midi_r, to7_midi_w )
-     AM_RANGE ( 0xe7f8, 0xe7fb ) AM_DEVREADWRITE ( "pia_3", pia6821_alt_r, pia6821_alt_w )
+     AM_RANGE ( 0xe7f8, 0xe7fb ) AM_DEVREADWRITE_MODERN( "pia_3", pia6821_device, read_alt, write_alt )
      AM_RANGE ( 0xe7fe, 0xe7ff ) AM_READWRITE ( to7_modem_mea8000_r,
 						to7_modem_mea8000_w )
      AM_RANGE ( 0xe800, 0xffff ) AM_ROM       /* system bios  */
@@ -339,7 +339,7 @@ static ADDRESS_MAP_START ( to7, ADDRESS_SPACE_PROGRAM, 8 )
 /* 0x10000 - 0x1ffff: 64 KB external ROM cartridge */
 /* 0x20000 - 0x247ff: 18 KB floppy / network ROM controllers */
 
-/* messram_get_ptr(machine->device("messram")) mapping:
+/* ram_get_ptr(machine.device(RAM_TAG)) mapping:
    0x0000 - 0x3fff: 16 KB video RAM (actually 8 K x 8 bits + 8 K x 6 bits)
    0x4000 - 0x5fff:  8 KB base RAM
    0x6000 - 0x9fff: 16 KB extended RAM
@@ -585,15 +585,36 @@ static INPUT_PORTS_START ( t9000 )
      PORT_INCLUDE ( to7 )
 INPUT_PORTS_END
 
-static const floppy_config thomson_floppy_config =
+static const floppy_interface thomson_floppy_interface =
 {
-	DEVCB_NULL,
+	DEVCB_LINE(thomson_index_callback),
 	DEVCB_NULL,
 	DEVCB_NULL,
 	DEVCB_NULL,
 	DEVCB_NULL,
 	FLOPPY_STANDARD_5_25_DSHD,
 	FLOPPY_OPTIONS_NAME(thomson),
+	NULL,
+	NULL
+};
+
+
+/********************* devices ************************/
+const cassette_interface to7_cassette_interface =
+{
+	to7_cassette_formats,
+	NULL,
+	(cassette_state)(CASSETTE_PLAY | CASSETTE_MOTOR_DISABLED | CASSETTE_SPEAKER_ENABLED),
+	NULL,
+	NULL
+};
+
+const cassette_interface mo5_cassette_interface =
+{
+	mo5_cassette_formats,
+	NULL,
+	(cassette_state)(CASSETTE_PLAY | CASSETTE_MOTOR_DISABLED | CASSETTE_SPEAKER_ENABLED),
+	NULL,
 	NULL
 };
 
@@ -615,11 +636,12 @@ static MACHINE_CONFIG_START( to7, driver_device )
      MCFG_SCREEN_SIZE ( THOM_TOTAL_WIDTH * 2, THOM_TOTAL_HEIGHT )
      MCFG_SCREEN_VISIBLE_AREA ( 0, THOM_TOTAL_WIDTH * 2 - 1,
 				0, THOM_TOTAL_HEIGHT - 1 )
+     MCFG_SCREEN_UPDATE ( thom )
+     MCFG_SCREEN_EOF ( thom )
+
      MCFG_PALETTE_LENGTH ( 4097 ) /* 12-bit color + transparency */
      MCFG_PALETTE_INIT ( thom )
      MCFG_VIDEO_START ( thom )
-     MCFG_VIDEO_UPDATE ( thom )
-     MCFG_VIDEO_EOF ( thom )
      MCFG_DEFAULT_LAYOUT( layout_thomson )
 
 /* sound */
@@ -635,7 +657,7 @@ static MACHINE_CONFIG_START( to7, driver_device )
      MCFG_CENTRONICS_ADD("centronics", to7_centronics_config)
 
 /* cassette */
-     MCFG_CASSETTE_ADD( "cassette", to7_cassette_config )
+     MCFG_CASSETTE_ADD( CASSETTE_TAG, to7_cassette_interface )
 
 /* timer */
      MCFG_MC6846_ADD( "mc6846", to7_timer )
@@ -646,7 +668,7 @@ static MACHINE_CONFIG_START( to7, driver_device )
 /* floppy */
      MCFG_MC6843_ADD( "mc6843", to7_6843_itf )
      MCFG_WD2793_ADD( "wd2793", default_wd17xx_interface )
-     MCFG_FLOPPY_4_DRIVES_ADD(thomson_floppy_config)
+     MCFG_FLOPPY_4_DRIVES_ADD(thomson_floppy_interface)
 
 /* network */
      MCFG_MC6854_ADD( "mc6854", to7_network_iface )
@@ -670,7 +692,7 @@ static MACHINE_CONFIG_START( to7, driver_device )
      MCFG_CARTSLOT_LOAD(to7_cartridge)
 
 /* internal ram */
-	MCFG_RAM_ADD("messram")
+	MCFG_RAM_ADD(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("40K")
 	MCFG_RAM_EXTRA_OPTIONS("24K,48K")
 
@@ -737,7 +759,7 @@ In arabic mode, Ctrl+E / Ctrl+X to start / stop typing in-line latin.
 
 **********************************************************************/
 
-static ADDRESS_MAP_START ( to770, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START ( to770, AS_PROGRAM, 8 )
 
      AM_RANGE ( 0x0000, 0x3fff ) AM_READ_BANK ( THOM_CART_BANK) AM_WRITE( to7_cartridge_w ) /* 4 * 16 KB */
      AM_RANGE ( 0x4000, 0x5fff ) AM_READ_BANK ( THOM_VRAM_BANK) AM_WRITE( to770_vram_w )
@@ -745,15 +767,15 @@ static ADDRESS_MAP_START ( to770, ADDRESS_SPACE_PROGRAM, 8 )
      AM_RANGE ( 0xa000, 0xdfff ) AM_RAMBANK   ( THOM_RAM_BANK )  /* 6 * 16 KB */
      AM_RANGE ( 0xe000, 0xe7bf ) AM_ROMBANK   ( THOM_FLOP_BANK )
      AM_RANGE ( 0xe7c0, 0xe7c7 ) AM_DEVREADWRITE("mc6846", mc6846_r, mc6846_w)
-     AM_RANGE ( 0xe7c8, 0xe7cb ) AM_DEVREADWRITE ( "pia_0", pia6821_alt_r,  pia6821_alt_w )
-     AM_RANGE ( 0xe7cc, 0xe7cf ) AM_DEVREADWRITE ( "pia_1", pia6821_alt_r,  pia6821_alt_w )
+     AM_RANGE ( 0xe7c8, 0xe7cb ) AM_DEVREADWRITE_MODERN( "pia_0", pia6821_device, read_alt, write_alt )
+     AM_RANGE ( 0xe7cc, 0xe7cf ) AM_DEVREADWRITE_MODERN( "pia_1", pia6821_device, read_alt, write_alt )
      AM_RANGE ( 0xe7d0, 0xe7df ) AM_READWRITE ( to7_floppy_r, to7_floppy_w )
-     AM_RANGE ( 0xe7e0, 0xe7e3 ) AM_DEVREADWRITE ( "pia_2", pia6821_alt_r, pia6821_alt_w )
+     AM_RANGE ( 0xe7e0, 0xe7e3 ) AM_DEVREADWRITE_MODERN( "pia_2", pia6821_device, read_alt, write_alt )
      AM_RANGE ( 0xe7e4, 0xe7e7 ) AM_READWRITE ( to770_gatearray_r,
                                                 to770_gatearray_w )
      AM_RANGE ( 0xe7e8, 0xe7eb ) AM_DEVREADWRITE("acia",  acia_6551_r, acia_6551_w )
      AM_RANGE ( 0xe7f2, 0xe7f3 ) AM_READWRITE ( to7_midi_r, to7_midi_w )
-     AM_RANGE ( 0xe7f8, 0xe7fb ) AM_DEVREADWRITE ( "pia_3", pia6821_alt_r, pia6821_alt_w )
+     AM_RANGE ( 0xe7f8, 0xe7fb ) AM_DEVREADWRITE_MODERN( "pia_3", pia6821_device, read_alt, write_alt )
      AM_RANGE ( 0xe7fe, 0xe7ff ) AM_READWRITE ( to7_modem_mea8000_r,
 						to7_modem_mea8000_w )
      AM_RANGE ( 0xe800, 0xffff ) AM_ROM       /* system bios  */
@@ -761,7 +783,7 @@ static ADDRESS_MAP_START ( to770, ADDRESS_SPACE_PROGRAM, 8 )
 /* 0x10000 - 0x1ffff: 64 KB external ROM cartridge */
 /* 0x20000 - 0x247ff: 18 KB floppy / network ROM controllers */
 
-/* messram_get_ptr(machine->device("messram")) mapping:
+/* ram_get_ptr(machine.device(RAM_TAG)) mapping:
    0x00000 - 0x03fff: 16 KB video RAM
    0x04000 - 0x07fff: 16 KB unbanked base RAM
    0x08000 - 0x1ffff: 6 * 16 KB banked extended RAM
@@ -855,7 +877,7 @@ static MACHINE_CONFIG_DERIVED( to770, to7 )
     MCFG_MC6846_MODIFY( "mc6846", to770_timer )
 
 	/* internal ram */
-	MCFG_RAM_MODIFY("messram")
+	MCFG_RAM_MODIFY(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("128K")
 	MCFG_RAM_EXTRA_OPTIONS("64K")
 MACHINE_CONFIG_END
@@ -927,16 +949,16 @@ Differences include:
 
 **********************************************************************/
 
-static ADDRESS_MAP_START ( mo5, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START ( mo5, AS_PROGRAM, 8 )
 
      AM_RANGE ( 0x0000, 0x1fff ) AM_READ_BANK ( THOM_VRAM_BANK ) AM_WRITE( to770_vram_w )
      AM_RANGE ( 0x2000, 0x9fff ) AM_RAMBANK   ( THOM_BASE_BANK )
      AM_RANGE ( 0xa000, 0xa7bf ) AM_ROMBANK   ( THOM_FLOP_BANK )
-     AM_RANGE ( 0xa7c0, 0xa7c3 ) AM_DEVREADWRITE ( "pia_0", pia6821_alt_r,  pia6821_alt_w )
+     AM_RANGE ( 0xa7c0, 0xa7c3 ) AM_DEVREADWRITE_MODERN( "pia_0", pia6821_device, read_alt, write_alt )
      AM_RANGE ( 0xa7cb, 0xa7cb ) AM_WRITE     ( mo5_ext_w )
-     AM_RANGE ( 0xa7cc, 0xa7cf ) AM_DEVREADWRITE ( "pia_1", pia6821_alt_r,  pia6821_alt_w )
+     AM_RANGE ( 0xa7cc, 0xa7cf ) AM_DEVREADWRITE_MODERN( "pia_1", pia6821_device, read_alt, write_alt )
      AM_RANGE ( 0xa7d0, 0xa7df ) AM_READWRITE ( to7_floppy_r, to7_floppy_w )
-     AM_RANGE ( 0xa7e0, 0xa7e3 ) AM_DEVREADWRITE ( "pia_2", pia6821_alt_r, pia6821_alt_w )
+     AM_RANGE ( 0xa7e0, 0xa7e3 ) AM_DEVREADWRITE_MODERN( "pia_2", pia6821_device, read_alt, write_alt )
      AM_RANGE ( 0xa7e4, 0xa7e7 ) AM_READWRITE ( mo5_gatearray_r,
 						mo5_gatearray_w )
      AM_RANGE ( 0xa7e8, 0xa7eb ) AM_DEVREADWRITE("acia",  acia_6551_r, acia_6551_w )
@@ -948,7 +970,7 @@ static ADDRESS_MAP_START ( mo5, ADDRESS_SPACE_PROGRAM, 8 )
 /* 0x10000 - 0x1ffff: 16 KB integrated BASIC / 64 KB external cartridge */
 /* 0x20000 - 0x247ff: 18 KB floppy / network ROM controllers */
 
-/* messram_get_ptr(machine->device("messram")) mapping:
+/* ram_get_ptr(machine.device(RAM_TAG)) mapping:
    0x00000 - 0x03fff: 16 KB video RAM
    0x04000 - 0x0bfff: 32 KB unbanked base RAM
    0x0c000 - 0x1bfff: 4 * 16 KB bank extended RAM
@@ -1030,7 +1052,7 @@ static MACHINE_CONFIG_DERIVED( mo5, to7 )
      MCFG_CPU_MODIFY( "maincpu" )
      MCFG_CPU_PROGRAM_MAP ( mo5)
 
-     MCFG_CASSETTE_MODIFY( "cassette", mo5_cassette_config )
+     MCFG_CASSETTE_MODIFY( CASSETTE_TAG, mo5_cassette_interface )
 
      MCFG_DEVICE_REMOVE( "mc6846" )
 
@@ -1041,7 +1063,7 @@ static MACHINE_CONFIG_DERIVED( mo5, to7 )
 	MCFG_CARTSLOT_LOAD(mo5_cartridge)
 
 	/* internal ram */
-	MCFG_RAM_MODIFY("messram")
+	MCFG_RAM_MODIFY(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("112K")
 MACHINE_CONFIG_END
 
@@ -1126,7 +1148,7 @@ It was replaced quickly with the improved TO9+.
 
 **********************************************************************/
 
-static ADDRESS_MAP_START ( to9, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START ( to9, AS_PROGRAM, 8 )
 
      AM_RANGE ( 0x0000, 0x3fff ) AM_READ_BANK ( THOM_CART_BANK ) AM_WRITE( to9_cartridge_w )/* 4 * 16 KB */
      AM_RANGE ( 0x4000, 0x5fff ) AM_READ_BANK ( THOM_VRAM_BANK ) AM_WRITE( to770_vram_w )
@@ -1134,8 +1156,8 @@ static ADDRESS_MAP_START ( to9, ADDRESS_SPACE_PROGRAM, 8 )
      AM_RANGE ( 0xa000, 0xdfff ) AM_RAMBANK   ( THOM_RAM_BANK )  /* 10 * 16 KB */
      AM_RANGE ( 0xe000, 0xe7bf ) AM_ROMBANK   ( THOM_FLOP_BANK )
      AM_RANGE ( 0xe7c0, 0xe7c7 ) AM_DEVREADWRITE("mc6846", mc6846_r, mc6846_w)
-     AM_RANGE ( 0xe7c8, 0xe7cb ) AM_DEVREADWRITE ( "pia_0", pia6821_alt_r,  pia6821_alt_w )
-     AM_RANGE ( 0xe7cc, 0xe7cf ) AM_DEVREADWRITE ( "pia_1", pia6821_alt_r,  pia6821_alt_w )
+     AM_RANGE ( 0xe7c8, 0xe7cb ) AM_DEVREADWRITE_MODERN( "pia_0", pia6821_device, read_alt, write_alt)
+     AM_RANGE ( 0xe7cc, 0xe7cf ) AM_DEVREADWRITE_MODERN( "pia_1", pia6821_device, read_alt, write_alt)
      AM_RANGE ( 0xe7d0, 0xe7d9 ) AM_READWRITE ( to9_floppy_r, to9_floppy_w )
      AM_RANGE ( 0xe7da, 0xe7dd ) AM_READWRITE ( to9_vreg_r, to9_vreg_w )
      AM_RANGE ( 0xe7de, 0xe7df ) AM_READWRITE ( to9_kbd_r, to9_kbd_w )
@@ -1144,7 +1166,7 @@ static ADDRESS_MAP_START ( to9, ADDRESS_SPACE_PROGRAM, 8 )
      AM_RANGE ( 0xe7e8, 0xe7eb ) AM_DEVREADWRITE("acia",  acia_6551_r, acia_6551_w )
 /*   AM_RANGE ( 0xe7f0, 0xe7f7 ) AM_READWRITE ( to9_ieee_r, to9_ieee_w ) */
      AM_RANGE ( 0xe7f2, 0xe7f3 ) AM_READWRITE ( to7_midi_r, to7_midi_w )
-     AM_RANGE ( 0xe7f8, 0xe7fb ) AM_DEVREADWRITE ( "pia_3", pia6821_alt_r, pia6821_alt_w )
+     AM_RANGE ( 0xe7f8, 0xe7fb ) AM_DEVREADWRITE_MODERN( "pia_3", pia6821_device, read_alt, write_alt)
      AM_RANGE ( 0xe7fe, 0xe7ff ) AM_READWRITE ( to7_modem_mea8000_r,
 						to7_modem_mea8000_w )
      AM_RANGE ( 0xe800, 0xffff ) AM_ROM       /* system bios  */
@@ -1153,7 +1175,7 @@ static ADDRESS_MAP_START ( to9, ADDRESS_SPACE_PROGRAM, 8 )
 /* 0x20000 - 0x3ffff: 128 KB internal software ROM */
 /* 0x40000 - 0x447ff: 18  KB external floppy / network ROM controllers */
 
-/* messram_get_ptr(machine->device("messram")) mapping:
+/* ram_get_ptr(machine.device(RAM_TAG)) mapping:
    0x00000 - 0x03fff: 16 KB video RAM
    0x04000 - 0x07fff: 16 KB unbanked base RAM
    0x08000 - 0x2ffff: 10 * 16 KB banked extended RAM
@@ -1378,7 +1400,7 @@ static MACHINE_CONFIG_DERIVED( to9, to7 )
      MCFG_MC6846_MODIFY( "mc6846", to9_timer )
 
 	 /* internal ram */
-	MCFG_RAM_MODIFY("messram")
+	MCFG_RAM_MODIFY(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("192K")
 	MCFG_RAM_EXTRA_OPTIONS("128K")
 MACHINE_CONFIG_END
@@ -1450,7 +1472,7 @@ The TO8D is simply a TO8 with an integrated 3"1/2 floppy drive.
 **********************************************************************/
 
 
-static ADDRESS_MAP_START ( to8, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START ( to8, AS_PROGRAM, 8 )
 
      AM_RANGE ( 0x0000, 0x3fff ) AM_READ_BANK ( THOM_CART_BANK) AM_WRITE( to8_cartridge_w ) /* 4 * 16 KB */
      AM_RANGE ( 0x4000, 0x5fff ) AM_READ_BANK ( THOM_VRAM_BANK) AM_WRITE( to770_vram_w )
@@ -1460,8 +1482,8 @@ static ADDRESS_MAP_START ( to8, ADDRESS_SPACE_PROGRAM, 8 )
      AM_RANGE ( 0xc000, 0xdfff ) AM_READ_BANK ( TO8_DATA_HI) AM_WRITE( to8_data_hi_w )
      AM_RANGE ( 0xe000, 0xe7bf ) AM_ROMBANK   ( THOM_FLOP_BANK ) /* 2 * 2 KB */
      AM_RANGE ( 0xe7c0, 0xe7c7 ) AM_DEVREADWRITE("mc6846", mc6846_r, mc6846_w)
-     AM_RANGE ( 0xe7c8, 0xe7cb ) AM_DEVREADWRITE ( "pia_0", pia6821_alt_r,  pia6821_alt_w )
-     AM_RANGE ( 0xe7cc, 0xe7cf ) AM_DEVREADWRITE ( "pia_1", pia6821_alt_r,  pia6821_alt_w )
+     AM_RANGE ( 0xe7c8, 0xe7cb ) AM_DEVREADWRITE_MODERN( "pia_0", pia6821_device, read_alt, write_alt)
+     AM_RANGE ( 0xe7cc, 0xe7cf ) AM_DEVREADWRITE_MODERN( "pia_1", pia6821_device, read_alt, write_alt)
      AM_RANGE ( 0xe7d0, 0xe7d9 ) AM_READWRITE ( to8_floppy_r, to8_floppy_w )
      AM_RANGE ( 0xe7da, 0xe7dd ) AM_READWRITE ( to8_vreg_r, to8_vreg_w )
      AM_RANGE ( 0xe7e4, 0xe7e7 ) AM_READWRITE ( to8_gatearray_r,
@@ -1469,7 +1491,7 @@ static ADDRESS_MAP_START ( to8, ADDRESS_SPACE_PROGRAM, 8 )
      AM_RANGE ( 0xe7e8, 0xe7eb ) AM_DEVREADWRITE("acia",  acia_6551_r, acia_6551_w )
 /*   AM_RANGE ( 0xe7f0, 0xe7f7 ) AM_READWRITE ( to9_ieee_r, to9_ieee_w ) */
      AM_RANGE ( 0xe7f2, 0xe7f3 ) AM_READWRITE ( to7_midi_r, to7_midi_w )
-     AM_RANGE ( 0xe7f8, 0xe7fb ) AM_DEVREADWRITE ( "pia_3", pia6821_alt_r, pia6821_alt_w )
+     AM_RANGE ( 0xe7f8, 0xe7fb ) AM_DEVREADWRITE_MODERN( "pia_3", pia6821_device, read_alt, write_alt)
      AM_RANGE ( 0xe7fe, 0xe7ff ) AM_READWRITE ( to7_modem_mea8000_r,
 						to7_modem_mea8000_w )
      AM_RANGE ( 0xe800, 0xffff ) AM_ROMBANK   ( TO8_BIOS_BANK ) /* 2 * 6 KB */
@@ -1479,7 +1501,7 @@ static ADDRESS_MAP_START ( to8, ADDRESS_SPACE_PROGRAM, 8 )
 /* 0x30000 - 0x33fff: 16 KB BIOS ROM */
 /* 0x34000 - 0x387ff: 18 KB external floppy / network ROM controllers */
 
-/* messram_get_ptr(machine->device("messram")) mapping: 512 KB flat (including video) */
+/* ram_get_ptr(machine.device(RAM_TAG)) mapping: 512 KB flat (including video) */
 
 ADDRESS_MAP_END
 
@@ -1596,7 +1618,7 @@ static MACHINE_CONFIG_DERIVED( to8, to7 )
      MCFG_MC6846_MODIFY( "mc6846", to8_timer )
 
 	 /* internal ram */
-	MCFG_RAM_MODIFY("messram")
+	MCFG_RAM_MODIFY(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("512K")
 	MCFG_RAM_EXTRA_OPTIONS("256K")
 MACHINE_CONFIG_END
@@ -1647,7 +1669,7 @@ The differences with the TO8 are:
 
 **********************************************************************/
 
-static ADDRESS_MAP_START ( to9p, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START ( to9p, AS_PROGRAM, 8 )
 
      AM_RANGE ( 0x0000, 0x3fff ) AM_READ_BANK ( THOM_CART_BANK) AM_WRITE( to8_cartridge_w ) /* 4 * 16 KB */
      AM_RANGE ( 0x4000, 0x5fff ) AM_READ_BANK ( THOM_VRAM_BANK) AM_WRITE( to770_vram_w )
@@ -1657,8 +1679,8 @@ static ADDRESS_MAP_START ( to9p, ADDRESS_SPACE_PROGRAM, 8 )
      AM_RANGE ( 0xc000, 0xdfff ) AM_READ_BANK ( TO8_DATA_HI) AM_WRITE( to8_data_hi_w )
      AM_RANGE ( 0xe000, 0xe7bf ) AM_ROMBANK   ( THOM_FLOP_BANK ) /* 2 * 2 KB */
      AM_RANGE ( 0xe7c0, 0xe7c7 ) AM_DEVREADWRITE("mc6846", mc6846_r, mc6846_w)
-     AM_RANGE ( 0xe7c8, 0xe7cb ) AM_DEVREADWRITE ( "pia_0", pia6821_alt_r,  pia6821_alt_w )
-     AM_RANGE ( 0xe7cc, 0xe7cf ) AM_DEVREADWRITE ( "pia_1", pia6821_alt_r,  pia6821_alt_w )
+     AM_RANGE ( 0xe7c8, 0xe7cb ) AM_DEVREADWRITE_MODERN( "pia_0", pia6821_device, read_alt, write_alt)
+     AM_RANGE ( 0xe7cc, 0xe7cf ) AM_DEVREADWRITE_MODERN( "pia_1", pia6821_device, read_alt, write_alt)
      AM_RANGE ( 0xe7d0, 0xe7d9 ) AM_READWRITE ( to8_floppy_r, to8_floppy_w )
      AM_RANGE ( 0xe7da, 0xe7dd ) AM_READWRITE ( to8_vreg_r, to8_vreg_w )
      AM_RANGE ( 0xe7de, 0xe7df ) AM_READWRITE ( to9_kbd_r, to9_kbd_w )
@@ -1667,7 +1689,7 @@ static ADDRESS_MAP_START ( to9p, ADDRESS_SPACE_PROGRAM, 8 )
      AM_RANGE ( 0xe7e8, 0xe7eb ) AM_DEVREADWRITE("acia",  acia_6551_r, acia_6551_w )
 /*   AM_RANGE ( 0xe7f0, 0xe7f7 ) AM_READWRITE ( to9_ieee_r, to9_ieee_w ) */
      AM_RANGE ( 0xe7f2, 0xe7f3 ) AM_READWRITE ( to7_midi_r, to7_midi_w )
-     AM_RANGE ( 0xe7f8, 0xe7fb ) AM_DEVREADWRITE ( "pia_3", pia6821_alt_r, pia6821_alt_w )
+     AM_RANGE ( 0xe7f8, 0xe7fb ) AM_DEVREADWRITE_MODERN( "pia_3", pia6821_device, read_alt, write_alt)
      AM_RANGE ( 0xe7fe, 0xe7ff ) AM_READWRITE ( to7_modem_mea8000_r,
 						to7_modem_mea8000_w )
      AM_RANGE ( 0xe800, 0xffff ) AM_ROMBANK   ( TO8_BIOS_BANK ) /* 2 * 6 KB */
@@ -1677,7 +1699,7 @@ static ADDRESS_MAP_START ( to9p, ADDRESS_SPACE_PROGRAM, 8 )
 /* 0x30000 - 0x33fff: 16 KB BIOS ROM */
 /* 0x34000 - 0x387ff: 18 KB external floppy / network ROM controllers */
 
-/* messram_get_ptr(machine->device("messram")) mapping: 512 KB flat (including video) */
+/* ram_get_ptr(machine.device(RAM_TAG)) mapping: 512 KB flat (including video) */
 
 ADDRESS_MAP_END
 
@@ -1745,7 +1767,7 @@ static MACHINE_CONFIG_DERIVED( to9p, to7 )
      MCFG_MC6846_MODIFY( "mc6846", to9p_timer )
 
 	/* internal ram */
-	MCFG_RAM_MODIFY("messram")
+	MCFG_RAM_MODIFY(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("512K")
 MACHINE_CONFIG_END
 
@@ -1811,7 +1833,7 @@ a PC XT.
 
 **********************************************************************/
 
-static ADDRESS_MAP_START ( mo6, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START ( mo6, AS_PROGRAM, 8 )
 
      AM_RANGE ( 0x0000, 0x1fff ) AM_READ_BANK ( THOM_VRAM_BANK) AM_WRITE( to770_vram_w )
      AM_RANGE ( 0x2000, 0x3fff ) AM_READ_BANK ( TO8_SYS_LO) AM_WRITE( to8_sys_lo_w )
@@ -1819,9 +1841,9 @@ static ADDRESS_MAP_START ( mo6, ADDRESS_SPACE_PROGRAM, 8 )
      AM_RANGE ( 0x6000, 0x7fff ) AM_READ_BANK ( TO8_DATA_LO) AM_WRITE( to8_data_lo_w )
      AM_RANGE ( 0x8000, 0x9fff ) AM_READ_BANK ( TO8_DATA_HI) AM_WRITE( to8_data_hi_w )
      AM_RANGE ( 0xa000, 0xa7bf ) AM_ROMBANK   ( THOM_FLOP_BANK )
-     AM_RANGE ( 0xa7c0, 0xa7c3 ) AM_DEVREADWRITE ( "pia_0", pia6821_alt_r,  pia6821_alt_w )
+     AM_RANGE ( 0xa7c0, 0xa7c3 ) AM_DEVREADWRITE_MODERN( "pia_0", pia6821_device, read_alt, write_alt)
      AM_RANGE ( 0xa7cb, 0xa7cb ) AM_WRITE     ( mo6_ext_w )
-     AM_RANGE ( 0xa7cc, 0xa7cf ) AM_DEVREADWRITE ( "pia_1", pia6821_alt_r,  pia6821_alt_w )
+     AM_RANGE ( 0xa7cc, 0xa7cf ) AM_DEVREADWRITE_MODERN( "pia_1", pia6821_device, read_alt, write_alt)
      AM_RANGE ( 0xa7d0, 0xa7d9 ) AM_READWRITE ( to7_floppy_r, to7_floppy_w )
      AM_RANGE ( 0xa7da, 0xa7dd ) AM_READWRITE ( mo6_vreg_r, mo6_vreg_w )
      AM_RANGE ( 0xa7e4, 0xa7e7 ) AM_READWRITE ( mo6_gatearray_r,
@@ -1838,7 +1860,7 @@ static ADDRESS_MAP_START ( mo6, ADDRESS_SPACE_PROGRAM, 8 )
 /* 0x20000 - 0x2ffff: 64 KB BIOS ROM */
 /* 0x30000 - 0x347ff: 16 KB floppy / network ROM controllers */
 
-/* messram_get_ptr(machine->device("messram")) mapping: 128 KB flat (including video) */
+/* ram_get_ptr(machine.device(RAM_TAG)) mapping: 128 KB flat (including video) */
 
 ADDRESS_MAP_END
 
@@ -2081,7 +2103,7 @@ static MACHINE_CONFIG_DERIVED( mo6, to7 )
 	MCFG_CARTSLOT_LOAD(mo5_cartridge)
 
 	/* internal ram */
-	MCFG_RAM_MODIFY("messram")
+	MCFG_RAM_MODIFY(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("128K")
 MACHINE_CONFIG_END
 
@@ -2123,7 +2145,7 @@ Here are the differences between the MO6 and MO5NR:
 
 **********************************************************************/
 
-static ADDRESS_MAP_START ( mo5nr, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START ( mo5nr, AS_PROGRAM, 8 )
 
      AM_RANGE ( 0x0000, 0x1fff ) AM_READ_BANK ( THOM_VRAM_BANK) AM_WRITE( to770_vram_w )
      AM_RANGE ( 0x2000, 0x3fff ) AM_READ_BANK ( TO8_SYS_LO) AM_WRITE( to8_sys_lo_w )
@@ -2131,9 +2153,9 @@ static ADDRESS_MAP_START ( mo5nr, ADDRESS_SPACE_PROGRAM, 8 )
      AM_RANGE ( 0x6000, 0x7fff ) AM_READ_BANK ( TO8_DATA_LO) AM_WRITE( to8_data_lo_w )
      AM_RANGE ( 0x8000, 0x9fff ) AM_READ_BANK ( TO8_DATA_HI) AM_WRITE( to8_data_hi_w )
      AM_RANGE ( 0xa000, 0xa7bf ) AM_ROMBANK   ( THOM_FLOP_BANK )
-     AM_RANGE ( 0xa7c0, 0xa7c3 ) AM_DEVREADWRITE ( "pia_0", pia6821_alt_r,  pia6821_alt_w )
+     AM_RANGE ( 0xa7c0, 0xa7c3 ) AM_DEVREADWRITE_MODERN( "pia_0", pia6821_device, read_alt, write_alt)
      AM_RANGE ( 0xa7cb, 0xa7cb ) AM_WRITE     ( mo6_ext_w )
-     AM_RANGE ( 0xa7cc, 0xa7cf ) AM_DEVREADWRITE ( "pia_1", pia6821_alt_r,  pia6821_alt_w )
+     AM_RANGE ( 0xa7cc, 0xa7cf ) AM_DEVREADWRITE_MODERN( "pia_1", pia6821_device, read_alt, write_alt)
      AM_RANGE ( 0xa7d0, 0xa7d9 ) AM_READWRITE ( mo5nr_net_r, mo5nr_net_w )
      AM_RANGE ( 0xa7da, 0xa7dd ) AM_READWRITE ( mo6_vreg_r, mo6_vreg_w )
      AM_RANGE ( 0xa7e1, 0xa7e1 ) AM_DEVREADWRITE("centronics", centronics_data_r, centronics_data_w)
@@ -2143,7 +2165,7 @@ static ADDRESS_MAP_START ( mo5nr, ADDRESS_SPACE_PROGRAM, 8 )
      AM_RANGE ( 0xa7e8, 0xa7eb ) AM_DEVREADWRITE("acia",  acia_6551_r, acia_6551_w )
 /*   AM_RANGE ( 0xa7f0, 0xa7f7 ) AM_READWRITE ( to9_ieee_r, to9_ieee_w ) */
      AM_RANGE ( 0xa7f2, 0xa7f3 ) AM_READWRITE ( to7_midi_r, to7_midi_w )
-     AM_RANGE ( 0xa7f8, 0xa7fb ) AM_DEVREADWRITE ( "pia_3", pia6821_alt_r, pia6821_alt_w )
+     AM_RANGE ( 0xa7f8, 0xa7fb ) AM_DEVREADWRITE_MODERN( "pia_3", pia6821_device, read_alt, write_alt)
      AM_RANGE ( 0xa7fe, 0xa7ff ) AM_DEVREADWRITE("mea8000", mea8000_r, mea8000_w)
      AM_RANGE ( 0xb000, 0xefff ) AM_READ_BANK ( THOM_CART_BANK) AM_WRITE( mo6_cartridge_w ) /* 4 * 16 KB */
      AM_RANGE ( 0xf000, 0xffff ) AM_ROMBANK   ( TO8_BIOS_BANK )
@@ -2152,7 +2174,7 @@ static ADDRESS_MAP_START ( mo5nr, ADDRESS_SPACE_PROGRAM, 8 )
 /* 0x20000 - 0x2ffff: 64 KB BIOS ROM */
 /* 0x30000 - 0x347ff: 16 KB floppy / network ROM controllers */
 
-/* messram_get_ptr(machine->device("messram")) mapping: 128 KB flat (including video) */
+/* ram_get_ptr(machine.device(RAM_TAG)) mapping: 128 KB flat (including video) */
 
 ADDRESS_MAP_END
 
@@ -2307,7 +2329,7 @@ static MACHINE_CONFIG_DERIVED( mo5nr, to7 )
 	MCFG_CARTSLOT_LOAD(mo5_cartridge)
 
 	/* internal ram */
-	MCFG_RAM_MODIFY("messram")
+	MCFG_RAM_MODIFY(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("128K")
 MACHINE_CONFIG_END
 

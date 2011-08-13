@@ -1,18 +1,18 @@
 class prehisle_state : public driver_device
 {
 public:
-	prehisle_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	prehisle_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 
-	UINT16 *spriteram;
-	UINT16 *videoram;
-	UINT16 *bg_videoram16;
-	UINT16 invert_controls;
+	UINT16 *m_spriteram;
+	UINT16 *m_videoram;
+	UINT16 *m_bg_videoram16;
+	UINT16 m_invert_controls;
 
-	tilemap_t *bg2_tilemap;
-	tilemap_t *bg_tilemap;
-	tilemap_t *fg_tilemap;
+	tilemap_t *m_bg2_tilemap;
+	tilemap_t *m_bg_tilemap;
+	tilemap_t *m_fg_tilemap;
 };
 
 
@@ -24,4 +24,4 @@ WRITE16_HANDLER( prehisle_control16_w );
 READ16_HANDLER( prehisle_control16_r );
 
 VIDEO_START( prehisle );
-VIDEO_UPDATE( prehisle );
+SCREEN_UPDATE( prehisle );

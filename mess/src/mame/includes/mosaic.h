@@ -7,19 +7,20 @@
 class mosaic_state : public driver_device
 {
 public:
-	mosaic_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	mosaic_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 	/* memory pointers */
-	UINT8 *        fgvideoram;
-	UINT8 *        bgvideoram;
-//      UINT8 *        paletteram;    // currently this uses generic palette handling
+	UINT8 *        m_fgvideoram;
+	UINT8 *        m_bgvideoram;
+//      UINT8 *        m_paletteram;    // currently this uses generic palette handling
 
 	/* video-related */
-	tilemap_t      *bg_tilemap,*fg_tilemap;
+	tilemap_t      *m_bg_tilemap;
+	tilemap_t      *m_fg_tilemap;
 
 	/* misc */
-	int            prot_val;
+	int            m_prot_val;
 };
 
 
@@ -29,4 +30,4 @@ WRITE8_HANDLER( mosaic_fgvideoram_w );
 WRITE8_HANDLER( mosaic_bgvideoram_w );
 
 VIDEO_START( mosaic );
-VIDEO_UPDATE( mosaic );
+SCREEN_UPDATE( mosaic );

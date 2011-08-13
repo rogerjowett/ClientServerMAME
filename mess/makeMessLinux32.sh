@@ -1,2 +1,2 @@
-make TARGET=mess WERROR=0
-cp mess ~/Releases/MAMEHub/src/lnxmess
+make -j4 TARGET=mess
+cp mess ~/mamehub/Linux/src/lnxmess

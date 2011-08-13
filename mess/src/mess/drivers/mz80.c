@@ -10,9 +10,9 @@
 #include "cpu/z80/z80.h"
 #include "sound/speaker.h"
 #include "sound/wave.h"
-#include "machine/i8255a.h"
+#include "machine/i8255.h"
 #include "machine/pit8253.h"
-#include "devices/cassette.h"
+#include "imagedev/cassette.h"
 #include "includes/mz80.h"
 
 
@@ -224,18 +224,18 @@ static INPUT_PORTS_START( mz80a )
 	PORT_BIT(0x80, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_PLUS_PAD) PORT_CHAR(UCHAR_MAMEKEY(PLUS_PAD))
 INPUT_PORTS_END
 
-static ADDRESS_MAP_START( mz80k_mem , ADDRESS_SPACE_PROGRAM, 8)
+static ADDRESS_MAP_START( mz80k_mem , AS_PROGRAM, 8)
 	ADDRESS_MAP_UNMAP_HIGH
     AM_RANGE(0x0000, 0x0fff) AM_ROM
     AM_RANGE(0x1000, 0xcfff) AM_RAM // 48 KB of RAM
     AM_RANGE(0xd000, 0xd3ff) AM_RAM // Video RAM
-    AM_RANGE(0xe000, 0xe003) AM_DEVREADWRITE("ppi8255", i8255a_r, i8255a_w) /* PPIA 8255 */
+    AM_RANGE(0xe000, 0xe003) AM_DEVREADWRITE_MODERN("ppi8255", i8255_device, read, write) /* PPIA 8255 */
     AM_RANGE(0xe004, 0xe007) AM_DEVREADWRITE("pit8253", pit8253_r,pit8253_w)  /* PIT 8253  */
     AM_RANGE(0xe008, 0xe00b) AM_READWRITE( mz80k_strobe_r, mz80k_strobe_w)
     AM_RANGE(0xf000, 0xf3ff) AM_ROM
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( mz80k_io, ADDRESS_SPACE_IO, 8)
+static ADDRESS_MAP_START( mz80k_io, AS_IO, 8)
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 	ADDRESS_MAP_UNMAP_HIGH
 ADDRESS_MAP_END
@@ -248,18 +248,19 @@ static GFXDECODE_START( mz80kj )
 	GFXDECODE_ENTRY( "gfx1", 0x0000, mz80kj_charlayout, 0, 1 )
 GFXDECODE_END
 
-static const cassette_config mz80k_cassette_config =
+static const cassette_interface mz80k_cassette_interface =
 {
 	cassette_default_formats,
 	NULL,
 	(cassette_state)(CASSETTE_STOPPED | CASSETTE_MOTOR_ENABLED | CASSETTE_SPEAKER_ENABLED),
+	NULL,
 	NULL
 };
 
 static TIMER_DEVICE_CALLBACK( ne555_tempo_callback )
 {
-	mz80_state *state = timer.machine->driver_data<mz80_state>();
-	state->mz80k_tempo_strobe ^= 1;
+	mz80_state *state = timer.machine().driver_data<mz80_state>();
+	state->m_mz80k_tempo_strobe ^= 1;
 }
 
 static MACHINE_CONFIG_START( mz80k, mz80_state )
@@ -272,33 +273,33 @@ static MACHINE_CONFIG_START( mz80k, mz80_state )
 
 	MCFG_MACHINE_RESET( mz80k )
 
-	MCFG_I8255A_ADD( "ppi8255", mz80k_8255_int )
+	MCFG_I8255_ADD( "ppi8255", mz80k_8255_int )
 
 	MCFG_PIT8253_ADD( "pit8253", mz80k_pit8253_config )
 
     /* video hardware */
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(60)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_SIZE(320, 200)
+	MCFG_SCREEN_VISIBLE_AREA(0, 319, 0, 199)
+	MCFG_SCREEN_UPDATE(mz80k)
 
 	MCFG_VIDEO_START(mz80k)
-	MCFG_VIDEO_UPDATE(mz80k)
 
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_GFXDECODE( mz80k )
 	MCFG_PALETTE_LENGTH(2)
 	MCFG_PALETTE_INIT(black_and_white)
-	MCFG_SCREEN_SIZE(320, 200)
-	MCFG_SCREEN_VISIBLE_AREA(0, 319, 0, 199)
 
 	MCFG_SPEAKER_STANDARD_MONO("mono")
-	MCFG_SOUND_WAVE_ADD("wave", "cassette")
-	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
-	MCFG_SOUND_ADD("speaker", SPEAKER_SOUND, 0)
+	MCFG_SOUND_WAVE_ADD(WAVE_TAG, CASSETTE_TAG)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+	MCFG_SOUND_ADD(SPEAKER_TAG, SPEAKER_SOUND, 0)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MCFG_TIMER_ADD_PERIODIC("tempo", ne555_tempo_callback, HZ(34)) // 33.5Hz - 34.3Hz
+	MCFG_TIMER_ADD_PERIODIC("tempo", ne555_tempo_callback, attotime::from_hz(34)) // 33.5Hz - 34.3Hz
 
-	MCFG_CASSETTE_ADD( "cassette", mz80k_cassette_config )
+	MCFG_CASSETTE_ADD( CASSETTE_TAG, mz80k_cassette_interface )
 MACHINE_CONFIG_END
 
 static MACHINE_CONFIG_DERIVED( mz80kj, mz80k )
@@ -345,15 +346,6 @@ ROM_START( mz80b )
 	ROM_LOAD( "mzfont.rom", 0x0000, 0x0800, CRC(0631efc3) SHA1(99b206af5c9845995733d877e9e93e9681b982a8) )
 ROM_END
 
-ROM_START( mz2000 )
-	ROM_REGION( 0x10000, "maincpu", 0 )
-	ROM_LOAD( "mz20ipl.bin",0x0000, 0x0800, CRC(d7ccf37f) SHA1(692814ffc2cf50fa8bf9e30c96ebe4a9ee536a86))
-
-	ROM_REGION( 0x1000, "gfx1", 0 )
-	ROM_LOAD( "mzfont.rom", 0x0000, 0x0800, CRC(0631efc3) SHA1(99b206af5c9845995733d877e9e93e9681b982a8) )
-ROM_END
-
-
 /*    YEAR  NAME      PARENT    COMPAT  MACHINE  INPUT   INIT   COMPANY    FULLNAME */
 COMP( 1979, mz80kj,   0,        0,      mz80kj,  mz80k,  mz80k, "Sharp",   "MZ-80K (Japanese)", 0 )
 COMP( 1979, mz80k,    mz80kj,   0,      mz80k,   mz80k,  mz80k, "Sharp",   "MZ-80K", 0 )
@@ -361,4 +353,3 @@ COMP( 1979, mz80k,    mz80kj,   0,      mz80k,   mz80k,  mz80k, "Sharp",   "MZ-8
 // These may need a separate driver!
 COMP( 1982, mz80a,    0,        0,      mz80k,   mz80a,  mz80k, "Sharp",   "MZ-80A", GAME_NOT_WORKING )
 COMP( 1981, mz80b,    0,        0,      mz80k,   mz80k,  mz80k, "Sharp",   "MZ-80B", GAME_NOT_WORKING )
-COMP( 1982, mz2000,   mz80b,    0,      mz80k,   mz80k,  mz80k, "Sharp",   "MZ-2000", GAME_NOT_WORKING )

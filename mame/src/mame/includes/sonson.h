@@ -7,24 +7,24 @@
 class sonson_state : public driver_device
 {
 public:
-	sonson_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	sonson_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 	/* memory pointers */
-	UINT8 *    videoram;
-	UINT8 *    colorram;
-	UINT8 *    spriteram;
-	size_t     videoram_size;
-	size_t     spriteram_size;
+	UINT8 *    m_videoram;
+	UINT8 *    m_colorram;
+	UINT8 *    m_spriteram;
+	size_t     m_videoram_size;
+	size_t     m_spriteram_size;
 
 	/* video-related */
-	tilemap_t    *bg_tilemap;
+	tilemap_t    *m_bg_tilemap;
 
 	/* misc */
-	int        last_irq;
+	int        m_last_irq;
 
 	/* devices */
-	device_t *audiocpu;
+	device_t *m_audiocpu;
 };
 
 
@@ -37,4 +37,4 @@ WRITE8_HANDLER( sonson_flipscreen_w );
 
 PALETTE_INIT( sonson );
 VIDEO_START( sonson );
-VIDEO_UPDATE( sonson );
+SCREEN_UPDATE( sonson );

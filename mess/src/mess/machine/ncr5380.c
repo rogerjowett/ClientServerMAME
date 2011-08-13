@@ -65,32 +65,13 @@ static int get_cmd_len(int cbyte)
 	return 6;
 }
 
-//**************************************************************************
-//  DEVICE CONFIGURATION
-//**************************************************************************
-
-ncr5380_device_config::ncr5380_device_config(const machine_config &mconfig, const char *tag, const device_config *owner, UINT32 clock)
-    : device_config(mconfig, static_alloc_device_config, "5380 SCSI", tag, owner, clock)
-{
-}
-
-device_config *ncr5380_device_config::static_alloc_device_config(const machine_config &mconfig, const char *tag, const device_config *owner, UINT32 clock)
-{ 
-	return global_alloc(ncr5380_device_config(mconfig, tag, owner, clock));
-}
-
-device_t *ncr5380_device_config::alloc_device(running_machine &machine) const
-{
-	return auto_alloc(&machine, ncr5380_device(machine, *this));
-}
-
 //-------------------------------------------------
 //  device_config_complete - perform any
 //  operations now that the configuration is
 //  complete
 //-------------------------------------------------
 
-void ncr5380_device_config::device_config_complete()
+void ncr5380_device::device_config_complete()
 {
 	// inherit a copy of the static data
 	const NCR5380interface *intf = reinterpret_cast<const NCR5380interface *>(static_config());
@@ -109,15 +90,14 @@ void ncr5380_device_config::device_config_complete()
 //  LIVE DEVICE
 //**************************************************************************
 
-const device_type NCR5380 = ncr5380_device_config::static_alloc_device_config;
+const device_type NCR5380 = &device_creator<ncr5380_device>;
 
 //-------------------------------------------------
 //  ncr5380_device - constructor/destructor
 //-------------------------------------------------
 
-ncr5380_device::ncr5380_device(running_machine &_machine, const ncr5380_device_config &config)
-    : device_t(_machine, config),
-      m_config(config)
+ncr5380_device::ncr5380_device(const machine_config &mconfig, const char *tag, device_t *owner, UINT32 clock)
+    : device_t(mconfig, NCR5380, "5380 SCSI", tag, owner, clock)
 {
 }
 
@@ -136,22 +116,22 @@ void ncr5380_device::device_start()
 	m_next_req_flag = 0;
 
 	// try to open the devices
-	for (i = 0; i < m_config.scsidevs->devs_present; i++)
+	for (i = 0; i < scsidevs->devs_present; i++)
 	{
-		SCSIAllocInstance( machine, 
-				m_config.scsidevs->devices[i].scsiClass, 
-				&m_scsi_devices[m_config.scsidevs->devices[i].scsiID],
-				m_config.scsidevs->devices[i].diskregion );
+		SCSIAllocInstance( machine(),
+				scsidevs->devices[i].scsiClass,
+				&m_scsi_devices[scsidevs->devices[i].scsiID],
+				scsidevs->devices[i].diskregion );
 	}
 
-	state_save_register_device_item_array(this, 0, m_5380_Registers);
-	state_save_register_device_item_array(this, 0, m_5380_Command);
-	state_save_register_device_item_array(this, 0, m_5380_Data);
-	state_save_register_device_item(this, 0, m_last_id);
-	state_save_register_device_item(this, 0, m_cmd_ptr);
-	state_save_register_device_item(this, 0, m_d_ptr);
-	state_save_register_device_item(this, 0, m_d_limit);
-	state_save_register_device_item(this, 0, m_next_req_flag);
+	save_item(NAME(m_5380_Registers));
+	save_item(NAME(m_5380_Command));
+	save_item(NAME(m_5380_Data));
+	save_item(NAME(m_last_id));
+	save_item(NAME(m_cmd_ptr));
+	save_item(NAME(m_d_ptr));
+	save_item(NAME(m_d_limit));
+	save_item(NAME(m_next_req_flag));
 }
 
 //-------------------------------------------------
@@ -181,9 +161,9 @@ void ncr5380_device::device_stop()
 	int i;
 
 	// clean up the devices
-	for (i = 0; i < m_config.scsidevs->devs_present; i++)
+	for (i = 0; i < scsidevs->devs_present; i++)
 	{
-		SCSIDeleteInstance( m_scsi_devices[m_config.scsidevs->devices[i].scsiID] );
+		SCSIDeleteInstance( m_scsi_devices[scsidevs->devices[i].scsiID] );
 	}
 }
 
@@ -269,7 +249,7 @@ READ8_DEVICE_HANDLER_TRAMPOLINE(ncr5380, ncr5380_read_reg)
 	}
 
 	if (VERBOSE)
-		logerror("NCR5380: read %s (reg %d) = %02x [PC=%x]\n", rnames[reg], reg, rv, cpu_get_pc(machine->firstcpu));
+		logerror("NCR5380: read %s (reg %d) = %02x [PC=%x]\n", rnames[reg], reg, rv, cpu_get_pc(machine().firstcpu));
 
 	return rv;
 }
@@ -279,7 +259,7 @@ WRITE8_DEVICE_HANDLER_TRAMPOLINE(ncr5380, ncr5380_write_reg)
 	int reg = offset & 7;
 
 	if (VERBOSE)
-		logerror("NCR5380: %02x to %s (reg %d) [PC=%x]\n", data, wnames[reg], reg, cpu_get_pc(machine->firstcpu));
+		logerror("NCR5380: %02x to %s (reg %d) [PC=%x]\n", data, wnames[reg], reg, cpu_get_pc(machine().firstcpu));
 
 	switch( reg )
 	{
@@ -366,7 +346,7 @@ WRITE8_DEVICE_HANDLER_TRAMPOLINE(ncr5380, ncr5380_write_reg)
 					if (get_cmd_len(m_5380_Command[0]) == m_cmd_ptr)
 					{
 						if (VERBOSE)
-							logerror("NCR5380: Command (to ID %d): %x %x %x %x %x %x %x %x %x %x (PC %x)\n", m_last_id, m_5380_Command[0], m_5380_Command[1], m_5380_Command[2], m_5380_Command[3], m_5380_Command[4], m_5380_Command[5], m_5380_Command[6], m_5380_Command[7], m_5380_Command[8], m_5380_Command[9], cpu_get_pc(machine->firstcpu));
+							logerror("NCR5380: Command (to ID %d): %x %x %x %x %x %x %x %x %x %x (PC %x)\n", m_last_id, m_5380_Command[0], m_5380_Command[1], m_5380_Command[2], m_5380_Command[3], m_5380_Command[4], m_5380_Command[5], m_5380_Command[6], m_5380_Command[7], m_5380_Command[8], m_5380_Command[9], cpu_get_pc(machine().firstcpu));
 
 						SCSISetCommand(m_scsi_devices[m_last_id], &m_5380_Command[0], 16);
 						SCSIExecCommand(m_scsi_devices[m_last_id], &m_d_limit);
@@ -512,15 +492,15 @@ void ncr5380_device::ncr5380_scan_devices()
 	int i;
 
 	// try to open the devices
-	for (i = 0; i < m_config.scsidevs->devs_present; i++)
+	for (i = 0; i < scsidevs->devs_present; i++)
 	{
 		// if a device wasn't already allocated
-		if (!m_scsi_devices[m_config.scsidevs->devices[i].scsiID])
+		if (!m_scsi_devices[scsidevs->devices[i].scsiID])
 		{
-			SCSIAllocInstance( machine, 
-					m_config.scsidevs->devices[i].scsiClass, 
-					&m_scsi_devices[m_config.scsidevs->devices[i].scsiID],
-					m_config.scsidevs->devices[i].diskregion );
+			SCSIAllocInstance( machine(),
+					scsidevs->devices[i].scsiClass,
+					&m_scsi_devices[scsidevs->devices[i].scsiID],
+					scsidevs->devices[i].diskregion );
 		}
 	}
 }

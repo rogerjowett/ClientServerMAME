@@ -107,8 +107,7 @@ endif
 
 ifdef MSVC_BUILD
 
-VCONV = $(WINOBJ)/vconv$(EXE)
-VCONVPREFIX = $(subst /,\,$(VCONV))
+OSPREBUILD = $(VCONV_TARGET)
 
 # append a 'v' prefix if nothing specified
 ifndef PREFIX
@@ -116,33 +115,16 @@ PREFIX = v
 endif
 
 # replace the various compilers with vconv.exe prefixes
-CC = @$(VCONVPREFIX) gcc -I. -I"C:\DirectXSDK\Include"
-LD = @$(VCONVPREFIX) ld /profile 
-AR = @$(VCONVPREFIX) ar
-RC = @$(VCONVPREFIX) windres
+CC = @$(VCONV) gcc -I. -I"C:\DirectXSDK\Include"
+LD = @$(VCONV) ld /profile /SUBSYSTEM:CONSOLE
+AR = @$(VCONV) ar
+RC = @$(VCONV) windres
 
 # make sure we use the multithreaded runtime
 ifdef DEBUG
 CCOMFLAGS += /MTd
 else
 CCOMFLAGS += /MT
-endif
-
-#JJG: Add sse2 support
-CCOMFLAGS += /arch:SSE2
-
-ifdef DEBUG
-ifeq ($(PTR64),1)
-LDFLAGS += ${SRC}/../../../Libraries/RakNet/Lib/RakNetLibStaticDebug.lib ws2_32.lib
-else
-LDFLAGS += ${SRC}/../../../Libraries/RakNet32/Lib/RakNetLibStaticDebug.lib ws2_32.lib
-endif
-else
-ifeq ($(PTR64),1)
-LDFLAGS += ${SRC}/../../../Libraries/RakNet/Lib/RakNetLibStatic.lib ws2_32.lib
-else
-LDFLAGS += ${SRC}/../../../Libraries/RakNet32/Lib/RakNetLibStatic.lib ws2_32.lib
-endif
 endif
 
 # turn on link-time codegen if the MAXOPT flag is also set
@@ -155,7 +137,12 @@ endif
 # disable warnings and link against bufferoverflowu for 64-bit targets
 ifeq ($(PTR64),1)
 CCOMFLAGS += /wd4267
-LIBS += -lbufferoverflowu
+#LIBS += -lbufferoverflowu
+endif
+
+# enable basic run-time checks in non-optimized build
+ifeq ($(OPTIMIZE),0)
+CCOMFLAGS += /RTC1
 endif
 
 # enable exception handling for C++
@@ -173,26 +160,14 @@ CPPONLYFLAGS += /wd4800
 # disable better packing warning
 CPPONLYFLAGS += /wd4371
 
+# disable macro redefinition warning
+CCOMFLAGS += /wd4005
+
 # explicitly set the entry point for UNICODE builds
 LDFLAGS += /ENTRY:wmainCRTStartup
 
 # add some VC++-specific defines
 DEFS += -D_CRT_SECURE_NO_DEPRECATE -D_CRT_NONSTDC_NO_DEPRECATE -DXML_STATIC -Dsnprintf=_snprintf
-
-# make msvcprep into a pre-build step
-OSPREBUILD = $(VCONV)
-
-ifneq ($(CROSS_BUILD),1)
-# add VCONV to the build tools
-BUILD += $(VCONV)
-
-$(VCONV): $(WINOBJ)/vconv.o
-	@echo Linking $@...
-	@link.exe /nologo $^ version.lib /out:$@
-
-$(WINOBJ)/vconv.o: $(WINSRC)/vconv.c
-	@echo Compiling $<...
-	@cl.exe /nologo /O1 -D_CRT_SECURE_NO_DEPRECATE -c $< /Fo$@
 
 OSDCLEAN = msvcclean
 
@@ -203,7 +178,28 @@ msvcclean:
 	$(RM) *.exp
 
 endif
+
+
+#-------------------------------------------------
+# build VCONV
+#-------------------------------------------------
+
+VCONV_TARGET = $(BUILDOUT)/vconv$(BUILD_EXE)
+VCONV = $(subst /,\,$(VCONV_TARGET))
+
+ifneq ($(CROSS_BUILD),1)
+BUILD += \
+	$(VCONV_TARGET)
 endif
+
+$(VCONV_TARGET): $(WINOBJ)/vconv.o
+	@echo Linking $@...
+	@gcc.exe -static-libgcc $^ $(LIBS) -lversion -o $@
+
+$(WINOBJ)/vconv.o: $(WINSRC)/vconv.c
+	@echo Compiling $<...
+	@gcc.exe -O3 -c $< -o $@
+
 
 
 #-------------------------------------------------
@@ -233,7 +229,7 @@ endif
 
 # debug build: enable guard pages on all memory allocations
 ifdef DEBUG
-#DEFS += -DMALLOC_DEBUG
+DEFS += -DMALLOC_DEBUG
 endif
 
 
@@ -252,9 +248,17 @@ endif
 
 # ensure we statically link the gcc runtime lib
 ifdef MSVC_BUILD
+ifeq ($(PTR64),1)
+LDFLAGS += -static-libgcc /LIBPATH:"C:\DirectXSDK\Lib\x64"
+else
 LDFLAGS += -static-libgcc /LIBPATH:"C:\DirectXSDK\Lib\x86"
+endif
+else
+ifeq ($(PTR64),1)
+LDFLAGS += -static-libgcc -L/c/DirectXSDK/Lib/x64
 else
 LDFLAGS += -static-libgcc -L/c/DirectXSDK/Lib/x86
+endif
 endif
 
 # add the windows libraries
@@ -268,7 +272,7 @@ LIBS += -ldinput
 CCOMFLAGS += -DDIRECTINPUT_VERSION=0x0700
 endif
 
-
+LIBS += -lcomdlg32
 
 #-------------------------------------------------
 # OSD core library
@@ -296,6 +300,7 @@ OSDCOREOBJS = \
 OSDOBJS = \
 	$(WINOBJ)/d3d9intf.o \
 	$(WINOBJ)/drawd3d.o \
+	$(WINOBJ)/d3dhlsl.o \
 	$(WINOBJ)/drawdd.o \
 	$(WINOBJ)/drawgdi.o \
 	$(WINOBJ)/drawnone.o \
@@ -304,6 +309,7 @@ OSDOBJS = \
 	$(WINOBJ)/sound.o \
 	$(WINOBJ)/video.o \
 	$(WINOBJ)/window.o \
+	$(WINOBJ)/winmenu.o \
 	$(WINOBJ)/winmain.o
 
 ifeq ($(DIRECT3D),9)

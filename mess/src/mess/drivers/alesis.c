@@ -8,6 +8,7 @@
     http://www.vintagesynth.com/misc/sr16.php
 
 ****************************************************************************/
+#define ADDRESS_MAP_MODERN
 
 #include "emu.h"
 #include "cpu/mcs51/mcs51.h"
@@ -16,28 +17,28 @@
 class alesis_state : public driver_device
 {
 public:
-	alesis_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	alesis_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 };
 
 
-static ADDRESS_MAP_START(hr16_mem, ADDRESS_SPACE_PROGRAM, 8)
+static ADDRESS_MAP_START(hr16_mem, AS_PROGRAM, 8, alesis_state)
 	ADDRESS_MAP_UNMAP_HIGH
 	AM_RANGE(0x0000, 0x7fff) AM_ROM
 	AM_RANGE(0x8000, 0xffff) AM_RAM
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( hr16_io , ADDRESS_SPACE_IO, 8)
+static ADDRESS_MAP_START(hr16_io, AS_IO, 8, alesis_state)
 	ADDRESS_MAP_UNMAP_HIGH
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START(sr16_mem, ADDRESS_SPACE_PROGRAM, 8)
+static ADDRESS_MAP_START(sr16_mem, AS_PROGRAM, 8, alesis_state)
 	ADDRESS_MAP_UNMAP_HIGH
 	AM_RANGE(0x0000, 0xffff) AM_ROM
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( sr16_io , ADDRESS_SPACE_IO, 8)
+static ADDRESS_MAP_START(sr16_io, AS_IO, 8, alesis_state)
 	ADDRESS_MAP_UNMAP_HIGH
 ADDRESS_MAP_END
 
@@ -54,7 +55,7 @@ static VIDEO_START( alesis )
 {
 }
 
-static VIDEO_UPDATE( alesis )
+static SCREEN_UPDATE( alesis )
 {
 	return 0;
 }
@@ -74,11 +75,12 @@ static MACHINE_CONFIG_START( hr16, alesis_state )
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(640, 480)
 	MCFG_SCREEN_VISIBLE_AREA(0, 640-1, 0, 480-1)
+	MCFG_SCREEN_UPDATE(alesis)
+
 	MCFG_PALETTE_LENGTH(2)
 	MCFG_PALETTE_INIT(black_and_white)
 
 	MCFG_VIDEO_START(alesis)
-	MCFG_VIDEO_UPDATE(alesis)
 MACHINE_CONFIG_END
 
 static MACHINE_CONFIG_START( sr16, alesis_state )
@@ -96,11 +98,12 @@ static MACHINE_CONFIG_START( sr16, alesis_state )
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(640, 480)
 	MCFG_SCREEN_VISIBLE_AREA(0, 640-1, 0, 480-1)
+	MCFG_SCREEN_UPDATE(alesis)
+
 	MCFG_PALETTE_LENGTH(2)
 	MCFG_PALETTE_INIT(black_and_white)
 
 	MCFG_VIDEO_START(alesis)
-	MCFG_VIDEO_UPDATE(alesis)
 MACHINE_CONFIG_END
 
 /* ROM definition */
@@ -144,8 +147,8 @@ ROM_END
 static DRIVER_INIT( hr16 )
 {
 	int i;
-	UINT8 *ROM = machine->region("maincpu")->base();
-	UINT8 *orig = machine->region("user1")->base();
+	UINT8 *ROM = machine.region("maincpu")->base();
+	UINT8 *orig = machine.region("user1")->base();
 	for (i = 0; i < 0x8000; i++)
 	{
 		ROM[BITSWAP16(i,15,14,13,12,11,10,9,8,0,1,2,3,4,5,6,7)] = orig[i];
@@ -154,6 +157,6 @@ static DRIVER_INIT( hr16 )
 
 /* Driver */
 /*    YEAR  NAME    PARENT  COMPAT   MACHINE    INPUT    INIT    COMPANY    FULLNAME       FLAGS */
-COMP( 1987, hr16,  0,       0,       hr16,      alesis,  hr16,   "Alesis",  "HR-16",       GAME_NOT_WORKING | GAME_NO_SOUND)
-COMP( 1989, hr16b, hr16,    0,       hr16,      alesis,  hr16,   "Alesis",  "HR-16B",      GAME_NOT_WORKING | GAME_NO_SOUND)
-COMP( 1990, sr16,  0,       0,       sr16,      alesis,  0,      "Alesis",  "SR-16",       GAME_NOT_WORKING | GAME_NO_SOUND)
+SYST( 1987, hr16,  0,       0,       hr16,      alesis,  hr16,   "Alesis",  "HR-16",       GAME_NOT_WORKING | GAME_NO_SOUND)
+SYST( 1989, hr16b, hr16,    0,       hr16,      alesis,  hr16,   "Alesis",  "HR-16B",      GAME_NOT_WORKING | GAME_NO_SOUND)
+SYST( 1990, sr16,  0,       0,       sr16,      alesis,  0,      "Alesis",  "SR-16",       GAME_NOT_WORKING | GAME_NO_SOUND)

@@ -50,13 +50,6 @@
 //  PARAMETERS
 //============================================================
 
-#ifndef MESS
-#define HAS_WINDOW_MENU			FALSE
-#else
-#define HAS_WINDOW_MENU			TRUE
-#endif
-
-
 
 //============================================================
 //  CONSTANTS
@@ -72,9 +65,14 @@
 //  TYPE DEFINITIONS
 //============================================================
 
-typedef struct _win_window_info win_window_info;
-struct _win_window_info
+struct win_window_info
 {
+public:
+	win_window_info(running_machine &machine)
+		: m_machine(machine) { }
+
+	running_machine &machine() const { return m_machine; }
+
 	win_window_info *	next;
 	volatile int		init_state;
 
@@ -111,7 +109,8 @@ struct _win_window_info
 	// drawing data
 	void *				drawdata;
 
-	running_machine *	machine;
+private:
+	running_machine &	m_machine;
 };
 
 
@@ -123,6 +122,8 @@ struct _win_draw_callbacks
 	int (*window_init)(win_window_info *window);
 	render_primitive_list *(*window_get_primitives)(win_window_info *window);
 	int (*window_draw)(win_window_info *window, HDC dc, int update);
+	void (*window_save)(win_window_info *window);
+	void (*window_record)(win_window_info *window);
 	void (*window_destroy)(win_window_info *window);
 };
 
@@ -142,32 +143,34 @@ extern win_window_info *win_window_list;
 //============================================================
 
 // core initialization
-void winwindow_init(running_machine *machine);
+void winwindow_init(running_machine &machine);
 
 // creation/deletion of windows
-void winwindow_video_window_create(running_machine *machine, int index, win_monitor_info *monitor, const win_window_config *config);
+void winwindow_video_window_create(running_machine &machine, int index, win_monitor_info *monitor, const win_window_config *config);
 
 BOOL winwindow_has_focus(void);
-void winwindow_update_cursor_state(running_machine *machine);
+void winwindow_update_cursor_state(running_machine &machine);
 void winwindow_video_window_update(win_window_info *window);
 win_monitor_info *winwindow_video_window_monitor(win_window_info *window, const RECT *proposed);
 
 LRESULT CALLBACK winwindow_video_window_proc(HWND wnd, UINT message, WPARAM wparam, LPARAM lparam);
+extern LRESULT CALLBACK winwindow_video_window_proc_ui(HWND wnd, UINT message, WPARAM wparam, LPARAM lparam);
+
 void winwindow_toggle_full_screen(void);
+void winwindow_take_snap(void);
+void winwindow_take_video(void);
 
-void winwindow_process_events_periodic(running_machine *machine);
-void winwindow_process_events(running_machine *machine, int ingame);
+void winwindow_process_events_periodic(running_machine &machine);
+void winwindow_process_events(running_machine &machine, int ingame);
 
-void winwindow_ui_pause_from_window_thread(running_machine *machine, int pause);
-void winwindow_ui_pause_from_main_thread(running_machine *machine, int pause);
-int winwindow_ui_is_paused(running_machine *machine);
+void winwindow_ui_pause_from_window_thread(running_machine &machine, int pause);
+void winwindow_ui_pause_from_main_thread(running_machine &machine, int pause);
+int winwindow_ui_is_paused(running_machine &machine);
 
 void winwindow_ui_exec_on_main_thread(void (*func)(void *), void *param);
-void winwindow_dispatch_message(running_machine *machine, MSG *message);
+void winwindow_dispatch_message(running_machine &machine, MSG *message);
 
-#if HAS_WINDOW_MENU
-int win_create_menu(running_machine *machine, HMENU *menus);
-#endif
+extern int win_create_menu(running_machine &machine, HMENU *menus);
 
 
 

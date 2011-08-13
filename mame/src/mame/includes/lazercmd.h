@@ -20,24 +20,27 @@
 class lazercmd_state : public driver_device
 {
 public:
-	lazercmd_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	lazercmd_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 	/* memory pointers */
-	UINT8 *  videoram;
-	size_t   videoram_size;
+	UINT8 *  m_videoram;
+	size_t   m_videoram_size;
 
 	/* video-related */
-	int      marker_x, marker_y;
+	int      m_marker_x;
+	int      m_marker_y;
 
 	/* misc */
-	int      timer_count, sense_state, dac_data;
+	int      m_timer_count;
+	int      m_sense_state;
+	int      m_dac_data;
 
 	/* device */
-	device_t *dac;
+	device_t *m_dac;
 };
 
 
 /*----------- defined in video/lazercmd.c -----------*/
 
-VIDEO_UPDATE( lazercmd );
+SCREEN_UPDATE( lazercmd );

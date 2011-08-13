@@ -43,8 +43,15 @@
 #define __ASTRING_H__
 
 #include <stdarg.h>
+#include <ctype.h>
 #include "osdcomm.h"
 
+#ifdef toupper
+#undef toupper
+#endif
+#ifdef tolower
+#undef tolower
+#endif
 
 /***************************************************************************
     TYPE DEFINITIONS
@@ -296,6 +303,10 @@ INLINE astring *astring_assemble_5(astring *dst, const char *src1, const char *s
 ***************************************************************************/
 
 #ifdef __cplusplus
+#ifdef SDLMAME_NETBSD
+#undef toupper
+#undef tolower
+#endif
 
 /* derived class for C++ */
 class astring : public astring_base
@@ -314,6 +325,7 @@ public:
 	astring(const char *str1, const char *str2, const char *str3, const char *str4) { init().cpy(str1).cat(str2).cat(str3).cat(str4); }
 	astring(const char *str1, const char *str2, const char *str3, const char *str4, const char *str5) { init().cpy(str1).cat(str2).cat(str3).cat(str4).cat(str5); }
 	astring(const astring &string) { init().cpy(string); }
+	astring(const astring &string, int start, int count = -1) { init().cpysubstr(string, start, count); }
 
 	astring &operator=(const char *string) { return cpy(string); }
 	astring &operator=(const astring &string) { return cpy(string); }
@@ -350,6 +362,7 @@ public:
 	astring &cpy(const char *src, int count) { return *astring_cpych(this, src, count); }
 	astring &cpysubstr(const astring &src, int start, int count) { return *astring_cpysubstr(this, &src, start, count); }
 
+	astring &cat(char ch) { return *astring_insch(this, -1, &ch, 1); }
 	astring &cat(const astring &src) { return ins(-1, src); }
 	astring &cat(const char *src) { return ins(-1, src); }
 	astring &cat(const char *src, int count) { return ins(-1, src, count); }

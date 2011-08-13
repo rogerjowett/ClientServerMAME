@@ -130,7 +130,7 @@ static void tx0_init_common(legacy_cpu_device *device, device_irq_callback irqca
 	tx0_state *cpustate = get_safe_token(device);
 
 	/* clean-up */
-	cpustate->iface = (const tx0_reset_param_t *)device->baseconfig().static_config();
+	cpustate->iface = (const tx0_reset_param_t *)device->static_config();
 
 	cpustate->address_mask = is_64kw ? ADDRESS_MASK_64KW : ADDRESS_MASK_8KW;
 	cpustate->ir_mask = is_64kw ? 03 : 037;
@@ -441,15 +441,15 @@ CPU_GET_INFO( tx0_64kw )
 	case CPUINFO_INT_MIN_CYCLES:					info->i = 1;									break;
 	case CPUINFO_INT_MAX_CYCLES:					info->i = 3;									break;
 
-	case DEVINFO_INT_DATABUS_WIDTH + ADDRESS_SPACE_PROGRAM:	info->i = 32;							break;
-	case DEVINFO_INT_ADDRBUS_WIDTH + ADDRESS_SPACE_PROGRAM: info->i = 16;							break;
-	case DEVINFO_INT_ADDRBUS_SHIFT + ADDRESS_SPACE_PROGRAM: info->i = -2;							break;
-	case DEVINFO_INT_DATABUS_WIDTH + ADDRESS_SPACE_DATA:	info->i = 0;							break;
-	case DEVINFO_INT_ADDRBUS_WIDTH + ADDRESS_SPACE_DATA:	info->i = 0;							break;
-	case DEVINFO_INT_ADDRBUS_SHIFT + ADDRESS_SPACE_DATA:	info->i = 0;							break;
-	case DEVINFO_INT_DATABUS_WIDTH + ADDRESS_SPACE_IO:		info->i = 0;							break;
-	case DEVINFO_INT_ADDRBUS_WIDTH + ADDRESS_SPACE_IO:		info->i = 0;							break;
-	case DEVINFO_INT_ADDRBUS_SHIFT + ADDRESS_SPACE_IO:		info->i = 0;							break;
+	case DEVINFO_INT_DATABUS_WIDTH + AS_PROGRAM:	info->i = 32;							break;
+	case DEVINFO_INT_ADDRBUS_WIDTH + AS_PROGRAM: info->i = 16;							break;
+	case DEVINFO_INT_ADDRBUS_SHIFT + AS_PROGRAM: info->i = -2;							break;
+	case DEVINFO_INT_DATABUS_WIDTH + AS_DATA:	info->i = 0;							break;
+	case DEVINFO_INT_ADDRBUS_WIDTH + AS_DATA:	info->i = 0;							break;
+	case DEVINFO_INT_ADDRBUS_SHIFT + AS_DATA:	info->i = 0;							break;
+	case DEVINFO_INT_DATABUS_WIDTH + AS_IO:		info->i = 0;							break;
+	case DEVINFO_INT_ADDRBUS_WIDTH + AS_IO:		info->i = 0;							break;
+	case DEVINFO_INT_ADDRBUS_SHIFT + AS_IO:		info->i = 0;							break;
 
 	case CPUINFO_INT_SP:							info->i = 0;	/* no SP */						break;
 	case CPUINFO_INT_PC:							info->i = PC;									break;
@@ -567,15 +567,15 @@ CPU_GET_INFO( tx0_8kw )
 	case CPUINFO_INT_MIN_CYCLES:					info->i = 1;							break;
 	case CPUINFO_INT_MAX_CYCLES:					info->i = 3;							break;
 
-	case DEVINFO_INT_DATABUS_WIDTH + ADDRESS_SPACE_PROGRAM:	info->i = 32;					break;
-	case DEVINFO_INT_ADDRBUS_WIDTH + ADDRESS_SPACE_PROGRAM: info->i = 13;					break;
-	case DEVINFO_INT_ADDRBUS_SHIFT + ADDRESS_SPACE_PROGRAM: info->i = -2;					break;
-	case DEVINFO_INT_DATABUS_WIDTH + ADDRESS_SPACE_DATA:	info->i = 0;					break;
-	case DEVINFO_INT_ADDRBUS_WIDTH + ADDRESS_SPACE_DATA:	info->i = 0;					break;
-	case DEVINFO_INT_ADDRBUS_SHIFT + ADDRESS_SPACE_DATA:	info->i = 0;					break;
-	case DEVINFO_INT_DATABUS_WIDTH + ADDRESS_SPACE_IO:		info->i = 0;					break;
-	case DEVINFO_INT_ADDRBUS_WIDTH + ADDRESS_SPACE_IO:		info->i = 0;					break;
-	case DEVINFO_INT_ADDRBUS_SHIFT + ADDRESS_SPACE_IO:		info->i = 0;					break;
+	case DEVINFO_INT_DATABUS_WIDTH + AS_PROGRAM:	info->i = 32;					break;
+	case DEVINFO_INT_ADDRBUS_WIDTH + AS_PROGRAM: info->i = 13;					break;
+	case DEVINFO_INT_ADDRBUS_SHIFT + AS_PROGRAM: info->i = -2;					break;
+	case DEVINFO_INT_DATABUS_WIDTH + AS_DATA:	info->i = 0;					break;
+	case DEVINFO_INT_ADDRBUS_WIDTH + AS_DATA:	info->i = 0;					break;
+	case DEVINFO_INT_ADDRBUS_SHIFT + AS_DATA:	info->i = 0;					break;
+	case DEVINFO_INT_DATABUS_WIDTH + AS_IO:		info->i = 0;					break;
+	case DEVINFO_INT_ADDRBUS_WIDTH + AS_IO:		info->i = 0;					break;
+	case DEVINFO_INT_ADDRBUS_SHIFT + AS_IO:		info->i = 0;					break;
 
 	case CPUINFO_INT_SP:							info->i = 0;	/* no SP */				break;
 	case CPUINFO_INT_PC:							info->i = PC;							break;

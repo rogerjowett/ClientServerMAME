@@ -7,8 +7,8 @@
 #ifndef __TIMEX_DCK_H__
 #define __TIMEX_DCK_H__
 
-#include "devices/snapquik.h"
-#include "devices/cartslot.h"
+#include "imagedev/snapquik.h"
+#include "imagedev/cartslot.h"
 
 enum
 {
@@ -18,9 +18,14 @@ enum
 	TIMEX_CART_HOME
 };
 
-extern int timex_cart_type;
-extern UINT8 timex_cart_chunks;
-extern UINT8 *timex_cart_data;
+typedef struct
+{
+	int type;
+	UINT8 chunks;
+	UINT8 *data;
+} timex_cart_t;
+
+const timex_cart_t *timex_cart_data(void);
 
 DEVICE_IMAGE_LOAD( timex_cart );
 DEVICE_IMAGE_UNLOAD( timex_cart );

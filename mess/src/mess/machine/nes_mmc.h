@@ -50,7 +50,7 @@ enum
 	/* Rex Soft */
 	REXSOFT_SL1632, REXSOFT_DBZ5,
 	/* Sachen */
-	SACHEN_8259A, SACHEN_8259B, SACHEN_8259C, SACHEN_8259D, 
+	SACHEN_8259A, SACHEN_8259B, SACHEN_8259C, SACHEN_8259D,
 	SACHEN_SA009, SACHEN_SA0036, SACHEN_SA0037,
 	SACHEN_SA72007, SACHEN_SA72008, SACHEN_TCA01,
 	SACHEN_TCU01, SACHEN_TCU02,
@@ -90,7 +90,7 @@ enum
 	/* Misc: these are needed to convert mappers to boards, I will sort them later */
 	OPENCORP_DAOU306, HES_BOARD, HES6IN1_BOARD, RUMBLESTATION_BOARD,
 	MAGICSERIES_MD, KASING_BOARD, FUTUREMEDIA_BOARD, FUKUTAKE_BOARD, SOMERI_SL12,
-	HENGEDIANZI_BOARD, HENGEDIANZI_XJZB, SUBOR_TYPE0, SUBOR_TYPE1, 
+	HENGEDIANZI_BOARD, HENGEDIANZI_XJZB, SUBOR_TYPE0, SUBOR_TYPE1,
 	KAISER_KS7058, KAISER_KS7032, KAISER_KS7022, KAISER_KS7017, KAISER_KS202, CONY_BOARD,
 	CNE_DECATHLON, CNE_FSB, CNE_SHLZ, RCM_GS2015, RCM_TETRISFAMILY,
 	WAIXING_TYPE_A, WAIXING_TYPE_A_1, WAIXING_TYPE_B, WAIXING_TYPE_C, WAIXING_TYPE_D,
@@ -107,13 +107,13 @@ enum
 };
 
 // these are used to setup the proper PCB ID, for each supported type of files
-int nes_get_pcb_id(running_machine *machine, const char *feature);	// for softlist
-void unif_mapr_setup(running_machine *machine, const char *board);	// for UNIF files
-int nes_get_mmc_id(running_machine *machine, int mapper);	// for iNES files
+int nes_get_pcb_id(running_machine &machine, const char *feature);	// for softlist
+void unif_mapr_setup(running_machine &machine, const char *board);	// for UNIF files
+int nes_get_mmc_id(running_machine &machine, int mapper);	// for iNES files
 
 // these are used to setup handlers and callbacks necessary to the emulation (resp. at start and reset)
-void pcb_handlers_setup(running_machine *machine);
-int nes_pcb_reset(running_machine *machine);
+void pcb_handlers_setup(running_machine &machine);
+int nes_pcb_reset(running_machine &machine);
 
 
 WRITE8_HANDLER( nes_low_mapper_w );
@@ -140,7 +140,7 @@ READ8_HANDLER( waixing_sh2_chr_r );
 #define PPU_MIRROR_LOW		4
 #define PPU_MIRROR_4SCREEN	5	// Same effect as NONE, but signals that we should never mirror
 
-void set_nt_mirroring(running_machine *machine, int mirroring);
+void set_nt_mirroring(running_machine &machine, int mirroring);
 
 
 #endif

@@ -16,9 +16,9 @@
 */
 
 #include "emu.h"
-#include "imageutl.h"
-#include "devices/flopdrv.h"
-#include "devices/harddriv.h"
+#include "formats/imageutl.h"
+#include "imagedev/flopdrv.h"
+#include "imagedev/harddriv.h"
 #include "harddisk.h"
 
 #include "smc92x4.h"
@@ -299,7 +299,7 @@ static void smc92x4_set_interrupt(device_t *device)
 	if ((w->register_r[INT_STATUS] & ST_INTPEND) == 0)
 	{
 		w->register_r[INT_STATUS] |= ST_INTPEND;
-		devcb_call_write_line(&w->out_intrq_func, ASSERT_LINE);
+		w->out_intrq_func(ASSERT_LINE);
 	}
 }
 
@@ -309,7 +309,7 @@ static void smc92x4_set_interrupt(device_t *device)
 static void smc92x4_set_dip(device_t *device, int value)
 {
 	smc92x4_state *w = get_safe_token(device);
-	devcb_call_write_line(&w->out_dip_func, value);
+	w->out_dip_func(value);
 }
 
 /*
@@ -354,7 +354,7 @@ static void smc92x4_clear_interrupt(device_t *device)
 	smc92x4_state *w = get_safe_token(device);
 	if ((w->register_r[INT_STATUS] & ST_INTPEND) != 0)
 	{
-		devcb_call_write_line(&w->out_intrq_func, CLEAR_LINE);
+		w->out_intrq_func(CLEAR_LINE);
 	}
 }
 
@@ -365,9 +365,9 @@ static void smc92x4_clear_interrupt(device_t *device)
 static void set_dma_address(device_t *device, int pos2316, int pos1508, int pos0700)
 {
 	smc92x4_state *w = get_safe_token(device);
-	devcb_call_write8(&w->out_auxbus_func, OUTPUT_DMA_ADDR, w->register_r[pos2316]);
-	devcb_call_write8(&w->out_auxbus_func, OUTPUT_DMA_ADDR, w->register_r[pos1508]);
-	devcb_call_write8(&w->out_auxbus_func, OUTPUT_DMA_ADDR, w->register_r[pos0700]);
+	w->out_auxbus_func(OUTPUT_DMA_ADDR, w->register_r[pos2316]);
+	w->out_auxbus_func(OUTPUT_DMA_ADDR, w->register_r[pos1508]);
+	w->out_auxbus_func(OUTPUT_DMA_ADDR, w->register_r[pos0700]);
 }
 
 static void dma_add_offset(device_t *device, int offset)
@@ -393,8 +393,8 @@ static void sync_status_in(device_t *device)
 	smc92x4_state *w = get_safe_token(device);
 
 	prev = w->register_r[DRIVE_STATUS];
-	w->register_r[DRIVE_STATUS] = devcb_call_read_line(&w->in_auxbus_func);
-	
+	w->register_r[DRIVE_STATUS] = w->in_auxbus_func();
+
 	/* Raise interrupt if ready changes. TODO: Check this more closely. */
 //  logerror("disk status = %02x\n", reply);
 	if (((w->register_r[DRIVE_STATUS] & DS_READY) != (prev & DS_READY))
@@ -413,8 +413,8 @@ static void sync_latches_out(device_t *device)
 	smc92x4_state *w = get_safe_token(device);
 	w->output1 = (w->output1 & 0xf0) | (w->register_w[RETRY_COUNT]&0x0f);
 
-	devcb_call_write8(&w->out_auxbus_func, OUTPUT_OUTPUT1, w->output1);
-	devcb_call_write8(&w->out_auxbus_func, OUTPUT_OUTPUT2, w->output2);
+	w->out_auxbus_func(OUTPUT_OUTPUT1, w->output1);
+	w->out_auxbus_func(OUTPUT_OUTPUT2, w->output2);
 }
 
 /*************************************************************
@@ -431,7 +431,7 @@ static void smc92x4_timed_data_request(device_t *device)
 		time = 1;
 
 	/* set new timer */
-	timer_adjust_oneshot(w->timer_data, ATTOTIME_IN_USEC(time, 0));
+	w->timer_data->adjust(attotime::from_usec(time));
 }
 #endif
 
@@ -451,7 +451,7 @@ static void smc92x4_timed_sector_read_request(device_t *device)
 	if (!w->use_real_timing)
 		time = 1;
 
-	timer_adjust_oneshot(w->timer_rs, ATTOTIME_IN_USEC(time), 0);
+	w->timer_rs->adjust(attotime::from_usec(time));
 	w->to_be_continued = TRUE;
 }
 
@@ -470,7 +470,7 @@ static void smc92x4_timed_sector_write_request(device_t *device)
 	if (!w->use_real_timing)
 		time = 1;
 
-	timer_adjust_oneshot(w->timer_ws, ATTOTIME_IN_USEC(time), 0);
+	w->timer_ws->adjust(attotime::from_usec(time));
 	w->to_be_continued = TRUE;
 }
 
@@ -490,7 +490,7 @@ static void smc92x4_timed_track_request(device_t *device)
 	if (!w->use_real_timing)
 		time = 1;
 
-	timer_adjust_oneshot(w->timer_track, ATTOTIME_IN_USEC(time), 0);
+	w->timer_track->adjust(attotime::from_usec(time));
 
 	w->to_be_continued = TRUE;
 }
@@ -524,7 +524,7 @@ static void smc92x4_timed_seek_request(device_t *device)
 		time = 1;
 	}
 
-	timer_adjust_oneshot(w->timer_seek, ATTOTIME_IN_USEC(time), 0);
+	w->timer_seek->adjust(attotime::from_usec(time));
 	w->to_be_continued = TRUE;
 }
 
@@ -1487,7 +1487,7 @@ static void format_floppy_track(device_t *device, int flags)
 	int i,index,j, exp_size;
 	int gap0, gap1, gap2, gap3, gap4, sync1, sync2, count, size, fm;
 	int gap_byte, pre_gap, crc, mark, inam;
-	UINT8 curr_ident, curr_cyl, curr_head, curr_sect, curr_size;
+	UINT8 curr_cyl, curr_head, curr_sect, curr_size;
 
 	int normal_data_mark = flags & 0x10;
 
@@ -1590,7 +1590,8 @@ static void format_floppy_track(device_t *device, int flags)
 		buffer[index++] = 0xfe;
 
 		smc92x4_set_dip(device, TRUE);
-		if (!fm) curr_ident = (*w->intf->dma_read_callback)(device);
+//      if (!fm) curr_ident = (*w->intf->dma_read_callback)(device);
+		if (!fm) (*w->intf->dma_read_callback)(device);
 		curr_cyl = (*w->intf->dma_read_callback)(device);
 		curr_head = (*w->intf->dma_read_callback)(device);
 		curr_sect = (*w->intf->dma_read_callback)(device);
@@ -1655,7 +1656,7 @@ static void format_harddisk_track(device_t *device, int flags)
 {
 	smc92x4_state *w = get_safe_token(device);
 	int i,index,j;
-	int gap0, gap1, gap2, gap3, gap4, sync, count, size, fm, gap_byte, crc;
+	int gap1, gap2, gap3, gap4, sync, count, size, gap_byte, crc;
 	UINT8 curr_ident, curr_cyl, curr_head, curr_sect, curr_size;
 
 	int normal_data_mark = flags & 0x10;
@@ -1666,7 +1667,7 @@ static void format_harddisk_track(device_t *device, int flags)
 	sync_status_in(device);
 
 	/* Build buffer */
-	gap0 = (-w->register_w[DMA7_0])&0xff;
+//  gap0 = (-w->register_w[DMA7_0])&0xff;
 	gap1 = (-w->register_w[DMA15_8])&0xff;
 	gap2 = (-w->register_w[DMA23_16])&0xff;
 	gap3 = (-w->register_w[DESIRED_SECTOR])&0xff;
@@ -1681,7 +1682,8 @@ static void format_harddisk_track(device_t *device, int flags)
 	buffer = (UINT8*)malloc(data_count);
 
 	index = 0;
-	fm = controller_set_to_single_density(device);
+//  fm = controller_set_to_single_density(device);
+	controller_set_to_single_density(device);
 	gap_byte = 0x4e;
 
 	/* use the backup registers set up during drive_select */
@@ -2136,20 +2138,20 @@ WRITE8_DEVICE_HANDLER( smc92x4_w )
 static DEVICE_START( smc92x4 )
 {
 	smc92x4_state *w = get_safe_token(device);
-	assert(device->baseconfig().static_config() != NULL);
+	assert(device->static_config() != NULL);
 
-	w->intf = (const smc92x4_interface*)device->baseconfig().static_config();
-	devcb_resolve_write_line(&w->out_intrq_func, &w->intf->out_intrq_func, device);
-	devcb_resolve_write_line(&w->out_dip_func, &w->intf->out_dip_func, device);
-	devcb_resolve_write8(&w->out_auxbus_func, &w->intf->out_auxbus_func, device);
-	devcb_resolve_read_line(&w->in_auxbus_func, &w->intf->in_auxbus_func, device);
+	w->intf = (const smc92x4_interface*)device->static_config();
+	w->out_intrq_func.resolve(w->intf->out_intrq_func, *device);
+	w->out_dip_func.resolve(w->intf->out_dip_func, *device);
+	w->out_auxbus_func.resolve(w->intf->out_auxbus_func, *device);
+	w->in_auxbus_func.resolve(w->intf->in_auxbus_func, *device);
 
 	/* allocate timers */
-	/* w->timer_data = timer_alloc(device->machine, smc92x4_data_callback, (void *)device); */
-	w->timer_rs = timer_alloc(device->machine, smc92x4_read_sector_callback, (void *)device);
-	w->timer_ws = timer_alloc(device->machine, smc92x4_write_sector_callback, (void *)device);
-	w->timer_track = timer_alloc(device->machine, smc92x4_track_callback, (void *)device);
-	w->timer_seek = timer_alloc(device->machine, smc92x4_seek_callback, (void *)device);
+	/* w->timer_data = device->machine().scheduler().timer_alloc(FUNC(smc92x4_data_callback), (void *)device); */
+	w->timer_rs = device->machine().scheduler().timer_alloc(FUNC(smc92x4_read_sector_callback), (void *)device);
+	w->timer_ws = device->machine().scheduler().timer_alloc(FUNC(smc92x4_write_sector_callback), (void *)device);
+	w->timer_track = device->machine().scheduler().timer_alloc(FUNC(smc92x4_track_callback), (void *)device);
+	w->timer_seek = device->machine().scheduler().timer_alloc(FUNC(smc92x4_seek_callback), (void *)device);
 
 	w->use_real_timing = TRUE;
 }

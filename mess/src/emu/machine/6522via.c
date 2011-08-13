@@ -105,57 +105,19 @@
 
 
 
-//**************************************************************************
-//  DEVICE CONFIGURATION
-//**************************************************************************
-
-GENERIC_DEVICE_CONFIG_SETUP(via6522, "6522 VIA")
-
-//-------------------------------------------------
-//  device_config_complete - perform any
-//  operations now that the configuration is
-//  complete
-//-------------------------------------------------
-
-void via6522_device_config::device_config_complete()
-{
-	// inherit a copy of the static data
-	const via6522_interface *intf = reinterpret_cast<const via6522_interface *>(static_config());
-	if (intf != NULL)
-		*static_cast<via6522_interface *>(this) = *intf;
-
-	// or initialize to defaults if none provided
-	else
-	{
-    	memset(&m_in_a_func, 0, sizeof(m_in_a_func));
-    	memset(&m_in_b_func, 0, sizeof(m_in_b_func));
-    	memset(&m_in_ca1_func, 0, sizeof(m_in_ca1_func));
-    	memset(&m_in_cb1_func, 0, sizeof(m_in_cb1_func));
-    	memset(&m_in_ca2_func, 0, sizeof(m_in_ca2_func));
-    	memset(&m_in_cb2_func, 0, sizeof(m_in_cb2_func));
-    	memset(&m_out_a_func, 0, sizeof(m_out_a_func));
-    	memset(&m_out_b_func, 0, sizeof(m_out_b_func));
-    	memset(&m_out_ca2_func, 0, sizeof(m_out_ca2_func));
-    	memset(&m_out_cb2_func, 0, sizeof(m_out_cb2_func));
-    	memset(&m_irq_func, 0, sizeof(m_irq_func));
-	}
-}
-
-
-
 /***************************************************************************
     INLINE FUNCTIONS
 ***************************************************************************/
 
 attotime via6522_device::cycles_to_time(int c)
 {
-	return attotime_mul(ATTOTIME_IN_HZ(clock()), c);
+	return attotime::from_hz(clock()) * c;
 }
 
 
 UINT32 via6522_device::time_to_cycles(attotime t)
 {
-	return attotime_to_double(attotime_mul(t, clock()));
+	return (t * clock()).as_double();
 }
 
 
@@ -165,11 +127,11 @@ UINT16 via6522_device::get_counter1_value()
 
     if(m_t1_active)
     {
-        val = time_to_cycles(timer_timeleft(m_t1)) - IFR_DELAY;
+        val = time_to_cycles(m_t1->remaining()) - IFR_DELAY;
 	}
     else
     {
-        val = 0xffff - time_to_cycles(attotime_sub(timer_get_time(&m_machine), m_time1));
+        val = 0xffff - time_to_cycles(machine().time() - m_time1);
 	}
 
 	return val;
@@ -180,18 +142,50 @@ UINT16 via6522_device::get_counter1_value()
 //  LIVE DEVICE
 //**************************************************************************
 
-const device_type VIA6522 = via6522_device_config::static_alloc_device_config;
+// device type definition
+const device_type VIA6522 = &device_creator<via6522_device>;
 
 //-------------------------------------------------
 //  via6522_device - constructor
 //-------------------------------------------------
 
-via6522_device::via6522_device(running_machine &_machine, const via6522_device_config &config)
-    : device_t(_machine, config),
-      m_config(config)
+via6522_device::via6522_device(const machine_config &mconfig, const char *tag, device_t *owner, UINT32 clock)
+    : device_t(mconfig, VIA6522, "6522 VIA", tag, owner, clock)
 {
 
 }
+
+
+//-------------------------------------------------
+//  device_config_complete - perform any
+//  operations now that the configuration is
+//  complete
+//-------------------------------------------------
+
+void via6522_device::device_config_complete()
+{
+	// inherit a copy of the static data
+	const via6522_interface *intf = reinterpret_cast<const via6522_interface *>(static_config());
+	if (intf != NULL)
+		*static_cast<via6522_interface *>(this) = *intf;
+
+	// or initialize to defaults if none provided
+	else
+	{
+    	memset(&m_in_a_cb, 0, sizeof(m_in_a_cb));
+    	memset(&m_in_b_cb, 0, sizeof(m_in_b_cb));
+    	memset(&m_in_ca1_cb, 0, sizeof(m_in_ca1_cb));
+    	memset(&m_in_cb1_cb, 0, sizeof(m_in_cb1_cb));
+    	memset(&m_in_ca2_cb, 0, sizeof(m_in_ca2_cb));
+    	memset(&m_in_cb2_cb, 0, sizeof(m_in_cb2_cb));
+    	memset(&m_out_a_cb, 0, sizeof(m_out_a_cb));
+    	memset(&m_out_b_cb, 0, sizeof(m_out_b_cb));
+    	memset(&m_out_ca2_cb, 0, sizeof(m_out_ca2_cb));
+    	memset(&m_out_cb2_cb, 0, sizeof(m_out_cb2_cb));
+    	memset(&m_irq_cb, 0, sizeof(m_irq_cb));
+	}
+}
+
 
 //-------------------------------------------------
 //  device_start - device-specific startup
@@ -199,64 +193,64 @@ via6522_device::via6522_device(running_machine &_machine, const via6522_device_c
 
 void via6522_device::device_start()
 {
-    devcb_resolve_read8(&m_in_a_func, &m_config.m_in_a_func, this);
-    devcb_resolve_read8(&m_in_b_func, &m_config.m_in_b_func, this);
-    devcb_resolve_read_line(&m_in_ca1_func, &m_config.m_in_ca1_func, this);
-    devcb_resolve_read_line(&m_in_cb1_func, &m_config.m_in_cb1_func, this);
-    devcb_resolve_read_line(&m_in_ca2_func, &m_config.m_in_ca2_func, this);
-    devcb_resolve_read_line(&m_in_cb2_func, &m_config.m_in_cb2_func, this);
-    devcb_resolve_write8(&m_out_a_func, &m_config.m_out_a_func, this);
-    devcb_resolve_write8(&m_out_b_func, &m_config.m_out_b_func, this);
-    devcb_resolve_write_line(&m_out_ca1_func, &m_config.m_out_ca1_func, this);
-    devcb_resolve_write_line(&m_out_cb1_func, &m_config.m_out_cb1_func, this);
-    devcb_resolve_write_line(&m_out_ca2_func, &m_config.m_out_ca2_func, this);
-    devcb_resolve_write_line(&m_out_cb2_func, &m_config.m_out_cb2_func, this);
-    devcb_resolve_write_line(&m_irq_func, &m_config.m_irq_func, this);
+    m_in_a_func.resolve(m_in_a_cb, *this);
+    m_in_b_func.resolve(m_in_b_cb, *this);
+    m_in_ca1_func.resolve(m_in_ca1_cb, *this);
+    m_in_cb1_func.resolve(m_in_cb1_cb, *this);
+    m_in_ca2_func.resolve(m_in_ca2_cb, *this);
+    m_in_cb2_func.resolve(m_in_cb2_cb, *this);
+    m_out_a_func.resolve(m_out_a_cb, *this);
+    m_out_b_func.resolve(m_out_b_cb, *this);
+    m_out_ca1_func.resolve(m_out_ca1_cb, *this);
+    m_out_cb1_func.resolve(m_out_cb1_cb, *this);
+    m_out_ca2_func.resolve(m_out_ca2_cb, *this);
+    m_out_cb2_func.resolve(m_out_cb2_cb, *this);
+    m_irq_func.resolve(m_irq_cb, *this);
 
     m_t1ll = 0xf3; /* via at 0x9110 in vic20 show these values */
     m_t1lh = 0xb5; /* ports are not written by kernel! */
     m_t2ll = 0xff; /* taken from vice */
     m_t2lh = 0xff;
-    m_time2 = m_time1 = timer_get_time(&m_machine);
-    m_t1 = device_timer_alloc(*this, TIMER_T1);
-    m_t2 = device_timer_alloc(*this, TIMER_T2);
-    m_shift_timer = device_timer_alloc(*this, TIMER_SHIFT);
+    m_time2 = m_time1 = machine().time();
+    m_t1 = timer_alloc(TIMER_T1);
+    m_t2 = timer_alloc(TIMER_T2);
+    m_shift_timer = timer_alloc(TIMER_SHIFT);
 
 	/* Default clock is from CPU1 */
 	if (clock() == 0)
     {
-		set_unscaled_clock(m_machine.firstcpu->clock());
+		set_unscaled_clock(machine().firstcpu->clock());
     }
 
 	/* save state register */
-    state_save_register_device_item(this, 0, m_in_a);
-    state_save_register_device_item(this, 0, m_in_ca1);
-    state_save_register_device_item(this, 0, m_in_ca2);
-    state_save_register_device_item(this, 0, m_out_a);
-    state_save_register_device_item(this, 0, m_out_ca2);
-    state_save_register_device_item(this, 0, m_ddr_a);
-    state_save_register_device_item(this, 0, m_in_b);
-    state_save_register_device_item(this, 0, m_in_cb1);
-    state_save_register_device_item(this, 0, m_in_cb2);
-    state_save_register_device_item(this, 0, m_out_b);
-    state_save_register_device_item(this, 0, m_out_cb2);
-    state_save_register_device_item(this, 0, m_ddr_b);
-    state_save_register_device_item(this, 0, m_t1cl);
-    state_save_register_device_item(this, 0, m_t1ch);
-    state_save_register_device_item(this, 0, m_t1ll);
-    state_save_register_device_item(this, 0, m_t1lh);
-    state_save_register_device_item(this, 0, m_t2cl);
-    state_save_register_device_item(this, 0, m_t2ch);
-    state_save_register_device_item(this, 0, m_t2ll);
-    state_save_register_device_item(this, 0, m_t2lh);
-    state_save_register_device_item(this, 0, m_sr);
-    state_save_register_device_item(this, 0, m_pcr);
-    state_save_register_device_item(this, 0, m_acr);
-    state_save_register_device_item(this, 0, m_ier);
-    state_save_register_device_item(this, 0, m_ifr);
-    state_save_register_device_item(this, 0, m_t1_active);
-    state_save_register_device_item(this, 0, m_t2_active);
-    state_save_register_device_item(this, 0, m_shift_counter);
+    save_item(NAME(m_in_a));
+    save_item(NAME(m_in_ca1));
+    save_item(NAME(m_in_ca2));
+    save_item(NAME(m_out_a));
+    save_item(NAME(m_out_ca2));
+    save_item(NAME(m_ddr_a));
+    save_item(NAME(m_in_b));
+    save_item(NAME(m_in_cb1));
+    save_item(NAME(m_in_cb2));
+    save_item(NAME(m_out_b));
+    save_item(NAME(m_out_cb2));
+    save_item(NAME(m_ddr_b));
+    save_item(NAME(m_t1cl));
+    save_item(NAME(m_t1ch));
+    save_item(NAME(m_t1ll));
+    save_item(NAME(m_t1lh));
+    save_item(NAME(m_t2cl));
+    save_item(NAME(m_t2ch));
+    save_item(NAME(m_t2ll));
+    save_item(NAME(m_t2lh));
+    save_item(NAME(m_sr));
+    save_item(NAME(m_pcr));
+    save_item(NAME(m_acr));
+    save_item(NAME(m_ier));
+    save_item(NAME(m_ifr));
+    save_item(NAME(m_t1_active));
+    save_item(NAME(m_t2_active));
+    save_item(NAME(m_shift_counter));
 }
 
 
@@ -304,13 +298,13 @@ void via6522_device::set_int(int data)
 	m_ifr |= data;
 	if (TRACE_VIA)
     {
-		logerror("%s:6522VIA chip %s: IFR = %02X\n", cpuexec_describe_context(&m_machine), tag(), m_ifr);
+		logerror("%s:6522VIA chip %s: IFR = %02X\n", machine().describe_context(), tag(), m_ifr);
     }
 
 	if (m_ier & m_ifr)
     {
 		m_ifr |= INT_ANY;
-		devcb_call_write_line(&m_irq_func, ASSERT_LINE);
+		m_irq_func(ASSERT_LINE);
     }
 }
 
@@ -325,7 +319,7 @@ void via6522_device::clear_int(int data)
 
 	if (TRACE_VIA)
     {
-		logerror("%s:6522VIA chip %s: IFR = %02X\n", cpuexec_describe_context(&m_machine), tag(), m_ifr);
+		logerror("%s:6522VIA chip %s: IFR = %02X\n", machine().describe_context(), tag(), m_ifr);
     }
 
 	if (m_ifr & m_ier)
@@ -334,7 +328,7 @@ void via6522_device::clear_int(int data)
     }
 	else
 	{
-		devcb_call_write_line(&m_irq_func, CLEAR_LINE);
+		m_irq_func(CLEAR_LINE);
 	}
 }
 
@@ -350,22 +344,22 @@ void via6522_device::shift()
 		m_out_cb2 = (m_sr >> 7) & 1;
 		m_sr =  (m_sr << 1) | m_out_cb2;
 
-		devcb_call_write_line(&m_out_cb2_func, m_out_cb2);
+		m_out_cb2_func(m_out_cb2);
 
 		m_in_cb1=1;
 
 		/* this should be one cycle wide */
-		devcb_call_write_line(&m_out_cb1_func, 0);
-		devcb_call_write_line(&m_out_cb1_func, 1);
+		m_out_cb1_func(0);
+		m_out_cb1_func(1);
 
 		m_shift_counter = (m_shift_counter + 1) % 8;
 
 		if (m_shift_counter)
         {
 			if (SO_O2_CONTROL(m_acr)) {
-				timer_adjust_oneshot(m_shift_timer, cycles_to_time(2), 0);
+				m_shift_timer->adjust(cycles_to_time(2));
 			} else {
-				timer_adjust_oneshot(m_shift_timer, cycles_to_time((m_t2ll + 2)*2), 0);
+				m_shift_timer->adjust(cycles_to_time((m_t2ll + 2)*2));
 			}
         }
 		else
@@ -381,7 +375,7 @@ void via6522_device::shift()
         m_out_cb2 = (m_sr >> 7) & 1;
         m_sr =  (m_sr << 1) | m_out_cb2;
 
-        devcb_call_write_line(&m_out_cb2_func, m_out_cb2);
+        m_out_cb2_func(m_out_cb2);
 
         m_shift_counter = (m_shift_counter + 1) % 8;
 
@@ -395,9 +389,9 @@ void via6522_device::shift()
 	}
     if (SI_EXT_CONTROL(m_acr))
 	{
-        if (m_in_cb2_func.read != NULL)
+        if (!m_in_cb2_func.isnull())
         {
-            m_in_cb2 = devcb_call_read_line(&m_in_cb2_func);
+            m_in_cb2 = m_in_cb2_func();
         }
 
         m_sr =  (m_sr << 1) | (m_in_cb2 & 1);
@@ -432,7 +426,7 @@ void via6522_device::device_timer(emu_timer &timer, device_timer_id id, int para
 		        {
 		            m_out_b ^= 0x80;
 		        }
-		        timer_adjust_oneshot(m_t1, cycles_to_time(TIMER1_VALUE + IFR_DELAY), 0);
+		        m_t1->adjust(cycles_to_time(TIMER1_VALUE + IFR_DELAY));
 		    }
 			else
 		    {
@@ -441,12 +435,12 @@ void via6522_device::device_timer(emu_timer &timer, device_timer_id id, int para
 		            m_out_b |= 0x80;
 		        }
 		        m_t1_active = 0;
-		        m_time1 = timer_get_time(&m_machine);
+		        m_time1 = machine().time();
 		    }
 		    if (m_ddr_b)
 			{
 		        UINT8 write_data = (m_out_b & m_ddr_b) | (m_ddr_b ^ 0xff);
-		        devcb_call_write8(&m_out_b_func, 0, write_data);
+		        m_out_b_func(0, write_data);
 			}
 
 		    if (!(m_ifr & INT_T1))
@@ -458,7 +452,7 @@ void via6522_device::device_timer(emu_timer &timer, device_timer_id id, int para
 		// t2 timeout
 		case TIMER_T2:
 		    m_t2_active = 0;
-		    m_time2 = timer_get_time(&m_machine);
+		    m_time2 = machine().time();
 
 		    if (!(m_ifr & INT_T2))
 		    {
@@ -486,13 +480,13 @@ READ8_MEMBER( via6522_device::read )
 		{
 			if (m_ddr_b != 0xff)
 			{
-				if (m_in_b_func.read != NULL)
+				if (!m_in_b_func.isnull())
                 {
-					m_in_b = devcb_call_read8(&m_in_b_func, 0);
+					m_in_b = m_in_b_func(0);
                 }
 				else
                 {
-					logerror("%s:6522VIA chip %s: Port B is being read but has no handler\n", cpuexec_describe_context(&m_machine), tag());
+					logerror("%s:6522VIA chip %s: Port B is being read but has no handler\n", machine().describe_context(), tag());
                 }
 			}
 		}
@@ -516,13 +510,13 @@ READ8_MEMBER( via6522_device::read )
 		{
 			if (m_ddr_a != 0xff)
 			{
-				if (m_in_a_func.read != NULL)
+				if (!m_in_a_func.isnull())
                 {
-					m_in_a = devcb_call_read8(&m_in_a_func, 0);
+					m_in_a = m_in_a_func(0);
                 }
 				else
                 {
-					logerror("%s:6522VIA chip %s: Port A is being read but has no handler\n", cpuexec_describe_context(&m_machine), tag());
+					logerror("%s:6522VIA chip %s: Port A is being read but has no handler\n", machine().describe_context(), tag());
                 }
 			}
 		}
@@ -542,7 +536,7 @@ READ8_MEMBER( via6522_device::read )
 				m_out_ca2 = 0;
 
 				/* call the CA2 output function */
-				devcb_call_write_line(&m_out_ca2_func, 0);
+				m_out_ca2_func(0);
 			}
 		}
 
@@ -552,13 +546,13 @@ READ8_MEMBER( via6522_device::read )
 		/* update the input */
 		if (PA_LATCH_ENABLE(m_acr) == 0)
 		{
-			if (m_in_a_func.read != NULL)
+			if (!m_in_a_func.isnull())
             {
-				m_in_a = devcb_call_read8(&m_in_a_func, 0);
+				m_in_a = m_in_a_func(0);
             }
 			else
             {
-				logerror("%s:6522VIA chip %s: Port A is being read but has no handler\n", cpuexec_describe_context(&m_machine), tag());
+				logerror("%s:6522VIA chip %s: Port A is being read but has no handler\n", machine().describe_context(), tag());
             }
 		}
 
@@ -595,7 +589,7 @@ READ8_MEMBER( via6522_device::read )
 		clear_int(INT_T2);
 		if (m_t2_active)
         {
-			val = time_to_cycles(timer_timeleft(m_t2)) & 0xff;
+			val = time_to_cycles(m_t2->remaining()) & 0xff;
         }
 		else
 		{
@@ -605,7 +599,7 @@ READ8_MEMBER( via6522_device::read )
             }
 			else
             {
-				val = (0x10000 - (time_to_cycles(attotime_sub(timer_get_time(&m_machine), m_time2)) & 0xffff) - 1) & 0xff;
+				val = (0x10000 - (time_to_cycles(machine().time() - m_time2) & 0xffff) - 1) & 0xff;
             }
 		}
 		break;
@@ -613,7 +607,7 @@ READ8_MEMBER( via6522_device::read )
     case VIA_T2CH:
 		if (m_t2_active)
         {
-			val = time_to_cycles(timer_timeleft(m_t2)) >> 8;
+			val = time_to_cycles(m_t2->remaining()) >> 8;
         }
 		else
 		{
@@ -623,7 +617,7 @@ READ8_MEMBER( via6522_device::read )
             }
 			else
             {
-				val = (0x10000 - (time_to_cycles(attotime_sub(timer_get_time(&m_machine), m_time2)) & 0xffff) - 1) >> 8;
+				val = (0x10000 - (time_to_cycles(machine().time() - m_time2) & 0xffff) - 1) >> 8;
             }
 		}
 		break;
@@ -634,11 +628,11 @@ READ8_MEMBER( via6522_device::read )
 		clear_int(INT_SR);
 		if (SO_O2_CONTROL(m_acr))
 		{
-			timer_adjust_oneshot(m_shift_timer, cycles_to_time(2), 0);
+			m_shift_timer->adjust(cycles_to_time(2));
 		}
 		if (SO_T2_CONTROL(m_acr))
 		{
-			timer_adjust_oneshot(m_shift_timer, cycles_to_time((m_t2ll + 2)*2), 0);
+			m_shift_timer->adjust(cycles_to_time((m_t2ll + 2)*2));
 		}
 		break;
 
@@ -681,7 +675,7 @@ WRITE8_MEMBER( via6522_device::write )
 		if (m_ddr_b)
 		{
 			UINT8 write_data = (m_out_b & m_ddr_b) | (m_ddr_b ^ 0xff);
-			devcb_call_write8(&m_out_b_func, 0, write_data);
+			m_out_b_func(0, write_data);
 		}
 
 		CLR_PB_INT();
@@ -696,7 +690,7 @@ WRITE8_MEMBER( via6522_device::write )
 				m_out_cb2 = 0;
 
 				/* call the CB2 output function */
-				devcb_call_write_line(&m_out_cb2_func, 0);
+				m_out_cb2_func(0);
 			}
 		}
 		break;
@@ -707,7 +701,7 @@ WRITE8_MEMBER( via6522_device::write )
 		if (m_ddr_a)
 		{
 			UINT8 write_data = (m_out_a & m_ddr_a) | (m_ddr_a ^ 0xff);
-			devcb_call_write8(&m_out_a_func, 0, write_data);
+			m_out_a_func(0, write_data);
 		}
 
 		CLR_PA_INT();
@@ -717,8 +711,8 @@ WRITE8_MEMBER( via6522_device::write )
 		if (CA2_PULSE_OUTPUT(m_pcr))
 		{
 			/* call the CA2 output function */
-			devcb_call_write_line(&m_out_ca2_func, 0);
-			devcb_call_write_line(&m_out_ca2_func, 1);
+			m_out_ca2_func(0);
+			m_out_ca2_func(1);
 
 			/* set CA2 (shouldn't be needed) */
 			m_out_ca2 = 1;
@@ -731,7 +725,7 @@ WRITE8_MEMBER( via6522_device::write )
 				m_out_ca2 = 0;
 
 				/* call the CA2 output function */
-				devcb_call_write_line(&m_out_ca2_func, 0);
+				m_out_ca2_func(0);
 			}
 		}
 
@@ -743,7 +737,7 @@ WRITE8_MEMBER( via6522_device::write )
 		if (m_ddr_a)
 		{
 			UINT8 write_data = (m_out_a & m_ddr_a) | (m_ddr_a ^ 0xff);
-			devcb_call_write8(&m_out_a_func, 0, write_data);
+			m_out_a_func(0, write_data);
 		}
 
 		break;
@@ -757,7 +751,7 @@ WRITE8_MEMBER( via6522_device::write )
 			//if (m_ddr_b)
 			{
 				UINT8 write_data = (m_out_b & m_ddr_b) | (m_ddr_b ^ 0xff);
-				devcb_call_write8(&m_out_b_func, 0, write_data);
+				m_out_b_func(0, write_data);
 			}
 		}
 		break;
@@ -771,7 +765,7 @@ WRITE8_MEMBER( via6522_device::write )
 			//if (m_ddr_a)
 			{
 				UINT8 write_data = (m_out_a & m_ddr_a) | (m_ddr_a ^ 0xff);
-				devcb_call_write8(&m_out_a_func, 0, write_data);
+				m_out_a_func(0, write_data);
 			}
 		}
 		break;
@@ -799,10 +793,10 @@ WRITE8_MEMBER( via6522_device::write )
 			//if (m_ddr_b)
 			{
 				UINT8 write_data = (m_out_b & m_ddr_b) | (m_ddr_b ^ 0xff);
-				devcb_call_write8(&m_out_b_func, 0, write_data);
+				m_out_b_func(0, write_data);
 			}
 		}
-		timer_adjust_oneshot(m_t1, cycles_to_time(TIMER1_VALUE + IFR_DELAY), 0);
+		m_t1->adjust(cycles_to_time(TIMER1_VALUE + IFR_DELAY));
 		m_t1_active = 1;
 		break;
 
@@ -818,14 +812,14 @@ WRITE8_MEMBER( via6522_device::write )
 
 		if (!T2_COUNT_PB6(m_acr))
 		{
-			timer_adjust_oneshot(m_t2, cycles_to_time(TIMER2_VALUE + IFR_DELAY), 0);
+			m_t2->adjust(cycles_to_time(TIMER2_VALUE + IFR_DELAY));
 			m_t2_active = 1;
 		}
 		else
 		{
-			timer_adjust_oneshot(m_t2, cycles_to_time(TIMER2_VALUE), 0);
+			m_t2->adjust(cycles_to_time(TIMER2_VALUE));
 			m_t2_active = 1;
-			m_time2 = timer_get_time(&m_machine);
+			m_time2 = machine().time();
 		}
 		break;
 
@@ -835,11 +829,11 @@ WRITE8_MEMBER( via6522_device::write )
 		clear_int(INT_SR);
 		if (SO_O2_CONTROL(m_acr))
 		{
-			timer_adjust_oneshot(m_shift_timer, cycles_to_time(2), 0);
+			m_shift_timer->adjust(cycles_to_time(2));
 		}
 		if (SO_T2_CONTROL(m_acr))
 		{
-			timer_adjust_oneshot(m_shift_timer, cycles_to_time((m_t2ll + 2)*2), 0);
+			m_shift_timer->adjust(cycles_to_time((m_t2ll + 2)*2));
 		}
 		break;
 
@@ -848,19 +842,19 @@ WRITE8_MEMBER( via6522_device::write )
 
 		if (TRACE_VIA)
         {
-			logerror("%s:6522VIA chip %s: PCR = %02X\n", cpuexec_describe_context(&m_machine), tag(), data);
+			logerror("%s:6522VIA chip %s: PCR = %02X\n", machine().describe_context(), tag(), data);
         }
 
 		if (CA2_FIX_OUTPUT(data) && CA2_OUTPUT_LEVEL(data) ^ m_out_ca2)
 		{
 			m_out_ca2 = CA2_OUTPUT_LEVEL(data);
-			devcb_call_write_line(&m_out_ca2_func, m_out_ca2);
+			m_out_ca2_func(m_out_ca2);
 		}
 
 		if (CB2_FIX_OUTPUT(data) && CB2_OUTPUT_LEVEL(data) ^ m_out_cb2)
 		{
 			m_out_cb2 = CB2_OUTPUT_LEVEL(data);
-			devcb_call_write_line(&m_out_cb2_func, m_out_cb2);
+			m_out_cb2_func(m_out_cb2);
 		}
 		break;
 
@@ -882,12 +876,12 @@ WRITE8_MEMBER( via6522_device::write )
 				//if (m_ddr_b)
 				{
 					UINT8 write_data = (m_out_b & m_ddr_b) | (m_ddr_b ^ 0xff);
-					devcb_call_write8(&m_out_b_func, 0, write_data);
+					m_out_b_func(0, write_data);
 				}
 			}
 			if (T1_CONTINUOUS(data))
 			{
-				timer_adjust_oneshot(m_t1, cycles_to_time(counter1 + IFR_DELAY), 0);
+				m_t1->adjust(cycles_to_time(counter1 + IFR_DELAY));
 				m_t1_active = 1;
 			}
 		}
@@ -908,7 +902,7 @@ WRITE8_MEMBER( via6522_device::write )
 			if (((m_ifr & m_ier) & 0x7f) == 0)
 			{
 				m_ifr &= ~INT_ANY;
-				devcb_call_write_line(&m_irq_func, CLEAR_LINE);
+				m_irq_func(CLEAR_LINE);
 			}
 		}
 		else
@@ -916,7 +910,7 @@ WRITE8_MEMBER( via6522_device::write )
 			if ((m_ier & m_ifr) & 0x7f)
 			{
 				m_ifr |= INT_ANY;
-				devcb_call_write_line(&m_irq_func, ASSERT_LINE);
+				m_irq_func(ASSERT_LINE);
 			}
 		}
 		break;
@@ -942,19 +936,19 @@ WRITE_LINE_MEMBER( via6522_device::write_ca1 )
 	if (state != m_in_ca1)
     {
 		if (TRACE_VIA)
-			logerror("%s:6522VIA chip %s: CA1 = %02X\n", cpuexec_describe_context(&m_machine), tag(), state);
+			logerror("%s:6522VIA chip %s: CA1 = %02X\n", machine().describe_context(), tag(), state);
 
 		if ((CA1_LOW_TO_HIGH(m_pcr) && state) || (CA1_HIGH_TO_LOW(m_pcr) && !state))
 		{
 			if (PA_LATCH_ENABLE(m_acr))
 			{
-				if (m_in_a_func.read != NULL)
+				if (!m_in_a_func.isnull())
                 {
-					m_in_a = devcb_call_read8(&m_in_a_func, 0);
+					m_in_a = m_in_a_func(0);
                 }
 				else
                 {
-                    logerror("%s:6522VIA chip %s: Port A is being read but has no handler\n", cpuexec_describe_context(&m_machine), tag());
+                    logerror("%s:6522VIA chip %s: Port A is being read but has no handler\n", machine().describe_context(), tag());
                 }
 			}
 
@@ -970,7 +964,7 @@ WRITE_LINE_MEMBER( via6522_device::write_ca1 )
 					m_out_ca2 = 1;
 
 					/* call the CA2 output function */
-					devcb_call_write_line(&m_out_ca2_func, 1);
+					m_out_ca2_func(1);
 				}
 			}
 		}
@@ -1018,13 +1012,13 @@ WRITE_LINE_MEMBER( via6522_device::write_cb1 )
 		{
 			if (PB_LATCH_ENABLE(m_acr))
 			{
-				if (m_in_b_func.read != NULL)
+				if (!m_in_b_func.isnull())
                 {
-					m_in_b = devcb_call_read8(&m_in_b_func, 0);
+					m_in_b = m_in_b_func(0);
                 }
 				else
                 {
-                    logerror("%s:6522VIA chip %s: Port B is being read but has no handler\n", cpuexec_describe_context(&m_machine), tag());
+                    logerror("%s:6522VIA chip %s: Port B is being read but has no handler\n", machine().describe_context(), tag());
                 }
 			}
 			if (SO_EXT_CONTROL(m_acr) || SI_EXT_CONTROL(m_acr))
@@ -1044,7 +1038,7 @@ WRITE_LINE_MEMBER( via6522_device::write_cb1 )
 					m_out_cb2 = 1;
 
 					/* call the CB2 output function */
-					devcb_call_write_line(&m_out_cb2_func, 1);
+					m_out_cb2_func(1);
 				}
 			}
 		}

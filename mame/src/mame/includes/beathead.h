@@ -11,8 +11,8 @@
 class beathead_state : public atarigen_state
 {
 public:
-	beathead_state(running_machine &machine, const driver_device_config_base &config)
-		: atarigen_state(machine, config),
+	beathead_state(const machine_config &mconfig, device_type type, const char *tag)
+		: atarigen_state(mconfig, type, tag),
 		  m_maincpu(*this, "maincpu"),
 		  m_nvram(*this, "nvram") { }
 
@@ -20,7 +20,7 @@ public:
 	virtual void machine_reset();
 
 	virtual void video_start();
-	virtual bool video_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect);
+	virtual bool screen_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect);
 
 	required_device<asap_device> m_maincpu;
 
@@ -42,7 +42,7 @@ public:
 	UINT32 *		m_ram_base;
 	UINT32 *		m_rom_base;
 
-	double			m_hblank_offset;
+	attotime		m_hblank_offset;
 
 	UINT8			m_irq_line_state;
 	UINT8			m_irq_enable[3];

@@ -12,18 +12,20 @@
 class bankp_state : public driver_device
 {
 public:
-	bankp_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	bankp_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 	/* memory pointers */
-	UINT8 * videoram;
-	UINT8 * colorram;
-	UINT8 * videoram2;
-	UINT8 * colorram2;
+	UINT8 * m_videoram;
+	UINT8 * m_colorram;
+	UINT8 * m_videoram2;
+	UINT8 * m_colorram2;
 
 	/* video-related */
-	tilemap_t *bg_tilemap, *fg_tilemap;
-	int     scroll_x, priority;
+	tilemap_t *m_bg_tilemap;
+	tilemap_t *m_fg_tilemap;
+	int     m_scroll_x;
+	int     m_priority;
 };
 
 
@@ -38,6 +40,6 @@ WRITE8_HANDLER( bankp_out_w );
 
 PALETTE_INIT( bankp );
 VIDEO_START( bankp );
-VIDEO_UPDATE( bankp );
+SCREEN_UPDATE( bankp );
 
 

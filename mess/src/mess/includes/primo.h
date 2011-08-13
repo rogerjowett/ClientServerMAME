@@ -7,18 +7,22 @@
 #ifndef PRIMO_H_
 #define PRIMO_H_
 
-#include "devices/snapquik.h"
-
+#include "imagedev/snapquik.h"
+#include "machine/cbmiec.h"
 
 class primo_state : public driver_device
 {
 public:
-	primo_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	primo_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag),
+		  m_iec(*this, CBM_IEC_TAG)
+    { }
 
-	UINT16 video_memory_base;
-	UINT8 port_FD;
-	int nmi;
+	required_device<cbm_iec_device> m_iec;
+
+	UINT16 m_video_memory_base;
+	UINT8 m_port_FD;
+	int m_nmi;
 };
 
 
@@ -41,7 +45,7 @@ extern QUICKLOAD_LOAD( primo );
 
 /*----------- defined in video/primo.c -----------*/
 
-extern VIDEO_UPDATE( primo );
+extern SCREEN_UPDATE( primo );
 
 
 #endif /* PRIMO_H_ */

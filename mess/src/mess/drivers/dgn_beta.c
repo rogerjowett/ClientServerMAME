@@ -44,9 +44,10 @@ documentation still exists.
 #include "includes/dgn_beta.h"
 #include "machine/6551.h"
 #include "formats/coco_dsk.h"
-#include "devices/flopdrv.h"
-#include "devices/coco_vhd.h"
-#include "devices/messram.h"
+#include "imagedev/flopdrv.h"
+#include "machine/ram.h"
+#include "video/mc6845.h"
+
 
 /*
  Colour codes are as below acording to os-9 headers, however the presise values
@@ -133,14 +134,14 @@ static const unsigned char dgnbeta_palette[] =
 
 */
 
-static ADDRESS_MAP_START( dgnbeta_map, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( dgnbeta_map, AS_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x0FFF)	AM_RAMBANK("bank1")
 	AM_RANGE(0x1000, 0x1FFF)	AM_RAMBANK("bank2")
 	AM_RANGE(0x2000, 0x2FFF)	AM_RAMBANK("bank3")
 	AM_RANGE(0x3000, 0x3FFF)	AM_RAMBANK("bank4")
 	AM_RANGE(0x4000, 0x4FFF)	AM_RAMBANK("bank5")
 	AM_RANGE(0x5000, 0x5FFF)	AM_RAMBANK("bank6")
-	AM_RANGE(0x6000, 0x6FFF)	AM_RAMBANK("bank7") AM_BASE_MEMBER(dgn_beta_state, videoram)
+	AM_RANGE(0x6000, 0x6FFF)	AM_RAMBANK("bank7") AM_BASE_MEMBER(dgn_beta_state, m_videoram)
 	AM_RANGE(0x7000, 0x7FFF)	AM_RAMBANK("bank8")
 	AM_RANGE(0x8000, 0x8FFF)	AM_RAMBANK("bank9")
 	AM_RANGE(0x9000, 0x9FFF)	AM_RAMBANK("bank10")
@@ -151,13 +152,14 @@ static ADDRESS_MAP_START( dgnbeta_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0xE000, 0xEFFF)	AM_RAMBANK("bank15")
 	AM_RANGE(0xF000, 0xFBFF)	AM_RAMBANK("bank16")
 	AM_RANGE(0xfC00, 0xfC1F)	AM_NOP
-	AM_RANGE(0xFC20, 0xFC23)	AM_DEVREADWRITE(PIA_0_TAG, pia6821_r, pia6821_w)
-	AM_RANGE(0xFC24, 0xFC27)	AM_DEVREADWRITE(PIA_1_TAG, pia6821_r, pia6821_w)
+	AM_RANGE(0xFC20, 0xFC23)	AM_DEVREADWRITE_MODERN(PIA_0_TAG, pia6821_device, read, write)
+	AM_RANGE(0xFC24, 0xFC27)	AM_DEVREADWRITE_MODERN(PIA_1_TAG, pia6821_device, read, write)
 	AM_RANGE(0xFC28, 0xfC7F)	AM_NOP
-	AM_RANGE(0xfc80, 0xfc81)	AM_READWRITE(dgnbeta_6845_r	,dgnbeta_6845_w)
+	AM_RANGE(0xfc80, 0xfc80)    AM_DEVWRITE_MODERN("crtc", mc6845_device, address_w)
+	AM_RANGE(0xfc81, 0xfc81)    AM_DEVREADWRITE_MODERN("crtc", mc6845_device, register_r, register_w)
 	AM_RANGE(0xfc82, 0xfC9F)	AM_NOP
 	AM_RANGE(0xFCA0, 0xFCA3)	AM_READNOP AM_WRITE(dgnbeta_colour_ram_w)		    /* 4x4bit colour ram for graphics modes */
-	AM_RANGE(0xFCC0, 0xFCC3)	AM_DEVREADWRITE(PIA_2_TAG, pia6821_r, pia6821_w)
+	AM_RANGE(0xFCC0, 0xFCC3)	AM_DEVREADWRITE_MODERN(PIA_2_TAG, pia6821_device, read, write)
 	AM_RANGE(0xfcC4, 0xfcdf)	AM_NOP
 	AM_RANGE(0xfce0, 0xfce3)	AM_READWRITE(dgnbeta_wd2797_r	,dgnbeta_wd2797_w)	/* Onboard disk interface */
 	AM_RANGE(0xfce4, 0xfdff)	AM_NOP
@@ -284,7 +286,7 @@ static PALETTE_INIT( dgnbeta )
 	}
 }
 
-static const floppy_config dgnbeta_floppy_config =
+static const floppy_interface dgnbeta_floppy_interface =
 {
 	DEVCB_NULL,
 	DEVCB_NULL,
@@ -293,6 +295,7 @@ static const floppy_config dgnbeta_floppy_config =
 	DEVCB_NULL,
 	FLOPPY_STANDARD_5_25_DSHD,
 	FLOPPY_OPTIONS_NAME(coco),
+	NULL,
 	NULL
 };
 
@@ -324,34 +327,34 @@ static MACHINE_CONFIG_START( dgnbeta, dgn_beta_state )
 	MCFG_CPU_ADD(DMACPU_TAG, M6809E, DGNBETA_CPU_SPEED_HZ)        /* 2 MHz */
 	MCFG_CPU_PROGRAM_MAP(dgnbeta_map)
 
-	MCFG_SCREEN_ADD("screen", RASTER)
-	MCFG_SCREEN_REFRESH_RATE(DGNBETA_FRAMES_PER_SECOND)
-	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(100))
-
 	MCFG_MACHINE_START( dgnbeta )
 
 	/* video hardware */
-
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE(DGNBETA_FRAMES_PER_SECOND)
+	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(100))
 	MCFG_SCREEN_SIZE(700,550)
 	MCFG_SCREEN_VISIBLE_AREA(0, 699, 0, 549)
+	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
+	MCFG_SCREEN_UPDATE( dgnbeta )
+
 	MCFG_GFXDECODE(dgnbeta)
 	MCFG_PALETTE_LENGTH(ARRAY_LENGTH(dgnbeta_palette) / 3)
 	MCFG_PALETTE_INIT( dgnbeta )
 	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_AFTER_VBLANK)
-	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
-
-	MCFG_VIDEO_UPDATE( dgnbeta )
 
 	MCFG_PIA6821_ADD( PIA_0_TAG, dgnbeta_pia_intf[0] )
 	MCFG_PIA6821_ADD( PIA_1_TAG, dgnbeta_pia_intf[1] )
 	MCFG_PIA6821_ADD( PIA_2_TAG, dgnbeta_pia_intf[2] )
 
-	MCFG_WD179X_ADD(FDC_TAG, dgnbeta_wd17xx_interface )
+	MCFG_WD2797_ADD(FDC_TAG, dgnbeta_wd17xx_interface )
 
-	MCFG_FLOPPY_4_DRIVES_ADD(dgnbeta_floppy_config)
+	MCFG_FLOPPY_4_DRIVES_ADD(dgnbeta_floppy_interface)
+
+	MCFG_MC6845_ADD("crtc", HD6845, XTAL_12_288MHz / 16, dgnbeta_crtc6845_interface)	//XTAL is guessed
 
 	/* internal ram */
-	MCFG_RAM_ADD("messram")
+	MCFG_RAM_ADD(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("256K")
 	MCFG_RAM_EXTRA_OPTIONS("128K,384K,512K,640K,768K")
 	/* Ram size can now be configured, since the machine was known as either the Dragon Beta or */

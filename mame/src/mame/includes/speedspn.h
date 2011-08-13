@@ -1,9 +1,21 @@
+class speedspn_state : public driver_device
+{
+public:
+	speedspn_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
+
+	UINT8 *m_attram;
+	tilemap_t *m_tilemap;
+	UINT8 m_display_disable;
+	int m_bank_vidram;
+	UINT8* m_vidram;
+};
+
+
 /*----------- defined in video/speedspn.c -----------*/
 
-extern UINT8 *speedspn_attram;
-
 VIDEO_START( speedspn );
-VIDEO_UPDATE( speedspn );
+SCREEN_UPDATE( speedspn );
 
 WRITE8_HANDLER( speedspn_vidram_w );
 WRITE8_HANDLER( speedspn_attram_w );

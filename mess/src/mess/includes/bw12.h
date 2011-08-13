@@ -1,6 +1,8 @@
 #ifndef __BW12__
 #define __BW12__
 
+#include "machine/ram.h"
+
 #define SCREEN_TAG			"screen"
 #define Z80_TAG				"ic35"
 #define MC6845_TAG			"ic14"
@@ -9,7 +11,7 @@
 #define PIT8253_TAG			"ic34"
 #define PIA6821_TAG			"ic16"
 #define MC1408_TAG			"ic4"
-#define AY3600_TAG			"ic74"
+#define AY3600PRO002_TAG	"ic74"
 #define CENTRONICS_TAG		"centronics"
 #define FLOPPY_TIMER_TAG	"motor_off"
 
@@ -19,36 +21,36 @@
 class bw12_state : public driver_device
 {
 public:
-	bw12_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config),
+	bw12_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag),
 		  m_maincpu(*this, Z80_TAG),
 		  m_pia(*this, PIA6821_TAG),
 		  m_fdc(*this, UPD765_TAG),
-		  m_kbc(*this, AY3600_TAG),
+		  m_kbc(*this, AY3600PRO002_TAG),
 		  m_crtc(*this, MC6845_TAG),
 		  m_centronics(*this, CENTRONICS_TAG),
-		  m_ram(*this, "messram"),
+		  m_ram(*this, RAM_TAG),
 		  m_floppy0(*this, FLOPPY_0),
 		  m_floppy1(*this, FLOPPY_1),
 		  m_floppy_timer(*this, FLOPPY_TIMER_TAG)
 	{ }
 
 	required_device<cpu_device> m_maincpu;
-	required_device<device_t> m_pia;
+	required_device<pia6821_device> m_pia;
 	required_device<device_t> m_fdc;
-	required_device<device_t> m_kbc;
-	required_device<device_t> m_crtc;
+	required_device<ay3600_device> m_kbc;
+	required_device<mc6845_device> m_crtc;
 	required_device<device_t> m_centronics;
 	required_device<device_t> m_ram;
 	required_device<device_t> m_floppy0;
 	required_device<device_t> m_floppy1;
 	required_device<timer_device> m_floppy_timer;
-	
+
 	virtual void machine_start();
 	virtual void machine_reset();
 
 	virtual void video_start();
-	virtual bool video_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect);
+	virtual bool screen_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect);
 
 	void bankswitch();
 	void floppy_motor_off();
@@ -62,6 +64,8 @@ public:
 	DECLARE_READ_LINE_MEMBER( pia_cb1_r );
 	DECLARE_WRITE_LINE_MEMBER( pia_cb2_w );
 	DECLARE_WRITE_LINE_MEMBER( pit_out2_w );
+	DECLARE_READ_LINE_MEMBER( ay3600_shift_r );
+	DECLARE_READ_LINE_MEMBER( ay3600_control_r );
 	DECLARE_WRITE_LINE_MEMBER( ay3600_data_ready_w );
 
 	/* memory state */

@@ -7,25 +7,27 @@
 class yunsun16_state : public driver_device
 {
 public:
-	yunsun16_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	yunsun16_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 	/* memory pointers */
-	UINT16 *    vram_0;
-	UINT16 *    vram_1;
-	UINT16 *    scrollram_0;
-	UINT16 *    scrollram_1;
-	UINT16 *    priorityram;
-//  UINT16 *    paletteram; // currently this uses generic palette handling
-	UINT16 *    spriteram;
-	size_t      spriteram_size;
+	UINT16 *    m_vram_0;
+	UINT16 *    m_vram_1;
+	UINT16 *    m_scrollram_0;
+	UINT16 *    m_scrollram_1;
+	UINT16 *    m_priorityram;
+//  UINT16 *    m_paletteram; // currently this uses generic palette handling
+	UINT16 *    m_spriteram;
+	size_t      m_spriteram_size;
 
 	/* other video-related elements */
-	tilemap_t     *tilemap_0, *tilemap_1;
-	int         sprites_scrolldx, sprites_scrolldy;
+	tilemap_t     *m_tilemap_0;
+	tilemap_t     *m_tilemap_1;
+	int         m_sprites_scrolldx;
+	int         m_sprites_scrolldy;
 
 	/* devices */
-	device_t *audiocpu;
+	device_t *m_audiocpu;
 };
 
 
@@ -35,4 +37,4 @@ WRITE16_HANDLER( yunsun16_vram_0_w );
 WRITE16_HANDLER( yunsun16_vram_1_w );
 
 VIDEO_START( yunsun16 );
-VIDEO_UPDATE( yunsun16 );
+SCREEN_UPDATE( yunsun16 );

@@ -40,7 +40,7 @@
 #define FORMAT_IA				3
 #define FORMAT_I				4
 
-#if LSB_FIRST
+#ifdef LSB_FIRST
 #define BYTE_XOR_DWORD_SWAP 7
 #define WORD_XOR_DWORD_SWAP 3
 #else
@@ -420,25 +420,24 @@ class Processor
 			m_span_dzdy = dz;
 		}
 
+		running_machine &machine() const { assert(m_machine != NULL); return *m_machine; }
+
 		void	InitInternalState()
 		{
-			if(m_machine)
+			m_tmem = auto_alloc_array(machine(), UINT8, 0x1000);
+			memset(m_tmem, 0, 0x1000);
+
+			UINT8 *normpoint = machine().region("normpoint")->base();
+			UINT8 *normslope = machine().region("normslope")->base();
+
+			for(INT32 i = 0; i < 64; i++)
 			{
-				m_tmem = auto_alloc_array(m_machine, UINT8, 0x1000);
-				memset(m_tmem, 0, 0x1000);
-
-				UINT8 *normpoint = m_machine->region("normpoint")->base();
-				UINT8 *normslope = m_machine->region("normslope")->base();
-
-				for(INT32 i = 0; i < 64; i++)
-				{
-					m_norm_point_rom[i] = (normpoint[(i << 1) + 1] << 8) | normpoint[i << 1];
-					m_norm_slope_rom[i] = (normslope[(i << 1) + 1] << 8) | normslope[i << 1];
-				}
+				m_norm_point_rom[i] = (normpoint[(i << 1) + 1] << 8) | normpoint[i << 1];
+				m_norm_slope_rom[i] = (normslope[(i << 1) + 1] << 8) | normslope[i << 1];
 			}
 		}
 
-		void		SetMachine(running_machine* machine) { m_machine = machine; }
+		void		SetMachine(running_machine& machine) { m_machine = &machine; }
 
 		// CPU-visible registers
 		void		SetStartReg(UINT32 val) { m_start = val; }

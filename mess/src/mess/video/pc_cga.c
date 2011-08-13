@@ -78,19 +78,17 @@
 #include "emu.h"
 #include "video/pc_cga.h"
 #include "video/mc6845.h"
-#include "video/pc_video_mess.h"
 #include "video/cgapal.h"
 #include "memconv.h"
 
 #define VERBOSE_CGA 0		/* CGA (Color Graphics Adapter) */
-#define	NTSC_FILTER	0
 
 #define CGA_LOG(N,M,A) \
 	do { \
 		if(VERBOSE_CGA>=N) \
 		{ \
 			if( M ) \
-				logerror("%11.6f: %-24s",attotime_to_double(timer_get_time(machine)),(char*)M ); \
+				logerror("%11.6f: %-24s",machine.time().as_double(),(char*)M ); \
 			logerror A; \
 		} \
 	} while (0)
@@ -102,6 +100,7 @@
 ***************************************************************************/
 
 static VIDEO_START( pc_cga );
+static VIDEO_START( pc_cga32k );
 static PALETTE_INIT( pc_cga );
 
 
@@ -159,7 +158,7 @@ INPUT_PORTS_END
 #define CGA_CHIPSET_PARADISE    0x80    /* Paradise (used in PC1640) */
 
 
-static VIDEO_UPDATE( mc6845_cga );
+static SCREEN_UPDATE( mc6845_cga );
 static READ8_HANDLER( pc_cga8_r );
 static WRITE8_HANDLER( pc_cga8_w );
 static READ16_HANDLER( pc_cga16le_r );
@@ -170,10 +169,10 @@ static MC6845_UPDATE_ROW( cga_update_row );
 static WRITE_LINE_DEVICE_HANDLER( cga_hsync_changed );
 static WRITE_LINE_DEVICE_HANDLER( cga_vsync_changed );
 static VIDEO_START( pc1512 );
-static VIDEO_UPDATE( mc6845_pc1512 );
+static SCREEN_UPDATE( mc6845_pc1512 );
 
 static VIDEO_START( cga_poisk2 );
-static VIDEO_UPDATE( cga_poisk2 );
+static SCREEN_UPDATE( cga_poisk2 );
 
 static const mc6845_interface mc6845_cga_intf =
 {
@@ -194,26 +193,33 @@ MACHINE_CONFIG_FRAGMENT( pcvideo_cga )
 	MCFG_SCREEN_ADD(CGA_SCREEN_NAME, RASTER)
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_RAW_PARAMS(XTAL_14_31818MHz,912,0,640,262,0,200)
-	MCFG_PALETTE_LENGTH(/* CGA_PALETTE_SETS * 16*/ 65536 )
+	MCFG_SCREEN_UPDATE( mc6845_cga )
 
+	MCFG_PALETTE_LENGTH(/* CGA_PALETTE_SETS * 16*/ 65536 )
 	MCFG_PALETTE_INIT(pc_cga)
 
 	MCFG_MC6845_ADD(CGA_MC6845_NAME, MC6845, XTAL_14_31818MHz/8, mc6845_cga_intf)
 
 	MCFG_VIDEO_START( pc_cga )
-	MCFG_VIDEO_UPDATE( mc6845_cga )
+MACHINE_CONFIG_END
+
+MACHINE_CONFIG_FRAGMENT( pcvideo_cga32k )
+	MCFG_FRAGMENT_ADD( pcvideo_cga )
+	MCFG_VIDEO_START( pc_cga32k )
 MACHINE_CONFIG_END
 
 MACHINE_CONFIG_FRAGMENT( pcvideo_poisk2 )
 	MCFG_FRAGMENT_ADD( pcvideo_cga )
 	MCFG_VIDEO_START( cga_poisk2 )
-	MCFG_VIDEO_UPDATE( cga_poisk2 )
+	MCFG_SCREEN_MODIFY(CGA_SCREEN_NAME)
+	MCFG_SCREEN_UPDATE( cga_poisk2 )
 MACHINE_CONFIG_END
 
 MACHINE_CONFIG_FRAGMENT( pcvideo_pc1512 )
 	MCFG_FRAGMENT_ADD( pcvideo_cga )
 	MCFG_VIDEO_START( pc1512 )
-	MCFG_VIDEO_UPDATE( mc6845_pc1512 )
+	MCFG_SCREEN_MODIFY(CGA_SCREEN_NAME)
+	MCFG_SCREEN_UPDATE( mc6845_pc1512 )
 MACHINE_CONFIG_END
 
 
@@ -242,167 +248,10 @@ static struct
 	UINT8	vsync;
 	UINT8	hsync;
 	UINT8   p3df;
+
+	size_t  videoram_size;
+	UINT8  *videoram;
 } cga;
-
-
-
-/***************************************************************************
- *
- * NTSC filter
- *
- * Code taken from http://www.reenigne.org/crtc.html
- *
- ***************************************************************************/
-
-static struct ntsc_decoder
-{
-	int period;
-
-	int *I_filter;
-	int *Q_filter;
-
-	int *Y_buffer;
-	int *I_buffer;
-	int *Q_buffer;
-
-	int Y_total;
-	int I_total;
-	int Q_total;
-} s_ntsc;
-
-
-/* Clear NTSC buffers and running totals. Call this before the beginning of each new line. */
-static void ntsc_clear(struct ntsc_decoder *ntsc)
-{
-	int j;
-	for (j=0;j<ntsc->period;++j)
-	{
-		ntsc->Y_buffer[j] = 0;
-		ntsc->I_buffer[j] = 0;
-		ntsc->Q_buffer[j] = 0;
-	}
-	ntsc->Y_total = 0;
-	ntsc->I_total = 0;
-	ntsc->Q_total = 0;
-}
-
-
-/* Create an NTSC decoder object.
-
-   period is the number of times the NTSC signal is sampled per cycle of the color subcarrier clock (3.579545 MHz).
-   e.g. CGA is 8 because you need to sample the chroma signal at 28.6MHz to retain all color information.
-   For 4-color composite systems such as CoCo, 2 samples may suffice.
-
-   samples is also the number of data points whose values are used to determine the color of a given point.
-
-   Points here do not necessarily correspond to pixels - points are samples of the RGB color decoded output and pixels
-   are CPU addressable points in the input composite data.
-
-   The correct value for hue will usually be a multiple of 128.
-*/
-static void ntsc_decoder_init(running_machine *machine, struct ntsc_decoder *ntsc, int period, int hue)
-{
-	int j;
-
-	ntsc->period = period;
-	ntsc->I_filter = auto_alloc_array(machine, int, period);
-	ntsc->Q_filter = auto_alloc_array(machine, int, period);
-	ntsc->Y_buffer = auto_alloc_array(machine, int, period);
-	ntsc->I_buffer = auto_alloc_array(machine, int, period);
-	ntsc->Q_buffer = auto_alloc_array(machine, int, period);
-	ntsc_clear(ntsc);
-	for (j=0;j<period;++j)
-	{
-		double angle = M_PI*((hue+(j<<8))/(period*128.0)-33.0/180);
-		ntsc->I_filter[j] = (int)(512.0*cos(angle));
-		ntsc->Q_filter[j] = (int)(512.0*sin(angle));
-	}
-}
-
-
-/* Decode some NTSC data, working from left to right.
-
-   The composite (luma+chroma) values are in "input", scaled to 0-255 values.
-   Red, green and blue bytes (in that order) are placed in "output".
-
-   Note that consecutive calls to ntsc_decode() should be on consecutive input data,
-   or the first ntsc->samples points will be inaccurate. To avoid this inaccuracy,
-   first call ntsc_decode(ntsc, input, NULL, 1) with "input" containing the
-   samples directly before the samples you will subsequently be using.
-*/
-static void ntsc_decode(struct ntsc_decoder *ntsc, UINT8 *input, UINT8 *output, int periods)
-{
-	int j;
-
-	int *I_filter;
-	int *Q_filter;
-	int *Y_buffer;
-	int *I_buffer;
-	int *Q_buffer;
-	int Y_total = ntsc->Y_total;
-	int I_total = ntsc->I_total;
-	int Q_total = ntsc->Q_total;
-	int Y,I,Q;
-	int R,G,B;
-	int period = ntsc->period;
-
-	while ((--periods)>=0)
-	{
-		I_filter = ntsc->I_filter;
-		Q_filter = ntsc->Q_filter;
-		Y_buffer = ntsc->Y_buffer;
-		I_buffer = ntsc->I_buffer;
-		Q_buffer = ntsc->Q_buffer;
-
-		for (j=0;j<period;++j)
-		{
-
-			/* Get next point */
-			Y = *(input++);
-			I = Y * *(I_filter++);
-			Q = Y * *(Q_filter++);
-
-			/* Update running totals */
-			Y_total += Y - *Y_buffer;
-			I_total += I - *I_buffer;
-			Q_total += Q - *Q_buffer;
-
-			/* Save point in buffer */
-			*(Y_buffer++) = Y;
-			*(I_buffer++) = I;
-			*(Q_buffer++) = Q;
-
-			/* Compute averages over entire period */
-			Y = Y_total/period;
-			I = I_total/period;
-			Q = Q_total/period;
-
-			/* Clamp YIQ values to avoid hue drift of oversaturated colors */
-			if (Y>256) Y=256; if (Y<0) Y=0;
-			if (I>39041) I=39041; if (I<-39041) I=-39041;
-			if (Q>34249) Q=34249; if (Q<-34249) Q=-34249;
-
-			/* Convert YIQ to RGB */
-			Y<<=16;
-			R = (Y + 249*I + 159*Q)>>16;
-			G = (Y -  70*I - 166*Q)>>16;
-			B = (Y - 283*I + 436*Q)>>16;
-
-			/* Clamp the RGB values */
-			if (R>255) R=255; if (R<0) R=0;
-			if (G>255) G=255; if (G<0) G=0;
-			if (B>255) B=255; if (B<0) B=0;
-
-			/* Emit the RGB values to the output buffer */
-			*output = R; output++;
-			*output = G; output++;
-			*output = B; output++;
-		}
-	}
-	ntsc->Y_total = Y_total;
-	ntsc->I_total = I_total;
-	ntsc->Q_total = Q_total;
-}
 
 
 /***************************************************************************
@@ -436,19 +285,19 @@ static PALETTE_INIT( pc_cga )
 }
 
 
-static int internal_pc_cga_video_start(running_machine *machine, int personality)
+static int internal_pc_cga_video_start(running_machine &machine)
 {
 	memset(&cga, 0, sizeof(cga));
 	cga.update_row = NULL;
 
-	cga.chr_gen = machine->region( "gfx1" )->base() + 0x1000;
+	cga.chr_gen = machine.region( "gfx1" )->base() + 0x1000;
 
 	state_save_register_item(machine, "pccga", NULL, 0, cga.mode_control);
 	state_save_register_item(machine, "pccga", NULL, 0, cga.color_select);
 	state_save_register_item(machine, "pccga", NULL, 0, cga.status);
 	state_save_register_item(machine, "pccga", NULL, 0, cga.plantronics);
 
-	cga.config_input_port = machine->m_portlist.find("pcvideo_cga_config" );
+	cga.config_input_port = machine.m_portlist.find("pcvideo_cga_config" );
 
 	return 0;
 }
@@ -458,35 +307,64 @@ static int internal_pc_cga_video_start(running_machine *machine, int personality
 static VIDEO_START( pc_cga )
 {
 	int buswidth;
-	address_space *space = cpu_get_address_space(machine->firstcpu, ADDRESS_SPACE_PROGRAM);
-	address_space *spaceio = cpu_get_address_space(machine->firstcpu, ADDRESS_SPACE_IO);
+	address_space *space = machine.firstcpu->memory().space(AS_PROGRAM);
+	address_space *spaceio = machine.firstcpu->memory().space(AS_IO);
 
-	/* Changed video RAM size to full 32k, for cards which support the
-     * Plantronics chipset.
-     * TODO: Cards which don't support Plantronics should repeat at
-     * BC000h */
-	buswidth = device_memory(machine->firstcpu)->space_config(AS_PROGRAM)->m_databus_width;
+	space->install_readwrite_bank(0xb8000, 0xbbfff, 0, 0x04000, "bank11" );
+	buswidth = machine.firstcpu->memory().space_config(AS_PROGRAM)->m_databus_width;
 	switch(buswidth)
 	{
 		case 8:
-			memory_install_read_bank(space, 0xb8000, 0xbbfff, 0, 0x04000, "bank11" );
-			memory_install_write8_handler(space, 0xb8000, 0xbbfff, 0, 0x04000, pc_video_videoram_w );
-			memory_install_read8_handler(spaceio, 0x3d0, 0x3df, 0, 0, pc_cga8_r );
-			memory_install_write8_handler(spaceio, 0x3d0, 0x3df, 0, 0, pc_cga8_w );
+			spaceio->install_legacy_read_handler(0x3d0, 0x3df, FUNC(pc_cga8_r) );
+			spaceio->install_legacy_write_handler(0x3d0, 0x3df, FUNC(pc_cga8_w) );
 			break;
 
 		case 16:
-			memory_install_read_bank(space, 0xb8000, 0xbbfff, 0, 0x04000, "bank11" );
-			memory_install_write16_handler(space, 0xb8000, 0xbbfff, 0, 0x04000, pc_video_videoram16le_w );
-			memory_install_read16_handler(spaceio, 0x3d0, 0x3df, 0, 0, pc_cga16le_r );
-			memory_install_write16_handler(spaceio, 0x3d0, 0x3df, 0, 0, pc_cga16le_w );
+			spaceio->install_legacy_read_handler(0x3d0, 0x3df, FUNC(pc_cga16le_r) );
+			spaceio->install_legacy_write_handler(0x3d0, 0x3df, FUNC(pc_cga16le_w) );
 			break;
 
 		case 32:
-			memory_install_read_bank(space, 0xb8000, 0xbbfff, 0, 0x04000, "bank11" );
-			memory_install_write32_handler(space, 0xb8000, 0xbbfff, 0, 0x04000, pc_video_videoram32_w );
-			memory_install_read32_handler(spaceio, 0x3d0, 0x3df, 0, 0, pc_cga32le_r );
-			memory_install_write32_handler(spaceio, 0x3d0, 0x3df, 0, 0, pc_cga32le_w );
+			spaceio->install_legacy_read_handler(0x3d0, 0x3df, FUNC(pc_cga32le_r) );
+			spaceio->install_legacy_write_handler(0x3d0, 0x3df, FUNC(pc_cga32le_w) );
+			break;
+
+		default:
+			fatalerror("CGA: Bus width %d not supported", buswidth);
+			break;
+	}
+	internal_pc_cga_video_start(machine);
+	cga.videoram_size = 0x4000;
+	cga.videoram = auto_alloc_array(machine, UINT8, 0x4000);
+
+	memory_set_bankptr(machine,"bank11", cga.videoram);
+}
+
+
+static VIDEO_START( pc_cga32k )
+{
+	int buswidth;
+	address_space *space = machine.firstcpu->memory().space(AS_PROGRAM);
+	address_space *spaceio = machine.firstcpu->memory().space(AS_IO);
+
+
+	space->install_readwrite_bank(0xb8000, 0xbffff, "bank11" );
+	buswidth = machine.firstcpu->memory().space_config(AS_PROGRAM)->m_databus_width;
+	switch(buswidth)
+	{
+		case 8:
+			spaceio->install_legacy_read_handler(0x3d0, 0x3df, FUNC(pc_cga8_r) );
+			spaceio->install_legacy_write_handler(0x3d0, 0x3df, FUNC(pc_cga8_w) );
+			break;
+
+		case 16:
+			spaceio->install_legacy_read_handler(0x3d0, 0x3df, FUNC(pc_cga16le_r) );
+			spaceio->install_legacy_write_handler(0x3d0, 0x3df, FUNC(pc_cga16le_w) );
+			break;
+
+		case 32:
+			spaceio->install_legacy_read_handler(0x3d0, 0x3df, FUNC(pc_cga32le_r) );
+			spaceio->install_legacy_write_handler(0x3d0, 0x3df, FUNC(pc_cga32le_w) );
 			break;
 
 		default:
@@ -494,23 +372,19 @@ static VIDEO_START( pc_cga )
 			break;
 	}
 
-	pc_videoram_size = 0x4000;
-	pc_videoram = auto_alloc_array(machine, UINT8, 0x4000);
+	internal_pc_cga_video_start(machine);
 
-	memory_set_bankptr(machine,"bank11", pc_videoram);
+	cga.videoram_size = 0x8000;
+	cga.videoram = auto_alloc_array(machine, UINT8, 0x8000);
 
-	internal_pc_cga_video_start(machine, M6845_PERSONALITY_GENUINE);
-
-	ntsc_decoder_init( machine, &s_ntsc, 8, 256 );
+	memory_set_bankptr(machine,"bank11", cga.videoram);
 }
 
-
-
-static VIDEO_UPDATE( mc6845_cga )
+static SCREEN_UPDATE( mc6845_cga )
 {
-	UINT8 *gfx = screen->machine->region("gfx1")->base();
-	device_t *devconf = screen->machine->device(CGA_MC6845_NAME);
-	mc6845_update( devconf, bitmap, cliprect);
+	UINT8 *gfx = screen->machine().region("gfx1")->base();
+	mc6845_device *mc6845 = screen->machine().device<mc6845_device>(CGA_MC6845_NAME);
+	mc6845->update( bitmap, cliprect);
 
 	/* Check for changes in font dipsetting */
 	switch ( CGA_FONT & 0x01 )
@@ -529,14 +403,14 @@ static VIDEO_UPDATE( mc6845_cga )
 static VIDEO_START( cga_poisk2 )
 {
 	VIDEO_START_CALL(pc_cga);
-	cga.chr_gen = machine->region( "gfx1" )->base() + 0x0000;
+	cga.chr_gen = machine.region( "gfx1" )->base() + 0x0000;
 }
 
-static VIDEO_UPDATE( cga_poisk2 )
+static SCREEN_UPDATE( cga_poisk2 )
 {
-	UINT8 *gfx = screen->machine->region("gfx1")->base();
-	device_t *devconf = screen->machine->device(CGA_MC6845_NAME);
-	mc6845_update( devconf, bitmap, cliprect);
+	UINT8 *gfx = screen->machine().region("gfx1")->base();
+	mc6845_device *mc6845 = screen->machine().device<mc6845_device>(CGA_MC6845_NAME);
+	mc6845->update( bitmap, cliprect);
 
 	/* Check for changes in font dipsetting */
 	switch ( CGA_FONT & 0x01 )
@@ -558,10 +432,10 @@ static VIDEO_UPDATE( cga_poisk2 )
 
 static MC6845_UPDATE_ROW( cga_text_inten_update_row )
 {
-	UINT8 *videoram = pc_videoram;
+	UINT8 *videoram = cga.videoram;
 	UINT16  *p = BITMAP_ADDR16(bitmap, y, 0);
 	int i;
-	running_machine *machine = device->machine;
+	running_machine &machine = device->machine();
 
 	if ( y == 0 ) CGA_LOG(1,"cga_text_inten_update_row",("\n"));
 	for ( i = 0; i < x_count; i++ )
@@ -597,10 +471,10 @@ static MC6845_UPDATE_ROW( cga_text_inten_update_row )
 
 static MC6845_UPDATE_ROW( cga_text_inten_comp_grey_update_row )
 {
-	UINT8 *videoram = pc_videoram;
+	UINT8 *videoram = cga.videoram;
 	UINT16  *p = BITMAP_ADDR16(bitmap, y, 0);
 	int i;
-	running_machine *machine = device->machine;
+	running_machine &machine = device->machine();
 
 	if ( y == 0 ) CGA_LOG(1,"cga_text_inten_update_row",("\n"));
 	for ( i = 0; i < x_count; i++ )
@@ -635,10 +509,10 @@ static MC6845_UPDATE_ROW( cga_text_inten_comp_grey_update_row )
 
 static MC6845_UPDATE_ROW( cga_text_inten_alt_update_row )
 {
-	UINT8 *videoram = pc_videoram;
+	UINT8 *videoram = cga.videoram;
 	UINT16  *p = BITMAP_ADDR16(bitmap, y, 0);
 	int i;
-	running_machine *machine = device->machine;
+	running_machine &machine = device->machine();
 
 	if ( y == 0 ) CGA_LOG(1,"cga_text_inten_alt_update_row",("\n"));
 	for ( i = 0; i < x_count; i++ )
@@ -673,10 +547,10 @@ static MC6845_UPDATE_ROW( cga_text_inten_alt_update_row )
 
 static MC6845_UPDATE_ROW( cga_text_blink_update_row )
 {
-	UINT8 *videoram = pc_videoram;
+	UINT8 *videoram = cga.videoram;
 	UINT16	*p = BITMAP_ADDR16(bitmap, y, 0);
 	int i;
-	running_machine *machine = device->machine;
+	running_machine &machine = device->machine();
 
 	if ( y == 0 ) CGA_LOG(1,"cga_text_blink_update_row",("\n"));
 	for ( i = 0; i < x_count; i++ )
@@ -722,10 +596,10 @@ static MC6845_UPDATE_ROW( cga_text_blink_update_row )
 
 static MC6845_UPDATE_ROW( cga_text_blink_alt_update_row )
 {
-	UINT8 *videoram = pc_videoram;
+	UINT8 *videoram = cga.videoram;
 	UINT16  *p = BITMAP_ADDR16(bitmap, y, 0);
 	int i;
-	running_machine *machine = device->machine;
+	running_machine &machine = device->machine();
 
 	if ( y == 0 ) CGA_LOG(1,"cga_text_blink_alt_update_row",("\n"));
 	for ( i = 0; i < x_count; i++ )
@@ -769,10 +643,10 @@ static MC6845_UPDATE_ROW( cga_text_blink_alt_update_row )
 
 static MC6845_UPDATE_ROW( cga_gfx_4bppl_update_row )
 {
-	UINT8 *videoram = pc_videoram;
+	UINT8 *videoram = cga.videoram;
 	UINT16  *p = BITMAP_ADDR16(bitmap, y, 0);
 	int i;
-	running_machine *machine = device->machine;
+	running_machine &machine = device->machine();
 
 	if ( y == 0 ) CGA_LOG(1,"cga_gfx_4bppl_update_row",("\n"));
 	for ( i = 0; i < x_count; i++ )
@@ -826,45 +700,17 @@ static const UINT8 yc_lut[16][8] =
 
 static MC6845_UPDATE_ROW( cga_gfx_4bpph_update_row )
 {
-	UINT8 *videoram = pc_videoram;
-	UINT8	samples[1280];
-	UINT8	ntsc_decoded[3*1280];
-	int		samp_index = 0;
+	UINT8 *videoram = cga.videoram;
 	UINT16  *p = BITMAP_ADDR16(bitmap, y, 0);
 	int i;
-	running_machine *machine = device->machine;
+	running_machine &machine = device->machine();
 
 	if ( y == 0 ) CGA_LOG(1,"cga_gfx_4bpph_update_row",("\n"));
-if ( NTSC_FILTER )
-{
-	ntsc_clear( &s_ntsc );
-	memset( ntsc_decoded, 0, sizeof(ntsc_decoded));
-}
+
 	for ( i = 0; i < x_count; i++ )
 	{
 		UINT16 offset = ( ( ( ma + i ) << 1 ) & 0x1fff ) | ( ( y & 1 ) << 13 );
 		UINT8 data = videoram[ offset ];
-
-if ( NTSC_FILTER )
-{
-		samples[samp_index] = yc_lut2[yc_lut[data>>4][0]]; samp_index++;
-		samples[samp_index] = yc_lut2[yc_lut[data>>4][1]]; samp_index++;
-		samples[samp_index] = yc_lut2[yc_lut[data>>4][2]]; samp_index++;
-		samples[samp_index] = yc_lut2[yc_lut[data>>4][3]]; samp_index++;
-		samples[samp_index] = yc_lut2[yc_lut[data>>4][4]]; samp_index++;
-		samples[samp_index] = yc_lut2[yc_lut[data>>4][5]]; samp_index++;
-		samples[samp_index] = yc_lut2[yc_lut[data>>4][6]]; samp_index++;
-		samples[samp_index] = yc_lut2[yc_lut[data>>4][7]]; samp_index++;
-
-		samples[samp_index] = yc_lut2[yc_lut[data & 0x0F][0]]; samp_index++;
-		samples[samp_index] = yc_lut2[yc_lut[data & 0x0F][1]]; samp_index++;
-		samples[samp_index] = yc_lut2[yc_lut[data & 0x0F][2]]; samp_index++;
-		samples[samp_index] = yc_lut2[yc_lut[data & 0x0F][3]]; samp_index++;
-		samples[samp_index] = yc_lut2[yc_lut[data & 0x0F][4]]; samp_index++;
-		samples[samp_index] = yc_lut2[yc_lut[data & 0x0F][5]]; samp_index++;
-		samples[samp_index] = yc_lut2[yc_lut[data & 0x0F][6]]; samp_index++;
-		samples[samp_index] = yc_lut2[yc_lut[data & 0x0F][7]]; samp_index++;
-}
 
 		*p = data >> 4; p++;
 		*p = data >> 4; p++;
@@ -877,27 +723,6 @@ if ( NTSC_FILTER )
 
 		data = videoram[ offset + 1 ];
 
-if ( NTSC_FILTER )
-{
-		samples[samp_index] = yc_lut2[yc_lut[data>>4][0]]; samp_index++;
-		samples[samp_index] = yc_lut2[yc_lut[data>>4][1]]; samp_index++;
-		samples[samp_index] = yc_lut2[yc_lut[data>>4][2]]; samp_index++;
-		samples[samp_index] = yc_lut2[yc_lut[data>>4][3]]; samp_index++;
-		samples[samp_index] = yc_lut2[yc_lut[data>>4][4]]; samp_index++;
-		samples[samp_index] = yc_lut2[yc_lut[data>>4][5]]; samp_index++;
-		samples[samp_index] = yc_lut2[yc_lut[data>>4][6]]; samp_index++;
-		samples[samp_index] = yc_lut2[yc_lut[data>>4][7]]; samp_index++;
-
-		samples[samp_index] = yc_lut2[yc_lut[data & 0x0F][0]]; samp_index++;
-		samples[samp_index] = yc_lut2[yc_lut[data & 0x0F][1]]; samp_index++;
-		samples[samp_index] = yc_lut2[yc_lut[data & 0x0F][2]]; samp_index++;
-		samples[samp_index] = yc_lut2[yc_lut[data & 0x0F][3]]; samp_index++;
-		samples[samp_index] = yc_lut2[yc_lut[data & 0x0F][4]]; samp_index++;
-		samples[samp_index] = yc_lut2[yc_lut[data & 0x0F][5]]; samp_index++;
-		samples[samp_index] = yc_lut2[yc_lut[data & 0x0F][6]]; samp_index++;
-		samples[samp_index] = yc_lut2[yc_lut[data & 0x0F][7]]; samp_index++;
-}
-
 		*p = data >> 4; p++;
 		*p = data >> 4; p++;
 		*p = data >> 4; p++;
@@ -907,21 +732,6 @@ if ( NTSC_FILTER )
 		*p = data & 0x0F; p++;
 		*p = data & 0x0F; p++;
 	}
-if (NTSC_FILTER)
-{
-	ntsc_decode( &s_ntsc, samples, ntsc_decoded, 160 );
-	p = BITMAP_ADDR16(bitmap, y, 0);
-	samp_index = 0;
-	for ( i = 0; i < ( 8 * x_count ); i++ )
-	{
-		int r = ( ntsc_decoded[samp_index] + ntsc_decoded[samp_index+3] ) / 2;
-		int g = ( ntsc_decoded[samp_index+1] + ntsc_decoded[samp_index+4] ) / 2;
-		int b = ( ntsc_decoded[samp_index+2] + ntsc_decoded[samp_index+5] ) / 2;
-		*p = 0x8000 + ( ( ( r & 0xF8 ) << 7 ) | ( ( g & 0xF8 ) << 2 ) | ( ( b & 0xF8 ) >> 3 ) );
-		p++;
-		samp_index +=6;
-	}
-}
 }
 
 
@@ -933,10 +743,10 @@ if (NTSC_FILTER)
 
 static MC6845_UPDATE_ROW( cga_gfx_2bpp_update_row )
 {
-	UINT8 *videoram = pc_videoram;
+	UINT8 *videoram = cga.videoram;
 	UINT16  *p = BITMAP_ADDR16(bitmap, y, 0);
 	int i;
-	running_machine *machine = device->machine;
+	running_machine &machine = device->machine();
 
 	if ( y == 0 ) CGA_LOG(1,"cga_gfx_2bpp_update_row",("\n"));
 	for ( i = 0; i < x_count; i++ )
@@ -968,11 +778,11 @@ static MC6845_UPDATE_ROW( cga_gfx_2bpp_update_row )
 
 static MC6845_UPDATE_ROW( cga_gfx_1bpp_update_row )
 {
-	UINT8 *videoram = pc_videoram;
+	UINT8 *videoram = cga.videoram;
 	UINT16  *p = BITMAP_ADDR16(bitmap, y, 0);
 	UINT8	fg = cga.color_select & 0x0F;
 	int i;
-	running_machine *machine = device->machine;
+	running_machine &machine = device->machine();
 
 	if ( y == 0 ) CGA_LOG(1,"cga_gfx_1bpp_update_row",("\n"));
 	for ( i = 0; i < x_count; i++ )
@@ -1083,9 +893,9 @@ static void pc_cga_set_palette_luts(void)
  *  x x x 1 1 1 1 0 - 640x200 graphics. Colour on black on RGB monitor, monochrome on composite monitor.
  *  x x x 1 1 1 1 1 - unknown/invalid.
  */
-static void pc_cga_mode_control_w(running_machine *machine, int data)
+static void pc_cga_mode_control_w(running_machine &machine, int data)
 {
-	device_t *devconf = machine->device(CGA_MC6845_NAME);
+	mc6845_device *mc6845 = machine.device<mc6845_device>(CGA_MC6845_NAME);
 
 	CGA_LOG(1,"CGA_mode_control_w",("$%02x: columns %d, gfx %d, hires %d, blink %d\n",
 		data, (data&1)?80:40, (data>>1)&1, (data>>4)&1, (data>>5)&1));
@@ -1096,7 +906,7 @@ static void pc_cga_mode_control_w(running_machine *machine, int data)
 	switch ( cga.mode_control & 0x3F )
 	{
 	case 0x08: case 0x09: case 0x0C: case 0x0D:
-		mc6845_set_hpixels_per_column( devconf, 8 );
+		mc6845->set_hpixels_per_column( 8 );
 		if ( CGA_MONITOR == CGA_MONITOR_COMPOSITE )
 		{
 			if ( cga.mode_control & 0x04 )
@@ -1117,7 +927,7 @@ static void pc_cga_mode_control_w(running_machine *machine, int data)
 		}
 		break;
 	case 0x0A: case 0x0B: case 0x2A: case 0x2B:
-		mc6845_set_hpixels_per_column( devconf, 8 );
+		mc6845->set_hpixels_per_column( 8 );
 		if ( CGA_MONITOR == CGA_MONITOR_COMPOSITE )
 		{
 			cga.update_row = cga_gfx_4bppl_update_row;
@@ -1128,15 +938,15 @@ static void pc_cga_mode_control_w(running_machine *machine, int data)
 		}
 		break;
 	case 0x0E: case 0x0F: case 0x2E: case 0x2F:
-		mc6845_set_hpixels_per_column( devconf, 8 );
+		mc6845->set_hpixels_per_column( 8 );
 		cga.update_row = cga_gfx_2bpp_update_row;
 		break;
 	case 0x18: case 0x19: case 0x1C: case 0x1D:
-		mc6845_set_hpixels_per_column( devconf, 8 );
+		mc6845->set_hpixels_per_column( 8 );
 		cga.update_row = cga_text_inten_alt_update_row;
 		break;
 	case 0x1A: case 0x1B: case 0x3A: case 0x3B:
-		mc6845_set_hpixels_per_column( devconf, 16 );
+		mc6845->set_hpixels_per_column( 16 );
 		if ( CGA_MONITOR == CGA_MONITOR_COMPOSITE )
 		{
 			cga.update_row = cga_gfx_4bpph_update_row;
@@ -1147,11 +957,11 @@ static void pc_cga_mode_control_w(running_machine *machine, int data)
 		}
 		break;
 	case 0x1E: case 0x1F: case 0x3E: case 0x3F:
-		mc6845_set_hpixels_per_column( devconf, 16 );
+		mc6845->set_hpixels_per_column( 16 );
 		cga.update_row = cga_gfx_1bpp_update_row;
 		break;
 	case 0x28: case 0x29: case 0x2C: case 0x2D:
-		mc6845_set_hpixels_per_column( devconf, 8 );
+		mc6845->set_hpixels_per_column( 8 );
 		if ( CGA_MONITOR == CGA_MONITOR_COMPOSITE )
 		{
 			if ( cga.mode_control & 0x04 )
@@ -1172,7 +982,7 @@ static void pc_cga_mode_control_w(running_machine *machine, int data)
 		}
 		break;
 	case 0x38: case 0x39: case 0x3C: case 0x3D:
-		mc6845_set_hpixels_per_column( devconf, 8 );
+		mc6845->set_hpixels_per_column( 8 );
 		cga.update_row = cga_text_blink_alt_update_row;
 		break;
 	default:
@@ -1188,7 +998,7 @@ static void pc_cga_mode_control_w(running_machine *machine, int data)
 /*
  *  ?W  reserved for color select register on color adapter
  */
-static void pc_cga_color_select_w(running_machine *machine, int data)
+static void pc_cga_color_select_w(running_machine &machine, int data)
 {
 	CGA_LOG(1,"CGA_color_select_w",("$%02x\n", data));
 	cga.color_select = data;
@@ -1201,7 +1011,7 @@ static void pc_cga_color_select_w(running_machine *machine, int data)
 /*
  * Select Plantronics modes
  */
-static void pc_cga_plantronics_w(running_machine *machine, int data)
+static void pc_cga_plantronics_w(running_machine &machine, int data)
 {
 	CGA_LOG(1,"CGA_plantronics_w",("$%02x\n", data));
 
@@ -1223,7 +1033,7 @@ static void pc_cga_plantronics_w(running_machine *machine, int data)
 
 static WRITE8_HANDLER ( char_ram_w )
 {
-	UINT8 *gfx = space->machine->region("gfx1")->base();
+	UINT8 *gfx = space->machine().region("gfx1")->base();
 	logerror("write char ram %04x %02x\n",offset,data);
 	gfx[offset + 0x0000] = data;
 	gfx[offset + 0x0800] = data;
@@ -1236,7 +1046,7 @@ static WRITE32_HANDLER( char_ram_32_w )   { write32le_with_write8_handler(char_r
 
 static READ8_HANDLER ( char_ram_r )
 {
-	UINT8 *gfx = space->machine->region("gfx1")->base();
+	UINT8 *gfx = space->machine().region("gfx1")->base();
 	return gfx[offset];
 }
 
@@ -1245,7 +1055,7 @@ static READ32_HANDLER( char_ram_32_r )   { return read32le_with_read8_handler(ch
 
 static READ8_HANDLER( pc_cga8_r )
 {
-	device_t *devconf = space->machine->device(CGA_MC6845_NAME);
+	mc6845_device *mc6845 = space->machine().device<mc6845_device>(CGA_MC6845_NAME);
 	int data = 0xff;
 	switch( offset )
 	{
@@ -1253,7 +1063,7 @@ static READ8_HANDLER( pc_cga8_r )
 			/* return last written mc6845 address value here? */
 			break;
 		case 1: case 3: case 5: case 7:
-			data = mc6845_register_r( devconf, offset );
+			data = mc6845->register_r( *space, offset );
 			break;
 		case 10:
 			data = cga.vsync | ( ( data & 0x40 ) >> 4 ) | cga.hsync;
@@ -1269,44 +1079,44 @@ static READ8_HANDLER( pc_cga8_r )
 
 static WRITE8_HANDLER( pc_cga8_w )
 {
-	device_t *devconf;
+	mc6845_device *mc6845;
 
 	switch(offset) {
 	case 0: case 2: case 4: case 6:
-		devconf = space->machine->device(CGA_MC6845_NAME);
-		mc6845_address_w( devconf, offset, data );
+		mc6845 = space->machine().device<mc6845_device>(CGA_MC6845_NAME);
+		mc6845->address_w( *space, offset, data );
 		break;
 	case 1: case 3: case 5: case 7:
-		devconf = space->machine->device(CGA_MC6845_NAME);
-		mc6845_register_w( devconf, offset, data );
+		mc6845 = space->machine().device<mc6845_device>(CGA_MC6845_NAME);
+		mc6845->register_w( *space, offset, data );
 		break;
 	case 8:
-		pc_cga_mode_control_w(space->machine, data);
+		pc_cga_mode_control_w(space->machine(), data);
 		break;
 	case 9:
-		pc_cga_color_select_w(space->machine, data);
+		pc_cga_color_select_w(space->machine(), data);
 		break;
 	case 0x0d:
-		pc_cga_plantronics_w(space->machine, data);
+		pc_cga_plantronics_w(space->machine(), data);
 		break;
 	case 0x0f:
 		// Not sure if some all CGA cards have ability to upload char definition
-		UINT8 buswidth = device_memory(space->machine->firstcpu)->space_config(AS_PROGRAM)->m_databus_width;
-		address_space *space_prg = cpu_get_address_space(space->machine->firstcpu, ADDRESS_SPACE_PROGRAM);
+		UINT8 buswidth = space->machine().firstcpu->memory().space_config(AS_PROGRAM)->m_databus_width;
+		address_space *space_prg = space->machine().firstcpu->memory().space(AS_PROGRAM);
 		cga.p3df = data;
 		if (data & 1) {
 			switch(buswidth)
 			{
 				case 8:
-					memory_install_readwrite8_handler(space_prg, 0xb8000, 0xb87ff, 0, 0, char_ram_r,char_ram_w );
+					space_prg->install_legacy_readwrite_handler(0xb8000, 0xb87ff, FUNC(char_ram_r),FUNC(char_ram_w) );
 					break;
 
 				case 16:
-					memory_install_readwrite16_handler(space_prg, 0xb8000, 0xb87ff, 0, 0, char_ram_16le_r,char_ram_16le_w );
+					space_prg->install_legacy_readwrite_handler(0xb8000, 0xb87ff, FUNC(char_ram_16le_r),FUNC(char_ram_16le_w) );
 					break;
 
 				case 32:
-					memory_install_readwrite32_handler(space_prg, 0xb8000, 0xb87ff, 0, 0, char_ram_32_r,char_ram_32_w );
+					space_prg->install_legacy_readwrite_handler(0xb8000, 0xb87ff, FUNC(char_ram_32_r),FUNC(char_ram_32_w) );
 					break;
 
 				default:
@@ -1314,26 +1124,11 @@ static WRITE8_HANDLER( pc_cga8_w )
 					break;
 			}
 		} else {
-			memory_install_read_bank(space_prg, 0xb8000, 0xbbfff, 0, 0x04000, "bank11" );
-			switch(buswidth)
-			{
-				case 8:
-					memory_install_write8_handler(space_prg, 0xb8000, 0xbbfff, 0, 0x04000, pc_video_videoram_w );
-					break;
-
-				case 16:
-					memory_install_write16_handler(space_prg, 0xb8000, 0xbbfff, 0, 0x04000, pc_video_videoram16le_w );
-					break;
-
-				case 32:
-					memory_install_write32_handler(space_prg, 0xb8000, 0xbbfff, 0, 0x04000, pc_video_videoram32_w );
-					break;
-
-				default:
-					fatalerror("CGA: Bus width %d not supported", buswidth);
-					break;
+			if (cga.videoram_size== 0x4000) {
+				space_prg->install_readwrite_bank(0xb8000, 0xbbfff, 0, 0x04000, "bank11" );
+			} else {
+				space_prg->install_readwrite_bank(0xb8000, 0xbffff, "bank11" );
 			}
-
 		}
 		break;
 
@@ -1559,11 +1354,11 @@ static struct
 
 static MC6845_UPDATE_ROW( pc1512_gfx_4bpp_update_row )
 {
-	UINT8 *videoram = pc_videoram;
+	UINT8 *videoram = cga.videoram;
 	UINT16  *p = BITMAP_ADDR16(bitmap, y, 0);
 	UINT16	offset_base = ra << 13;
 	int j;
-	running_machine *machine = device->machine;
+	running_machine &machine = device->machine();
 
 	if ( y == 0 ) CGA_LOG(1,"pc1512_gfx_4bpp_update_row",("\n"));
 	for ( j = 0; j < x_count; j++ )
@@ -1588,21 +1383,21 @@ static MC6845_UPDATE_ROW( pc1512_gfx_4bpp_update_row )
 
 static WRITE8_HANDLER ( pc1512_w )
 {
-	UINT8 *videoram = pc_videoram;
-	device_t *devconf = space->machine->device(CGA_MC6845_NAME);
+	UINT8 *videoram = cga.videoram;
+	mc6845_device *mc6845 = space->machine().device<mc6845_device>(CGA_MC6845_NAME);
 
 	switch (offset)
 	{
 	case 0: case 2: case 4: case 6:
 		data &= 0x1F;
-		mc6845_address_w( devconf, offset, data );
+		mc6845->address_w( *space, offset, data );
 		pc1512.mc6845_address = data;
 		break;
 
 	case 1: case 3: case 5: case 7:
 		if ( ! pc1512.mc6845_locked_register[pc1512.mc6845_address] )
 		{
-			mc6845_register_w( devconf, offset, data );
+			mc6845->register_w( *space, offset, data );
 			if ( mc6845_writeonce_register[pc1512.mc6845_address] )
 			{
 				pc1512.mc6845_locked_register[pc1512.mc6845_address] = 1;
@@ -1618,17 +1413,17 @@ static WRITE8_HANDLER ( pc1512_w )
 		}
 		else
 		{
-			memory_set_bankptr(space->machine,"bank1", videoram + videoram_offset[0]);
+			memory_set_bankptr(space->machine(),"bank1", videoram + videoram_offset[0]);
 		}
 		cga.mode_control = data;
 		switch( cga.mode_control & 0x3F )
 		{
 		case 0x08: case 0x09: case 0x0C: case 0x0D:
-			mc6845_set_hpixels_per_column( devconf, 8 );
+			mc6845->set_hpixels_per_column( 8 );
 			cga.update_row = cga_text_inten_update_row;
 			break;
 		case 0x0A: case 0x0B: case 0x2A: case 0x2B:
-			mc6845_set_hpixels_per_column( devconf, 8 );
+			mc6845->set_hpixels_per_column( 8 );
 			if ( CGA_MONITOR == CGA_MONITOR_COMPOSITE )
 			{
 				cga.update_row = cga_gfx_4bppl_update_row;
@@ -1639,27 +1434,27 @@ static WRITE8_HANDLER ( pc1512_w )
 			}
 			break;
 		case 0x0E: case 0x0F: case 0x2E: case 0x2F:
-			mc6845_set_hpixels_per_column( devconf, 8 );
+			mc6845->set_hpixels_per_column( 8 );
 			cga.update_row = cga_gfx_2bpp_update_row;
 			break;
 		case 0x18: case 0x19: case 0x1C: case 0x1D:
-			mc6845_set_hpixels_per_column( devconf, 8 );
+			mc6845->set_hpixels_per_column( 8 );
 			cga.update_row = cga_text_inten_alt_update_row;
 			break;
 		case 0x1A: case 0x1B: case 0x3A: case 0x3B:
-			mc6845_set_hpixels_per_column( devconf, 8 );
+			mc6845->set_hpixels_per_column( 8 );
 			cga.update_row = pc1512_gfx_4bpp_update_row;
 			break;
 		case 0x1E: case 0x1F: case 0x3E: case 0x3F:
-			mc6845_set_hpixels_per_column( devconf, 16 );
+			mc6845->set_hpixels_per_column( 16 );
 			cga.update_row = cga_gfx_1bpp_update_row;
 			break;
 		case 0x28: case 0x29: case 0x2C: case 0x2D:
-			mc6845_set_hpixels_per_column( devconf, 8 );
+			mc6845->set_hpixels_per_column( 8 );
 			cga.update_row = cga_text_blink_update_row;
 			break;
 		case 0x38: case 0x39: case 0x3C: case 0x3D:
-			mc6845_set_hpixels_per_column( devconf, 8 );
+			mc6845->set_hpixels_per_column( 8 );
 			cga.update_row = cga_text_blink_alt_update_row;
 			break;
 		default:
@@ -1676,7 +1471,7 @@ static WRITE8_HANDLER ( pc1512_w )
 		pc1512.read = data;
 		if ( ( cga.mode_control & 0x12 ) == 0x12 )
 		{
-			memory_set_bankptr(space->machine,"bank1", videoram + videoram_offset[data & 3]);
+			memory_set_bankptr(space->machine(),"bank1", videoram + videoram_offset[data & 3]);
 		}
 		break;
 
@@ -1710,7 +1505,7 @@ static READ8_HANDLER ( pc1512_r )
 
 static WRITE8_HANDLER ( pc1512_videoram_w )
 {
-	UINT8 *videoram = pc_videoram;
+	UINT8 *videoram = cga.videoram;
 	if ( ( cga.mode_control & 0x12 ) == 0x12 )
 	{
 		if (pc1512.write & 1)
@@ -1738,24 +1533,33 @@ WRITE16_HANDLER ( pc1512_videoram16le_w ) { write16le_with_write8_handler(pc1512
 
 static VIDEO_START( pc1512 )
 {
-	pc_videoram_size = 0x10000;
-	pc_videoram = auto_alloc_array(machine, UINT8, 0x10000 );
-	memory_set_bankptr(machine, "bank1", pc_videoram + videoram_offset[0]);
-
 	memset( &pc1512, 0, sizeof ( pc1512 ) );
 	pc1512.write = 0xf;
 	pc1512.read = 0;
 
 	/* PC1512 cut-down 6845 */
-	internal_pc_cga_video_start(machine, M6845_PERSONALITY_PC1512);
+	internal_pc_cga_video_start(machine);
+	cga.videoram_size = 0x10000;
+	cga.videoram = auto_alloc_array(machine, UINT8, 0x10000 );
+
+	address_space *space = machine.firstcpu->memory().space( AS_PROGRAM );
+	address_space *io_space = machine.firstcpu->memory().space( AS_IO );
+
+	space->install_read_bank( 0xb8000, 0xbbfff, 0, 0x0C000, "bank1" );
+	memory_set_bankptr(machine, "bank1", cga.videoram + videoram_offset[0]);
+	space->install_legacy_write_handler( 0xb8000, 0xbbfff, 0, 0x0C000, FUNC(pc1512_videoram16le_w) );
+
+	io_space->install_legacy_read_handler( 0x3d0, 0x3df, FUNC(pc1512_16le_r) );
+	io_space->install_legacy_write_handler( 0x3d0, 0x3df, FUNC(pc1512_16le_w) );
+
 }
 
 
-static VIDEO_UPDATE( mc6845_pc1512 )
+static SCREEN_UPDATE( mc6845_pc1512 )
 {
-	UINT8 *gfx = screen->machine->region("gfx1")->base();
-	device_t *devconf = screen->machine->device(CGA_MC6845_NAME);
-	mc6845_update( devconf, bitmap, cliprect);
+	UINT8 *gfx = screen->machine().region("gfx1")->base();
+	mc6845_device *mc6845 = screen->machine().device<mc6845_device>(CGA_MC6845_NAME);
+	mc6845->update(bitmap, cliprect);
 
 	/* Check for changes in font dipsetting */
 	switch ( CGA_FONT & 0x03 )

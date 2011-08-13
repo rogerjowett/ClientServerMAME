@@ -282,7 +282,8 @@ OSDOBJS = \
 	$(SDLOBJ)/video.o \
 	$(SDLOBJ)/drawsdl.o \
 	$(SDLOBJ)/window.o \
-	$(SDLOBJ)/output.o
+	$(SDLOBJ)/output.o \
+	$(SDLOBJ)/watchdog.o
 
 # Add SDL1.3 support
 ifdef SDL_INSTALL_ROOT
@@ -414,7 +415,7 @@ else
 # files (header files are #include "SDL/something.h", so the extra "/SDL"
 # causes a significant problem)
 INCPATH += `sdl-config --cflags | sed 's:/SDL::'`
-CCOMFLAGS += -DNO_SDL_GLEXT
+#CCOMFLAGS += -DNO_SDL_GLEXT
 # Remove libSDLmain, as its symbols conflict with SDLMain_tmpl.m
 LIBS += `sdl-config --libs | sed 's/-lSDLmain//'` -lpthread
 endif

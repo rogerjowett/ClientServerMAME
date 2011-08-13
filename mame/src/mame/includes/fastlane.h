@@ -7,23 +7,25 @@
 class fastlane_state : public driver_device
 {
 public:
-	fastlane_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	fastlane_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 	/* memory pointers */
-	UINT8 *    videoram1;
-	UINT8 *    videoram2;
-	UINT8 *    paletteram;
-	UINT8 *    spriteram;
-	UINT8 *    k007121_regs;
+	UINT8 *    m_videoram1;
+	UINT8 *    m_videoram2;
+	UINT8 *    m_paletteram;
+	UINT8 *    m_spriteram;
+	UINT8 *    m_k007121_regs;
 
 	/* video-related */
-	tilemap_t    *layer0, *layer1;
-	rectangle  clip0, clip1;
+	tilemap_t    *m_layer0;
+	tilemap_t    *m_layer1;
+	rectangle  m_clip0;
+	rectangle  m_clip1;
 
 	/* devices */
-	device_t *konami2;
-	device_t *k007121;
+	device_t *m_konami2;
+	device_t *m_k007121;
 };
 
 
@@ -36,4 +38,4 @@ WRITE8_HANDLER( fastlane_vram2_w );
 
 PALETTE_INIT( fastlane );
 VIDEO_START( fastlane );
-VIDEO_UPDATE( fastlane );
+SCREEN_UPDATE( fastlane );

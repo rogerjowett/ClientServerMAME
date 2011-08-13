@@ -16,16 +16,11 @@ The timer seems to follow these rules:
 
 
 //**************************************************************************
-//  DEVICE DEFINITIONS
-//**************************************************************************
-
-const device_type RIOT6532 = riot6532_device_config::static_alloc_device_config;
-
-
-
-//**************************************************************************
 //  CONSTANTS
 //**************************************************************************
+
+// device type definition
+const device_type RIOT6532 = &device_creator<riot6532_device>;
 
 enum
 {
@@ -37,68 +32,6 @@ enum
 #define TIMER_FLAG		0x80
 #define PA7_FLAG		0x40
 
-
-
-//**************************************************************************
-//  DEVICE CONFIGURATION
-//**************************************************************************
-
-//-------------------------------------------------
-//  riot6532_device_config - constructor
-//-------------------------------------------------
-
-riot6532_device_config::riot6532_device_config(const machine_config &mconfig, const char *tag, const device_config *owner, UINT32 clock)
-	: device_config(mconfig, static_alloc_device_config, "6532 (RIOT)", tag, owner, clock)
-{
-}
-
-
-//-------------------------------------------------
-//  static_alloc_device_config - allocate a new
-//  configuration object
-//-------------------------------------------------
-
-device_config *riot6532_device_config::static_alloc_device_config(const machine_config &mconfig, const char *tag, const device_config *owner, UINT32 clock)
-{
-	return global_alloc(riot6532_device_config(mconfig, tag, owner, clock));
-}
-
-
-//-------------------------------------------------
-//  alloc_device - allocate a new device object
-//-------------------------------------------------
-
-device_t *riot6532_device_config::alloc_device(running_machine &machine) const
-{
-	return auto_alloc(&machine, riot6532_device(machine, *this));
-}
-
-
-//-------------------------------------------------
-//  device_config_complete - perform any
-//  operations now that the configuration is
-//  complete
-//-------------------------------------------------
-
-void riot6532_device_config::device_config_complete()
-{
-	// inherit a copy of the static data
-	const riot6532_interface *intf = reinterpret_cast<const riot6532_interface *>(static_config());
-	if (intf != NULL)
-	{
-		*static_cast<riot6532_interface *>(this) = *intf;
-	}
-
-	// or initialize to defaults if none provided
-	else
-	{
-		memset(&m_in_a_func, 0, sizeof(m_in_a_func));
-		memset(&m_in_b_func, 0, sizeof(m_in_b_func));
-		memset(&m_out_a_func, 0, sizeof(m_out_a_func));
-		memset(&m_out_b_func, 0, sizeof(m_out_b_func));
-		memset(&m_irq_func, 0, sizeof(m_irq_func));
-	}
-}
 
 
 
@@ -115,13 +48,13 @@ void riot6532_device::update_irqstate()
 {
 	int state = (m_irqstate & m_irqenable);
 
-	if (m_irq_func.write != NULL)
+	if (!m_irq_func.isnull())
 	{
-		devcb_call_write_line(&m_irq_func, (state != 0) ? ASSERT_LINE : CLEAR_LINE);
+		m_irq_func((state != 0) ? ASSERT_LINE : CLEAR_LINE);
 	}
 	else
 	{
-		logerror("%s:6532RIOT chip #%d: no irq callback function\n", cpuexec_describe_context(&m_machine), m_index);
+		logerror("%s:6532RIOT chip #%d: no irq callback function\n", machine().describe_context(), m_index);
 	}
 }
 
@@ -171,13 +104,13 @@ UINT8 riot6532_device::get_timer()
 	/* if counting, return the number of ticks remaining */
 	else if (m_timerstate == TIMER_COUNTING)
 	{
-		return attotime_to_ticks(timer_timeleft(m_timer), clock()) >> m_timershift;
+		return m_timer->remaining().as_ticks(clock()) >> m_timershift;
 	}
 
 	/* if finishing, return the number of ticks without the shift */
 	else
 	{
-		return attotime_to_ticks(timer_timeleft(m_timer), clock());
+		return m_timer->remaining().as_ticks(clock());
 	}
 }
 
@@ -202,7 +135,7 @@ void riot6532_device::timer_end()
 	if(m_timerstate == TIMER_COUNTING)
 	{
 		m_timerstate = TIMER_FINISHING;
-		timer_adjust_oneshot(m_timer, ticks_to_attotime(256, clock()), 0);
+		m_timer->adjust(attotime::from_ticks(256, clock()));
 
 		/* signal timer IRQ as well */
 		m_irqstate |= TIMER_FLAG;
@@ -212,7 +145,7 @@ void riot6532_device::timer_end()
 	/* if we finished finishing, keep spinning */
 	else if (m_timerstate == TIMER_FINISHING)
 	{
-		timer_adjust_oneshot(m_timer, ticks_to_attotime(256, clock()), 0);
+		m_timer->adjust(attotime::from_ticks(256, clock()));
 	}
 }
 
@@ -238,7 +171,7 @@ void riot6532_device::reg_w(UINT8 offset, UINT8 data)
 	if ((offset & 0x14) == 0x14)
 	{
 		static const UINT8 timershift[4] = { 0, 3, 6, 10 };
-		attotime curtime = timer_get_time(&m_machine);
+		attotime curtime = machine().time();
 		INT64 target;
 
 		/* A0-A1 contain the timer divisor */
@@ -259,8 +192,8 @@ void riot6532_device::reg_w(UINT8 offset, UINT8 data)
 
 		/* update the timer */
 		m_timerstate = TIMER_COUNTING;
-		target = attotime_to_ticks(curtime, clock()) + 1 + (data << m_timershift);
-		timer_adjust_oneshot(m_timer, attotime_sub(ticks_to_attotime(target, clock()), curtime), 0);
+		target = curtime.as_ticks(clock()) + 1 + (data << m_timershift);
+		m_timer->adjust(attotime::from_ticks(target, clock()) - curtime);
 	}
 
 	/* if A4 == 0 and A2 == 1, we are writing to the edge detect control */
@@ -296,13 +229,13 @@ void riot6532_device::reg_w(UINT8 offset, UINT8 data)
 		else
 		{
 			port->m_out = data;
-			if (port->m_out_func.write != NULL)
+			if (!port->m_out_func.isnull())
 			{
-				devcb_call_write8(&port->m_out_func, 0, data);
+				port->m_out_func(0, data);
 			}
 			else
 			{
-				logerror("%s:6532RIOT chip %s: Port %c is being written to but has no handler. %02X\n", cpuexec_describe_context(&m_machine), tag(), 'A' + (offset & 1), data);
+				logerror("%s:6532RIOT chip %s: Port %c is being written to but has no handler. %02X\n", machine().describe_context(), tag(), 'A' + (offset & 1), data);
 			}
 		}
 
@@ -378,9 +311,9 @@ UINT8 riot6532_device::reg_r(UINT8 offset)
 		else
 		{
 			/* call the input callback if it exists */
-			if (port->m_in_func.read != NULL)
+			if (!port->m_in_func.isnull())
 			{
-				port->m_in = devcb_call_read8(&port->m_in_func, 0);
+				port->m_in = port->m_in_func(0);
 
 				/* changes to port A need to update the PA7 state */
 				if (port == &m_port[0])
@@ -390,7 +323,7 @@ UINT8 riot6532_device::reg_r(UINT8 offset)
 			}
 			else
 			{
-				logerror("%s:6532RIOT chip %s: Port %c is being read but has no handler\n", cpuexec_describe_context(&m_machine), tag(), 'A' + (offset & 1));
+				logerror("%s:6532RIOT chip %s: Port %c is being read but has no handler\n", machine().describe_context(), tag(), 'A' + (offset & 1));
 			}
 
 			/* apply the DDR to the result */
@@ -506,11 +439,38 @@ UINT8 riot6532_device::portb_out_get()
 //  riot6532_device - constructor
 //-------------------------------------------------
 
-riot6532_device::riot6532_device(running_machine &_machine, const riot6532_device_config &config)
-	: device_t(_machine, config),
-	  m_config(config)
+riot6532_device::riot6532_device(const machine_config &mconfig, const char *tag, device_t *owner, UINT32 clock)
+	: device_t(mconfig, RIOT6532, "6532 (RIOT)", tag, owner, clock)
 {
 }
+
+
+//-------------------------------------------------
+//  device_config_complete - perform any
+//  operations now that the configuration is
+//  complete
+//-------------------------------------------------
+
+void riot6532_device::device_config_complete()
+{
+	// inherit a copy of the static data
+	const riot6532_interface *intf = reinterpret_cast<const riot6532_interface *>(static_config());
+	if (intf != NULL)
+	{
+		*static_cast<riot6532_interface *>(this) = *intf;
+	}
+
+	// or initialize to defaults if none provided
+	else
+	{
+		memset(&m_in_a_cb, 0, sizeof(m_in_a_cb));
+		memset(&m_in_b_cb, 0, sizeof(m_in_b_cb));
+		memset(&m_out_a_cb, 0, sizeof(m_out_a_cb));
+		memset(&m_out_b_cb, 0, sizeof(m_out_b_cb));
+		memset(&m_irq_cb, 0, sizeof(m_irq_cb));
+	}
+}
+
 
 /*-------------------------------------------------
     device_start - device-specific startup
@@ -522,36 +482,36 @@ void riot6532_device::device_start()
 	assert(this != NULL);
 
 	/* set static values */
-	m_index = m_machine.m_devicelist.index(RIOT6532, tag());
+	m_index = machine().devicelist().indexof(RIOT6532, tag());
 
 	/* configure the ports */
-	devcb_resolve_read8(&m_port[0].m_in_func, &m_config.m_in_a_func, this);
-	devcb_resolve_write8(&m_port[0].m_out_func, &m_config.m_out_a_func, this);
-	devcb_resolve_read8(&m_port[1].m_in_func, &m_config.m_in_b_func, this);
-	devcb_resolve_write8(&m_port[1].m_out_func, &m_config.m_out_b_func, this);
+	m_port[0].m_in_func.resolve(m_in_a_cb, *this);
+	m_port[0].m_out_func.resolve(m_out_a_cb, *this);
+	m_port[1].m_in_func.resolve(m_in_b_cb, *this);
+	m_port[1].m_out_func.resolve(m_out_b_cb, *this);
 
 	/* resolve irq func */
-	devcb_resolve_write_line(&m_irq_func, &m_config.m_irq_func, this);
+	m_irq_func.resolve(m_irq_cb, *this);
 
 	/* allocate timers */
-	m_timer = timer_alloc(&m_machine, timer_end_callback, (void *)this);
+	m_timer = machine().scheduler().timer_alloc(FUNC(timer_end_callback), (void *)this);
 
 	/* register for save states */
-	state_save_register_device_item(this, 0, m_port[0].m_in);
-	state_save_register_device_item(this, 0, m_port[0].m_out);
-	state_save_register_device_item(this, 0, m_port[0].m_ddr);
-	state_save_register_device_item(this, 0, m_port[1].m_in);
-	state_save_register_device_item(this, 0, m_port[1].m_out);
-	state_save_register_device_item(this, 0, m_port[1].m_ddr);
+	save_item(NAME(m_port[0].m_in));
+	save_item(NAME(m_port[0].m_out));
+	save_item(NAME(m_port[0].m_ddr));
+	save_item(NAME(m_port[1].m_in));
+	save_item(NAME(m_port[1].m_out));
+	save_item(NAME(m_port[1].m_ddr));
 
-	state_save_register_device_item(this, 0, m_irqstate);
-	state_save_register_device_item(this, 0, m_irqenable);
+	save_item(NAME(m_irqstate));
+	save_item(NAME(m_irqenable));
 
-	state_save_register_device_item(this, 0, m_pa7dir);
-	state_save_register_device_item(this, 0, m_pa7prev);
+	save_item(NAME(m_pa7dir));
+	save_item(NAME(m_pa7prev));
 
-	state_save_register_device_item(this, 0, m_timershift);
-	state_save_register_device_item(this, 0, m_timerstate);
+	save_item(NAME(m_timershift));
+	save_item(NAME(m_timerstate));
 }
 
 
@@ -580,5 +540,5 @@ void riot6532_device::device_reset()
 	/* reset timer states */
 	m_timershift = 0;
 	m_timerstate = TIMER_IDLE;
-	timer_adjust_oneshot(m_timer, attotime_never, 0);
+	m_timer->adjust(attotime::never);
 }

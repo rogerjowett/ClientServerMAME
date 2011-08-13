@@ -3,6 +3,8 @@
 #ifndef __TEK405X__
 #define __TEK405X__
 
+#include "machine/ram.h"
+
 #define MC6800_TAG			"u61"
 #define MC6820_Y_TAG		"u561"
 #define MC6820_X_TAG		"u565"
@@ -11,9 +13,7 @@
 #define MC6820_GPIB_TAG		"u265"
 #define MC6820_COM_TAG		"u5"
 #define MC6850_TAG			"u25"
-#define IEEE488_TAG			"ieee488"
 #define RS232_TAG			"rs232"
-#define SPEAKER_TAG			"speaker"
 #define SCREEN_TAG			"screen"
 
 #define AM2901A_TAG			"am2901a"
@@ -21,22 +21,22 @@
 class tek4051_state : public driver_device
 {
 public:
-	tek4051_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config),
+	tek4051_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag),
 		  m_maincpu(*this, MC6800_TAG),
 		  m_gpib_pia(*this, MC6820_GPIB_TAG),
 		  m_com_pia(*this, MC6820_COM_TAG),
 		  m_acia(*this, MC6850_TAG),
-		  m_ieee(*this, IEEE488_TAG),
+		  m_gpib(*this, IEEE488_TAG),
 		  m_speaker(*this, SPEAKER_TAG),
-		  m_ram(*this, "messram")
+		  m_ram(*this, RAM_TAG)
 	 { }
 
 	required_device<cpu_device> m_maincpu;
 	required_device<device_t> m_gpib_pia;
 	required_device<device_t> m_com_pia;
 	required_device<acia6850_device> m_acia;
-	required_device<device_t> m_ieee;
+	required_device<ieee488_device> m_gpib;
 	required_device<device_t> m_speaker;
 	required_device<device_t> m_ram;
 
@@ -129,10 +129,10 @@ public:
 class tek4052_state : public driver_device
 {
 public:
-	tek4052_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config),
+	tek4052_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag),
 		  m_maincpu(*this, AM2901A_TAG),
-		  m_ram(*this, "messram")
+		  m_ram(*this, RAM_TAG)
 	 { }
 
 	required_device<cpu_device> m_maincpu;

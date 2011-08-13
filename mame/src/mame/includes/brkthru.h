@@ -7,27 +7,28 @@
 class brkthru_state : public driver_device
 {
 public:
-	brkthru_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	brkthru_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 	/* memory pointers */
-	UINT8 * videoram;
-	UINT8 * spriteram;
-	UINT8 * fg_videoram;
-	size_t  videoram_size;
-	size_t  spriteram_size;
-	size_t  fg_videoram_size;
+	UINT8 * m_videoram;
+	UINT8 * m_spriteram;
+	UINT8 * m_fg_videoram;
+	size_t  m_videoram_size;
+	size_t  m_spriteram_size;
+	size_t  m_fg_videoram_size;
 
 	/* video-related */
-	tilemap_t *fg_tilemap, *bg_tilemap;
-	int     bgscroll;
-	int     bgbasecolor;
-	int     flipscreen;
-	//UINT8 *brkthru_nmi_enable; /* needs to be tracked down */
+	tilemap_t *m_fg_tilemap;
+	tilemap_t *m_bg_tilemap;
+	int     m_bgscroll;
+	int     m_bgbasecolor;
+	int     m_flipscreen;
+	//UINT8 *m_brkthru_nmi_enable; /* needs to be tracked down */
 
 	/* devices */
-	device_t *maincpu;
-	device_t *audiocpu;
+	device_t *m_maincpu;
+	device_t *m_audiocpu;
 };
 
 
@@ -38,4 +39,4 @@ WRITE8_HANDLER( brkthru_bgram_w );
 WRITE8_HANDLER( brkthru_fgram_w );
 VIDEO_START( brkthru );
 PALETTE_INIT( brkthru );
-VIDEO_UPDATE( brkthru );
+SCREEN_UPDATE( brkthru );

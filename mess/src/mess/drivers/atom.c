@@ -77,6 +77,10 @@ Hardware:   PPIA 8255
     reserved at present for the file server, and 235 for the printer server. Wire links must be soldered to each network station card during installation, a sugested
     scheme for number allocation is to number normal user stations from one upwards and to number special stations and servers from 255 downwards.
 
+    2011 June 04  - Phill Harvey-Smith
+        Fixed "ERROR" repeating infinite loop, caused by random values in machine_start() being poked into the wrong memory reigion causing the basic ROM to become
+        corrupted. Values are now correctly placed in bytes 0x0008 - 0x000B of RAM.
+
 
 ***************************************************************************/
 
@@ -86,8 +90,8 @@ Hardware:   PPIA 8255
 
     - connect to softwarelist
     - e000 EPROM switching
-    - ERROR repeats ad infinitum
-    - display should be monochrome
+    - display should be monochrome -- Should be optional, Acorn produced a Colour Card, and there is
+        at least one aftermarket Colour card.
     - ram expansion
     - tap files
     - mouse
@@ -107,24 +111,7 @@ Hardware:   PPIA 8255
 
 */
 
-#include "emu.h"
 #include "includes/atom.h"
-#include "cpu/m6502/m6502.h"
-#include "devices/cartslot.h"
-#include "devices/cassette.h"
-#include "devices/flopdrv.h"
-#include "devices/messram.h"
-#include "devices/snapquik.h"
-#include "formats/atom_atm.h"
-#include "formats/atom_tap.h"
-#include "formats/basicdsk.h"
-#include "formats/uef_cas.h"
-#include "machine/ctronics.h"
-#include "machine/6522via.h"
-#include "machine/i8255a.h"
-#include "machine/i8271.h"
-#include "sound/speaker.h"
-#include "video/m6847.h"
 
 /***************************************************************************
     READ/WRITE HANDLERS
@@ -134,32 +121,29 @@ Hardware:   PPIA 8255
     bankswitch - EPROM bankswitch
 -------------------------------------------------*/
 
-static void bankswitch(running_machine *machine)
+void atom_state::bankswitch()
 {
-	atom_state *state = machine->driver_data<atom_state>();
-	address_space *program = cputag_get_address_space(machine, SY6502_TAG, ADDRESS_SPACE_PROGRAM);
+	address_space *program = m_maincpu->memory().space(AS_PROGRAM);
 
-	UINT8 *eprom = machine->region("a000")->base() + (state->eprom << 12);
+	UINT8 *eprom = machine().region(EXTROM_TAG)->base() + (m_eprom << 12);
 
-	memory_install_rom(program, 0xa000, 0xafff, 0, 0, eprom);
+	program->install_rom(0xa000, 0xafff, eprom);
 }
 
 /*-------------------------------------------------
      eprom_r - EPROM slot select read
 -------------------------------------------------*/
 
-static READ8_HANDLER( eprom_r )
+READ8_MEMBER( atom_state::eprom_r )
 {
-	atom_state *state = space->machine->driver_data<atom_state>();
-
-	return state->eprom;
+	return m_eprom;
 }
 
 /*-------------------------------------------------
      eprom_w - EPROM slot select write
 -------------------------------------------------*/
 
-static WRITE8_HANDLER( eprom_w )
+WRITE8_MEMBER( atom_state::eprom_w )
 {
 	/*
 
@@ -176,14 +160,12 @@ static WRITE8_HANDLER( eprom_w )
 
     */
 
-	atom_state *state = space->machine->driver_data<atom_state>();
-
 	/* block A */
-	state->eprom = data & 0x0f;
+	m_eprom = data & 0x0f;
 
 	/* TODO block E */
 
-	bankswitch(space->machine);
+	bankswitch();
 }
 
 /***************************************************************************
@@ -194,18 +176,18 @@ static WRITE8_HANDLER( eprom_w )
     ADDRESS_MAP( atom_mem )
 -------------------------------------------------*/
 
-static ADDRESS_MAP_START( atom_mem, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( atom_mem, AS_PROGRAM, 8, atom_state )
 	AM_RANGE(0x0000, 0x09ff) AM_RAM
-	AM_RANGE(0x0a00, 0x0a03) AM_MIRROR(0x1f8) AM_DEVREADWRITE(I8271_TAG, i8271_r, i8271_w)
-	AM_RANGE(0x0a04, 0x0a04) AM_MIRROR(0x1f8) AM_DEVREADWRITE(I8271_TAG, i8271_data_r, i8271_data_w)
+	AM_RANGE(0x0a00, 0x0a03) AM_MIRROR(0x1f8) AM_DEVREADWRITE_LEGACY(I8271_TAG, i8271_r, i8271_w)
+	AM_RANGE(0x0a04, 0x0a04) AM_MIRROR(0x1f8) AM_DEVREADWRITE_LEGACY(I8271_TAG, i8271_data_r, i8271_data_w)
 	AM_RANGE(0x0a05, 0x7fff) AM_RAM
-	AM_RANGE(0x8000, 0x97ff) AM_RAM AM_BASE_MEMBER(atom_state, video_ram)
+	AM_RANGE(0x8000, 0x97ff) AM_RAM AM_BASE(m_video_ram)
 	AM_RANGE(0x9800, 0x9fff) AM_RAM
-	AM_RANGE(0xa000, 0xafff) AM_ROM AM_REGION("a000", 0)
-	AM_RANGE(0xb000, 0xb003) AM_MIRROR(0x3fc) AM_DEVREADWRITE(INS8255_TAG, i8255a_r, i8255a_w)
-//  AM_RANGE(0xb400, 0xb403) AM_DEVREADWRITE(MC6854_TAG, mc6854_r, mc6854_w)
+	AM_RANGE(0xa000, 0xafff) AM_ROM AM_REGION(EXTROM_TAG, 0)
+	AM_RANGE(0xb000, 0xb003) AM_MIRROR(0x3fc) AM_DEVREADWRITE(INS8255_TAG, i8255_device, read, write)
+//  AM_RANGE(0xb400, 0xb403) AM_DEVREADWRITE_LEGACY(MC6854_TAG, mc6854_r, mc6854_w)
 //  AM_RANGE(0xb404, 0xb404) AM_READ_PORT("ECONET")
-	AM_RANGE(0xb800, 0xb80f) AM_MIRROR(0x3f0) AM_DEVREADWRITE_MODERN(R6522_TAG, via6522_device, read, write)
+	AM_RANGE(0xb800, 0xb80f) AM_MIRROR(0x3f0) AM_DEVREADWRITE(R6522_TAG, via6522_device, read, write)
 	AM_RANGE(0xc000, 0xffff) AM_ROM AM_REGION(SY6502_TAG, 0)
 ADDRESS_MAP_END
 
@@ -213,7 +195,7 @@ ADDRESS_MAP_END
     ADDRESS_MAP( atomeb_mem )
 -------------------------------------------------*/
 
-static ADDRESS_MAP_START( atomeb_mem, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( atomeb_mem, AS_PROGRAM, 8, atom_state )
 	AM_IMPORT_FROM(atom_mem)
 	AM_RANGE(0xbfff, 0xbfff) AM_READWRITE(eprom_r, eprom_w)
 ADDRESS_MAP_END
@@ -228,7 +210,7 @@ ADDRESS_MAP_END
 
 static INPUT_CHANGED( trigger_reset )
 {
-	cputag_set_input_line(field->port->machine, SY6502_TAG, INPUT_LINE_RESET, newval ? CLEAR_LINE : ASSERT_LINE);
+	cputag_set_input_line(field.machine(), SY6502_TAG, INPUT_LINE_RESET, newval ? CLEAR_LINE : ASSERT_LINE);
 }
 
 /*-------------------------------------------------
@@ -361,14 +343,12 @@ INPUT_PORTS_END
 ***************************************************************************/
 
 /*-------------------------------------------------
-    VIDEO_UPDATE( atom )
+    SCREEN_UPDATE( atom )
 -------------------------------------------------*/
 
-static VIDEO_UPDATE( atom )
+bool atom_state::screen_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect)
 {
-	atom_state *state = screen->machine->driver_data<atom_state>();
-
-	return mc6847_update(state->mc6847, bitmap, cliprect);
+	return mc6847_update(m_vdg, &bitmap, &cliprect);
 }
 
 /***************************************************************************
@@ -376,10 +356,10 @@ static VIDEO_UPDATE( atom )
 ***************************************************************************/
 
 /*-------------------------------------------------
-    I8255A_INTERFACE( ppi_intf )
+    I8255_INTERFACE( ppi_intf )
 -------------------------------------------------*/
 
-static WRITE8_DEVICE_HANDLER( ppi_pa_w )
+WRITE8_MEMBER( atom_state::ppi_pa_w )
 {
 	/*
 
@@ -396,19 +376,17 @@ static WRITE8_DEVICE_HANDLER( ppi_pa_w )
 
     */
 
-	atom_state *state = device->machine->driver_data<atom_state>();
-
 	/* keyboard column */
-	state->keylatch = data & 0x0f;
+	m_keylatch = data & 0x0f;
 
 	/* MC6847 */
-	mc6847_ag_w(state->mc6847, BIT(data, 4));
-	mc6847_gm0_w(state->mc6847, BIT(data, 5));
-	mc6847_gm1_w(state->mc6847, BIT(data, 6));
-	mc6847_gm2_w(state->mc6847, BIT(data, 7));
+	mc6847_ag_w(m_vdg, BIT(data, 4));
+	mc6847_gm0_w(m_vdg, BIT(data, 5));
+	mc6847_gm1_w(m_vdg, BIT(data, 6));
+	mc6847_gm2_w(m_vdg, BIT(data, 7));
 }
 
-static READ8_DEVICE_HANDLER( ppi_pb_r )
+READ8_MEMBER( atom_state::ppi_pb_r )
 {
 	/*
 
@@ -425,29 +403,28 @@ static READ8_DEVICE_HANDLER( ppi_pb_r )
 
     */
 
-	atom_state *state = device->machine->driver_data<atom_state>();
 	UINT8 data = 0xff;
 
-	switch (state->keylatch)
+	switch (m_keylatch)
 	{
-	case 0: data &= input_port_read(device->machine, "KEY0"); break;
-	case 1: data &= input_port_read(device->machine, "KEY1"); break;
-	case 2: data &= input_port_read(device->machine, "KEY2"); break;
-	case 3: data &= input_port_read(device->machine, "KEY3"); break;
-	case 4: data &= input_port_read(device->machine, "KEY4"); break;
-	case 5: data &= input_port_read(device->machine, "KEY5"); break;
-	case 6: data &= input_port_read(device->machine, "KEY6"); break;
-	case 7: data &= input_port_read(device->machine, "KEY7"); break;
-	case 8: data &= input_port_read(device->machine, "KEY8"); break;
-	case 9: data &= input_port_read(device->machine, "KEY9"); break;
+	case 0: data &= input_port_read(machine(), "KEY0"); break;
+	case 1: data &= input_port_read(machine(), "KEY1"); break;
+	case 2: data &= input_port_read(machine(), "KEY2"); break;
+	case 3: data &= input_port_read(machine(), "KEY3"); break;
+	case 4: data &= input_port_read(machine(), "KEY4"); break;
+	case 5: data &= input_port_read(machine(), "KEY5"); break;
+	case 6: data &= input_port_read(machine(), "KEY6"); break;
+	case 7: data &= input_port_read(machine(), "KEY7"); break;
+	case 8: data &= input_port_read(machine(), "KEY8"); break;
+	case 9: data &= input_port_read(machine(), "KEY9"); break;
 	}
 
-	data &= input_port_read(device->machine, "KEY10");
+	data &= input_port_read(machine(), "KEY10");
 
 	return data;
 }
 
-static READ8_DEVICE_HANDLER( ppi_pc_r )
+READ8_MEMBER( atom_state::ppi_pc_r )
 {
 	/*
 
@@ -463,27 +440,25 @@ static READ8_DEVICE_HANDLER( ppi_pc_r )
         7       MC6847 FS
 
     */
-
-	atom_state *state = device->machine->driver_data<atom_state>();
 
 	UINT8 data = 0;
 
 	/* 2400 Hz input */
-	data |= state->hz2400 << 4;
+	data |= m_hz2400 << 4;
 
 	/* cassette input */
-	data |= (cassette_input(state->cassette) > 0.0) << 5;
+	data |= (m_cassette->input() > 0.0) << 5;
 
 	/* keyboard RPT */
-	data |= BIT(input_port_read(device->machine, "RPT"), 0) << 6;
+	data |= BIT(input_port_read(machine(), "RPT"), 0) << 6;
 
 	/* MC6847 FS */
-	data |= mc6847_fs_r(state->mc6847) << 7;
+	data |= mc6847_fs_r(m_vdg) << 7;
 
 	return data;
 }
 
-static WRITE8_DEVICE_HANDLER( ppi_pc_w )
+WRITE8_MEMBER( atom_state::ppi_pc_w )
 {
 	/*
 
@@ -500,52 +475,50 @@ static WRITE8_DEVICE_HANDLER( ppi_pc_w )
 
     */
 
-	atom_state *state = device->machine->driver_data<atom_state>();
-
 	/* cassette output */
-	state->pc0 = BIT(data, 0);
-	state->pc1 = BIT(data, 1);
+	m_pc0 = BIT(data, 0);
+	m_pc1 = BIT(data, 1);
 
 	/* speaker output */
-	speaker_level_w(device, BIT(data, 2));
+	speaker_level_w(m_speaker, BIT(data, 2));
 
 	/* MC6847 CSS */
-	mc6847_css_w(state->mc6847, BIT(data, 3));
+	mc6847_css_w(m_vdg, BIT(data, 3));
 }
 
-static I8255A_INTERFACE( ppi_intf )
+static I8255_INTERFACE( ppi_intf )
 {
 	DEVCB_NULL,
-	DEVCB_HANDLER(ppi_pb_r),
-	DEVCB_HANDLER(ppi_pc_r),
-	DEVCB_HANDLER(ppi_pa_w),
+	DEVCB_DRIVER_MEMBER(atom_state, ppi_pa_w),
+	DEVCB_DRIVER_MEMBER(atom_state, ppi_pb_r),
 	DEVCB_NULL,
-	DEVCB_DEVICE_HANDLER(SPEAKER_TAG, ppi_pc_w)
+	DEVCB_DRIVER_MEMBER(atom_state, ppi_pc_r),
+	DEVCB_DRIVER_MEMBER(atom_state, ppi_pc_w)
 };
 
 /*-------------------------------------------------
     via6522_interface via_intf
 -------------------------------------------------*/
 
-static READ8_DEVICE_HANDLER( atom_printer_busy )
+READ8_MEMBER( atom_state::printer_busy )
 {
-	return centronics_busy_r(device) << 7;
+	return centronics_busy_r(m_centronics) << 7;
 }
 
-static WRITE8_DEVICE_HANDLER( atom_printer_data )
+WRITE8_MEMBER( atom_state::printer_data )
 {
-	centronics_data_w(device, 0, data & 0x7f);
+	centronics_data_w(m_centronics, 0, data & 0x7f);
 }
 
 static const via6522_interface via_intf =
 {
-	DEVCB_DEVICE_HANDLER(CENTRONICS_TAG, atom_printer_busy),
+	DEVCB_DRIVER_MEMBER(atom_state, printer_busy),
 	DEVCB_NULL,
 	DEVCB_NULL,
 	DEVCB_NULL,
 	DEVCB_NULL,
 	DEVCB_NULL,
-	DEVCB_DEVICE_HANDLER(CENTRONICS_TAG, atom_printer_data),
+	DEVCB_DRIVER_MEMBER(atom_state, printer_data),
 	DEVCB_NULL,
 	DEVCB_NULL,
 	DEVCB_NULL,
@@ -558,27 +531,26 @@ static const via6522_interface via_intf =
     i8271_interface fdc_intf
 -------------------------------------------------*/
 
-
 static void atom_8271_interrupt_callback(device_t *device, int state)
 {
-	atom_state *drvstate = device->machine->driver_data<atom_state>();
+	atom_state *drvstate = device->machine().driver_data<atom_state>();
 	/* I'm assuming that the nmi is edge triggered */
 	/* a interrupt from the fdc will cause a change in line state, and
     the nmi will be triggered, but when the state changes because the int
     is cleared this will not cause another nmi */
 	/* I'll emulate it like this to be sure */
 
-	if (state!=drvstate->previous_i8271_int_state)
+	if (state!=drvstate->m_previous_i8271_int_state)
 	{
 		if (state)
 		{
 			/* I'll pulse it because if I used hold-line I'm not sure
             it would clear - to be checked */
-			cputag_set_input_line(device->machine, SY6502_TAG, INPUT_LINE_NMI, PULSE_LINE);
+			drvstate->m_maincpu->set_input_line(INPUT_LINE_NMI, PULSE_LINE);
 		}
 	}
 
-	drvstate->previous_i8271_int_state = state;
+	drvstate->m_previous_i8271_int_state = state;
 }
 
 static const i8271_interface fdc_intf =
@@ -595,7 +567,7 @@ static const i8271_interface fdc_intf =
 static const centronics_interface atom_centronics_config =
 {
 	FALSE,
-	DEVCB_DEVICE_LINE_MEMBER(R6522_TAG, via6522_device,write_ca1),
+	DEVCB_DEVICE_LINE_MEMBER(R6522_TAG, via6522_device, write_ca1),
 	DEVCB_NULL,
 	DEVCB_NULL
 };
@@ -605,7 +577,7 @@ static const centronics_interface atom_centronics_config =
 -------------------------------------------------*/
 
 static FLOPPY_OPTIONS_START( atom )
-	FLOPPY_OPTION(atom, "dsk,40t", "Atom disk image", basicdsk_identify_default, basicdsk_construct_default,
+	FLOPPY_OPTION(atom, "dsk,40t", "Atom disk image", basicdsk_identify_default, basicdsk_construct_default, NULL,
 		HEADS([1])
 		TRACKS([40])
 		SECTORS([10])
@@ -614,10 +586,10 @@ static FLOPPY_OPTIONS_START( atom )
 FLOPPY_OPTIONS_END
 
 /*-------------------------------------------------
-    floppy_config atom_floppy_config
+    floppy_interface atom_floppy_interface
 -------------------------------------------------*/
 
-static const floppy_config atom_floppy_config =
+static const floppy_interface atom_floppy_interface =
 {
 	DEVCB_NULL,
 	DEVCB_NULL,
@@ -626,55 +598,50 @@ static const floppy_config atom_floppy_config =
 	DEVCB_NULL,
 	FLOPPY_STANDARD_5_25_SSDD_40,
 	FLOPPY_OPTIONS_NAME(atom),
+	"floppy_5_25",
 	NULL
 };
 
 /*-------------------------------------------------
-    cassette_config atom_cassette_config
+    cassette_interface atom_cassette_interface
 -------------------------------------------------*/
 
 static TIMER_DEVICE_CALLBACK( cassette_output_tick )
 {
-	atom_state *state = timer.machine->driver_data<atom_state>();
+	atom_state *state = timer.machine().driver_data<atom_state>();
 
-	int level = !(!(!state->hz2400 & state->pc1) & state->pc0);
+	int level = !(!(!state->m_hz2400 & state->m_pc1) & state->m_pc0);
 
-	cassette_output(state->cassette, level ? -1.0 : +1.0);
+	state->m_cassette->output(level ? -1.0 : +1.0);
 
-	state->hz2400 = !state->hz2400;
+	state->m_hz2400 = !state->m_hz2400;
 }
 
-static CASSETTE_FORMATLIST_START( atom_cassette_formats )
-	CASSETTE_FORMAT(atom_tap_format)
-	CASSETTE_FORMAT(uef_cassette_format)
-CASSETTE_FORMATLIST_END
-
-static const cassette_config atom_cassette_config =
+static const cassette_interface atom_cassette_interface =
 {
 	atom_cassette_formats,
 	NULL,
 	(cassette_state) (CASSETTE_STOPPED | CASSETTE_MOTOR_ENABLED | CASSETTE_SPEAKER_MUTED),
+	NULL,
 	NULL
 };
 
 /*-------------------------------------------------
-    mc6847_interface atom_mc6847_intf
+    mc6847_interface vdg_intf
 -------------------------------------------------*/
 
-static READ8_DEVICE_HANDLER( atom_mc6847_videoram_r )
+READ8_MEMBER( atom_state::vdg_videoram_r )
 {
-	atom_state *state = device->machine->driver_data<atom_state>();
+	mc6847_as_w(m_vdg, BIT(m_video_ram[offset], 6));
+	mc6847_intext_w(m_vdg, BIT(m_video_ram[offset], 6));
+	mc6847_inv_w(m_vdg, BIT(m_video_ram[offset], 7));
 
-	mc6847_as_w(device, BIT(state->video_ram[offset], 6));
-	mc6847_intext_w(device, BIT(state->video_ram[offset], 6));
-	mc6847_inv_w(device, BIT(state->video_ram[offset], 7));
-
-	return state->video_ram[offset];
+	return m_video_ram[offset];
 }
 
-static const mc6847_interface atom_mc6847_intf =
+static const mc6847_interface vdg_intf =
 {
-	DEVCB_HANDLER(atom_mc6847_videoram_r),
+	DEVCB_DRIVER_MEMBER(atom_state, vdg_videoram_r),
 	DEVCB_NULL,
 	DEVCB_NULL,
 	DEVCB_NULL,
@@ -696,34 +663,30 @@ static const mc6847_interface atom_mc6847_intf =
     MACHINE_START( atom )
 -------------------------------------------------*/
 
-static MACHINE_START( atom )
+void atom_state::machine_start()
 {
-	atom_state *state = machine->driver_data<atom_state>();
-
 	/* this is temporary */
 	/* Kees van Oss mentions that address 8-b are used for the random number
     generator. I don't know if this is hardware, or random data because the
     ram chips are not cleared at start-up. So at this time, these numbers
     are poked into the memory to simulate it. When I have more details I will fix it */
-	machine->region(SY6502_TAG)->base()[0x08] = machine->rand() & 0x0ff;
-	machine->region(SY6502_TAG)->base()[0x09] = machine->rand() & 0x0ff;
-	machine->region(SY6502_TAG)->base()[0x0a] = machine->rand() & 0x0ff;
-	machine->region(SY6502_TAG)->base()[0x0b] = machine->rand() & 0x0ff;
+	UINT8 *m_baseram = (UINT8 *)m_maincpu->memory().space(AS_PROGRAM)->get_write_ptr(0x0000);
 
-	/* find devices */
-	state->mc6847 = machine->device(MC6847_TAG);
-	state->cassette = machine->device(CASSETTE_TAG);
+	m_baseram[0x08] = machine().rand() & 0x0ff;
+	m_baseram[0x09] = machine().rand() & 0x0ff;
+	m_baseram[0x0a] = machine().rand() & 0x0ff;
+	m_baseram[0x0b] = machine().rand() & 0x0ff;
 }
 
 /*-------------------------------------------------
     MACHINE_START( atomeb )
 -------------------------------------------------*/
 
-static MACHINE_START( atomeb )
+void atomeb_state::machine_start()
 {
-	MACHINE_START_CALL(atom);
+	atom_state::machine_start();
 
-	bankswitch(machine);
+	bankswitch();
 }
 
 /***************************************************************************
@@ -782,26 +745,26 @@ static DEVICE_IMAGE_LOAD( atom_cart )
 	if (image.software_entry() == NULL)
 	{
 		size = image.length();
-		temp_copy = auto_alloc_array(image.device().machine, UINT8, size);
+		temp_copy = auto_alloc_array(image.device().machine(), UINT8, size);
 
 		if (size > 0x1000)
 		{
 			image.seterror(IMAGE_ERROR_UNSPECIFIED, "Unsupported cartridge size");
-			auto_free(image.device().machine, temp_copy);
+			auto_free(image.device().machine(), temp_copy);
 			return IMAGE_INIT_FAIL;
 		}
 
 		if (image.fread(temp_copy, size) != size)
 		{
 			image.seterror(IMAGE_ERROR_UNSPECIFIED, "Unable to fully read from file");
-			auto_free(image.device().machine, temp_copy);
+			auto_free(image.device().machine(), temp_copy);
 			return IMAGE_INIT_FAIL;
 		}
 	}
 	else
 	{
 		size = image.get_software_region_length( "rom");
-		temp_copy = auto_alloc_array(image.device().machine, UINT8, size);
+		temp_copy = auto_alloc_array(image.device().machine(), UINT8, size);
 		memcpy(temp_copy, image.get_software_region("rom"), size);
 	}
 
@@ -809,9 +772,9 @@ static DEVICE_IMAGE_LOAD( atom_cart )
 
 	/* With the following, we mirror the cart in the whole memory region */
 	for (i = 0; i < mirror; i++)
-		memcpy(image.device().machine->region(this_cart->region)->base() + this_cart->offset + i * size, temp_copy, size);
+		memcpy(image.device().machine().region(this_cart->region)->base() + this_cart->offset + i * size, temp_copy, size);
 
-	auto_free(image.device().machine, temp_copy);
+	auto_free(image.device().machine(), temp_copy);
 
 	return IMAGE_INIT_PASS;
 }
@@ -829,12 +792,9 @@ static DEVICE_IMAGE_LOAD( atom_cart )
 
 
 static MACHINE_CONFIG_START( atom, atom_state )
-
 	/* basic machine hardware */
-	MCFG_CPU_ADD(SY6502_TAG, M65C02, X2/4)
+	MCFG_CPU_ADD(SY6502_TAG, M6502, X2/4)
 	MCFG_CPU_PROGRAM_MAP(atom_mem)
-
-	MCFG_MACHINE_START( atom )
 
 	/* video hardware */
 	MCFG_SCREEN_ADD(SCREEN_TAG, RASTER)
@@ -843,10 +803,8 @@ static MACHINE_CONFIG_START( atom, atom_state )
 	MCFG_SCREEN_SIZE(320, 25+192+26)
 	MCFG_SCREEN_VISIBLE_AREA(0, 319, 1, 239)
 
-	MCFG_MC6847_ADD(MC6847_TAG, atom_mc6847_intf)
+	MCFG_MC6847_ADD(MC6847_TAG, vdg_intf)
 	MCFG_MC6847_TYPE(M6847_VERSION_ORIGINAL_PAL)
-
-	MCFG_VIDEO_UPDATE(atom)
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
@@ -854,22 +812,22 @@ static MACHINE_CONFIG_START( atom, atom_state )
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
 
 	/* devices */
-	MCFG_TIMER_ADD_PERIODIC("hz2400", cassette_output_tick, HZ(X2/4/416))
+	MCFG_TIMER_ADD_PERIODIC("hz2400", cassette_output_tick, attotime::from_hz(4806)) // X2/4/416
 	MCFG_VIA6522_ADD(R6522_TAG, X2/4, via_intf)
-	MCFG_I8255A_ADD(INS8255_TAG, ppi_intf)
+	MCFG_I8255_ADD(INS8255_TAG, ppi_intf)
 	MCFG_I8271_ADD(I8271_TAG, fdc_intf)
-	MCFG_FLOPPY_2_DRIVES_ADD(atom_floppy_config)
+	MCFG_FLOPPY_2_DRIVES_ADD(atom_floppy_interface)
 	MCFG_CENTRONICS_ADD(CENTRONICS_TAG, atom_centronics_config)
-	MCFG_CASSETTE_ADD(CASSETTE_TAG, atom_cassette_config)
+	MCFG_CASSETTE_ADD(CASSETTE_TAG, atom_cassette_interface)
 	MCFG_QUICKLOAD_ADD("quickload", atom_atm, "atm", 0)
 
 	/* cartridge */
 	MCFG_ATOM_CARTSLOT_ADD("cart")
 
 	/* internal ram */
-	MCFG_RAM_ADD("messram")
+	MCFG_RAM_ADD(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("2K")
-	MCFG_RAM_EXTRA_OPTIONS("4K,6K,8K,10K,12K")
+	MCFG_RAM_EXTRA_OPTIONS("4K,6K,8K,10K,12K,32K")
 
 	/* Software lists */
 	MCFG_SOFTWARE_LIST_ADD("cart_list","atom")
@@ -879,11 +837,9 @@ MACHINE_CONFIG_END
     MACHINE_DRIVER( atomeb )
 -------------------------------------------------*/
 
-static MACHINE_CONFIG_DERIVED( atomeb, atom )
+static MACHINE_CONFIG_DERIVED_CLASS( atomeb, atom, atomeb_state )
 	MCFG_CPU_MODIFY(SY6502_TAG)
 	MCFG_CPU_PROGRAM_MAP(atomeb_mem)
-
-	MCFG_MACHINE_START(atomeb)
 
 	/* cartridges */
 	MCFG_DEVICE_REMOVE("cart")
@@ -937,9 +893,9 @@ ROM_START( atomeb )
 	ROM_LOAD( "afloat.ic21", 0x1000, 0x1000, CRC(81d86af7) SHA1(ebcde5b36cb3a3344567cbba4c7b9fde015f4802) )
 	ROM_LOAD( "dosrom.u15",  0x2000, 0x1000, CRC(c431a9b7) SHA1(71ea0a4b8d9c3caf9718fc7cc279f4306a23b39c) )
 
-	ROM_REGION( 0x10000, "a000", ROMREGION_ERASEFF )
+	ROM_REGION( 0x10000, EXTROM_TAG, ROMREGION_ERASEFF )
 
-	ROM_REGION( 0x2000, "e000", ROMREGION_ERASEFF )
+	ROM_REGION( 0x2000, DOSROM_TAG, ROMREGION_ERASEFF )
 ROM_END
 
 /***************************************************************************

@@ -180,18 +180,18 @@ int ttl74148_enable_output_r(device_t *device)
 
 static DEVICE_START( ttl74148 )
 {
-	ttl74148_config *config = (ttl74148_config *)downcast<const legacy_device_config_base &>(device->baseconfig()).inline_config();
+	ttl74148_config *config = (ttl74148_config *)downcast<const legacy_device_base *>(device)->inline_config();
 	ttl74148_state *state = get_safe_token(device);
     state->output_cb = config->output_cb;
 
-    state_save_register_device_item_array(device, 0, state->input_lines);
-    state_save_register_device_item(device, 0, state->enable_input);
-    state_save_register_device_item(device, 0, state->output);
-    state_save_register_device_item(device, 0, state->output_valid);
-    state_save_register_device_item(device, 0, state->enable_output);
-    state_save_register_device_item(device, 0, state->last_output);
-    state_save_register_device_item(device, 0, state->last_output_valid);
-    state_save_register_device_item(device, 0, state->last_enable_output);
+    device->save_item(NAME(state->input_lines));
+    device->save_item(NAME(state->enable_input));
+    device->save_item(NAME(state->output));
+    device->save_item(NAME(state->output_valid));
+    device->save_item(NAME(state->enable_output));
+    device->save_item(NAME(state->last_output));
+    device->save_item(NAME(state->last_output_valid));
+    device->save_item(NAME(state->last_enable_output));
 }
 
 

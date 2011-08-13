@@ -3,6 +3,8 @@
 #ifndef __BULLET__
 #define __BULLET__
 
+#include "machine/ram.h"
+
 #define Z80_TAG			"u20"
 #define Z80CTC_TAG		"u1"
 #define Z80DMA_TAG		"u50"
@@ -10,19 +12,18 @@
 #define Z80PIO_TAG		"z80pio"
 #define MB8877_TAG		"u55"
 #define CENTRONICS_TAG	"centronics"
-#define TERMINAL_TAG	"terminal"
 
 class bullet_state : public driver_device
 {
 public:
-	bullet_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config),
+	bullet_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag),
 		  m_maincpu(*this, Z80_TAG),
 		  m_ctc(*this, Z80CTC_TAG),
 		  m_dart(*this, Z80DART_TAG),
 		  m_dmac(*this, Z80DMA_TAG),
 		  m_fdc(*this, MB8877_TAG),
-		  m_ram(*this, "messram"),
+		  m_ram(*this, RAM_TAG),
 		  m_floppy0(*this, FLOPPY_0),
 		  m_floppy1(*this, FLOPPY_1),
 		  m_terminal(*this, TERMINAL_TAG),

@@ -59,11 +59,11 @@ Nascom Memory map
 #include "machine/z80pio.h"
 
 /* Devices */
-#include "devices/flopdrv.h"
+#include "imagedev/flopdrv.h"
 #include "formats/basicdsk.h"
-#include "devices/cartslot.h"
-#include "devices/cassette.h"
-#include "devices/messram.h"
+#include "imagedev/cartslot.h"
+#include "imagedev/cassette.h"
+#include "machine/ram.h"
 
 
 /*************************************
@@ -72,9 +72,9 @@ Nascom Memory map
  *
  *************************************/
 
-static ADDRESS_MAP_START( nascom1_mem, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( nascom1_mem, AS_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x07ff) AM_ROM
-	AM_RANGE(0x0800, 0x0bff) AM_RAM AM_BASE_MEMBER(nascom1_state, videoram)
+	AM_RANGE(0x0800, 0x0bff) AM_RAM AM_BASE_MEMBER(nascom1_state, m_videoram)
 	AM_RANGE(0x0c00, 0x0fff) AM_RAM
 	AM_RANGE(0x1000, 0x13ff) AM_RAM	/* 1Kb */
 	AM_RANGE(0x1400, 0x4fff) AM_RAM	/* 16Kb */
@@ -84,7 +84,7 @@ static ADDRESS_MAP_START( nascom1_mem, ADDRESS_SPACE_PROGRAM, 8 )
 ADDRESS_MAP_END
 
 
-static ADDRESS_MAP_START( nascom1_io, ADDRESS_SPACE_IO, 8 )
+static ADDRESS_MAP_START( nascom1_io, AS_IO, 8 )
 	ADDRESS_MAP_GLOBAL_MASK(0x0F)
 	AM_RANGE(0x00, 0x00) AM_READWRITE(nascom1_port_00_r, nascom1_port_00_w)
 	AM_RANGE(0x01, 0x01) AM_READWRITE(nascom1_port_01_r, nascom1_port_01_w)
@@ -93,7 +93,7 @@ static ADDRESS_MAP_START( nascom1_io, ADDRESS_SPACE_IO, 8 )
 ADDRESS_MAP_END
 
 
-static ADDRESS_MAP_START( nascom2_io, ADDRESS_SPACE_IO, 8 )
+static ADDRESS_MAP_START( nascom2_io, AS_IO, 8 )
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 	AM_RANGE(0x00, 0x00) AM_READWRITE(nascom1_port_00_r, nascom1_port_00_w)
 	AM_RANGE(0x01, 0x01) AM_READWRITE(nascom1_port_01_r, nascom1_port_01_w)
@@ -290,11 +290,11 @@ static MACHINE_CONFIG_START( nascom1, nascom1_state )
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(48 * 8, 16 * 16)
 	MCFG_SCREEN_VISIBLE_AREA(0, 48 * 8 - 1, 0, 16 * 16 - 1)
+	MCFG_SCREEN_UPDATE(nascom1)
+
 	MCFG_GFXDECODE(nascom1)
 	MCFG_PALETTE_LENGTH(2)
 	MCFG_PALETTE_INIT(black_and_white)
-
-	MCFG_VIDEO_UPDATE(nascom1)
 
 	MCFG_AY31015_ADD( "hd6402", nascom1_ay31015_config )
 
@@ -303,22 +303,22 @@ static MACHINE_CONFIG_START( nascom1, nascom1_state )
 	/* devices */
 	MCFG_SNAPSHOT_ADD("snapshot", nascom1, "nas", 0.5)
 
-	MCFG_CASSETTE_ADD( "cassette", default_cassette_config )
+	MCFG_CASSETTE_ADD( CASSETTE_TAG, default_cassette_interface )
 
 	/* internal ram */
-	MCFG_RAM_ADD("messram")
+	MCFG_RAM_ADD(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("40K")
 	MCFG_RAM_EXTRA_OPTIONS("1K,16K,32K")
 MACHINE_CONFIG_END
 
 static FLOPPY_OPTIONS_START(nascom2)
-	FLOPPY_OPTION(nascom2_ss, "dsk", "Nascom 2 SS disk image", basicdsk_identify_default, basicdsk_construct_default,
+	FLOPPY_OPTION(nascom2_ss, "dsk", "Nascom 2 SS disk image", basicdsk_identify_default, basicdsk_construct_default, NULL,
 		HEADS([1])
 		TRACKS([80])
 		SECTORS([16])
 		SECTOR_LENGTH([256])
 		FIRST_SECTOR_ID([1]))
-	FLOPPY_OPTION(nascom2_ds, "dsk", "Nascom 2 DS disk image", basicdsk_identify_default, basicdsk_construct_default,
+	FLOPPY_OPTION(nascom2_ds, "dsk", "Nascom 2 DS disk image", basicdsk_identify_default, basicdsk_construct_default, NULL,
 		HEADS([2])
 		TRACKS([80])
 		SECTORS([16])
@@ -326,7 +326,7 @@ static FLOPPY_OPTIONS_START(nascom2)
 		FIRST_SECTOR_ID([1]))
 FLOPPY_OPTIONS_END
 
-static const floppy_config nascom2_floppy_config =
+static const floppy_interface nascom2_floppy_interface =
 {
 	DEVCB_NULL,
 	DEVCB_NULL,
@@ -335,6 +335,7 @@ static const floppy_config nascom2_floppy_config =
 	DEVCB_NULL,
 	FLOPPY_STANDARD_5_25_DSHD,
 	FLOPPY_OPTIONS_NAME(nascom2),
+	NULL,
 	NULL
 };
 
@@ -346,12 +347,13 @@ static MACHINE_CONFIG_DERIVED( nascom2, nascom1 )
 	MCFG_SCREEN_MODIFY("screen")
 	MCFG_SCREEN_SIZE(48 * 8, 16 * 14)
 	MCFG_SCREEN_VISIBLE_AREA(0, 48 * 8 - 1, 0, 16 * 14 - 1)
+	MCFG_SCREEN_UPDATE(nascom2)
+
 	MCFG_GFXDECODE(nascom2)
-	MCFG_VIDEO_UPDATE(nascom2)
 
-	MCFG_WD1793_ADD("wd1793", nascom2_wd17xx_interface )
+	MCFG_FD1793_ADD("wd1793", nascom2_wd17xx_interface )
 
-	MCFG_FLOPPY_4_DRIVES_ADD(nascom2_floppy_config)
+	MCFG_FLOPPY_4_DRIVES_ADD(nascom2_floppy_interface)
 MACHINE_CONFIG_END
 
 

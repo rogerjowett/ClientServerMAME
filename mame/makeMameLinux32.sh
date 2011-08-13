@@ -1,2 +1,2 @@
-make WERROR=0
-cp mame ~/mamehub/src/lnxmame
+make -j4 NOWERROR=1
+cp mame ~/mamehub/Linux/src/lnxmame

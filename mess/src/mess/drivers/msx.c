@@ -5,7 +5,7 @@
 ** - Add support for other MSX models (de,fr,jp,ru etc.)
 
 This following list is probably incomplete. Corrections are welcome.
-
++
 Al Alamiah AX-170
 Al Alamiah AX-350
 Al Alamiah AX-370
@@ -278,17 +278,17 @@ PCB Layouts missing
 #include "emu.h"
 #include "cpu/z80/z80.h"
 #include "deprecat.h"
-#include "machine/i8255a.h"
-#include "machine/tc8521.h"
+#include "machine/i8255.h"
+#include "machine/rp5c01.h"
 #include "machine/wd17xx.h"
 #include "video/tms9928a.h"
 #include "video/v9938.h"
 #include "machine/ctronics.h"
 #include "includes/msx_slot.h"
 #include "includes/msx.h"
-#include "devices/flopdrv.h"
-#include "devices/cartslot.h"
-#include "devices/cassette.h"
+#include "imagedev/flopdrv.h"
+#include "imagedev/cartslot.h"
+#include "imagedev/cassette.h"
 #include "formats/fmsx_cas.h"
 #include "formats/msx_dsk.h"
 #include "sound/ay8910.h"
@@ -297,7 +297,7 @@ PCB Layouts missing
 #include "sound/k051649.h"
 #include "sound/2413intf.h"
 
-static ADDRESS_MAP_START (msx_memory_map, ADDRESS_SPACE_PROGRAM, 8)
+static ADDRESS_MAP_START (msx_memory_map, AS_PROGRAM, 8)
 	AM_RANGE( 0x0000, 0x1fff) AM_READ_BANK("bank1") AM_WRITE( msx_page0_w )
 	AM_RANGE( 0x2000, 0x3fff) AM_READ_BANK("bank2") AM_WRITE( msx_page0_1_w )
 	AM_RANGE( 0x4000, 0x5fff) AM_READ_BANK("bank3") AM_WRITE( msx_page1_w )
@@ -322,7 +322,7 @@ static WRITE8_DEVICE_HANDLER( msx_ay8910_w )
 }
 
 
-static ADDRESS_MAP_START (msx_io_map, ADDRESS_SPACE_IO, 8)
+static ADDRESS_MAP_START (msx_io_map, AS_IO, 8)
 	ADDRESS_MAP_UNMAP_HIGH
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 	AM_RANGE( 0x77, 0x77) AM_WRITE( msx_90in1_w )
@@ -330,14 +330,14 @@ static ADDRESS_MAP_START (msx_io_map, ADDRESS_SPACE_IO, 8)
 	AM_RANGE( 0x90, 0x90) AM_DEVREADWRITE("centronics", msx_printer_status_r, msx_printer_strobe_w)
 	AM_RANGE( 0x91, 0x91) AM_DEVWRITE("centronics", msx_printer_data_w)
 	AM_RANGE( 0xa0, 0xa7) AM_DEVREADWRITE("ay8910", ay8910_r, msx_ay8910_w )
-	AM_RANGE( 0xa8, 0xab) AM_DEVREADWRITE("ppi8255", i8255a_r, i8255a_w )
+	AM_RANGE( 0xa8, 0xab) AM_DEVREADWRITE_MODERN("ppi8255", i8255_device, read, write)
 	AM_RANGE( 0x98, 0x98) AM_READWRITE( TMS9928A_vram_r, TMS9928A_vram_w )
 	AM_RANGE( 0x99, 0x99) AM_READWRITE( TMS9928A_register_r, TMS9928A_register_w )
 	AM_RANGE( 0xd8, 0xd9) AM_READWRITE( msx_kanji_r, msx_kanji_w )
 ADDRESS_MAP_END
 
 
-static ADDRESS_MAP_START (msx2_io_map, ADDRESS_SPACE_IO, 8)
+static ADDRESS_MAP_START (msx2_io_map, AS_IO, 8)
 	ADDRESS_MAP_UNMAP_HIGH
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 	AM_RANGE( 0x77, 0x77) AM_WRITE( msx_90in1_w )
@@ -345,7 +345,7 @@ static ADDRESS_MAP_START (msx2_io_map, ADDRESS_SPACE_IO, 8)
 	AM_RANGE( 0x90, 0x90) AM_DEVREADWRITE("centronics", msx_printer_status_r, msx_printer_strobe_w)
 	AM_RANGE( 0x91, 0x91) AM_DEVWRITE("centronics", msx_printer_data_w)
 	AM_RANGE( 0xa0, 0xa7) AM_DEVREADWRITE("ay8910", ay8910_r, msx_ay8910_w )
-	AM_RANGE( 0xa8, 0xab) AM_DEVREADWRITE("ppi8255", i8255a_r, i8255a_w )
+	AM_RANGE( 0xa8, 0xab) AM_DEVREADWRITE_MODERN("ppi8255", i8255_device, read, write)
 	AM_RANGE( 0x98, 0x98) AM_READWRITE( v9938_0_vram_r, v9938_0_vram_w )
 	AM_RANGE( 0x99, 0x99) AM_READWRITE( v9938_0_status_r, v9938_0_command_w )
 	AM_RANGE( 0x9a, 0x9a) AM_WRITE( v9938_0_palette_w )
@@ -659,6 +659,7 @@ static INPUT_PORTS_START( msx )
 	PORT_INCLUDE( msx_dips )
 INPUT_PORTS_END
 
+#ifdef UNREFERENCED_CODE
 static INPUT_PORTS_START( msxuk )
 	PORT_START("KEY0")
 	KEYB_ROW0
@@ -692,6 +693,7 @@ static INPUT_PORTS_START( msxuk )
 
 	PORT_INCLUDE( msx_dips )
 INPUT_PORTS_END
+#endif
 
 #define KEYB_JAP_ROW0	\
 	PORT_BIT (0x0001, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_CODE(KEYCODE_0) PORT_CHAR('0')					\
@@ -998,7 +1000,7 @@ static const ay8910_interface msx_ay8910_interface =
 static VIDEO_START( msx2 )
 {
 	VIDEO_START_CALL(generic_bitmapped);
-	v9938_init(machine, 0, *machine->primary_screen, machine->generic.tmpbitmap, MODEL_V9938, 0x20000, msx_vdp_interrupt);
+	v9938_init(machine, 0, *machine.primary_screen, machine.generic.tmpbitmap, MODEL_V9938, 0x20000, msx_vdp_interrupt);
 }
 
 #define MSX_XBORDER_PIXELS		15
@@ -1008,15 +1010,16 @@ static VIDEO_START( msx2 )
 #define MSX_VISIBLE_XBORDER_PIXELS	8
 #define MSX_VISIBLE_YBORDER_PIXELS	24
 
-static const cassette_config msx_cassette_config =
+static const cassette_interface msx_cassette_interface =
 {
 	fmsx_cassette_formats,
 	NULL,
 	(cassette_state)(CASSETTE_PLAY),
+	NULL,
 	NULL
 };
 
-static const floppy_config msx_floppy_config =
+static const floppy_interface msx_floppy_interface =
 {
 	DEVCB_NULL,
 	DEVCB_NULL,
@@ -1025,6 +1028,7 @@ static const floppy_config msx_floppy_config =
 	DEVCB_NULL,
 	FLOPPY_STANDARD_5_25_DSHD,
 	FLOPPY_OPTIONS_NAME(msx),
+	NULL,
 	NULL
 };
 
@@ -1048,12 +1052,12 @@ static MACHINE_CONFIG_START( msx, msx_state )
 	MCFG_CPU_PROGRAM_MAP(msx_memory_map)
 	MCFG_CPU_IO_MAP(msx_io_map)
 	MCFG_CPU_VBLANK_INT("screen", msx_interrupt)
-	MCFG_QUANTUM_TIME(HZ(60))
+	MCFG_QUANTUM_TIME(attotime::from_hz(60))
 
 	MCFG_MACHINE_START( msx )
 	MCFG_MACHINE_RESET( msx )
 
-	MCFG_I8255A_ADD( "ppi8255", msx_ppi8255_interface )
+	MCFG_I8255_ADD( "ppi8255", msx_ppi8255_interface )
 
 	/* video hardware */
 	MCFG_FRAGMENT_ADD(tms9928a)
@@ -1067,7 +1071,7 @@ static MACHINE_CONFIG_START( msx, msx_state )
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 	MCFG_SOUND_ADD("dac", DAC, 0)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.10)
-	MCFG_SOUND_WAVE_ADD("wave", "cassette")
+	MCFG_SOUND_WAVE_ADD(WAVE_TAG, CASSETTE_TAG)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 	MCFG_SOUND_ADD("ay8910", AY8910, 1789773)
 	MCFG_SOUND_CONFIG(msx_ay8910_interface)
@@ -1080,11 +1084,11 @@ static MACHINE_CONFIG_START( msx, msx_state )
 	/* printer */
 	MCFG_CENTRONICS_ADD("centronics", standard_centronics)
 
-	MCFG_CASSETTE_ADD( "cassette", msx_cassette_config )
+	MCFG_CASSETTE_ADD( CASSETTE_TAG, msx_cassette_interface )
 
-	MCFG_WD179X_ADD("wd179x", msx_wd17xx_interface )
+	MCFG_FD1793_ADD("wd179x", msx_wd17xx_interface ) // TODO confirm type
 
-	MCFG_FLOPPY_2_DRIVES_ADD(msx_floppy_config)
+	MCFG_FLOPPY_2_DRIVES_ADD(msx_floppy_interface)
 
 	MCFG_FRAGMENT_ADD(msx_cartslot)
 MACHINE_CONFIG_END
@@ -1102,18 +1106,23 @@ MACHINE_CONFIG_END
 #define MSX2_VISIBLE_XBORDER_PIXELS	8 * 2
 #define MSX2_VISIBLE_YBORDER_PIXELS	14 * 2
 
+static RP5C01_INTERFACE( rtc_intf )
+{
+	DEVCB_NULL
+};
+
 static MACHINE_CONFIG_START( msx2, msx_state )
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, 3579545)		  /* 3.579545 MHz */
 	MCFG_CPU_PROGRAM_MAP(msx_memory_map)
 	MCFG_CPU_IO_MAP(msx2_io_map)
 	MCFG_CPU_VBLANK_INT_HACK(msx2_interrupt, 262)
-	MCFG_QUANTUM_TIME(HZ(60))
+	MCFG_QUANTUM_TIME(attotime::from_hz(60))
 
 	MCFG_MACHINE_START( msx2 )
 	MCFG_MACHINE_RESET( msx2 )
 
-	MCFG_I8255A_ADD( "ppi8255", msx_ppi8255_interface )
+	MCFG_I8255_ADD( "ppi8255", msx_ppi8255_interface )
 
 	/* video hardware */
 	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
@@ -1123,17 +1132,18 @@ static MACHINE_CONFIG_START( msx2, msx_state )
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(MSX2_TOTAL_XRES_PIXELS, MSX2_TOTAL_YRES_PIXELS)
 	MCFG_SCREEN_VISIBLE_AREA(MSX2_XBORDER_PIXELS - MSX2_VISIBLE_XBORDER_PIXELS, MSX2_TOTAL_XRES_PIXELS - MSX2_XBORDER_PIXELS + MSX2_VISIBLE_XBORDER_PIXELS - 1, MSX2_YBORDER_PIXELS - MSX2_VISIBLE_YBORDER_PIXELS, MSX2_TOTAL_YRES_PIXELS - MSX2_YBORDER_PIXELS + MSX2_VISIBLE_YBORDER_PIXELS - 1)
+	MCFG_SCREEN_UPDATE(generic_bitmapped)
+
 	MCFG_PALETTE_LENGTH(512)
 	MCFG_PALETTE_INIT(v9938)
 
 	MCFG_VIDEO_START(msx2)
-	MCFG_VIDEO_UPDATE(generic_bitmapped)
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 	MCFG_SOUND_ADD("dac", DAC, 0)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.10)
-	MCFG_SOUND_WAVE_ADD("wave", "cassette")
+	MCFG_SOUND_WAVE_ADD(WAVE_TAG, CASSETTE_TAG)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 	MCFG_SOUND_ADD("ay8910", AY8910, 1789773)
 	MCFG_SOUND_CONFIG(msx_ay8910_interface)
@@ -1143,20 +1153,18 @@ static MACHINE_CONFIG_START( msx2, msx_state )
 	MCFG_SOUND_ADD("ym2413", YM2413, 3579545)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
 
-	MCFG_NVRAM_HANDLER( msx2 )
-
 	/* printer */
 	MCFG_CENTRONICS_ADD("centronics", standard_centronics)
 
 	/* cassette */
-	MCFG_CASSETTE_ADD( "cassette", msx_cassette_config )
+	MCFG_CASSETTE_ADD( CASSETTE_TAG, msx_cassette_interface )
 
 	/* real time clock */
-	MCFG_TC8521_ADD("rtc", default_tc8521_interface)
+	MCFG_RP5C01_ADD("rtc", XTAL_32_768kHz, rtc_intf)
 
-	MCFG_WD179X_ADD("wd179x", msx_wd17xx_interface )
+	MCFG_FD1793_ADD("wd179x", msx_wd17xx_interface ) // TODO confirm type
 
-	MCFG_FLOPPY_2_DRIVES_ADD(msx_floppy_config)
+	MCFG_FLOPPY_2_DRIVES_ADD(msx_floppy_interface)
 
 	MCFG_FRAGMENT_ADD(msx_cartslot)
 MACHINE_CONFIG_END

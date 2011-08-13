@@ -4,6 +4,9 @@
 
         12/05/2009 Skeleton driver.
 
+
+    http://www.pisi.com.pl/piotr433/index.htm#mk90
+
 ****************************************************************************/
 
 #include "emu.h"
@@ -13,17 +16,24 @@
 class mk90_state : public driver_device
 {
 public:
-	mk90_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	mk90_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 };
 
 
-static ADDRESS_MAP_START(mk90_mem, ADDRESS_SPACE_PROGRAM, 16)
+static ADDRESS_MAP_START( mk90_mem, AS_PROGRAM, 16 )
 	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE( 0x0000, 0x3fff ) AM_RAM // RAM
-	AM_RANGE( 0x4000, 0x7fff ) AM_ROM // Extension ROM
-	AM_RANGE( 0x8000, 0xffff ) AM_ROM // Main ROM
+	AM_RANGE(0x0000, 0x3fff) AM_RAM // RAM
+	AM_RANGE(0x4000, 0x7fff) AM_ROM // Extension ROM
+	AM_RANGE(0x8000, 0xffff) AM_ROM // Main ROM
+//  AM_RANGE(0xe800, 0xe801) LCD address
+//  AM_RANGE(0xe802, 0xe803) LCD data
+//  AM_RANGE(0xe810, 0xe810) serial bus controller data
+//  AM_RANGE(0xe812, 0xe813) serial bus controller transfer rate
+//  AM_RANGE(0xe814, 0xe814) serial bus controller control/status
+//  AM_RANGE(0xe816, 0xe816) serial bus controller command
+//  AM_RANGE(0xea00, 0xea7e) RTC
 ADDRESS_MAP_END
 
 /* Input ports */
@@ -39,14 +49,14 @@ static VIDEO_START( mk90 )
 {
 }
 
-static VIDEO_UPDATE( mk90 )
+static SCREEN_UPDATE( mk90 )
 {
     return 0;
 }
 
 static const struct t11_setup t11_data =
 {
-	1 << 13			/* start from 8000 */
+	0xf600
 };
 
 static MACHINE_CONFIG_START( mk90, mk90_state )
@@ -64,11 +74,12 @@ static MACHINE_CONFIG_START( mk90, mk90_state )
     MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
     MCFG_SCREEN_SIZE(640, 480)
     MCFG_SCREEN_VISIBLE_AREA(0, 640-1, 0, 480-1)
+    MCFG_SCREEN_UPDATE(mk90)
+
     MCFG_PALETTE_LENGTH(2)
     MCFG_PALETTE_INIT(black_and_white)
 
     MCFG_VIDEO_START(mk90)
-    MCFG_VIDEO_UPDATE(mk90)
 MACHINE_CONFIG_END
 
 /* ROM definition */

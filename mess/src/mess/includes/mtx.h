@@ -7,7 +7,8 @@
 #ifndef __MTX__
 #define __MTX__
 
-#include "devices/snapquik.h"
+#include "imagedev/snapquik.h"
+#include "imagedev/cassette.h"
 
 #define Z80_TAG			"z80"
 #define Z80CTC_TAG		"z80ctc"
@@ -17,33 +18,32 @@
 #define SN76489A_TAG	"sn76489a"
 #define MC6845_TAG		"mc6845"
 #define SCREEN_TAG		"screen"
-#define CASSETTE_TAG	"cassette"
 #define CENTRONICS_TAG	"centronics"
 
 class mtx_state : public driver_device
 {
 public:
-	mtx_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	mtx_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 	/* keyboard state */
-	UINT8 key_sense;
+	UINT8 m_key_sense;
 
 	/* video state */
-	UINT8 *video_ram;
-	UINT8 *attr_ram;
+	UINT8 *m_video_ram;
+	UINT8 *m_attr_ram;
 
 	/* sound state */
-	UINT8 sound_latch;
+	UINT8 m_sound_latch;
 
 	/* devices */
-	device_t *z80ctc;
-	device_t *z80dart;
-	device_t *cassette;
-	device_t *centronics;
+	device_t *m_z80ctc;
+	device_t *m_z80dart;
+	cassette_image_device *m_cassette;
+	device_t *m_centronics;
 
 	/* timers */
-	device_t *cassette_timer;
+	device_t *m_cassette_timer;
 };
 
 /*----------- defined in machine/mtx.c -----------*/

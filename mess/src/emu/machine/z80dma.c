@@ -28,14 +28,6 @@
 
 
 //**************************************************************************
-//  DEVICE DEFINITIONS
-//**************************************************************************
-
-const device_type Z80DMA = z80dma_device_config::static_alloc_device_config;
-
-
-
-//**************************************************************************
 //  CONSTANTS
 //**************************************************************************
 
@@ -111,8 +103,6 @@ const int TM_SEARCH_TRANSFER	= 0x03;
 #define PORTB_ADDRESS			((PORTB_ADDRESS_H<<8) | PORTB_ADDRESS_L)
 #define BLOCKLEN				((BLOCKLEN_H<<8) | BLOCKLEN_L)
 
-#define PORTA_STEP				(((WR1 >> 4) & 0x03)*2-1)
-#define PORTB_STEP				(((WR2 >> 4) & 0x03)*2-1)
 #define PORTA_INC				(WR1 & 0x10)
 #define PORTB_INC				(WR2 & 0x10)
 #define PORTA_FIXED				(((WR1 >> 4) & 0x02) == 0x02)
@@ -143,38 +133,20 @@ const int TM_SEARCH_TRANSFER	= 0x03;
 
 
 //**************************************************************************
-//  DEVICE CONFIGURATION
+//  LIVE DEVICE
 //**************************************************************************
 
+// device type definition
+const device_type Z80DMA = &device_creator<z80dma_device>;
+
 //-------------------------------------------------
-//  z80dma_device_config - constructor
+//  z80dma_device - constructor
 //-------------------------------------------------
 
-z80dma_device_config::z80dma_device_config(const machine_config &mconfig, const char *tag, const device_config *owner, UINT32 clock)
-	: device_config(mconfig, static_alloc_device_config, "Z8410", tag, owner, clock),
-	  device_config_z80daisy_interface(mconfig, *this)
+z80dma_device::z80dma_device(const machine_config &mconfig, const char *tag, device_t *owner, UINT32 clock)
+	: device_t(mconfig, Z80DMA, "Z8410", tag, owner, clock),
+	  device_z80daisy_interface(mconfig, *this)
 {
-}
-
-
-//-------------------------------------------------
-//  static_alloc_device_config - allocate a new
-//  configuration object
-//-------------------------------------------------
-
-device_config *z80dma_device_config::static_alloc_device_config(const machine_config &mconfig, const char *tag, const device_config *owner, UINT32 clock)
-{
-	return global_alloc(z80dma_device_config(mconfig, tag, owner, clock));
-}
-
-
-//-------------------------------------------------
-//  alloc_device - allocate a new device object
-//-------------------------------------------------
-
-device_t *z80dma_device_config::alloc_device(running_machine &machine) const
-{
-	return auto_alloc(&machine, z80dma_device(machine, *this));
 }
 
 
@@ -184,7 +156,7 @@ device_t *z80dma_device_config::alloc_device(running_machine &machine) const
 //  complete
 //-------------------------------------------------
 
-void z80dma_device_config::device_config_complete()
+void z80dma_device::device_config_complete()
 {
 	// inherit a copy of the static data
 	const z80dma_interface *intf = reinterpret_cast<const z80dma_interface *>(static_config());
@@ -194,31 +166,14 @@ void z80dma_device_config::device_config_complete()
 	// or initialize to defaults if none provided
 	else
 	{
-		memset(&m_out_busreq_func, 0, sizeof(m_out_busreq_func));
-		memset(&m_out_int_func, 0, sizeof(m_out_int_func));
-		memset(&m_out_bao_func, 0, sizeof(m_out_bao_func));
-		memset(&m_in_mreq_func, 0, sizeof(m_in_mreq_func));
-		memset(&m_out_mreq_func, 0, sizeof(m_out_mreq_func));
-		memset(&m_in_iorq_func, 0, sizeof(m_in_iorq_func));
-		memset(&m_out_iorq_func, 0, sizeof(m_out_iorq_func));
+		memset(&m_out_busreq_cb, 0, sizeof(m_out_busreq_cb));
+		memset(&m_out_int_cb, 0, sizeof(m_out_int_cb));
+		memset(&m_out_bao_cb, 0, sizeof(m_out_bao_cb));
+		memset(&m_in_mreq_cb, 0, sizeof(m_in_mreq_cb));
+		memset(&m_out_mreq_cb, 0, sizeof(m_out_mreq_cb));
+		memset(&m_in_iorq_cb, 0, sizeof(m_in_iorq_cb));
+		memset(&m_out_iorq_cb, 0, sizeof(m_out_iorq_cb));
 	}
-}
-
-
-
-//**************************************************************************
-//  LIVE DEVICE
-//**************************************************************************
-
-//-------------------------------------------------
-//  z80dma_device - constructor
-//-------------------------------------------------
-
-z80dma_device::z80dma_device(running_machine &_machine, const z80dma_device_config &_config)
-	: device_t(_machine, _config),
-	  device_z80daisy_interface(_machine, _config, *this),
-	  m_config(_config)
-{
 }
 
 
@@ -229,35 +184,35 @@ z80dma_device::z80dma_device(running_machine &_machine, const z80dma_device_conf
 void z80dma_device::device_start()
 {
 	// resolve callbacks
-	devcb_resolve_write_line(&m_out_busreq_func, &m_config.m_out_busreq_func, this);
-	devcb_resolve_write_line(&m_out_int_func, &m_config.m_out_int_func, this);
-	devcb_resolve_write_line(&m_out_bao_func, &m_config.m_out_bao_func, this);
-	devcb_resolve_read8(&m_in_mreq_func, &m_config.m_in_mreq_func, this);
-	devcb_resolve_write8(&m_out_mreq_func, &m_config.m_out_mreq_func, this);
-	devcb_resolve_read8(&m_in_iorq_func, &m_config.m_in_iorq_func, this);
-	devcb_resolve_write8(&m_out_iorq_func, &m_config.m_out_iorq_func, this);
+	m_out_busreq_func.resolve(m_out_busreq_cb, *this);
+	m_out_int_func.resolve(m_out_int_cb, *this);
+	m_out_bao_func.resolve(m_out_bao_cb, *this);
+	m_in_mreq_func.resolve(m_in_mreq_cb, *this);
+	m_out_mreq_func.resolve(m_out_mreq_cb, *this);
+	m_in_iorq_func.resolve(m_in_iorq_cb, *this);
+	m_out_iorq_func.resolve(m_out_iorq_cb, *this);
 
 	// allocate timer
-	m_timer = timer_alloc(&m_machine, static_timerproc, (void *)this);
+	m_timer = machine().scheduler().timer_alloc(FUNC(static_timerproc), (void *)this);
 
 	// register for state saving
-	state_save_register_device_item_array(this, 0, m_regs);
-	state_save_register_device_item_array(this, 0, m_regs_follow);
-	state_save_register_device_item(this, 0, m_num_follow);
-	state_save_register_device_item(this, 0, m_cur_follow);
-	state_save_register_device_item(this, 0, m_status);
-	state_save_register_device_item(this, 0, m_dma_enabled);
-	state_save_register_device_item(this, 0, m_vector);
-	state_save_register_device_item(this, 0, m_ip);
-	state_save_register_device_item(this, 0, m_ius);
-	state_save_register_device_item(this, 0, m_addressA);
-	state_save_register_device_item(this, 0, m_addressB);
-	state_save_register_device_item(this, 0, m_count);
-	state_save_register_device_item(this, 0, m_rdy);
-	state_save_register_device_item(this, 0, m_force_ready);
-	state_save_register_device_item(this, 0, m_is_read);
-	state_save_register_device_item(this, 0, m_cur_cycle);
-	state_save_register_device_item(this, 0, m_latch);
+	save_item(NAME(m_regs));
+	save_item(NAME(m_regs_follow));
+	save_item(NAME(m_num_follow));
+	save_item(NAME(m_cur_follow));
+	save_item(NAME(m_status));
+	save_item(NAME(m_dma_enabled));
+	save_item(NAME(m_vector));
+	save_item(NAME(m_ip));
+	save_item(NAME(m_ius));
+	save_item(NAME(m_addressA));
+	save_item(NAME(m_addressB));
+	save_item(NAME(m_count));
+	save_item(NAME(m_rdy));
+	save_item(NAME(m_force_ready));
+	save_item(NAME(m_is_read));
+	save_item(NAME(m_cur_cycle));
+	save_item(NAME(m_latch));
 }
 
 
@@ -389,7 +344,7 @@ int z80dma_device::is_ready()
 
 void z80dma_device::interrupt_check()
 {
-	devcb_call_write_line(&m_out_int_func, m_ip ? ASSERT_LINE : CLEAR_LINE);
+	m_out_int_func(m_ip ? ASSERT_LINE : CLEAR_LINE);
 }
 
 
@@ -438,22 +393,22 @@ void z80dma_device::do_read()
 			if (PORTA_IS_SOURCE)
 			{
 				if (PORTA_MEMORY)
-					m_latch = devcb_call_read8(&m_in_mreq_func, m_addressA);
+					m_latch = m_in_mreq_func(m_addressA);
 				else
-					m_latch = devcb_call_read8(&m_in_iorq_func, m_addressA);
+					m_latch = m_in_iorq_func(m_addressA);
 
 				if (LOG) logerror("Z80DMA '%s' A src: %04x %s -> data: %02x\n", tag(), m_addressA, PORTA_MEMORY ? "mem" : "i/o", m_latch);
-				m_addressA += PORTA_FIXED ? 0 : PORTA_INC ? PORTA_STEP : -PORTA_STEP;
+				m_addressA += PORTA_FIXED ? 0 : PORTA_INC ? 1 : -1;
 			}
 			else
 			{
 				if (PORTB_MEMORY)
-					m_latch = devcb_call_read8(&m_in_mreq_func, m_addressB);
+					m_latch = m_in_mreq_func(m_addressB);
 				else
-					m_latch = devcb_call_read8(&m_in_iorq_func, m_addressB);
+					m_latch = m_in_iorq_func(m_addressB);
 
 				if (LOG) logerror("Z80DMA '%s' B src: %04x %s -> data: %02x\n", tag(), m_addressB, PORTB_MEMORY ? "mem" : "i/o", m_latch);
-				m_addressB += PORTB_FIXED ? 0 : PORTB_INC ? PORTB_STEP : -PORTB_STEP;
+				m_addressB += PORTB_FIXED ? 0 : PORTB_INC ? 1 : -1;
 			}
 			break;
 		case TM_SEARCH_TRANSFER:
@@ -485,22 +440,22 @@ int z80dma_device::do_write()
 			if (PORTA_IS_SOURCE)
 			{
 				if (PORTB_MEMORY)
-					devcb_call_write8(&m_out_mreq_func, m_addressB, m_latch);
+					m_out_mreq_func(m_addressB, m_latch);
 				else
-					devcb_call_write8(&m_out_iorq_func, m_addressB, m_latch);
+					m_out_iorq_func(m_addressB, m_latch);
 
 				if (LOG) logerror("Z80DMA '%s' B dst: %04x %s\n", tag(), m_addressB, PORTB_MEMORY ? "mem" : "i/o");
-				m_addressB += PORTB_FIXED ? 0 : PORTB_INC ? PORTB_STEP : -PORTB_STEP;
+				m_addressB += PORTB_FIXED ? 0 : PORTB_INC ? 1 : -1;
 			}
 			else
 			{
 				if (PORTA_MEMORY)
-					devcb_call_write8(&m_out_mreq_func, m_addressA, m_latch);
+					m_out_mreq_func(m_addressA, m_latch);
 				else
-					devcb_call_write8(&m_out_iorq_func, m_addressA, m_latch);
+					m_out_iorq_func(m_addressA, m_latch);
 
 				if (LOG) logerror("Z80DMA '%s' A dst: %04x %s\n", tag(), m_addressA, PORTA_MEMORY ? "mem" : "i/o");
-				m_addressA += PORTA_FIXED ? 0 : PORTA_INC ? PORTA_STEP : -PORTA_STEP;
+				m_addressA += PORTA_FIXED ? 0 : PORTA_INC ? 1 : -1;
 			}
 			m_count--;
 			done = (m_count == 0xFFFF);
@@ -606,9 +561,9 @@ void z80dma_device::update_status()
 	{
 		m_is_read = true;
 		m_cur_cycle = (PORTA_IS_SOURCE ? PORTA_CYCLE_LEN : PORTB_CYCLE_LEN);
-		next = ATTOTIME_IN_HZ(clock());
-		timer_adjust_periodic(m_timer,
-			attotime_zero,
+		next = attotime::from_hz(clock());
+		m_timer->adjust(
+			attotime::zero,
 			0,
 			// 1 byte transferred in 4 clock cycles
 			next);
@@ -618,12 +573,12 @@ void z80dma_device::update_status()
 		if (m_is_read)
 		{
 			// no transfers active right now
-			timer_reset(m_timer, attotime_never);
+			m_timer->reset();
 		}
 	}
 
 	// set the busreq line
-	devcb_call_write_line(&m_out_busreq_func, pending_transfer ? ASSERT_LINE : CLEAR_LINE);
+	m_out_busreq_func(pending_transfer ? ASSERT_LINE : CLEAR_LINE);
 }
 
 
@@ -823,6 +778,8 @@ void z80dma_device::write(UINT8 data)
 					fatalerror("Z80DMA '%s' Unknown WR6 command %02x", tag(), data);
 			}
 		}
+		else if(data == 0x8e) //newtype on Sharp X1, unknown purpose
+			printf("Z80DMA '%s' Unknown base register %02x\n", tag(), data);
 		else
 			fatalerror("Z80DMA '%s' Unknown base register %02x", tag(), data);
 		m_cur_follow = 0;
@@ -876,7 +833,7 @@ void z80dma_device::rdy_write_callback(int state)
 void z80dma_device::rdy_w(int state)
 {
 	if (LOG) logerror("Z80DMA '%s' RDY: %d Active High: %d\n", tag(), state, READY_ACTIVE_HIGH);
-	timer_call_after_resynch(&m_machine, (void *)this, state, static_rdy_write_callback);
+	machine().scheduler().synchronize(FUNC(static_rdy_write_callback), state, (void *)this);
 }
 
 

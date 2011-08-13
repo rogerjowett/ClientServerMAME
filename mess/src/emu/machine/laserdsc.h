@@ -70,14 +70,13 @@ typedef void (*vp931_data_ready_func)(device_t *device, int state);
 typedef struct _laserdisc_config laserdisc_config;
 struct _laserdisc_config
 {
-	UINT32					type;
 	laserdisc_get_disc_func	getdisc;
 	laserdisc_audio_func	audio;
 	const char *			sound;
 	const char *			screen;
 
 	/* overlay information */
-	video_update_func		overupdate;
+	screen_update_func		overupdate;
 	UINT32					overwidth, overheight, overformat;
 	rectangle				overclip;
 	float					overposx, overposy;
@@ -91,8 +90,7 @@ struct _laserdisc_config
 ***************************************************************************/
 
 #define MCFG_LASERDISC_ADD(_tag, _type, _screen, _sound) \
-	MCFG_DEVICE_ADD(_tag, LASERDISC, 0) \
-	MCFG_DEVICE_CONFIG_DATA32(laserdisc_config, type, LASERDISC_TYPE_##_type) \
+	MCFG_DEVICE_ADD(_tag, _type, 0) \
 	MCFG_DEVICE_CONFIG_DATAPTR(laserdisc_config, screen, _screen) \
 	MCFG_DEVICE_CONFIG_DATAPTR(laserdisc_config, sound, _sound) \
 
@@ -103,7 +101,7 @@ struct _laserdisc_config
 	MCFG_DEVICE_CONFIG_DATAPTR(laserdisc_config, audio, _func)
 
 #define MCFG_LASERDISC_OVERLAY(_update, _width, _height, _format) \
-	MCFG_DEVICE_CONFIG_DATAPTR(laserdisc_config, overupdate, VIDEO_UPDATE_NAME(_update)) \
+	MCFG_DEVICE_CONFIG_DATAPTR(laserdisc_config, overupdate, SCREEN_UPDATE_NAME(_update)) \
 	MCFG_DEVICE_CONFIG_DATA32(laserdisc_config, overwidth, _width) \
 	MCFG_DEVICE_CONFIG_DATA32(laserdisc_config, overheight, _height) \
 	MCFG_DEVICE_CONFIG_DATA32(laserdisc_config, overformat, _format)
@@ -126,20 +124,20 @@ struct _laserdisc_config
 /* use these to add laserdisc screens with proper video update parameters */
 #define MCFG_LASERDISC_SCREEN_ADD_NTSC(_tag, _overlayformat) \
 	MCFG_VIDEO_ATTRIBUTES(VIDEO_SELF_RENDER) \
-	MCFG_VIDEO_UPDATE(laserdisc) \
 	\
 	MCFG_SCREEN_ADD(_tag, RASTER) \
 	MCFG_SCREEN_FORMAT(_overlayformat) \
 	MCFG_SCREEN_RAW_PARAMS(XTAL_14_31818MHz*2, 910, 0, 704, 525, 44, 524) \
+	MCFG_SCREEN_UPDATE(laserdisc) \
 
 /* not correct yet; fix me... */
 #define MCFG_LASERDISC_SCREEN_ADD_PAL(_tag, _format) \
 	MCFG_VIDEO_ATTRIBUTES(VIDEO_SELF_RENDER) \
-	MCFG_VIDEO_UPDATE(laserdisc) \
 	\
 	MCFG_SCREEN_ADD(_tag, RASTER) \
 	MCFG_SCREEN_FORMAT(_format) \
 	MCFG_SCREEN_RAW_PARAMS(XTAL_14_31818MHz, 910, 0, 704, 525.0/2, 0, 480/2) \
+	MCFG_SCREEN_UPDATE(laserdisc) \
 
 
 
@@ -196,7 +194,7 @@ void laserdisc_video_enable(device_t *device, int enable);
 void laserdisc_overlay_enable(device_t *device, int enable);
 
 /* video update callback */
-VIDEO_UPDATE( laserdisc );
+SCREEN_UPDATE( laserdisc );
 
 
 
@@ -213,7 +211,13 @@ void laserdisc_set_config(device_t *device, const laserdisc_config *config);
 /* ----- device interface ----- */
 
 /* device get info callback */
-DECLARE_LEGACY_DEVICE(LASERDISC, laserdisc);
+DECLARE_LEGACY_DEVICE(PIONEER_PR7820,pioneer_pr7820);
+DECLARE_LEGACY_DEVICE(PIONEER_PR8210,pioneer_pr8210);
+DECLARE_LEGACY_DEVICE(SIMUTREK_SPECIAL,simutrek_special);
+DECLARE_LEGACY_DEVICE(PIONEER_LDV1000,pioneer_ldv1000);
+DECLARE_LEGACY_DEVICE(PHILLIPS_22VP931,phillips_22vp931);
+DECLARE_LEGACY_DEVICE(PHILLIPS_22VP932,phillips_22vp932);
+DECLARE_LEGACY_DEVICE(SONY_LDP1450,sony_ldp1450);
 
 /* audio get info callback */
 DECLARE_LEGACY_SOUND_DEVICE(LASERDISC_SOUND, laserdisc_sound);
@@ -222,5 +226,15 @@ DECLARE_LEGACY_SOUND_DEVICE(LASERDISC_SOUND, laserdisc_sound);
 int laserdisc_get_type(device_t *device);
 void laserdisc_set_type(device_t *device, int type);
 
+INLINE bool device_is_laserdisc(device_t *device)
+{
+	return(device->type() == PIONEER_PR7820 ||
+		device->type() == PIONEER_PR8210 ||
+		device->type() == SIMUTREK_SPECIAL ||
+		device->type() == PIONEER_LDV1000 ||
+		device->type() == PHILLIPS_22VP931 ||
+		device->type() == PHILLIPS_22VP932 ||
+		device->type() == SONY_LDP1450);
+}
 
 #endif	/* __LASERDSC_H__ */

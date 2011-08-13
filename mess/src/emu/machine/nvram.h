@@ -50,36 +50,40 @@
 
 #define MCFG_NVRAM_ADD_0FILL(_tag) \
 	MCFG_DEVICE_ADD(_tag, NVRAM, 0) \
-	nvram_device_config::static_set_default_value(device, nvram_device_config::DEFAULT_ALL_0); \
+	nvram_device::static_set_default_value(*device, nvram_device::DEFAULT_ALL_0); \
 
 #define MCFG_NVRAM_ADD_1FILL(_tag) \
 	MCFG_DEVICE_ADD(_tag, NVRAM, 0) \
-	nvram_device_config::static_set_default_value(device, nvram_device_config::DEFAULT_ALL_1); \
+	nvram_device::static_set_default_value(*device, nvram_device::DEFAULT_ALL_1); \
 
 #define MCFG_NVRAM_ADD_RANDOM_FILL(_tag) \
 	MCFG_DEVICE_ADD(_tag, NVRAM, 0) \
-	nvram_device_config::static_set_default_value(device, nvram_device_config::DEFAULT_RANDOM); \
+	nvram_device::static_set_default_value(*device, nvram_device::DEFAULT_RANDOM); \
+
+#define MCFG_NVRAM_ADD_NO_FILL(_tag) \
+	MCFG_DEVICE_ADD(_tag, NVRAM, 0) \
+	nvram_device::static_set_default_value(*device, nvram_device::DEFAULT_NONE); \
 
 #define MCFG_NVRAM_ADD_CUSTOM(_tag, _class, _method) \
 	MCFG_DEVICE_ADD(_tag, NVRAM, 0) \
-	nvram_device_config::static_set_custom_handler(device, nvram_init_proto_delegate::_create_member<_class, &_class::_method>(#_class "::" #_method)); \
+	nvram_device::static_set_custom_handler(*device, nvram_init_delegate(&_class::_method, #_class "::" #_method, (_class *)0)); \
 
 
 #define MCFG_NVRAM_REPLACE_0FILL(_tag) \
 	MCFG_DEVICE_REPLACE(_tag, NVRAM, 0) \
-	nvram_device_config::static_set_default_value(device, nvram_device_config::DEFAULT_ALL_0); \
+	nvram_device::static_set_default_value(*device, nvram_device::DEFAULT_ALL_0); \
 
 #define MCFG_NVRAM_REPLACE_1FILL(_tag) \
 	MCFG_DEVICE_REPLACE(_tag, NVRAM, 0) \
-	nvram_device_config::static_set_default_value(device, nvram_device_config::DEFAULT_ALL_1); \
+	nvram_device::static_set_default_value(*device, nvram_device::DEFAULT_ALL_1); \
 
 #define MCFG_NVRAM_REPLACE_RANDOM_FILL(_tag) \
 	MCFG_DEVICE_REPLACE(_tag, NVRAM, 0) \
-	nvram_device_config::static_set_default_value(device, nvram_device_config::DEFAULT_RANDOM); \
+	nvram_device::static_set_default_value(*device, nvram_device::DEFAULT_RANDOM); \
 
 #define MCFG_NVRAM_REPLACE_CUSTOM(_tag, _class, _method) \
 	MCFG_DEVICE_REPLACE(_tag, NVRAM, 0) \
-	nvram_device_config::static_set_custom_handler(device, nvram_init_proto_delegate::_create_member<_class, &_class::_method>(#_class "::" #_method)); \
+	nvram_device::static_set_custom_handler(*device, nvram_init_delegate(&_class::_method, #_class "::" #_method, (_class *)0)); \
 
 
 
@@ -91,43 +95,7 @@ class nvram_device;
 
 
 // custom initialization for default state
-typedef proto_delegate_3param<void, nvram_device &, void *, size_t> nvram_init_proto_delegate;
-typedef delegate_3param<void, nvram_device &, void *, size_t> nvram_init_delegate;
-
-
-// ======================> nvram_device_config
-
-class nvram_device_config :	public device_config,
-							public device_config_nvram_interface
-{
-	friend class nvram_device;
-
-	// construction/destruction
-	nvram_device_config(const machine_config &mconfig, const char *tag, const device_config *owner, UINT32 clock);
-
-public:
-	// values
-	enum default_value
-	{
-		DEFAULT_ALL_0,
-		DEFAULT_ALL_1,
-		DEFAULT_RANDOM,
-		DEFAULT_CUSTOM
-	};
-
-	// allocators
-	static device_config *static_alloc_device_config(const machine_config &mconfig, const char *tag, const device_config *owner, UINT32 clock);
-	virtual device_t *alloc_device(running_machine &machine) const;
-
-	// inline configuration helpers
-	static void static_set_default_value(device_config *device, default_value value);
-	static void static_set_custom_handler(device_config *device, nvram_init_proto_delegate callback);
-
-protected:
-	// internal state
-	default_value				m_default_value;
-	nvram_init_proto_delegate	m_custom_handler;
-};
+typedef delegate<void (nvram_device &, void *, size_t)> nvram_init_delegate;
 
 
 // ======================> nvram_device
@@ -135,12 +103,24 @@ protected:
 class nvram_device :	public device_t,
 						public device_nvram_interface
 {
-	friend class nvram_device_config;
+public:
+	// values
+	enum default_value
+	{
+		DEFAULT_ALL_0,
+		DEFAULT_ALL_1,
+		DEFAULT_RANDOM,
+		DEFAULT_CUSTOM,
+		DEFAULT_NONE
+	};
 
 	// construction/destruction
-	nvram_device(running_machine &_machine, const nvram_device_config &config);
+	nvram_device(const machine_config &mconfig, const char *tag, device_t *owner, UINT32 clock);
 
-public:
+	// inline configuration helpers
+	static void static_set_default_value(device_t &device, default_value value);
+	static void static_set_custom_handler(device_t &device, nvram_init_delegate callback);
+
 	// controls
 	void set_base(void *base, size_t length) { m_base = base; m_length = length; }
 
@@ -150,17 +130,19 @@ protected:
 
 	// device_nvram_interface overrides
 	virtual void nvram_default();
-	virtual void nvram_read(mame_file &file);
-	virtual void nvram_write(mame_file &file);
+	virtual void nvram_read(emu_file &file);
+	virtual void nvram_write(emu_file &file);
 
 	// internal helpers
 	void determine_final_base();
 
-	// internal state
-	const nvram_device_config &	m_config;
+	// configuration state
+	default_value				m_default_value;
+	nvram_init_delegate			m_custom_handler;
+
+	// runtime state
 	void *						m_base;
 	size_t						m_length;
-	nvram_init_delegate			m_custom_handler;
 };
 
 

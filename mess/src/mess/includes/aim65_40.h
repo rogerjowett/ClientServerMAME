@@ -8,19 +8,18 @@
 #define M6522_1_TAG		"m6522_1"
 #define M6522_2_TAG		"m6522_2"
 #define M6551_TAG		"m6551"
-#define SPEAKER_TAG		"speaker"
 
 class aim65_40_state : public driver_device
 {
 public:
-	aim65_40_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	aim65_40_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 	/* devices */
-	device_t *via0;
-	device_t *via1;
-	device_t *via2;
-	device_t *speaker;
+	device_t *m_via0;
+	device_t *m_via1;
+	device_t *m_via2;
+	device_t *m_speaker;
 };
 
 #endif

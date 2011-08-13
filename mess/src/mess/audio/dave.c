@@ -109,7 +109,7 @@ INLINE const dave_interface *get_interface(device_t *device)
 {
 	assert(device != NULL);
 	assert(device->type() == DAVE);
-	return (const dave_interface *) device->baseconfig().static_config();
+	return (const dave_interface *) device->static_config();
 }
 
 
@@ -139,9 +139,9 @@ static DEVICE_START( dave_sound )
 	memset(dave, 0, sizeof(*dave));
 
 	/* resolve callbacks */
-	devcb_resolve_read8(&dave->reg_r, &intf->reg_r, device);
-	devcb_resolve_write8(&dave->reg_w, &intf->reg_w, device);
-	devcb_resolve_write_line(&dave->int_callback, &intf->int_callback, device);
+	dave->reg_r.resolve(intf->reg_r, *device);
+	dave->reg_w.resolve(intf->reg_w, *device);
+	dave->int_callback.resolve(intf->int_callback, *device);
 
 	/* temp! */
 	dave->nick_virq = 0;
@@ -155,12 +155,12 @@ static DEVICE_START( dave_sound )
 	dave->one_khz_state = 0;
 	dave->fifty_hz_count = DAVE_FIFTY_HZ_COUNTER_RELOAD;
 	dave->one_hz_count = DAVE_ONE_HZ_COUNTER_RELOAD;
-	timer_pulse(device->machine, ATTOTIME_IN_HZ(1000), (void *) device, 0, dave_1khz_callback);
+	device->machine().scheduler().timer_pulse(attotime::from_hz(1000), FUNC(dave_1khz_callback), 0, (void *) device);
 
 	for (i=0; i<3; i++)
 	{
-		dave->Period[i] = (STEP * device->machine->sample_rate) / 125000;
-		dave->Count[i] = (STEP * device->machine->sample_rate) / 125000;
+		dave->Period[i] = (STEP * device->machine().sample_rate()) / 125000;
+		dave->Count[i] = (STEP * device->machine().sample_rate()) / 125000;
 		dave->level[i] = 0;
 	}
 
@@ -168,7 +168,7 @@ static DEVICE_START( dave_sound )
     the volumes are mixed internally and output as left and right volume */
 
 	/* 3 tone channels + 1 noise channel */
-	dave->sound_stream_var = stream_create(device, 0, 2, device->machine->sample_rate, NULL, dave_update_sound);
+	dave->sound_stream_var = device->machine().sound().stream_alloc(*device, 0, 2, device->machine().sample_rate(), NULL, dave_update_sound);
 }
 
 
@@ -204,7 +204,7 @@ static void dave_refresh_ints(device_t *device)
 	logerror("int latch: %02x enable: %02x input: %02x\n", (int) dave->int_latch, (int) dave->int_enable, (int) dave->int_input);
 
 	int_wanted = ((dave->int_enable<<1) & dave->int_latch) != 0;
-	devcb_call_write_line(&dave->int_callback, int_wanted);
+	dave->int_callback(int_wanted);
 }
 
 
@@ -411,7 +411,7 @@ static WRITE8_DEVICE_HANDLER(dave_sound_w)
 	dave_t *dave = get_token(device);
 
 	/* update stream */
-	stream_update(dave->sound_stream_var);
+	dave->sound_stream_var->update();
 
 	/* new write */
 	switch (offset)
@@ -454,7 +454,7 @@ static WRITE8_DEVICE_HANDLER(dave_sound_w)
 			count++;
 
 
-			dave->Period[channel_index] = ((STEP  * device->machine->sample_rate)/125000) * count;
+			dave->Period[channel_index] = ((STEP  * device->machine().sample_rate())/125000) * count;
 
 		}
 		break;
@@ -650,7 +650,7 @@ WRITE8_DEVICE_HANDLER ( dave_reg_w )
 			break;
 	}
 
-	devcb_call_write8(&dave->reg_w, offset, data);
+	dave->reg_w(offset, data);
 }
 
 
@@ -675,7 +675,7 @@ READ8_DEVICE_HANDLER( dave_reg_r )
 
 	logerror("dave r: %04x\n",offset);
 
-	devcb_call_read8(&dave->reg_r, offset);
+	dave->reg_r(offset);
 
 	switch (offset)
 	{

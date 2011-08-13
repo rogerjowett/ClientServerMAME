@@ -57,19 +57,19 @@
 
 #include "emu.h"
 #include "machine/wd17xx.h"
-#include "devices/flopdrv.h"
+#include "imagedev/flopdrv.h"
 #include "cpu/arm/arm.h"
 #include "sound/dac.h"
 #include "includes/archimds.h"
 #include "machine/i2cmem.h"
-#include "devices/messram.h"
+#include "machine/ram.h"
 
 
 class a310_state : public driver_device
 {
 public:
-	a310_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	a310_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 };
 
@@ -77,17 +77,17 @@ public:
 static WRITE_LINE_DEVICE_HANDLER( a310_wd177x_intrq_w )
 {
 	if (state)
-		archimedes_request_fiq(device->machine, ARCHIMEDES_FIQ_FLOPPY);
+		archimedes_request_fiq(device->machine(), ARCHIMEDES_FIQ_FLOPPY);
 	else
-		archimedes_clear_fiq(device->machine, ARCHIMEDES_FIQ_FLOPPY);
+		archimedes_clear_fiq(device->machine(), ARCHIMEDES_FIQ_FLOPPY);
 }
 
 static WRITE_LINE_DEVICE_HANDLER( a310_wd177x_drq_w )
 {
 	if (state)
-		archimedes_request_fiq(device->machine, ARCHIMEDES_FIQ_FLOPPY_DRQ);
+		archimedes_request_fiq(device->machine(), ARCHIMEDES_FIQ_FLOPPY_DRQ);
 	else
-		archimedes_clear_fiq(device->machine, ARCHIMEDES_FIQ_FLOPPY_DRQ);
+		archimedes_clear_fiq(device->machine(), ARCHIMEDES_FIQ_FLOPPY_DRQ);
 }
 
 static READ32_HANDLER( a310_psy_wram_r )
@@ -103,11 +103,11 @@ static WRITE32_HANDLER( a310_psy_wram_w )
 
 static DRIVER_INIT(a310)
 {
-	UINT32 ram_size = messram_get_size(machine->device("messram"));
+	UINT32 ram_size = ram_get_size(machine.device(RAM_TAG));
 
 	archimedes_memc_physmem = auto_alloc_array(machine, UINT32, 0x01000000);
 
-	memory_install_readwrite32_handler( cputag_get_address_space(machine, "maincpu", ADDRESS_SPACE_PROGRAM), 0x02000000, 0x02000000+(ram_size-1), 0, 0, a310_psy_wram_r, a310_psy_wram_w );
+	machine.device("maincpu")->memory().space(AS_PROGRAM)->install_legacy_readwrite_handler( 0x02000000, 0x02000000+(ram_size-1), FUNC(a310_psy_wram_r), FUNC(a310_psy_wram_w) );
 
 	archimedes_driver_init(machine);
 }
@@ -117,7 +117,7 @@ static MACHINE_START( a310 )
 	archimedes_init(machine);
 
 	// reset the DAC to centerline
-	//dac_signed_data_w(machine->device("dac"), 0x80);
+	//dac_signed_data_w(machine.device("dac"), 0x80);
 }
 
 static MACHINE_RESET( a310 )
@@ -125,7 +125,7 @@ static MACHINE_RESET( a310 )
 	archimedes_reset(machine);
 }
 
-static ADDRESS_MAP_START( a310_mem, ADDRESS_SPACE_PROGRAM, 32 )
+static ADDRESS_MAP_START( a310_mem, AS_PROGRAM, 32 )
 	AM_RANGE(0x00000000, 0x01ffffff) AM_READWRITE(archimedes_memc_logical_r, archimedes_memc_logical_w)
 //  AM_RANGE(0x02000000, 0x02ffffff) AM_RAM AM_BASE(&archimedes_memc_physmem) /* physical RAM - 16 MB for now, should be 512k for the A310 */
 	AM_RANGE(0x03000000, 0x033fffff) AM_READWRITE(archimedes_ioc_r, archimedes_ioc_w)
@@ -276,18 +276,19 @@ static MACHINE_CONFIG_START( a310, a310_state )
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
 	MCFG_SCREEN_SIZE(1280, 1024) //TODO: default screen size
 	MCFG_SCREEN_VISIBLE_AREA(0*8, 1280 - 1, 0*16, 1024 - 1)
+	MCFG_SCREEN_UPDATE(archimds_vidc)
+
 	MCFG_PALETTE_LENGTH(32768)
 
 	MCFG_VIDEO_START(archimds_vidc)
-	MCFG_VIDEO_UPDATE(archimds_vidc)
 
-	MCFG_RAM_ADD("messram")
+	MCFG_RAM_ADD(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("2M")
 	MCFG_RAM_EXTRA_OPTIONS("512K, 1M, 4M, 8M, 16M")
 
 	MCFG_WD1772_ADD("wd1772", a310_wd17xx_interface )
 
-	//MCFG_FLOPPY_4_DRIVES_ADD(a310_floppy_config)
+	//MCFG_FLOPPY_4_DRIVES_ADD(a310_floppy_interface)
 
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 	MCFG_SOUND_ADD("dac0", DAC, 0)

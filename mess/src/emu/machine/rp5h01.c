@@ -173,16 +173,16 @@ static DEVICE_START( rp5h01 )
 {
 	rp5h01_state *rp5h01 = get_safe_token(device);
 
-	assert(device->baseconfig().static_config() == NULL);
+	assert(device->static_config() == NULL);
 
 	rp5h01->data = *device->region();
 
 	/* register for state saving */
-	state_save_register_device_item(device, 0, rp5h01->counter);
-	state_save_register_device_item(device, 0, rp5h01->counter_mode);
-	state_save_register_device_item(device, 0, rp5h01->enabled);
-	state_save_register_device_item(device, 0, rp5h01->old_reset);
-	state_save_register_device_item(device, 0, rp5h01->old_clock);
+	device->save_item(NAME(rp5h01->counter));
+	device->save_item(NAME(rp5h01->counter_mode));
+	device->save_item(NAME(rp5h01->enabled));
+	device->save_item(NAME(rp5h01->old_reset));
+	device->save_item(NAME(rp5h01->old_clock));
 }
 
 /*-------------------------------------------------

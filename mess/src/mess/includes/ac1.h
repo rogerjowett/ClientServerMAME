@@ -8,13 +8,15 @@
 #define AC1_H_
 
 #include "machine/z80pio.h"
+#include "imagedev/cassette.h"
 
 class ac1_state : public driver_device
 {
 public:
-	ac1_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	ac1_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
+	cassette_image_device *m_cassette;
 };
 
 
@@ -30,8 +32,8 @@ extern const z80pio_interface ac1_z80pio_intf;
 extern const gfx_layout ac1_charlayout;
 
 VIDEO_START( ac1 );
-VIDEO_UPDATE( ac1 );
-VIDEO_UPDATE( ac1_32 );
+SCREEN_UPDATE( ac1 );
+SCREEN_UPDATE( ac1_32 );
 
 
 #endif /* AC1_h_ */

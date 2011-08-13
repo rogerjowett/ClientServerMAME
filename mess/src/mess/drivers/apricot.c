@@ -10,14 +10,14 @@
 #include "emu.h"
 #include "cpu/i86/i86.h"
 #include "machine/pit8253.h"
-#include "machine/i8255a.h"
+#include "machine/i8255.h"
 #include "machine/pic8259.h"
 #include "machine/z80sio.h"
 #include "machine/wd17xx.h"
 #include "sound/sn76496.h"
 #include "video/mc6845.h"
-#include "devices/messram.h"
-#include "devices/flopdrv.h"
+#include "machine/ram.h"
+#include "imagedev/flopdrv.h"
 #include "formats/apridisk.h"
 
 
@@ -28,17 +28,17 @@
 class apricot_state : public driver_device
 {
 public:
-	apricot_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	apricot_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
-	device_t *pic8259;
-	device_t *wd2793;
-	device_t *mc6845;
+	device_t *m_pic8259;
+	device_t *m_wd2793;
+	mc6845_device *m_mc6845;
 
-	int video_mode;
-	int display_on;
-	int display_enabled;
-	UINT16 *screen_buffer;
+	int m_video_mode;
+	int m_display_on;
+	int m_display_enabled;
+	UINT16 *m_screen_buffer;
 };
 
 
@@ -48,34 +48,34 @@ public:
 
 static READ8_DEVICE_HANDLER( apricot_sysctrl_r )
 {
-	apricot_state *apricot = device->machine->driver_data<apricot_state>();
+	apricot_state *state = device->machine().driver_data<apricot_state>();
 	UINT8 data = 0;
 
-	data |= apricot->display_enabled << 3;
+	data |= state->m_display_enabled << 3;
 
 	return data;
 }
 
 static WRITE8_DEVICE_HANDLER( apricot_sysctrl_w )
 {
-	apricot_state *apricot = device->machine->driver_data<apricot_state>();
+	apricot_state *state = device->machine().driver_data<apricot_state>();
 
-	apricot->display_on = BIT(data, 3);
-	apricot->video_mode = BIT(data, 4);
-	if (!BIT(data, 5)) wd17xx_set_drive(apricot->wd2793, BIT(data, 6));
+	state->m_display_on = BIT(data, 3);
+	state->m_video_mode = BIT(data, 4);
+	if (!BIT(data, 5)) wd17xx_set_drive(state->m_wd2793, BIT(data, 6));
 
 	/* switch video modes */
-	mc6845_set_clock(apricot->mc6845, apricot->video_mode ? XTAL_15MHz / 10 : XTAL_15MHz / 16);
-	mc6845_set_hpixels_per_column(apricot->mc6845, apricot->video_mode ? 10 : 16);
+	state->m_mc6845->set_clock( state->m_video_mode ? XTAL_15MHz / 10 : XTAL_15MHz / 16);
+	state->m_mc6845->set_hpixels_per_column( state->m_video_mode ? 10 : 16);
 }
 
-static const i8255a_interface apricot_i8255a_intf =
+static const i8255_interface apricot_i8255a_intf =
 {
 	DEVCB_NULL,
 	DEVCB_NULL,
-	DEVCB_HANDLER(apricot_sysctrl_r),
 	DEVCB_NULL,
 	DEVCB_HANDLER(apricot_sysctrl_w),
+	DEVCB_HANDLER(apricot_sysctrl_r),
 	DEVCB_NULL
 };
 
@@ -98,10 +98,10 @@ static const struct pit8253_config apricot_pit8253_intf =
 	}
 };
 
-static void apricot_sio_irq_w(device_t *device, int state)
+static void apricot_sio_irq_w(device_t *device, int st)
 {
-	apricot_state *apricot = device->machine->driver_data<apricot_state>();
-	pic8259_ir5_w(apricot->pic8259, state);
+	apricot_state *state = device->machine().driver_data<apricot_state>();
+	pic8259_ir5_w(state->m_pic8259, st);
 }
 
 static const z80sio_interface apricot_z80sio_intf =
@@ -121,13 +121,15 @@ static const z80sio_interface apricot_z80sio_intf =
 
 static IRQ_CALLBACK( apricot_irq_ack )
 {
-	apricot_state *apricot = device->machine->driver_data<apricot_state>();
-	return pic8259_acknowledge(apricot->pic8259);
+	apricot_state *state = device->machine().driver_data<apricot_state>();
+	return pic8259_acknowledge(state->m_pic8259);
 }
 
 static const struct pic8259_interface apricot_pic8259_intf =
 {
-	DEVCB_CPU_INPUT_LINE("maincpu", 0)
+	DEVCB_CPU_INPUT_LINE("maincpu", 0),
+	DEVCB_LINE_VCC,
+	DEVCB_NULL
 };
 
 
@@ -137,9 +139,9 @@ static const struct pic8259_interface apricot_pic8259_intf =
 
 static WRITE_LINE_DEVICE_HANDLER( apricot_wd2793_intrq_w )
 {
-	apricot_state *apricot = device->machine->driver_data<apricot_state>();
+	apricot_state *st = device->machine().driver_data<apricot_state>();
 
-	pic8259_ir4_w(apricot->pic8259, state);
+	pic8259_ir4_w(st->m_pic8259, state);
 //  i8089 external terminate channel 1
 }
 
@@ -161,12 +163,12 @@ static const wd17xx_interface apricot_wd17xx_intf =
     VIDEO EMULATION
 ***************************************************************************/
 
-static VIDEO_UPDATE( apricot )
+static SCREEN_UPDATE( apricot )
 {
-	apricot_state *apricot = screen->machine->driver_data<apricot_state>();
+	apricot_state *state = screen->machine().driver_data<apricot_state>();
 
-	if (!apricot->display_on)
-		mc6845_update(apricot->mc6845, bitmap, cliprect);
+	if (!state->m_display_on)
+		state->m_mc6845->update( bitmap, cliprect);
 	else
 		bitmap_fill(bitmap, cliprect, 0);
 
@@ -175,16 +177,16 @@ static VIDEO_UPDATE( apricot )
 
 static MC6845_UPDATE_ROW( apricot_update_row )
 {
-	apricot_state *apricot = device->machine->driver_data<apricot_state>();
-	UINT8 *ram = messram_get_ptr(device->machine->device("messram"));
+	apricot_state *state = device->machine().driver_data<apricot_state>();
+	UINT8 *ram = ram_get_ptr(device->machine().device(RAM_TAG));
 	int i, x;
 
-	if (apricot->video_mode)
+	if (state->m_video_mode)
 	{
 		/* text mode */
 		for (i = 0; i < x_count; i++)
 		{
-			UINT16 code = apricot->screen_buffer[(ma + i) & 0x7ff];
+			UINT16 code = state->m_screen_buffer[(ma + i) & 0x7ff];
 			UINT16 offset = ((code & 0x7ff) << 5) | (ra << 1);
 			UINT16 data = ram[offset + 1] << 8 | ram[offset];
 			int fill = 0;
@@ -210,8 +212,8 @@ static MC6845_UPDATE_ROW( apricot_update_row )
 
 static WRITE_LINE_DEVICE_HANDLER( apricot_mc6845_de )
 {
-	apricot_state *apricot = device->machine->driver_data<apricot_state>();
-	apricot->display_enabled = state;
+	apricot_state *st = device->machine().driver_data<apricot_state>();
+	st->m_display_enabled = state;
 }
 
 static const mc6845_interface apricot_mc6845_intf =
@@ -235,24 +237,24 @@ static const mc6845_interface apricot_mc6845_intf =
 
 static DRIVER_INIT( apricot )
 {
-	apricot_state *apricot = machine->driver_data<apricot_state>();
-	device_t *maincpu = machine->device("maincpu");
-	address_space *prg = cpu_get_address_space(maincpu, ADDRESS_SPACE_PROGRAM);
+	apricot_state *state = machine.driver_data<apricot_state>();
+	device_t *maincpu = machine.device("maincpu");
+	address_space *prg = maincpu->memory().space(AS_PROGRAM);
 
-	UINT8 *ram = messram_get_ptr(machine->device("messram"));
-	UINT32 ram_size = messram_get_size(machine->device("messram"));
+	UINT8 *ram = ram_get_ptr(machine.device(RAM_TAG));
+	UINT32 ram_size = ram_get_size(machine.device(RAM_TAG));
 
-	memory_unmap_readwrite(prg, 0x40000, 0xeffff, 0, 0);
-	memory_install_ram(prg, 0x00000, ram_size - 1, 0, 0, ram);
+	prg->unmap_readwrite(0x40000, 0xeffff);
+	prg->install_ram(0x00000, ram_size - 1, ram);
 
-	cpu_set_irq_callback(maincpu, apricot_irq_ack);
+	device_set_irq_callback(maincpu, apricot_irq_ack);
 
-	apricot->pic8259 = machine->device("ic31");
-	apricot->wd2793 = machine->device("ic68");
-	apricot->mc6845 = machine->device("ic30");
+	state->m_pic8259 = machine.device("ic31");
+	state->m_wd2793 = machine.device("ic68");
+	state->m_mc6845 = machine.device<mc6845_device>("ic30");
 
-	apricot->video_mode = 0;
-	apricot->display_on = 1;
+	state->m_video_mode = 0;
+	state->m_display_on = 1;
 }
 
 
@@ -260,22 +262,22 @@ static DRIVER_INIT( apricot )
     ADDRESS MAPS
 ***************************************************************************/
 
-static ADDRESS_MAP_START( apricot_mem, ADDRESS_SPACE_PROGRAM, 16 )
+static ADDRESS_MAP_START( apricot_mem, AS_PROGRAM, 16 )
 	AM_RANGE(0x00000, 0x3ffff) AM_RAMBANK("standard_ram")
 	AM_RANGE(0x40000, 0xeffff) AM_RAMBANK("expansion_ram")
-	AM_RANGE(0xf0000, 0xf0fff) AM_MIRROR(0x7000) AM_RAM AM_BASE_MEMBER(apricot_state, screen_buffer)
+	AM_RANGE(0xf0000, 0xf0fff) AM_MIRROR(0x7000) AM_RAM AM_BASE_MEMBER(apricot_state, m_screen_buffer)
 	AM_RANGE(0xfc000, 0xfffff) AM_MIRROR(0x4000) AM_ROM AM_REGION("bootstrap", 0)
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( apricot_io, ADDRESS_SPACE_IO, 16 )
+static ADDRESS_MAP_START( apricot_io, AS_IO, 16 )
 	AM_RANGE(0x00, 0x03) AM_DEVREADWRITE8("ic31", pic8259_r, pic8259_w, 0x00ff)
 	AM_RANGE(0x40, 0x47) AM_DEVREADWRITE8("ic68", wd17xx_r, wd17xx_w, 0x00ff)
-	AM_RANGE(0x48, 0x4f) AM_DEVREADWRITE8("ic17", i8255a_r, i8255a_w, 0x00ff)
+	AM_RANGE(0x48, 0x4f) AM_DEVREADWRITE8_MODERN("ic17", i8255_device, read, write, 0x00ff)
 	AM_RANGE(0x50, 0x51) AM_MIRROR(0x06) AM_DEVWRITE8("ic7", sn76496_w, 0x00ff)
 	AM_RANGE(0x58, 0x5f) AM_DEVREADWRITE8("ic16", pit8253_r, pit8253_w, 0x00ff)
 	AM_RANGE(0x60, 0x67) AM_DEVREADWRITE8("ic15", z80sio_ba_cd_r, z80sio_ba_cd_w, 0x00ff)
-	AM_RANGE(0x68, 0x69) AM_MIRROR(0x04) AM_DEVWRITE8("ic30", mc6845_address_w, 0x00ff)
-	AM_RANGE(0x6a, 0x6b) AM_MIRROR(0x04) AM_DEVREADWRITE8("ic30", mc6845_register_r, mc6845_register_w, 0x00ff)
+	AM_RANGE(0x68, 0x69) AM_MIRROR(0x04) AM_DEVWRITE8_MODERN("ic30", mc6845_device, address_w, 0x00ff)
+	AM_RANGE(0x6a, 0x6b) AM_MIRROR(0x04) AM_DEVREADWRITE8_MODERN("ic30", mc6845_device, register_r, register_w, 0x00ff)
 //  AM_RANGE(0x70, 0x71) AM_MIRROR(0x04) 8089 channel attention 1
 //  AM_RANGE(0x72, 0x73) AM_MIRROR(0x04) 8089 channel attention 2
 	AM_RANGE(0x78, 0x7f) AM_NOP /* unavailable */
@@ -309,7 +311,7 @@ static PALETTE_INIT( apricot )
 static FLOPPY_OPTIONS_START( apricot )
 	FLOPPY_OPTION
 	(
-		apridisk, "dsk", "ACT Apricot disk image", apridisk_identify, apridisk_construct,
+		apridisk, "dsk", "ACT Apricot disk image", apridisk_identify, apridisk_construct, NULL,
 		HEADS(1-[2])
 		TRACKS(70/[80])
 		SECTORS([9]/18)
@@ -318,7 +320,7 @@ static FLOPPY_OPTIONS_START( apricot )
 	)
 FLOPPY_OPTIONS_END
 
-static const floppy_config apricot_floppy_config =
+static const floppy_interface apricot_floppy_interface =
 {
 	DEVCB_NULL,
 	DEVCB_NULL,
@@ -327,6 +329,7 @@ static const floppy_config apricot_floppy_config =
 	DEVCB_NULL,
 	FLOPPY_STANDARD_5_25_SSDD_40,
 	FLOPPY_OPTIONS_NAME(apricot),
+	NULL,
 	NULL
 };
 
@@ -345,11 +348,10 @@ static MACHINE_CONFIG_START( apricot, apricot_state )
 	MCFG_SCREEN_SIZE(800, 400)
 	MCFG_SCREEN_VISIBLE_AREA(0, 800-1, 0, 400-1)
 	MCFG_SCREEN_REFRESH_RATE(72)
+	MCFG_SCREEN_UPDATE(apricot)
 
 	MCFG_PALETTE_LENGTH(3)
 	MCFG_PALETTE_INIT(apricot)
-
-	MCFG_VIDEO_UPDATE(apricot)
 
 	MCFG_MC6845_ADD("ic30", MC6845, XTAL_15MHz / 10, apricot_mc6845_intf)
 
@@ -359,7 +361,7 @@ static MACHINE_CONFIG_START( apricot, apricot_state )
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 
 	/* internal ram */
-	MCFG_RAM_ADD("messram")
+	MCFG_RAM_ADD(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("256k")
 	MCFG_RAM_EXTRA_OPTIONS("384k,512k") /* with 1 or 2 128k expansion boards */
 
@@ -370,7 +372,7 @@ static MACHINE_CONFIG_START( apricot, apricot_state )
 
 	/* floppy */
 	MCFG_WD2793_ADD("ic68", apricot_wd17xx_intf)
-	MCFG_FLOPPY_2_DRIVES_ADD(apricot_floppy_config)
+	MCFG_FLOPPY_2_DRIVES_ADD(apricot_floppy_interface)
 MACHINE_CONFIG_END
 
 static MACHINE_CONFIG_DERIVED( apricotxi, apricot )

@@ -7,27 +7,27 @@
 #ifndef VECTOR06_H_
 #define VECTOR06_H_
 
-#include "machine/i8255a.h"
+#include "machine/i8255.h"
 
 class vector06_state : public driver_device
 {
 public:
-	vector06_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	vector06_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
-	UINT8 keyboard_mask;
-	UINT8 color_index;
-	UINT8 video_mode;
-	UINT8 romdisk_msb;
-	UINT8 romdisk_lsb;
-	UINT8 vblank_state;
+	UINT8 m_keyboard_mask;
+	UINT8 m_color_index;
+	UINT8 m_video_mode;
+	UINT8 m_romdisk_msb;
+	UINT8 m_romdisk_lsb;
+	UINT8 m_vblank_state;
 };
 
 
 /*----------- defined in machine/vector06.c -----------*/
 
-extern const i8255a_interface vector06_ppi8255_interface;
-extern const i8255a_interface vector06_ppi8255_2_interface;
+extern const i8255_interface vector06_ppi8255_interface;
+extern const i8255_interface vector06_ppi8255_2_interface;
 
 extern MACHINE_START( vector06 );
 extern MACHINE_RESET( vector06 );
@@ -47,6 +47,6 @@ extern WRITE8_HANDLER(vector06_disc_w);
 
 extern PALETTE_INIT( vector06 );
 extern VIDEO_START( vector06 );
-extern VIDEO_UPDATE( vector06 );
+extern SCREEN_UPDATE( vector06 );
 
 #endif /* VECTOR06_H_ */

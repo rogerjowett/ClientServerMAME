@@ -5,79 +5,125 @@
     Copyright MESS Team.
     Visit http://mamedev.org for licensing and usage restrictions.
 
-**********************************************************************/
+*********************************************************************/
 
 /*
 
     TODO:
 
+    - scan timer clock frequency
     - more accurate emulation of real chip
 
 */
 
-#include "emu.h"
 #include "kb3600.h"
+#include "machine/devhelpr.h"
 
-/***************************************************************************
-    TYPE DEFINITIONS
-***************************************************************************/
 
-typedef struct _ay3600_t ay3600_t;
-struct _ay3600_t
+
+//**************************************************************************
+//  MACROS / CONSTANTS
+//**************************************************************************
+
+#define LOG 0
+
+
+
+//**************************************************************************
+//  GLOBAL VARIABLES
+//**************************************************************************
+
+// devices
+const device_type AY3600 = &device_creator<ay3600_device>;
+
+
+
+//**************************************************************************
+//  DEVICE CONFIGURATION
+//**************************************************************************
+
+//-------------------------------------------------
+//  device_config_complete - perform any
+//  operations now that the configuration is
+//  complete
+//-------------------------------------------------
+
+void ay3600_device::device_config_complete()
 {
-	devcb_resolved_read_line	in_shift_func;
-	devcb_resolved_read_line	in_control_func;
+	// inherit a copy of the static data
+	const ay3600_interface *intf = reinterpret_cast<const ay3600_interface *>(static_config());
+	if (intf != NULL)
+		*static_cast<ay3600_interface *>(this) = *intf;
 
-	devcb_resolved_write_line	out_data_ready_func;
-	devcb_resolved_write_line	out_ako_func;
-
-	int b;						/* output buffer */
-	int ako;					/* any key down */
-
-	/* timers */
-	emu_timer *scan_timer;		/* keyboard scan timer */
-};
-
-/***************************************************************************
-    INLINE FUNCTIONS
-***************************************************************************/
-
-INLINE ay3600_t *get_safe_token(device_t *device)
-{
-	assert(device != NULL);
-
-	return (ay3600_t *)downcast<legacy_device_base *>(device)->token();
+	// or initialize to defaults if none provided
+	else
+	{
+		memset(&m_in_shift_cb, 0, sizeof(m_in_shift_cb));
+		memset(&m_in_control_cb, 0, sizeof(m_in_control_cb));
+		memset(&m_out_data_ready_cb, 0, sizeof(m_out_data_ready_cb));
+		memset(&m_out_ako_cb, 0, sizeof(m_out_ako_cb));
+	}
 }
 
-INLINE const ay3600_interface *get_interface(device_t *device)
+
+
+//**************************************************************************
+//  LIVE DEVICE
+//**************************************************************************
+
+//-------------------------------------------------
+//  ay3600_device - constructor
+//-------------------------------------------------
+
+ay3600_device::ay3600_device(const machine_config &mconfig, const char *tag, device_t *owner, UINT32 clock)
+    : device_t(mconfig, AY3600, "AY-5-3600", tag, owner, clock)
 {
-	assert(device != NULL);
-	assert((device->type() == AY3600PRO002));
-	return (const ay3600_interface *) device->baseconfig().static_config();
 }
 
-/***************************************************************************
-    IMPLEMENTATION
-***************************************************************************/
+//-------------------------------------------------
+//  device_start - device-specific startup
+//-------------------------------------------------
 
-/*-------------------------------------------------
-    TIMER_CALLBACK( ay3600_scan_tick )
--------------------------------------------------*/
-
-static TIMER_CALLBACK( ay3600_scan_tick )
+void ay3600_device::device_start()
 {
-	device_t *device = (device_t *)ptr;
-	ay3600_t *ay3600 = get_safe_token(device);
-	const ay3600_interface *intf = get_interface(device);
+	// resolve callbacks
+	m_in_x_func[0].resolve(m_in_x0_cb, *this);
+	m_in_x_func[1].resolve(m_in_x1_cb, *this);
+	m_in_x_func[2].resolve(m_in_x2_cb, *this);
+	m_in_x_func[3].resolve(m_in_x3_cb, *this);
+	m_in_x_func[4].resolve(m_in_x4_cb, *this);
+	m_in_x_func[5].resolve(m_in_x5_cb, *this);
+	m_in_x_func[6].resolve(m_in_x6_cb, *this);
+	m_in_x_func[7].resolve(m_in_x7_cb, *this);
+	m_in_x_func[8].resolve(m_in_x8_cb, *this);
+	m_in_shift_func.resolve(m_in_shift_cb, *this);
+	m_in_control_func.resolve(m_in_control_cb, *this);
+	m_out_data_ready_func.resolve(m_out_data_ready_cb, *this);
+	m_out_ako_func.resolve(m_out_ako_cb, *this);
 
-	int x, y;
+	// allocate timers
+	m_scan_timer = timer_alloc();
+	m_scan_timer->adjust(attotime::from_hz(60), 0, attotime::from_hz(60));
+
+	// state saving
+	save_item(NAME(m_b));
+	save_item(NAME(m_ako));
+}
+
+
+//-------------------------------------------------
+//  device_timer - handler timer events
+//-------------------------------------------------
+
+void ay3600_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+{
 	int ako = 0;
 
-	for (x = 0; x < 9; x++)
+	for (int x = 0; x < 9; x++)
 	{
-		UINT16 data = intf->in_y_func(device, x);
+		UINT16 data = m_in_x_func[x](0,0xffff);
 
-		for (y = 0; y < 10; y++)
+		for (int y = 0; y < 10; y++)
 		{
 			if (BIT(data, y))
 			{
@@ -91,14 +137,14 @@ static TIMER_CALLBACK( ay3600_scan_tick )
 					b = 0x100 | b;
 				}
 
-				b |= (devcb_call_read_line(&ay3600->in_shift_func) << 6);
-				b |= (devcb_call_read_line(&ay3600->in_control_func) << 7);
+				b |= (m_in_shift_func() << 6);
+				b |= (m_in_control_func() << 7);
 
-				if (ay3600->b != b)
+				if (m_b != b)
 				{
-					ay3600->b = b;
+					m_b = b;
 
-					devcb_call_write_line(&ay3600->out_data_ready_func, 1);
+					m_out_data_ready_func(1);
 					return;
 				}
 			}
@@ -107,79 +153,26 @@ static TIMER_CALLBACK( ay3600_scan_tick )
 
 	if (!ako)
 	{
-		ay3600->b = -1;
+		m_b = -1;
 	}
 
-	if (ako != ay3600->ako)
+	if (ako != m_ako)
 	{
-		devcb_call_write_line(&ay3600->out_ako_func, ako);
-		ay3600->ako = ako;
+		m_out_ako_func(ako);
+		m_ako = ako;
 	}
 }
 
-/*-------------------------------------------------
-    ay3600_b_r - keyboard data read
--------------------------------------------------*/
 
-UINT16 ay3600_b_r(device_t *device)
+//-------------------------------------------------
+//  b_r -
+//-------------------------------------------------
+
+UINT16 ay3600_device::b_r()
 {
-	ay3600_t *ay3600 = get_safe_token(device);
+	UINT16 data = m_b;
 
-	UINT16 data = ay3600->b;
-
-	devcb_call_write_line(&ay3600->out_data_ready_func, 0);
+	m_out_data_ready_func(0);
 
 	return data;
 }
-
-/*-------------------------------------------------
-    DEVICE_START( ay3600 )
--------------------------------------------------*/
-
-static DEVICE_START( ay3600 )
-{
-	ay3600_t *ay3600 = get_safe_token(device);
-	const ay3600_interface *intf = get_interface(device);
-
-	/* resolve callbacks */
-	devcb_resolve_read_line(&ay3600->in_shift_func, &intf->in_shift_func, device);
-	devcb_resolve_read_line(&ay3600->in_control_func, &intf->in_control_func, device);
-	devcb_resolve_write_line(&ay3600->out_data_ready_func, &intf->out_data_ready_func, device);
-	devcb_resolve_write_line(&ay3600->out_ako_func, &intf->out_ako_func, device);
-
-	/* create the timers */
-	ay3600->scan_timer = timer_alloc(device->machine, ay3600_scan_tick, (void *)device);
-	timer_adjust_periodic(ay3600->scan_timer, attotime_zero, 0, ATTOTIME_IN_HZ(60));
-
-	/* register for state saving */
-	state_save_register_device_item(device, 0, ay3600->b);
-	state_save_register_device_item(device, 0, ay3600->ako);
-}
-
-/*-------------------------------------------------
-    DEVICE_GET_INFO( ay3600pro002 )
--------------------------------------------------*/
-
-DEVICE_GET_INFO( ay3600pro002 )
-{
-	switch (state)
-	{
-		/* --- the following bits of info are returned as 64-bit signed integers --- */
-		case DEVINFO_INT_TOKEN_BYTES:					info->i = sizeof(ay3600_t);					break;
-		case DEVINFO_INT_INLINE_CONFIG_BYTES:			info->i = 0;								break;
-
-		/* --- the following bits of info are returned as pointers to data or functions --- */
-		case DEVINFO_FCT_START:							info->start = DEVICE_START_NAME(ay3600);	break;
-		case DEVINFO_FCT_STOP:							/* Nothing */								break;
-		case DEVINFO_FCT_RESET:							/* Nothing */								break;
-
-		/* --- the following bits of info are returned as NULL-terminated strings --- */
-		case DEVINFO_STR_NAME:							strcpy(info->s, "GI AY-5-3600-PRO-002");	break;
-		case DEVINFO_STR_FAMILY:						strcpy(info->s, "GI AY-5-3600");			break;
-		case DEVINFO_STR_VERSION:						strcpy(info->s, "1.0");						break;
-		case DEVINFO_STR_SOURCE_FILE:					strcpy(info->s, __FILE__);					break;
-		case DEVINFO_STR_CREDITS:						strcpy(info->s, "Copyright MESS Team");		break;
-	}
-}
-
-DEFINE_LEGACY_DEVICE(AY3600PRO002, ay3600pro002);

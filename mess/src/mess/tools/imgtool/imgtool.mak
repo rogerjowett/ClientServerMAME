@@ -11,7 +11,7 @@
 IMGTOOL = imgtool$(EXE)
 
 # add path to imgtool headers
-CFLAGS += -I$(SRC)/$(TARGET)/tools/imgtool
+INCPATH += -I$(SRC)/$(TARGET)/tools/imgtool
 
 # imgtool directories
 IMGTOOLOBJ = $(MESS_TOOLS)/imgtool
@@ -31,28 +31,6 @@ LIBIMGTOOL = $(OBJ)/libimgtool.a
 
 # imgtool lib objects
 IMGTOOL_LIB_OBJS =					\
-	$(OBJ)/version.o				\
-	$(EMUOBJ)/emualloc.o				\
-	$(EMUOBJ)/emucore.o				\
-	$(EMUOBJ)/emuopts.o 				\
-	$(EMUOBJ)/memory.o				\
-	$(EMUOBJ)/ioprocs.o			\
-	$(MESS_FORMATS)/flopimg.o			\
-	$(MESS_FORMATS)/cassimg.o			\
-	$(MESS_FORMATS)/basicdsk.o			\
-	$(MESS_FORMATS)/coco_dsk.o			\
-	$(MESS_FORMATS)/coco_cas.o			\
-	$(MESS_FORMATS)/imd_dsk.o			\
-	$(MESS_FORMATS)/td0_dsk.o			\
-	$(MESS_FORMATS)/cqm_dsk.o			\
-	$(MESS_FORMATS)/dsk_dsk.o			\
-	$(MESS_FORMATS)/d88_dsk.o			\
-	$(MESS_FORMATS)/pc_dsk.o			\
-	$(MESS_FORMATS)/ap2_dsk.o			\
-	$(MESS_FORMATS)/ap_dsk35.o			\
-	$(MESS_FORMATS)/wavfile.o			\
-	$(MESS_FORMATS)/vt_dsk.o			\
-	$(MESS_FORMATS)/fdi_dsk.o			\
 	$(IMGTOOLOBJ)/stream.o				\
 	$(IMGTOOLOBJ)/library.o				\
 	$(IMGTOOLOBJ)/modules.o				\
@@ -106,8 +84,6 @@ $(LIBIMGTOOL): $(IMGTOOL_LIB_OBJS)
 
 IMGTOOL_OBJS = \
 	$(IMGTOOLOBJ)/main.o \
-	$(IMGTOOLOBJ)/stubs.o \
-	$(MESS_TOOLS)/toolerr.o
 
 
 
@@ -115,6 +91,6 @@ IMGTOOL_OBJS = \
 # rules to build the imgtool executable
 #-------------------------------------------------
 
-$(IMGTOOL): $(IMGTOOL_OBJS) $(LIBIMGTOOL) $(LIBUTIL) $(EXPAT) $(ZLIB) $(LIBOCORE)
+$(IMGTOOL): $(IMGTOOL_OBJS) $(LIBIMGTOOL) $(LIBUTIL) $(EXPAT) $(ZLIB) $(FORMATS_LIB) $(LIBOCORE)
 	@echo Linking $@...
 	$(LD) $(LDFLAGS) $^ $(LIBS) -o $@

@@ -14,36 +14,36 @@
 #include "sound/dac.h"
 #include "sound/wave.h"
 #include "includes/special.h"
-#include "machine/i8255a.h"
+#include "machine/i8255.h"
 #include "machine/pit8253.h"
-#include "devices/cassette.h"
-#include "devices/flopdrv.h"
+#include "imagedev/cassette.h"
+#include "imagedev/flopdrv.h"
 #include "formats/basicdsk.h"
 #include "formats/rk_cas.h"
 #include "formats/smx_dsk.h"
 #include "machine/wd17xx.h"
-#include "devices/messram.h"
+#include "machine/ram.h"
 
 /* Address maps */
-static ADDRESS_MAP_START(specialist_mem, ADDRESS_SPACE_PROGRAM, 8)
+static ADDRESS_MAP_START(specialist_mem, AS_PROGRAM, 8)
 	AM_RANGE( 0x0000, 0x2fff ) AM_RAMBANK("bank1") // First bank
     AM_RANGE( 0x3000, 0x8fff ) AM_RAM  // RAM
-    AM_RANGE( 0x9000, 0xbfff ) AM_RAM  AM_BASE_MEMBER(special_state, specialist_video_ram) // Video RAM
+    AM_RANGE( 0x9000, 0xbfff ) AM_RAM  AM_BASE_MEMBER(special_state, m_specialist_video_ram) // Video RAM
     AM_RANGE( 0xc000, 0xf000 ) AM_ROM  // System ROM
     AM_RANGE( 0xf000, 0xf700 ) AM_NOP
-    AM_RANGE( 0xf800, 0xffff ) AM_READWRITE(specialist_keyboard_r,specialist_keyboard_w) // 8255 for keyboard
+    AM_RANGE( 0xf800, 0xf803 ) AM_MIRROR(0x7fc) AM_DEVREADWRITE_MODERN("ppi8255", i8255_device, read, write)
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START(specialp_mem, ADDRESS_SPACE_PROGRAM, 8)
+static ADDRESS_MAP_START(specialp_mem, AS_PROGRAM, 8)
 	AM_RANGE( 0x0000, 0x2fff ) AM_RAMBANK("bank1") // First bank
     AM_RANGE( 0x3000, 0x7fff ) AM_RAM  // RAM
-    AM_RANGE( 0x8000, 0xbfff ) AM_RAM  AM_BASE_MEMBER(special_state, specialist_video_ram) // Video RAM
+    AM_RANGE( 0x8000, 0xbfff ) AM_RAM  AM_BASE_MEMBER(special_state, m_specialist_video_ram) // Video RAM
     AM_RANGE( 0xc000, 0xf000 ) AM_ROM  // System ROM
     AM_RANGE( 0xf000, 0xf700 ) AM_NOP
-    AM_RANGE( 0xf800, 0xffff ) AM_READWRITE(specialist_keyboard_r,specialist_keyboard_w) // 8255 for keyboard
+    AM_RANGE( 0xf800, 0xf803 ) AM_MIRROR(0x7fc) AM_DEVREADWRITE_MODERN("ppi8255", i8255_device, read, write)
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START(erik_mem, ADDRESS_SPACE_PROGRAM, 8)
+static ADDRESS_MAP_START(erik_mem, AS_PROGRAM, 8)
     AM_RANGE( 0x0000, 0x3fff ) AM_RAMBANK("bank1")
     AM_RANGE( 0x4000, 0x8fff ) AM_RAMBANK("bank2")
     AM_RANGE( 0x9000, 0xbfff ) AM_RAMBANK("bank3")
@@ -52,7 +52,7 @@ static ADDRESS_MAP_START(erik_mem, ADDRESS_SPACE_PROGRAM, 8)
     AM_RANGE( 0xf800, 0xffff ) AM_RAMBANK("bank6")
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( erik_io_map, ADDRESS_SPACE_IO, 8 )
+static ADDRESS_MAP_START( erik_io_map, AS_IO, 8 )
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 	AM_RANGE(0xf1, 0xf1) AM_READWRITE(erik_rr_reg_r, erik_rr_reg_w)
 	AM_RANGE(0xf2, 0xf2) AM_READWRITE(erik_rc_reg_r, erik_rc_reg_w)
@@ -63,13 +63,13 @@ static ADDRESS_MAP_START( erik_io_map, ADDRESS_SPACE_IO, 8 )
 	AM_RANGE(0xf7, 0xf7) AM_DEVREADWRITE("wd1793", wd17xx_data_r, wd17xx_data_w)
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START(specimx_mem, ADDRESS_SPACE_PROGRAM, 8)
+static ADDRESS_MAP_START(specimx_mem, AS_PROGRAM, 8)
 	ADDRESS_MAP_UNMAP_HIGH
     AM_RANGE( 0x0000, 0x8fff ) AM_RAMBANK("bank1")
 	AM_RANGE( 0x9000, 0xbfff ) AM_RAMBANK("bank2")
 	AM_RANGE( 0xc000, 0xffbf ) AM_RAMBANK("bank3")
     AM_RANGE( 0xffc0, 0xffdf ) AM_RAMBANK("bank4")
-    AM_RANGE( 0xffe0, 0xffe3 ) AM_READWRITE(specialist_keyboard_r,specialist_keyboard_w) // 8255 for keyboard
+    AM_RANGE( 0xffe0, 0xffe3 ) AM_DEVREADWRITE_MODERN("ppi8255", i8255_device, read, write)
     AM_RANGE( 0xffe4, 0xffe7 ) AM_RAM //external 8255
     AM_RANGE( 0xffe8, 0xffe8 ) AM_DEVREADWRITE("wd1793", wd17xx_status_r,wd17xx_command_w)
     AM_RANGE( 0xffe9, 0xffe9 ) AM_DEVREADWRITE("wd1793", wd17xx_track_r,wd17xx_track_w)
@@ -389,15 +389,16 @@ static INPUT_PORTS_START( specimx )
 	PORT_BIT(0xfe, IP_ACTIVE_LOW, IPT_UNUSED)
 INPUT_PORTS_END
 
-static const cassette_config special_cassette_config =
+static const cassette_interface special_cassette_interface =
 {
 	rks_cassette_formats,
 	NULL,
 	(cassette_state)(CASSETTE_STOPPED | CASSETTE_SPEAKER_ENABLED | CASSETTE_MOTOR_ENABLED),
+	NULL,
 	NULL
 };
 
-static const floppy_config specimx_floppy_config =
+static const floppy_interface specimx_floppy_interface =
 {
 	DEVCB_NULL,
 	DEVCB_NULL,
@@ -406,6 +407,7 @@ static const floppy_config specimx_floppy_config =
 	DEVCB_NULL,
 	FLOPPY_STANDARD_5_25_DSHD,
 	FLOPPY_OPTIONS_NAME(specimx),
+	NULL,
 	NULL
 };
 
@@ -418,7 +420,7 @@ static MACHINE_CONFIG_START( special, special_state )
 
 	MCFG_PIT8253_ADD( "pit8253", specimx_pit8253_intf )
 
-	MCFG_I8255A_ADD( "ppi8255", specialist_ppi8255_interface )
+	MCFG_I8255_ADD( "ppi8255", specialist_ppi8255_interface )
 
     /* video hardware */
 	MCFG_SCREEN_ADD("screen", RASTER)
@@ -427,20 +429,21 @@ static MACHINE_CONFIG_START( special, special_state )
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(384, 256)
 	MCFG_SCREEN_VISIBLE_AREA(0, 384-1, 0, 256-1)
+    MCFG_SCREEN_UPDATE(special)
+
 	MCFG_PALETTE_LENGTH(2)
 	MCFG_PALETTE_INIT(black_and_white)
 
     MCFG_VIDEO_START(special)
-    MCFG_VIDEO_UPDATE(special)
 
     /* audio hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 	MCFG_SOUND_ADD("dac", DAC, 0)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
-	MCFG_SOUND_WAVE_ADD("wave", "cassette")
-	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
+	MCFG_SOUND_WAVE_ADD(WAVE_TAG, CASSETTE_TAG)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
-	MCFG_CASSETTE_ADD( "cassette", special_cassette_config )
+	MCFG_CASSETTE_ADD( CASSETTE_TAG, special_cassette_interface )
 
 MACHINE_CONFIG_END
 
@@ -451,10 +454,11 @@ static MACHINE_CONFIG_DERIVED( specialp, special )
     MCFG_CPU_PROGRAM_MAP(specialp_mem)
 
     MCFG_SCREEN_MODIFY("screen")
-    MCFG_VIDEO_START(specialp)
-    MCFG_VIDEO_UPDATE(specialp)
+    MCFG_SCREEN_UPDATE(specialp)
 	MCFG_SCREEN_SIZE(512, 256)
 	MCFG_SCREEN_VISIBLE_AREA(0, 512-1, 0, 256-1)
+
+    MCFG_VIDEO_START(specialp)
 MACHINE_CONFIG_END
 
 static MACHINE_CONFIG_DERIVED( specimx, special )
@@ -466,22 +470,23 @@ static MACHINE_CONFIG_DERIVED( specimx, special )
 
     /* video hardware */
 	MCFG_SCREEN_MODIFY("screen")
-	MCFG_PALETTE_LENGTH(16)
-	MCFG_PALETTE_INIT( specimx )
+	MCFG_SCREEN_UPDATE(specimx)
 
 	MCFG_VIDEO_START(specimx)
-	MCFG_VIDEO_UPDATE(specimx)
+
+	MCFG_PALETTE_LENGTH(16)
+	MCFG_PALETTE_INIT( specimx )
 
     /* audio hardware */
 	MCFG_SOUND_ADD("custom", SPECIMX, 0)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
 
-	MCFG_WD1793_ADD("wd1793", default_wd17xx_interface_2_drives )
+	MCFG_FD1793_ADD("wd1793", default_wd17xx_interface_2_drives )
 
-	MCFG_FLOPPY_2_DRIVES_ADD(specimx_floppy_config)
+	MCFG_FLOPPY_2_DRIVES_ADD(specimx_floppy_interface)
 
 	/* internal ram */
-	MCFG_RAM_ADD("messram")
+	MCFG_RAM_ADD(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("128K")
 	MCFG_RAM_DEFAULT_VALUE(0x00)
 MACHINE_CONFIG_END
@@ -494,7 +499,7 @@ static MACHINE_CONFIG_START( erik, special_state )
 
     MCFG_MACHINE_RESET( erik )
 
-	MCFG_I8255A_ADD( "ppi8255", specialist_ppi8255_interface )
+	MCFG_I8255_ADD( "ppi8255", specialist_ppi8255_interface )
 
     /* video hardware */
 	MCFG_SCREEN_ADD("screen", RASTER)
@@ -503,26 +508,27 @@ static MACHINE_CONFIG_START( erik, special_state )
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(384, 256)
 	MCFG_SCREEN_VISIBLE_AREA(0, 384-1, 0, 256-1)
+    MCFG_SCREEN_UPDATE(erik)
+
 	MCFG_PALETTE_LENGTH(8)
 	MCFG_PALETTE_INIT(erik)
 
     MCFG_VIDEO_START(erik)
-    MCFG_VIDEO_UPDATE(erik)
     /* audio hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 	MCFG_SOUND_ADD("dac", DAC, 0)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
-	MCFG_SOUND_WAVE_ADD("wave", "cassette")
-	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
+	MCFG_SOUND_WAVE_ADD(WAVE_TAG, CASSETTE_TAG)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
-	MCFG_CASSETTE_ADD( "cassette", special_cassette_config )
+	MCFG_CASSETTE_ADD( CASSETTE_TAG, special_cassette_interface )
 
-	MCFG_WD1793_ADD("wd1793", default_wd17xx_interface_2_drives )
+	MCFG_FD1793_ADD("wd1793", default_wd17xx_interface_2_drives )
 
-	MCFG_FLOPPY_2_DRIVES_ADD(specimx_floppy_config)
+	MCFG_FLOPPY_2_DRIVES_ADD(specimx_floppy_interface)
 
 	/* internal ram */
-	MCFG_RAM_ADD("messram")
+	MCFG_RAM_ADD(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("192K")
 	MCFG_RAM_DEFAULT_VALUE(0x00)
 MACHINE_CONFIG_END
@@ -588,11 +594,18 @@ ROM_START( erik )
     ROM_LOAD( "erik.bin", 0x10000, 0x10000, CRC(6F3208F4) SHA1(41f6e2763ef60d3c7214c98893e580d25346fa2d))
 ROM_END
 
+ROM_START( pioner )
+	// Ukranian clone with 16KB RAM
+    ROM_REGION( 0x10000, "maincpu", ROMREGION_ERASEFF )
+	ROM_LOAD( "pioner.rf2", 0xc000, 0x0800, CRC(d6250ab2) SHA1(b953517d883c64857e63139fed52436f77d371cb))
+ROM_END
+
 /* Driver */
 
 /*    YEAR  NAME        PARENT  COMPAT   MACHINE    INPUT       INIT        COMPANY              FULLNAME       FLAGS */
 COMP( 1985, special,    0,  	0,		special,	special,	special,    "<unknown>",				 "Specialist",		0)
 COMP( 1985, specialm,   special,0,		special,	special,	special,    "<unknown>",				 "Specialist M",		0)
+COMP( 1985, pioner,     special,0,		special,	special,	special,    "<unknown>",				 "Pioner",		0)
 COMP( 1985, specialp,   special,0,		specialp,	specialp,	special,    "<unknown>",				 "Specialist + hires graph",		0)
 COMP( 1985, lik,    	special,0,		special,	lik,		special,    "<unknown>",				 "Lik",				0)
 COMP( 1985, specimx,	special,0,		specimx,	specimx,	0,	      "<unknown>",				 "Specialist MX",	0)

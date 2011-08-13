@@ -7,18 +7,18 @@
 class hanaawas_state : public driver_device
 {
 public:
-	hanaawas_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	hanaawas_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 	/* memory pointers */
-	UINT8 *    videoram;
-	UINT8 *    colorram;
+	UINT8 *    m_videoram;
+	UINT8 *    m_colorram;
 
 	/* video-related */
-	tilemap_t    *bg_tilemap;
+	tilemap_t    *m_bg_tilemap;
 
 	/* misc */
-	int        mux;
+	int        m_mux;
 };
 
 
@@ -30,4 +30,4 @@ WRITE8_DEVICE_HANDLER( hanaawas_portB_w );
 
 PALETTE_INIT( hanaawas );
 VIDEO_START( hanaawas );
-VIDEO_UPDATE( hanaawas );
+SCREEN_UPDATE( hanaawas );

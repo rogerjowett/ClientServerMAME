@@ -121,7 +121,6 @@ Known issues :
 
 #include "emu.h"
 #include "cpu/z80/z80.h"
-#include "deprecat.h"
 #include "sound/2203intf.h"
 #include "includes/argus.h"
 
@@ -132,18 +131,32 @@ Known issues :
 
 ***************************************************************************/
 
-static INTERRUPT_GEN( argus_interrupt )
+static TIMER_DEVICE_CALLBACK( argus_scanline )
 {
-	if (cpu_getiloops(device) == 0)
-		cpu_set_input_line_and_vector(device, 0, HOLD_LINE, 0xd7);	/* RST 10h */
-	else
-		cpu_set_input_line_and_vector(device, 0, HOLD_LINE, 0xcf);	/* RST 08h */
+	int scanline = param;
+
+	if(scanline == 240) // vblank-out irq
+		cputag_set_input_line_and_vector(timer.machine(), "maincpu", 0, HOLD_LINE,0xd7); /* RST 10h */
+
+	if(scanline == 16) // vblank-in irq
+		cputag_set_input_line_and_vector(timer.machine(), "maincpu", 0, HOLD_LINE,0xcf); /* RST 08h */
+}
+
+static TIMER_DEVICE_CALLBACK( butasan_scanline )
+{
+	int scanline = param;
+
+	if(scanline == 248) // vblank-out irq
+		cputag_set_input_line_and_vector(timer.machine(), "maincpu", 0, HOLD_LINE,0xd7); /* RST 10h */
+
+	if(scanline == 8) // vblank-in irq
+		cputag_set_input_line_and_vector(timer.machine(), "maincpu", 0, HOLD_LINE,0xcf); /* RST 08h */
 }
 
 /* Handler called by the YM2203 emulator when the internal timers cause an IRQ */
 static void irqhandler(device_t *device, int irq)
 {
-	cputag_set_input_line(device->machine, "audiocpu", 0, irq ? ASSERT_LINE : CLEAR_LINE);
+	cputag_set_input_line(device->machine(), "audiocpu", 0, irq ? ASSERT_LINE : CLEAR_LINE);
 }
 
 static const ym2203_interface ym2203_config =
@@ -165,11 +178,11 @@ static const ym2203_interface ym2203_config =
 
 static WRITE8_HANDLER( argus_bankselect_w )
 {
-	UINT8 *RAM = space->machine->region("maincpu")->base();
+	UINT8 *RAM = space->machine().region("maincpu")->base();
 	int bankaddress;
 
 	bankaddress = 0x10000 + ((data & 7) * 0x4000);
-	memory_set_bankptr(space->machine, "bank1", &RAM[bankaddress]);	 /* Select 8 banks of 16k */
+	memory_set_bankptr(space->machine(), "bank1", &RAM[bankaddress]);	 /* Select 8 banks of 16k */
 }
 
 
@@ -179,7 +192,7 @@ static WRITE8_HANDLER( argus_bankselect_w )
 
 ***************************************************************************/
 
-static ADDRESS_MAP_START( argus_map, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( argus_map, AS_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x7fff) AM_ROM
 	AM_RANGE(0x8000, 0xbfff) AM_RAMBANK("bank1")
 	AM_RANGE(0xc000, 0xc000) AM_READ_PORT("SYSTEM")
@@ -190,20 +203,20 @@ static ADDRESS_MAP_START( argus_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0xc200, 0xc200) AM_WRITE(soundlatch_w)
 	AM_RANGE(0xc201, 0xc201) AM_WRITE(argus_flipscreen_w)
 	AM_RANGE(0xc202, 0xc202) AM_WRITE(argus_bankselect_w)
-	AM_RANGE(0xc300, 0xc301) AM_WRITE(argus_bg0_scrollx_w) AM_BASE(&argus_bg0_scrollx)
-	AM_RANGE(0xc302, 0xc303) AM_WRITE(argus_bg0_scrolly_w) AM_BASE(&argus_bg0_scrolly)
-	AM_RANGE(0xc308, 0xc309) AM_WRITE(argus_bg1_scrollx_w) AM_BASE(&argus_bg1_scrollx)
-	AM_RANGE(0xc30a, 0xc30b) AM_WRITE(argus_bg1_scrolly_w) AM_BASE(&argus_bg1_scrolly)
+	AM_RANGE(0xc300, 0xc301) AM_RAM AM_BASE_MEMBER(argus_state, m_bg0_scrollx)
+	AM_RANGE(0xc302, 0xc303) AM_RAM AM_BASE_MEMBER(argus_state, m_bg0_scrolly)
+	AM_RANGE(0xc308, 0xc309) AM_RAM AM_BASE_MEMBER(argus_state, m_bg1_scrollx)
+	AM_RANGE(0xc30a, 0xc30b) AM_RAM AM_BASE_MEMBER(argus_state, m_bg1_scrolly)
 	AM_RANGE(0xc30c, 0xc30c) AM_WRITE(argus_bg_status_w)
-	AM_RANGE(0xc400, 0xcfff) AM_READWRITE(argus_paletteram_r, argus_paletteram_w) AM_BASE(&argus_paletteram)
-	AM_RANGE(0xd000, 0xd7ff) AM_READWRITE(argus_txram_r, argus_txram_w) AM_BASE(&argus_txram)
-	AM_RANGE(0xd800, 0xdfff) AM_READWRITE(argus_bg1ram_r, argus_bg1ram_w) AM_BASE(&argus_bg1ram)
+	AM_RANGE(0xc400, 0xcfff) AM_READWRITE(argus_paletteram_r, argus_paletteram_w) AM_BASE_MEMBER(argus_state, m_paletteram)
+	AM_RANGE(0xd000, 0xd7ff) AM_READWRITE(argus_txram_r, argus_txram_w) AM_BASE_MEMBER(argus_state, m_txram)
+	AM_RANGE(0xd800, 0xdfff) AM_READWRITE(argus_bg1ram_r, argus_bg1ram_w) AM_BASE_MEMBER(argus_state, m_bg1ram)
 	AM_RANGE(0xe000, 0xf1ff) AM_RAM
-	AM_RANGE(0xf200, 0xf7ff) AM_RAM AM_BASE_SIZE_GENERIC(spriteram)
+	AM_RANGE(0xf200, 0xf7ff) AM_RAM AM_BASE_SIZE_MEMBER(argus_state, m_spriteram, m_spriteram_size)
 	AM_RANGE(0xf800, 0xffff) AM_RAM
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( valtric_map, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( valtric_map, AS_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x7fff) AM_ROM
 	AM_RANGE(0x8000, 0xbfff) AM_RAMBANK("bank1")
 	AM_RANGE(0xc000, 0xc000) AM_READ_PORT("SYSTEM")
@@ -215,19 +228,19 @@ static ADDRESS_MAP_START( valtric_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0xc201, 0xc201) AM_WRITE(argus_flipscreen_w)
 	AM_RANGE(0xc202, 0xc202) AM_WRITE(argus_bankselect_w)
 	AM_RANGE(0xc300, 0xc300) AM_WRITE(valtric_unknown_w)
-	AM_RANGE(0xc308, 0xc309) AM_WRITE(argus_bg1_scrollx_w) AM_BASE(&argus_bg1_scrollx)
-	AM_RANGE(0xc30a, 0xc30b) AM_WRITE(argus_bg1_scrolly_w) AM_BASE(&argus_bg1_scrolly)
+	AM_RANGE(0xc308, 0xc309) AM_RAM AM_BASE_MEMBER(argus_state, m_bg1_scrollx)
+	AM_RANGE(0xc30a, 0xc30b) AM_RAM AM_BASE_MEMBER(argus_state, m_bg1_scrolly)
 	AM_RANGE(0xc30c, 0xc30c) AM_WRITE(valtric_bg_status_w)
 	AM_RANGE(0xc30d, 0xc30d) AM_WRITE(valtric_mosaic_w)
-	AM_RANGE(0xc400, 0xcfff) AM_READWRITE(argus_paletteram_r, valtric_paletteram_w) AM_BASE(&argus_paletteram)
-	AM_RANGE(0xd000, 0xd7ff) AM_READWRITE(argus_txram_r, argus_txram_w) AM_BASE(&argus_txram)
-	AM_RANGE(0xd800, 0xdfff) AM_READWRITE(argus_bg1ram_r, argus_bg1ram_w) AM_BASE(&argus_bg1ram)
+	AM_RANGE(0xc400, 0xcfff) AM_READWRITE(argus_paletteram_r, valtric_paletteram_w) AM_BASE_MEMBER(argus_state, m_paletteram)
+	AM_RANGE(0xd000, 0xd7ff) AM_READWRITE(argus_txram_r, argus_txram_w) AM_BASE_MEMBER(argus_state, m_txram)
+	AM_RANGE(0xd800, 0xdfff) AM_READWRITE(argus_bg1ram_r, argus_bg1ram_w) AM_BASE_MEMBER(argus_state, m_bg1ram)
 	AM_RANGE(0xe000, 0xf1ff) AM_RAM
-	AM_RANGE(0xf200, 0xf7ff) AM_RAM AM_BASE_SIZE_GENERIC(spriteram)
+	AM_RANGE(0xf200, 0xf7ff) AM_RAM AM_BASE_SIZE_MEMBER(argus_state, m_spriteram, m_spriteram_size)
 	AM_RANGE(0xf800, 0xffff) AM_RAM
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( butasan_map, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( butasan_map, AS_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x7fff) AM_ROM
 	AM_RANGE(0x8000, 0xbfff) AM_RAMBANK("bank1")
 	AM_RANGE(0xc000, 0xc000) AM_READ_PORT("SYSTEM")
@@ -240,40 +253,40 @@ static ADDRESS_MAP_START( butasan_map, ADDRESS_SPACE_PROGRAM, 8 )
 	AM_RANGE(0xc201, 0xc201) AM_WRITE(argus_flipscreen_w)
 	AM_RANGE(0xc202, 0xc202) AM_WRITE(argus_bankselect_w)
 	AM_RANGE(0xc203, 0xc203) AM_WRITE(butasan_pageselect_w)
-	AM_RANGE(0xc300, 0xc301) AM_WRITE(argus_bg0_scrollx_w) AM_BASE(&argus_bg0_scrollx)
-	AM_RANGE(0xc302, 0xc303) AM_WRITE(argus_bg0_scrolly_w) AM_BASE(&argus_bg0_scrolly)
+	AM_RANGE(0xc300, 0xc301) AM_RAM AM_BASE_MEMBER(argus_state, m_bg0_scrollx)
+	AM_RANGE(0xc302, 0xc303) AM_RAM AM_BASE_MEMBER(argus_state, m_bg0_scrolly)
 	AM_RANGE(0xc304, 0xc304) AM_WRITE(butasan_bg0_status_w)
-	AM_RANGE(0xc308, 0xc309) AM_WRITE(argus_bg1_scrollx_w) AM_BASE(&argus_bg1_scrollx)
-	AM_RANGE(0xc30a, 0xc30b) AM_WRITE(argus_bg1_scrolly_w) AM_BASE(&argus_bg1_scrolly)
+	AM_RANGE(0xc308, 0xc309) AM_RAM AM_BASE_MEMBER(argus_state, m_bg1_scrollx)
+	AM_RANGE(0xc30a, 0xc30b) AM_RAM AM_BASE_MEMBER(argus_state, m_bg1_scrolly)
 	AM_RANGE(0xc30c, 0xc30c) AM_WRITE(butasan_bg1_status_w)
-	AM_RANGE(0xc400, 0xc7ff) AM_READWRITE(butasan_bg1ram_r, butasan_bg1ram_w) AM_BASE(&butasan_bg1ram)
-	AM_RANGE(0xc800, 0xcfff) AM_READWRITE(argus_paletteram_r, butasan_paletteram_w) AM_BASE(&argus_paletteram)
+	AM_RANGE(0xc400, 0xc7ff) AM_READWRITE(butasan_bg1ram_r, butasan_bg1ram_w) AM_BASE_MEMBER(argus_state, m_butasan_bg1ram)
+	AM_RANGE(0xc800, 0xcfff) AM_READWRITE(argus_paletteram_r, butasan_paletteram_w) AM_BASE_MEMBER(argus_state, m_paletteram)
 	AM_RANGE(0xd000, 0xdfff) AM_READWRITE(butasan_pagedram_r, butasan_pagedram_w)
 	AM_RANGE(0xe000, 0xefff) AM_RAM
-	AM_RANGE(0xf000, 0xf67f) AM_RAM AM_BASE_SIZE_GENERIC(spriteram)
+	AM_RANGE(0xf000, 0xf67f) AM_RAM AM_BASE_SIZE_MEMBER(argus_state, m_spriteram, m_spriteram_size)
 	AM_RANGE(0xf680, 0xffff) AM_RAM
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( sound_map_a, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( sound_map_a, AS_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x7fff) AM_ROM
 	AM_RANGE(0x8000, 0x87ff) AM_RAM
 	AM_RANGE(0xc000, 0xc000) AM_READ(soundlatch_r)
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( sound_map_b, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( sound_map_b, AS_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0xbfff) AM_ROM
 	AM_RANGE(0xc000, 0xc7ff) AM_RAM
 	AM_RANGE(0xe000, 0xe000) AM_READ(soundlatch_r)
 ADDRESS_MAP_END
 
 #if 0
-static ADDRESS_MAP_START( sound_portmap_1, ADDRESS_SPACE_IO, 8 )
+static ADDRESS_MAP_START( sound_portmap_1, AS_IO, 8 )
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 	AM_RANGE(0x00, 0x01) AM_DEVREADWRITE("ym1", ym2203_r, ym2203_w)
 ADDRESS_MAP_END
 #endif
 
-static ADDRESS_MAP_START( sound_portmap_2, ADDRESS_SPACE_IO, 8 )
+static ADDRESS_MAP_START( sound_portmap_2, AS_IO, 8 )
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 	AM_RANGE(0x00, 0x01) AM_DEVREADWRITE("ym1", ym2203_r, ym2203_w)
 	AM_RANGE(0x80, 0x81) AM_DEVREADWRITE("ym2", ym2203_r, ym2203_w)
@@ -529,22 +542,18 @@ static GFXDECODE_START( butasan )
 GFXDECODE_END
 
 
-static MACHINE_CONFIG_START( argus, driver_device )
+static MACHINE_CONFIG_START( argus, argus_state )
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, 5000000)			/* 4 MHz */
 	MCFG_CPU_PROGRAM_MAP(argus_map)
-	MCFG_CPU_VBLANK_INT_HACK(argus_interrupt,2)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", argus_scanline, "screen", 0, 1)
 
 	MCFG_CPU_ADD("audiocpu", Z80, 5000000)
 	MCFG_CPU_PROGRAM_MAP(sound_map_a)
-#if 0
-	MCFG_CPU_IO_MAP(sound_portmap_1)
-#else
 	MCFG_CPU_IO_MAP(sound_portmap_2)
-#endif
 
-	MCFG_QUANTUM_TIME(HZ(600))
+	MCFG_QUANTUM_TIME(attotime::from_hz(600))
 
 	/* video hardware */
 	MCFG_SCREEN_ADD("screen", RASTER)
@@ -553,25 +562,17 @@ static MACHINE_CONFIG_START( argus, driver_device )
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
 	MCFG_SCREEN_SIZE(32*16, 32*16)
 	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_UPDATE(argus)
 
 	MCFG_GFXDECODE(argus)
 	MCFG_PALETTE_LENGTH(896)
 
 	MCFG_VIDEO_START(argus)
 	MCFG_VIDEO_RESET(argus)
-	MCFG_VIDEO_UPDATE(argus)
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-#if 0
-	MCFG_SOUND_ADD("ym1", YM2203, 6000000 / 4)
-	MCFG_SOUND_CONFIG(ym2203_config)
-	MCFG_SOUND_ROUTE(0, "mono", 0.15)
-	MCFG_SOUND_ROUTE(1, "mono", 0.15)
-	MCFG_SOUND_ROUTE(2, "mono", 0.15)
-	MCFG_SOUND_ROUTE(3, "mono", 0.50)
-#else
 	MCFG_SOUND_ADD("ym1", YM2203, 6000000 / 4)
 	MCFG_SOUND_CONFIG(ym2203_config)
 	MCFG_SOUND_ROUTE(0, "mono", 0.15)
@@ -584,21 +585,20 @@ static MACHINE_CONFIG_START( argus, driver_device )
 	MCFG_SOUND_ROUTE(1, "mono", 0.15)
 	MCFG_SOUND_ROUTE(2, "mono", 0.15)
 	MCFG_SOUND_ROUTE(3, "mono", 0.50)
-#endif
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( valtric, driver_device )
+static MACHINE_CONFIG_START( valtric, argus_state )
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, 5000000)			/* 5 MHz */
 	MCFG_CPU_PROGRAM_MAP(valtric_map)
-	MCFG_CPU_VBLANK_INT_HACK(argus_interrupt,2)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", argus_scanline, "screen", 0, 1)
 
 	MCFG_CPU_ADD("audiocpu", Z80, 5000000)
 	MCFG_CPU_PROGRAM_MAP(sound_map_a)
 	MCFG_CPU_IO_MAP(sound_portmap_2)
 
-	MCFG_QUANTUM_TIME(HZ(600))
+	MCFG_QUANTUM_TIME(attotime::from_hz(600))
 
 	/* video hardware */
 	MCFG_SCREEN_ADD("screen", RASTER)
@@ -607,13 +607,13 @@ static MACHINE_CONFIG_START( valtric, driver_device )
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
 	MCFG_SCREEN_SIZE(32*16, 32*16)
 	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 2*8, 30*8-1)
+	MCFG_SCREEN_UPDATE(valtric)
 
 	MCFG_GFXDECODE(valtric)
 	MCFG_PALETTE_LENGTH(768)
 
 	MCFG_VIDEO_START(valtric)
 	MCFG_VIDEO_RESET(valtric)
-	MCFG_VIDEO_UPDATE(valtric)
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
@@ -632,18 +632,18 @@ static MACHINE_CONFIG_START( valtric, driver_device )
 	MCFG_SOUND_ROUTE(3, "mono", 0.50)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( butasan, driver_device )
+static MACHINE_CONFIG_START( butasan, argus_state )
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, 5000000)			/* 5 MHz */
 	MCFG_CPU_PROGRAM_MAP(butasan_map)
-	MCFG_CPU_VBLANK_INT_HACK(argus_interrupt,2)
+	MCFG_TIMER_ADD_SCANLINE("scantimer", butasan_scanline, "screen", 0, 1)
 
 	MCFG_CPU_ADD("audiocpu", Z80, 5000000)
 	MCFG_CPU_PROGRAM_MAP(sound_map_b)
 	MCFG_CPU_IO_MAP(sound_portmap_2)
 
-	MCFG_QUANTUM_TIME(HZ(600))
+	MCFG_QUANTUM_TIME(attotime::from_hz(600))
 
 	/* video hardware */
 	MCFG_SCREEN_ADD("screen", RASTER)
@@ -652,13 +652,13 @@ static MACHINE_CONFIG_START( butasan, driver_device )
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
 	MCFG_SCREEN_SIZE(32*16, 32*16)
 	MCFG_SCREEN_VISIBLE_AREA(0*8, 32*8-1, 1*8, 31*8-1)
+	MCFG_SCREEN_UPDATE(butasan)
 
 	MCFG_GFXDECODE(butasan)
 	MCFG_PALETTE_LENGTH(768)
 
 	MCFG_VIDEO_START(butasan)
 	MCFG_VIDEO_RESET(butasan)
-	MCFG_VIDEO_UPDATE(butasan)
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")

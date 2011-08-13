@@ -47,24 +47,9 @@ SOUNDS += SN76496
 #-------------------------------------------------
 
 DRVLIBS = \
-	$(MESSOBJ)/tiny.o \
+	$(EMUOBJ)/drivers/emudummy.o \
 	$(MESS_DRIVERS)/coleco.o \
-	$(EMU_VIDEO)/tms9928a.o \
-	$(MESS_DEVICES)/cartslot.o \
-	$(MESS_DEVICES)/cassette.o	\
-	$(MESS_DEVICES)/messram.o	\
-	$(MESS_DEVICES)/multcart.o	\
-	$(MESS_FORMATS)/cassimg.o	\
-	$(MESS_FORMATS)/wavfile.o	\
-
-
-
-#-------------------------------------------------
-# layout dependencies
-#-------------------------------------------------
-
-$(MESSOBJ)/mess.o:	$(MESS_LAYOUT)/lcd.lh
-$(MESSOBJ)/mess.o:	$(MESS_LAYOUT)/lcd_rot.lh
+	$(MESS_MACHINE)/coleco.o \
 
 
 #-------------------------------------------------

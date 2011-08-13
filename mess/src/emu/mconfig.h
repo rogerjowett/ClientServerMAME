@@ -84,11 +84,11 @@
 
 
 #define NVRAM_HANDLER_NAME(name)	nvram_handler_##name
-#define NVRAM_HANDLER(name)			void NVRAM_HANDLER_NAME(name)(running_machine *machine, mame_file *file, int read_or_write)
+#define NVRAM_HANDLER(name)			void NVRAM_HANDLER_NAME(name)(running_machine &machine, emu_file *file, int read_or_write)
 #define NVRAM_HANDLER_CALL(name)	NVRAM_HANDLER_NAME(name)(machine, file, read_or_write)
 
 #define MEMCARD_HANDLER_NAME(name)	memcard_handler_##name
-#define MEMCARD_HANDLER(name)		void MEMCARD_HANDLER_NAME(name)(running_machine *machine, mame_file *file, int action)
+#define MEMCARD_HANDLER(name)		void MEMCARD_HANDLER_NAME(name)(running_machine &machine, emu_file &file, int action)
 #define MEMCARD_HANDLER_CALL(name)	MEMCARD_HANDLER_NAME(name)(machine, file, action)
 
 
@@ -105,13 +105,13 @@
 // forward references
 struct gfx_decode_entry;
 class driver_device;
-class screen_device_config;
+class screen_device;
 
 
 
 // various callback functions
-typedef void   (*nvram_handler_func)(running_machine *machine, mame_file *file, int read_or_write);
-typedef void   (*memcard_handler_func)(running_machine *machine, mame_file *file, int action);
+typedef void   (*nvram_handler_func)(running_machine &machine, emu_file *file, int read_or_write);
+typedef void   (*memcard_handler_func)(running_machine &machine, emu_file &file, int action);
 
 
 
@@ -126,12 +126,15 @@ class machine_config
 
 public:
 	// construction/destruction
-	machine_config(const game_driver &gamedrv);
+	machine_config(const game_driver &gamedrv, emu_options &options);
 	~machine_config();
 
 	// getters
 	const game_driver &gamedrv() const { return m_gamedrv; }
-	screen_device_config *first_screen() const;
+	const device_list &devicelist() const { return m_devicelist; }
+	const device_t *first_device() const { return m_devicelist.first(); }
+	screen_device *first_screen() const;
+	emu_options &options() const { return m_options; }
 
 	// public state
 	attotime				m_minimum_quantum;			// minimum scheduling quantum
@@ -147,17 +150,19 @@ public:
 	UINT32					m_total_colors;				// total number of colors in the palette
 	const char *			m_default_layout;			// default layout for this machine
 
-	device_config_list		m_devicelist;				// list of device configs
-
 	// helpers during configuration; not for general use
-	device_config *device_add(device_config *owner, const char *tag, device_type type, UINT32 clock);
-	device_config *device_replace(device_config *owner, const char *tag, device_type type, UINT32 clock);
-	device_config *device_remove(device_config *owner, const char *tag);
-	device_config *device_find(device_config *owner, const char *tag);
+	device_t *device_add(device_t *owner, const char *tag, device_type type, UINT32 clock);
+	device_t *device_replace(device_t *owner, const char *tag, device_type type, UINT32 clock);
+	device_t *device_remove(device_t *owner, const char *tag);
+	device_t *device_find(device_t *owner, const char *tag);
 
 private:
+	void device_add_subdevices(device_t *device);
+	void device_remove_subdevices(const device_t *device);
+
 	const game_driver &		m_gamedrv;
-	int						m_parse_level;				// nested parsing level
+	emu_options &			m_options;
+	device_list				m_devicelist;				// list of device configs
 };
 
 
@@ -170,20 +175,19 @@ private:
 #define MACHINE_CONFIG_NAME(_name) construct_machine_config_##_name
 
 #define MACHINE_CONFIG_START(_name, _class) \
-device_config *MACHINE_CONFIG_NAME(_name)(machine_config &config, device_config *owner) \
+device_t *MACHINE_CONFIG_NAME(_name)(machine_config &config, device_t *owner) \
 { \
-	device_config *device = NULL; \
+	device_t *device = NULL; \
 	const char *tag; \
 	astring tempstring; \
 	(void)device; \
 	(void)tag; \
-	assert(owner == NULL); \
-	owner = config.device_add(NULL, "root", &driver_device_config<_class>::static_alloc_device_config, 0); \
+	if (owner == NULL) owner = config.device_add(NULL, "root", &driver_device_creator<_class>, 0); \
 
 #define MACHINE_CONFIG_FRAGMENT(_name) \
-device_config *MACHINE_CONFIG_NAME(_name)(machine_config &config, device_config *owner) \
+device_t *MACHINE_CONFIG_NAME(_name)(machine_config &config, device_t *owner) \
 { \
-	device_config *device = NULL; \
+	device_t *device = NULL; \
 	const char *tag; \
 	astring tempstring; \
 	(void)device; \
@@ -191,9 +195,9 @@ device_config *MACHINE_CONFIG_NAME(_name)(machine_config &config, device_config 
 	assert(owner != NULL); \
 
 #define MACHINE_CONFIG_DERIVED(_name, _base) \
-device_config *MACHINE_CONFIG_NAME(_name)(machine_config &config, device_config *owner) \
+device_t *MACHINE_CONFIG_NAME(_name)(machine_config &config, device_t *owner) \
 { \
-	device_config *device = NULL; \
+	device_t *device = NULL; \
 	const char *tag; \
 	astring tempstring; \
 	(void)device; \
@@ -201,13 +205,24 @@ device_config *MACHINE_CONFIG_NAME(_name)(machine_config &config, device_config 
 	owner = MACHINE_CONFIG_NAME(_base)(config, owner); \
 	assert(owner != NULL); \
 
+#define MACHINE_CONFIG_DERIVED_CLASS(_name, _base, _class) \
+device_t *MACHINE_CONFIG_NAME(_name)(machine_config &config, device_t *owner) \
+{ \
+	device_t *device = NULL; \
+	const char *tag; \
+	astring tempstring; \
+	(void)device; \
+	(void)tag; \
+	if (owner == NULL) owner = config.device_add(NULL, "root", &driver_device_creator<_class>, 0); \
+	owner = MACHINE_CONFIG_NAME(_base)(config, owner); \
+
 #define MACHINE_CONFIG_END \
 	return owner; \
 }
 
 // use this to declare external references to a machine driver
 #define MACHINE_CONFIG_EXTERN(_name) \
-	extern device_config *MACHINE_CONFIG_NAME(_name)(machine_config &config, device_config *owner)
+	extern device_t *MACHINE_CONFIG_NAME(_name)(machine_config &config, device_t *owner)
 
 
 // importing data from other machine drivers
@@ -217,7 +232,7 @@ device_config *MACHINE_CONFIG_NAME(_name)(machine_config &config, device_config 
 
 // core parameters
 #define MCFG_QUANTUM_TIME(_time) \
-	config.m_minimum_quantum = ATTOTIME_IN_##_time; \
+	config.m_minimum_quantum = _time; \
 
 #define MCFG_QUANTUM_PERFECT_CPU(_cputag) \
 	config.m_perfect_cpu_quantum = _cputag; \
@@ -226,7 +241,7 @@ device_config *MACHINE_CONFIG_NAME(_name)(machine_config &config, device_config 
 	config.m_watchdog_vblank_count = _count; \
 
 #define MCFG_WATCHDOG_TIME_INIT(_time) \
-	config.m_watchdog_time = ATTOTIME_IN_##_time; \
+	config.m_watchdog_time = _time; \
 
 
 // core functions
@@ -253,35 +268,29 @@ device_config *MACHINE_CONFIG_NAME(_name)(machine_config &config, device_config 
 
 // core machine functions
 #define MCFG_MACHINE_START(_func) \
-	driver_device_config_base::static_set_callback(owner, driver_device_config_base::CB_MACHINE_START, MACHINE_START_NAME(_func)); \
+	driver_device::static_set_callback(*owner, driver_device::CB_MACHINE_START, MACHINE_START_NAME(_func)); \
 
 #define MCFG_MACHINE_RESET(_func) \
-	driver_device_config_base::static_set_callback(owner, driver_device_config_base::CB_MACHINE_RESET, MACHINE_RESET_NAME(_func)); \
+	driver_device::static_set_callback(*owner, driver_device::CB_MACHINE_RESET, MACHINE_RESET_NAME(_func)); \
 
 
 // core sound functions
 #define MCFG_SOUND_START(_func) \
-	driver_device_config_base::static_set_callback(owner, driver_device_config_base::CB_SOUND_START, SOUND_START_NAME(_func)); \
+	driver_device::static_set_callback(*owner, driver_device::CB_SOUND_START, SOUND_START_NAME(_func)); \
 
 #define MCFG_SOUND_RESET(_func) \
-	driver_device_config_base::static_set_callback(owner, driver_device_config_base::CB_SOUND_RESET, SOUND_RESET_NAME(_func)); \
+	driver_device::static_set_callback(*owner, driver_device::CB_SOUND_RESET, SOUND_RESET_NAME(_func)); \
 
 
 // core video functions
 #define MCFG_PALETTE_INIT(_func) \
-	driver_device_config_base::static_set_palette_init(owner, PALETTE_INIT_NAME(_func)); \
+	driver_device::static_set_palette_init(*owner, PALETTE_INIT_NAME(_func)); \
 
 #define MCFG_VIDEO_START(_func) \
-	driver_device_config_base::static_set_callback(owner, driver_device_config_base::CB_VIDEO_START, VIDEO_START_NAME(_func)); \
+	driver_device::static_set_callback(*owner, driver_device::CB_VIDEO_START, VIDEO_START_NAME(_func)); \
 
 #define MCFG_VIDEO_RESET(_func) \
-	driver_device_config_base::static_set_callback(owner, driver_device_config_base::CB_VIDEO_RESET, VIDEO_RESET_NAME(_func)); \
-
-#define MCFG_VIDEO_EOF(_func) \
-	driver_device_config_base::static_set_callback(owner, driver_device_config_base::CB_VIDEO_EOF, VIDEO_EOF_NAME(_func)); \
-
-#define MCFG_VIDEO_UPDATE(_func) \
-	driver_device_config_base::static_set_video_update(owner, VIDEO_UPDATE_NAME(_func)); \
+	driver_device::static_set_callback(*owner, driver_device::CB_VIDEO_RESET, VIDEO_RESET_NAME(_func)); \
 
 
 // add/remove devices

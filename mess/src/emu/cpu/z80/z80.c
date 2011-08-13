@@ -20,7 +20,8 @@
  *   TODO:
  *    - Interrupt mode 0 should be able to execute arbitrary opcodes
  *    - If LD A,I or LD A,R is interrupted, P/V flag gets reset, even if IFF2
- *      was set before this instruction
+ *      was set before this instruction (implemented, but not enabled: we need
+ *      document Z80 types first, see below)
  *    - Ideally, the tiny differences between Z80 types should be supported,
  *      currently known differences:
  *       - LD A,I/R P/V flag reset glitch is fixed on CMOS Z80
@@ -122,7 +123,12 @@
 #include "z80.h"
 #include "z80daisy.h"
 
-#define VERBOSE 0
+#define VERBOSE				0
+
+/* On an NMOS Z80, if LD A,I or LD A,R is interrupted, P/V flag gets reset,
+   even if IFF2 was set before this instruction. This issue was fixed on
+   the CMOS Z80, so until knowing (most) Z80 types on hardware, it's disabled */
+#define HAS_LDAIR_QUIRK		0
 
 #define LOG(x)	do { if (VERBOSE) logerror x; } while (0)
 
@@ -146,7 +152,10 @@ struct _z80_state
 	UINT8			nmi_pending;		/* nmi pending */
 	UINT8			irq_state;			/* irq line state */
 	UINT8			nsc800_irq_state[4];/* state of NSC800 restart interrupts A, B, C */
+	int				wait_state;			// wait line state
+	int				busrq_state;		// bus request line state
 	UINT8			after_ei;			/* are we in the EI shadow? */
+	UINT8			after_ldair;		/* same, but for LD A,I or LD A,R */
 	UINT32			ea;
 	device_irq_callback irq_callback;
 	legacy_cpu_device *device;
@@ -800,6 +809,7 @@ INLINE UINT32 ARG16(z80_state *z80)
 #define LD_A_R(Z) do {											\
 	(Z)->A = ((Z)->r & 0x7f) | (Z)->r2;							\
 	(Z)->F = ((Z)->F & CF) | SZ[(Z)->A] | ((Z)->iff2 << 2);		\
+	(Z)->after_ldair = TRUE;									\
 } while (0)
 
 /***************************************************************
@@ -815,6 +825,7 @@ INLINE UINT32 ARG16(z80_state *z80)
 #define LD_A_I(Z) do {											\
 	(Z)->A = (Z)->i;											\
 	(Z)->F = ((Z)->F & CF) | SZ[(Z)->A] | ((Z)->iff2 << 2);		\
+	(Z)->after_ldair = TRUE;									\
 } while (0)
 
 /***************************************************************
@@ -3412,31 +3423,34 @@ static CPU_INIT( z80 )
 		if( (i & 0x0f) == 0x0f ) SZHV_dec[i] |= HF;
 	}
 
-	state_save_register_device_item(device, 0, z80->prvpc.w.l);
-	state_save_register_device_item(device, 0, z80->PC);
-	state_save_register_device_item(device, 0, z80->SP);
-	state_save_register_device_item(device, 0, z80->AF);
-	state_save_register_device_item(device, 0, z80->BC);
-	state_save_register_device_item(device, 0, z80->DE);
-	state_save_register_device_item(device, 0, z80->HL);
-	state_save_register_device_item(device, 0, z80->IX);
-	state_save_register_device_item(device, 0, z80->IY);
-	state_save_register_device_item(device, 0, z80->WZ);
-	state_save_register_device_item(device, 0, z80->af2.w.l);
-	state_save_register_device_item(device, 0, z80->bc2.w.l);
-	state_save_register_device_item(device, 0, z80->de2.w.l);
-	state_save_register_device_item(device, 0, z80->hl2.w.l);
-	state_save_register_device_item(device, 0, z80->r);
-	state_save_register_device_item(device, 0, z80->r2);
-	state_save_register_device_item(device, 0, z80->iff1);
-	state_save_register_device_item(device, 0, z80->iff2);
-	state_save_register_device_item(device, 0, z80->halt);
-	state_save_register_device_item(device, 0, z80->im);
-	state_save_register_device_item(device, 0, z80->i);
-	state_save_register_device_item(device, 0, z80->nmi_state);
-	state_save_register_device_item(device, 0, z80->nmi_pending);
-	state_save_register_device_item(device, 0, z80->irq_state);
-	state_save_register_device_item(device, 0, z80->after_ei);
+	device->save_item(NAME(z80->prvpc.w.l));
+	device->save_item(NAME(z80->PC));
+	device->save_item(NAME(z80->SP));
+	device->save_item(NAME(z80->AF));
+	device->save_item(NAME(z80->BC));
+	device->save_item(NAME(z80->DE));
+	device->save_item(NAME(z80->HL));
+	device->save_item(NAME(z80->IX));
+	device->save_item(NAME(z80->IY));
+	device->save_item(NAME(z80->WZ));
+	device->save_item(NAME(z80->af2.w.l));
+	device->save_item(NAME(z80->bc2.w.l));
+	device->save_item(NAME(z80->de2.w.l));
+	device->save_item(NAME(z80->hl2.w.l));
+	device->save_item(NAME(z80->r));
+	device->save_item(NAME(z80->r2));
+	device->save_item(NAME(z80->iff1));
+	device->save_item(NAME(z80->iff2));
+	device->save_item(NAME(z80->halt));
+	device->save_item(NAME(z80->im));
+	device->save_item(NAME(z80->i));
+	device->save_item(NAME(z80->nmi_state));
+	device->save_item(NAME(z80->nmi_pending));
+	device->save_item(NAME(z80->irq_state));
+	device->save_item(NAME(z80->wait_state));
+	device->save_item(NAME(z80->busrq_state));
+	device->save_item(NAME(z80->after_ei));
+	device->save_item(NAME(z80->after_ldair));
 
 	/* Reset registers to their initial values */
 	z80->PRVPC = 0;
@@ -3463,11 +3477,14 @@ static CPU_INIT( z80 )
 	z80->nmi_state = 0;
 	z80->nmi_pending = 0;
 	z80->irq_state = 0;
+	z80->wait_state = 0;
+	z80->busrq_state = 0;
 	z80->after_ei = 0;
+	z80->after_ldair = 0;
 	z80->ea = 0;
 
-	if (device->baseconfig().static_config() != NULL)
-		z80->daisy.init(device, (const z80_daisy_config *)device->baseconfig().static_config());
+	if (device->static_config() != NULL)
+		z80->daisy.init(device, (const z80_daisy_config *)device->static_config());
 	z80->irq_callback = irqcallback;
 	z80->device = device;
 	z80->program = device->space(AS_PROGRAM);
@@ -3524,7 +3541,7 @@ static CPU_INIT( z80 )
 static CPU_INIT( nsc800 )
 {
 	z80_state *z80 = get_safe_token(device);
-	state_save_register_device_item_array(device, 0, z80->nsc800_irq_state);
+	device->save_item(NAME(z80->nsc800_irq_state));
 	CPU_INIT_CALL (z80);
 }
 
@@ -3542,7 +3559,10 @@ static CPU_RESET( z80 )
 	z80->nmi_state = CLEAR_LINE;
 	z80->nmi_pending = FALSE;
 	z80->irq_state = CLEAR_LINE;
+	z80->wait_state = CLEAR_LINE;
+	z80->busrq_state = CLEAR_LINE;
 	z80->after_ei = FALSE;
+	z80->after_ldair = FALSE;
 	z80->iff1 = 0;
 	z80->iff2 = 0;
 
@@ -3582,6 +3602,12 @@ static CPU_EXECUTE( z80 )
 		z80->PRVPC = -1;			/* there isn't a valid previous program counter */
 		LEAVE_HALT(z80);			/* Check if processor was halted */
 
+#if HAS_LDAIR_QUIRK
+		/* reset parity flag after LD A,I or LD A,R */
+		if (z80->after_ldair) z80->F &= ~PF;
+#endif
+		z80->after_ldair = FALSE;
+
 		z80->iff1 = 0;
 		PUSH(z80, pc);
 		z80->PCD = 0x0066;
@@ -3594,8 +3620,15 @@ static CPU_EXECUTE( z80 )
 	{
 		/* check for IRQs before each instruction */
 		if (z80->irq_state != CLEAR_LINE && z80->iff1 && !z80->after_ei)
+		{
+#if HAS_LDAIR_QUIRK
+			/* reset parity flag after LD A,I or LD A,R */
+			if (z80->after_ldair) z80->F &= ~PF;
+#endif
 			take_interrupt(z80);
+		}
 		z80->after_ei = FALSE;
+		z80->after_ldair = FALSE;
 
 		z80->PRVPC = z80->PCD;
 		debugger_instruction_hook(device, z80->PCD);
@@ -3667,48 +3700,74 @@ static CPU_BURN( z80 )
  ****************************************************************************/
 static void set_irq_line(z80_state *z80, int irqline, int state)
 {
-	if (irqline == INPUT_LINE_NMI)
+	switch (irqline)
 	{
+	case Z80_INPUT_LINE_BUSRQ:
+		z80->busrq_state = state;
+		break;
+
+	case INPUT_LINE_NMI:
 		/* mark an NMI pending on the rising edge */
 		if (z80->nmi_state == CLEAR_LINE && state != CLEAR_LINE)
 			z80->nmi_pending = TRUE;
 		z80->nmi_state = state;
-	}
-	else
-	{
+		break;
+
+	case INPUT_LINE_IRQ0:
 		/* update the IRQ state via the daisy chain */
 		z80->irq_state = state;
 		if (z80->daisy.present())
-			z80->irq_state = z80->daisy.update_irq_state();
+			z80->irq_state = ( z80->daisy.update_irq_state() == ASSERT_LINE ) ? ASSERT_LINE : z80->irq_state;
 
 		/* the main execute loop will take the interrupt */
+		break;
+
+	case Z80_INPUT_LINE_WAIT:
+		z80->wait_state = state;
+		break;
 	}
 }
 
 
 static void set_irq_line_nsc800(z80_state *z80, int irqline, int state)
 {
-	if (irqline == INPUT_LINE_NMI)
+	switch (irqline)
 	{
+	case Z80_INPUT_LINE_BUSRQ:
+		z80->busrq_state = state;
+		break;
+
+	case INPUT_LINE_NMI:
 		/* mark an NMI pending on the rising edge */
 		if (z80->nmi_state == CLEAR_LINE && state != CLEAR_LINE)
 			z80->nmi_pending = TRUE;
 		z80->nmi_state = state;
-	}
-	else if (irqline == NSC800_RSTA)
+		break;
+
+	case NSC800_RSTA:
 		z80->nsc800_irq_state[NSC800_RSTA] = state;
-	else if (irqline == NSC800_RSTB)
+		break;
+
+	case NSC800_RSTB:
 		z80->nsc800_irq_state[NSC800_RSTB] = state;
-	else if (irqline == NSC800_RSTC)
+		break;
+
+	case NSC800_RSTC:
 		z80->nsc800_irq_state[NSC800_RSTC] = state;
-	else
-	{
+		break;
+
+	case INPUT_LINE_IRQ0:
 		/* update the IRQ state via the daisy chain */
 		z80->irq_state = state;
 		if (z80->daisy.present())
 			z80->irq_state = z80->daisy.update_irq_state();
 
 		/* the main execute loop will take the interrupt */
+		break;
+
+	case Z80_INPUT_LINE_WAIT:
+		z80->wait_state = state;
+		break;
 	}
 }
 
@@ -3782,8 +3841,10 @@ static CPU_SET_INFO( z80 )
 	switch (state)
 	{
 		/* --- the following bits of info are set as 64-bit signed integers --- */
-		case CPUINFO_INT_INPUT_STATE + INPUT_LINE_NMI:		set_irq_line(z80, INPUT_LINE_NMI, info->i); break;
-		case CPUINFO_INT_INPUT_STATE + 0:					set_irq_line(z80, 0, info->i);				break;
+		case CPUINFO_INT_INPUT_STATE + Z80_INPUT_LINE_BUSRQ:	set_irq_line(z80, Z80_INPUT_LINE_BUSRQ, info->i);	break;
+		case CPUINFO_INT_INPUT_STATE + INPUT_LINE_NMI:			set_irq_line(z80, INPUT_LINE_NMI, info->i); 		break;
+		case CPUINFO_INT_INPUT_STATE + INPUT_LINE_IRQ0:			set_irq_line(z80, INPUT_LINE_IRQ0, info->i);		break;
+		case CPUINFO_INT_INPUT_STATE + Z80_INPUT_LINE_WAIT:		set_irq_line(z80, Z80_INPUT_LINE_WAIT, info->i);	break;
 	}
 }
 
@@ -3793,11 +3854,13 @@ static CPU_SET_INFO( nsc800 )
 	switch (state)
 	{
 		/* --- the following bits of info are set as 64-bit signed integers --- */
-		case CPUINFO_INT_INPUT_STATE + INPUT_LINE_NMI:		set_irq_line_nsc800(z80, INPUT_LINE_NMI, info->i);	break;
-		case CPUINFO_INT_INPUT_STATE + NSC800_RSTA:			set_irq_line_nsc800(z80, NSC800_RSTA, info->i); 	break;
-		case CPUINFO_INT_INPUT_STATE + NSC800_RSTB:			set_irq_line_nsc800(z80, NSC800_RSTB, info->i); 	break;
-		case CPUINFO_INT_INPUT_STATE + NSC800_RSTC:			set_irq_line_nsc800(z80, NSC800_RSTC, info->i); 	break;
-		case CPUINFO_INT_INPUT_STATE + 0:					set_irq_line_nsc800(z80, 0, info->i);				break;
+		case CPUINFO_INT_INPUT_STATE + Z80_INPUT_LINE_BUSRQ:	set_irq_line(z80, Z80_INPUT_LINE_BUSRQ, info->i);	break;
+		case CPUINFO_INT_INPUT_STATE + INPUT_LINE_NMI:			set_irq_line_nsc800(z80, INPUT_LINE_NMI, info->i);	break;
+		case CPUINFO_INT_INPUT_STATE + NSC800_RSTA:				set_irq_line_nsc800(z80, NSC800_RSTA, info->i); 	break;
+		case CPUINFO_INT_INPUT_STATE + NSC800_RSTB:				set_irq_line_nsc800(z80, NSC800_RSTB, info->i); 	break;
+		case CPUINFO_INT_INPUT_STATE + NSC800_RSTC:				set_irq_line_nsc800(z80, NSC800_RSTC, info->i); 	break;
+		case CPUINFO_INT_INPUT_STATE + INPUT_LINE_IRQ0:			set_irq_line_nsc800(z80, INPUT_LINE_IRQ0, info->i);	break;
+		case CPUINFO_INT_INPUT_STATE + Z80_INPUT_LINE_WAIT:		set_irq_line(z80, Z80_INPUT_LINE_WAIT, info->i);	break;
 	}
 }
 
@@ -3825,7 +3888,7 @@ CPU_GET_INFO( z80 )
 	{
 		/* --- the following bits of info are returned as 64-bit signed integers --- */
 		case CPUINFO_INT_CONTEXT_SIZE:					info->i = sizeof(z80_state);			break;
-		case CPUINFO_INT_INPUT_LINES:					info->i = 1;							break;
+		case CPUINFO_INT_INPUT_LINES:					info->i = 4;							break;
 		case CPUINFO_INT_DEFAULT_IRQ_VECTOR:			info->i = 0xff;							break;
 		case DEVINFO_INT_ENDIANNESS:					info->i = ENDIANNESS_LITTLE;			break;
 		case CPUINFO_INT_CLOCK_MULTIPLIER:				info->i = 1;							break;
@@ -3835,15 +3898,17 @@ CPU_GET_INFO( z80 )
 		case CPUINFO_INT_MIN_CYCLES:					info->i = 2;							break;
 		case CPUINFO_INT_MAX_CYCLES:					info->i = 16;							break;
 
-		case DEVINFO_INT_DATABUS_WIDTH + ADDRESS_SPACE_PROGRAM:			info->i = 8;							break;
-		case DEVINFO_INT_ADDRBUS_WIDTH + ADDRESS_SPACE_PROGRAM:			info->i = 16;							break;
-		case DEVINFO_INT_ADDRBUS_SHIFT + ADDRESS_SPACE_PROGRAM:			info->i = 0;							break;
-		case DEVINFO_INT_DATABUS_WIDTH + ADDRESS_SPACE_IO:				info->i = 8;							break;
-		case DEVINFO_INT_ADDRBUS_WIDTH + ADDRESS_SPACE_IO:				info->i = 16;							break;
-		case DEVINFO_INT_ADDRBUS_SHIFT + ADDRESS_SPACE_IO:				info->i = 0;							break;
+		case DEVINFO_INT_DATABUS_WIDTH + AS_PROGRAM:		info->i = 8;						break;
+		case DEVINFO_INT_ADDRBUS_WIDTH + AS_PROGRAM:		info->i = 16;						break;
+		case DEVINFO_INT_ADDRBUS_SHIFT + AS_PROGRAM:		info->i = 0;						break;
+		case DEVINFO_INT_DATABUS_WIDTH + AS_IO:				info->i = 8;						break;
+		case DEVINFO_INT_ADDRBUS_WIDTH + AS_IO:				info->i = 16;						break;
+		case DEVINFO_INT_ADDRBUS_SHIFT + AS_IO:				info->i = 0;						break;
 
-		case CPUINFO_INT_INPUT_STATE + INPUT_LINE_NMI:	info->i = z80->nmi_state;				break;
-		case CPUINFO_INT_INPUT_STATE + 0:				info->i = z80->irq_state;				break;
+		case CPUINFO_INT_INPUT_STATE + Z80_INPUT_LINE_BUSRQ:	info->i = z80->busrq_state;		break;
+		case CPUINFO_INT_INPUT_STATE + INPUT_LINE_NMI:			info->i = z80->nmi_state;		break;
+		case CPUINFO_INT_INPUT_STATE + INPUT_LINE_IRQ0:			info->i = z80->irq_state;		break;
+		case CPUINFO_INT_INPUT_STATE + Z80_INPUT_LINE_WAIT:		info->i = z80->wait_state;		break;
 
 		/* --- the following bits of info are returned as pointers to functions --- */
 		case CPUINFO_FCT_SET_INFO:		info->setinfo = CPU_SET_INFO_NAME(z80);					break;
@@ -3873,7 +3938,7 @@ CPU_GET_INFO( nsc800 )
 	z80_state *z80 = (device != NULL && device->token() != NULL) ? get_safe_token(device) : NULL;
 	switch (state)
 	{
-		case CPUINFO_INT_INPUT_LINES:					info->i = 4;									break;
+		case CPUINFO_INT_INPUT_LINES:					info->i = 7;									break;
 
 		case CPUINFO_INT_INPUT_STATE + NSC800_RSTA:		info->i = z80->nsc800_irq_state[NSC800_RSTA];	break;
 		case CPUINFO_INT_INPUT_STATE + NSC800_RSTB:		info->i = z80->nsc800_irq_state[NSC800_RSTB];	break;

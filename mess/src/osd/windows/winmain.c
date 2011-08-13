@@ -90,7 +90,7 @@
 //  TYPE DEFINITIONS
 //**************************************************************************
 
-template<typename func_ptr>
+template<typename _FunctionPtr>
 class dynamic_bind
 {
 public:
@@ -100,17 +100,17 @@ public:
 	{
 		HMODULE module = LoadLibrary(dll);
 		if (module != NULL)
-			m_function = reinterpret_cast<func_ptr>(GetProcAddress(module, symbol));
+			m_function = reinterpret_cast<_FunctionPtr>(GetProcAddress(module, symbol));
 	}
 
 	// bool to test if the function is NULL or not
 	operator bool() const { return (m_function != NULL); }
 
 	// dereference to get the underlying pointer
-	func_ptr operator *() const { return m_function; }
+	_FunctionPtr operator *() const { return m_function; }
 
 private:
-	func_ptr	m_function;
+	_FunctionPtr	m_function;
 };
 
 
@@ -175,12 +175,15 @@ private:
 
 	struct cache_entry
 	{
-		cache_entry(FPTR address, const char *symbol) : m_next(NULL), m_address(address), m_name(symbol) { }
+		cache_entry(FPTR address, const char *symbol) :
+			m_next(NULL), m_address(address), m_name(symbol) { }
+		cache_entry *next() const { return m_next; }
+
 		cache_entry *	m_next;
 		FPTR			m_address;
 		astring			m_name;
 	};
-	cache_entry *	m_cache;
+	simple_list<cache_entry> m_cache;
 
 	astring			m_mapfile;
 	astring			m_symfile;
@@ -256,13 +259,6 @@ static HANDLE watchdog_thread;
 
 static running_machine *g_current_machine;
 
-
-#ifndef MESS
-static const TCHAR helpfile[] = TEXT("docs\\windows.txt");
-#else
-static const TCHAR helpfile[] = TEXT("mess.chm");
-#endif
-
 //static HANDLE mm_task = NULL;
 //static DWORD task_index = 0;
 static int timeresult;
@@ -292,90 +288,144 @@ static void winui_output_error(void *param, const char *format, va_list argptr);
 //**************************************************************************
 
 // struct definitions
-const options_entry mame_win_options[] =
+const options_entry windows_options::s_option_entries[] =
 {
 	// debugging options
-	{ NULL,                       NULL,       OPTION_HEADER,     "WINDOWS DEBUGGING OPTIONS" },
-	{ "oslog",                    "0",        OPTION_BOOLEAN,    "output error.log data to the system debugger" },
-	{ "watchdog;wdog",            "0",        0,                 "force the program to terminate if no updates within specified number of seconds" },
-	{ "debugger_font;dfont",      "Lucida Console", 0,           "specifies the font to use for debugging; defaults to Lucida Console" },
-	{ "debugger_font_size;dfontsize", "9",    0,                 "specifies the font size to use for debugging; defaults to 9 pt" },
+	{ NULL,                                           NULL,       OPTION_HEADER,     "WINDOWS DEBUGGING OPTIONS" },
+	{ WINOPTION_OSLOG,                                "0",        OPTION_BOOLEAN,    "output error.log data to the system debugger" },
+	{ WINOPTION_WATCHDOG ";wdog",                     "0",        OPTION_INTEGER,    "force the program to terminate if no updates within specified number of seconds" },
+	{ WINOPTION_DEBUGGER_FONT ";dfont",               "Lucida Console", OPTION_STRING,"specifies the font to use for debugging; defaults to Lucida Console" },
+	{ WINOPTION_DEBUGGER_FONT_SIZE ";dfontsize",      "9",        OPTION_FLOAT,      "specifies the font size to use for debugging; defaults to 9 pt" },
 
 	// performance options
-	{ NULL,                       NULL,       OPTION_HEADER,     "WINDOWS PERFORMANCE OPTIONS" },
-	{ "priority(-15-1)",          "0",        0,                 "thread priority for the main game thread; range from -15 to 1" },
-	{ "multithreading;mt",        "0",        OPTION_BOOLEAN,    "enable multithreading; this enables rendering and blitting on a separate thread" },
-	{ "numprocessors;np",         "auto",     0,				 "number of processors; this overrides the number the system reports" },
-	{ "profile",                  "0",        0,                 "enable profiling, specifying the stack depth to track" },
-	{ "bench",                    "0",        0,                 "benchmark for the given number of emulated seconds; implies -video none -nosound -nothrottle" },
+	{ NULL,                                           NULL,       OPTION_HEADER,     "WINDOWS PERFORMANCE OPTIONS" },
+	{ WINOPTION_PRIORITY "(-15-1)",                   "0",        OPTION_INTEGER,    "thread priority for the main game thread; range from -15 to 1" },
+	{ WINOPTION_MULTITHREADING ";mt",                 "0",        OPTION_BOOLEAN,    "enable multithreading; this enables rendering and blitting on a separate thread" },
+	{ WINOPTION_NUMPROCESSORS ";np",                  "auto",     OPTION_STRING,	 "number of processors; this overrides the number the system reports" },
+	{ WINOPTION_PROFILE,                              "0",        OPTION_INTEGER,    "enable profiling, specifying the stack depth to track" },
+	{ WINOPTION_BENCH,                                "0",        OPTION_INTEGER,    "benchmark for the given number of emulated seconds; implies -video none -nosound -nothrottle" },
 
 	// video options
-	{ NULL,                       NULL,       OPTION_HEADER,     "WINDOWS VIDEO OPTIONS" },
-	{ "video",                    "d3d",      0,                 "video output method: none, gdi, ddraw, or d3d" },
-	{ "numscreens(1-4)",          "1",        0,                 "number of screens to create; usually, you want just one" },
-	{ "window;w",                 "0",        OPTION_BOOLEAN,    "enable window mode; otherwise, full screen mode is assumed" },
-	{ "maximize;max",             "1",        OPTION_BOOLEAN,    "default to maximized windows; otherwise, windows will be minimized" },
-	{ "keepaspect;ka",            "1",        OPTION_BOOLEAN,    "constrain to the proper aspect ratio" },
-	{ "prescale",                 "1",        0,                 "scale screen rendering by this amount in software" },
-	{ "waitvsync",                "0",        OPTION_BOOLEAN,    "enable waiting for the start of VBLANK before flipping screens; reduces tearing effects" },
-	{ "syncrefresh",              "0",        OPTION_BOOLEAN,    "enable using the start of VBLANK for throttling instead of the game time" },
+	{ NULL,                                           NULL,       OPTION_HEADER,     "WINDOWS VIDEO OPTIONS" },
+	{ WINOPTION_VIDEO,                                "d3d",      OPTION_STRING,     "video output method: none, gdi, ddraw, or d3d" },
+	{ WINOPTION_NUMSCREENS "(1-4)",                   "1",        OPTION_INTEGER,    "number of screens to create; usually, you want just one" },
+	{ WINOPTION_WINDOW ";w",                          "0",        OPTION_BOOLEAN,    "enable window mode; otherwise, full screen mode is assumed" },
+	{ WINOPTION_MAXIMIZE ";max",                      "1",        OPTION_BOOLEAN,    "default to maximized windows; otherwise, windows will be minimized" },
+	{ WINOPTION_KEEPASPECT ";ka",                     "1",        OPTION_BOOLEAN,    "constrain to the proper aspect ratio" },
+	{ WINOPTION_PRESCALE,                             "1",        OPTION_INTEGER,    "scale screen rendering by this amount in software" },
+	{ WINOPTION_WAITVSYNC,                            "0",        OPTION_BOOLEAN,    "enable waiting for the start of VBLANK before flipping screens; reduces tearing effects" },
+	{ WINOPTION_SYNCREFRESH,                          "0",        OPTION_BOOLEAN,    "enable using the start of VBLANK for throttling instead of the game time" },
+	{ WINOPTION_MENU,           		              "0",        OPTION_BOOLEAN,    "enable menu bar if available by UI implementation" },
 
 	// DirectDraw-specific options
-	{ NULL,                       NULL,       OPTION_HEADER,     "DIRECTDRAW-SPECIFIC OPTIONS" },
-	{ "hwstretch;hws",            "1",        OPTION_BOOLEAN,    "enable hardware stretching" },
+	{ NULL,                                           NULL,       OPTION_HEADER,     "DIRECTDRAW-SPECIFIC OPTIONS" },
+	{ WINOPTION_HWSTRETCH ";hws",                     "1",        OPTION_BOOLEAN,    "enable hardware stretching" },
 
 	// Direct3D-specific options
-	{ NULL,                       NULL,       OPTION_HEADER,     "DIRECT3D-SPECIFIC OPTIONS" },
-	{ "d3dversion(8-9)",          "9",        0,                 "specify the preferred Direct3D version (8 or 9)" },
-	{ "filter;d3dfilter;flt",     "1",        OPTION_BOOLEAN,    "enable bilinear filtering on screen output" },
+	{ NULL,                                           NULL,       OPTION_HEADER,     "DIRECT3D-SPECIFIC OPTIONS" },
+	{ WINOPTION_D3DVERSION "(8-9)",                   "9",        OPTION_INTEGER,    "specify the preferred Direct3D version (8 or 9)" },
+	{ WINOPTION_FILTER ";d3dfilter;flt",              "1",        OPTION_BOOLEAN,    "enable bilinear filtering on screen output" },
+
+	// post-processing options
+	{ NULL,                                             		NULL,        OPTION_HEADER,     "DIRECT3D POST-PROCESSING OPTIONS" },
+	{ WINOPTION_HLSL_ENABLE";hlsl",         					"0",         OPTION_BOOLEAN,    "enable HLSL post-processing (PS3.0 required)" },
+	{ WINOPTION_HLSL_INI_NAME,      							"%g",        OPTION_STRING,     "HLSL INI file path" },
+	{ WINOPTION_HLSLPATH,                                   	"hlsl",      OPTION_STRING,     "path to hlsl files" },
+	{ WINOPTION_HLSL_PRESCALE_X,        						"0",         OPTION_INTEGER,    "HLSL pre-scale override factor for X (0 for auto)" },
+	{ WINOPTION_HLSL_PRESCALE_Y,        						"0",         OPTION_INTEGER,    "HLSL pre-scale override factor for Y (0 for auto)" },
+	{ WINOPTION_HLSL_PRESET";(-1-3)",                           "-1",        OPTION_INTEGER,    "HLSL preset to use (0-3)" },
+	{ WINOPTION_HLSL_WRITE,         					        NULL,        OPTION_STRING,     "enable HLSL AVI writing (huge disk bandwidth suggested)" },
+	{ WINOPTION_HLSL_SNAP_WIDTH,        					    "2048",      OPTION_STRING,     "HLSL upscaled-snapshot width" },
+	{ WINOPTION_HLSL_SNAP_HEIGHT,       					    "1536",      OPTION_STRING,     "HLSL upscaled-snapshot height" },
+	{ WINOPTION_SHADOW_MASK_ALPHA";fs_shadwa(0.0-1.0)",         "0.0",       OPTION_FLOAT,      "shadow mask alpha-blend value (1.0 is fully blended, 0.0 is no mask)" },
+	{ WINOPTION_SHADOW_MASK_TEXTURE";fs_shadwt(0.0-1.0)",       "aperture.png", OPTION_STRING,  "shadow mask texture name" },
+	{ WINOPTION_SHADOW_MASK_COUNT_X";fs_shadww",				"320",		 OPTION_INTEGER,	"shadow mask width, in phosphor dots" },
+	{ WINOPTION_SHADOW_MASK_COUNT_Y";fs_shadwh",				"240",		 OPTION_INTEGER,	"shadow mask height, in phosphor dots" },
+	{ WINOPTION_SHADOW_MASK_USIZE";fs_shadwu(0.0-1.0)",			"0.09375",	 OPTION_FLOAT,		"shadow mask texture size in U direction" },
+	{ WINOPTION_SHADOW_MASK_VSIZE";fs_shadwv(0.0-1.0)",			"0.109375",	 OPTION_FLOAT,		"shadow mask texture size in V direction" },
+	{ WINOPTION_CURVATURE";fs_curv(0.0-4.0)",           		"0.0",       OPTION_FLOAT,  	"screen curvature amount" },
+	/* Beam-related values below this line*/
+	{ WINOPTION_PINCUSHION";fs_pin(0.0-4.0)",           		"0.0",       OPTION_FLOAT,  	"pincushion amount" },
+	{ WINOPTION_SCANLINE_AMOUNT";fs_scanam(0.0-4.0)",       	"0.0",       OPTION_FLOAT,  	"overall alpha scaling value for scanlines" },
+	{ WINOPTION_SCANLINE_SCALE";fs_scansc(0.0-4.0)",        	"1.0",       OPTION_FLOAT,  	"overall height scaling value for scanlines" },
+	{ WINOPTION_SCANLINE_HEIGHT";fs_scanh(0.0-4.0)",        	"0.7",       OPTION_FLOAT,  	"individual height scaling value for scanlines" },
+	{ WINOPTION_SCANLINE_BRIGHT_SCALE";fs_scanbs(0.0-2.0)", 	"1.0",       OPTION_FLOAT,  	"overall brightness scaling value for scanlines (multiplicative)" },
+	{ WINOPTION_SCANLINE_BRIGHT_OFFSET";fs_scanbo(0.0-1.0)",	"0.0",       OPTION_FLOAT,  	"overall brightness offset value for scanlines (additive)" },
+	{ WINOPTION_SCANLINE_OFFSET";fs_scanjt(0.0-4.0)",       	"0.0",       OPTION_FLOAT,  	"overall interlace jitter scaling value for scanlines" },
+	{ WINOPTION_DEFOCUS";fs_focus",				            	"0.0,0.0",   OPTION_STRING,     "overall defocus value in screen-relative coords" },
+	{ WINOPTION_CONVERGE_X";fs_convx",      					"0.0,0.0,0.0",OPTION_STRING,	"convergence in screen-relative X direction" },
+	{ WINOPTION_CONVERGE_Y";fs_convy",      					"0.0,0.0,0.0",OPTION_STRING,	"convergence in screen-relative Y direction" },
+	{ WINOPTION_RADIAL_CONVERGE_X";fs_rconvx",					"0.0,0.0,0.0",OPTION_STRING,	"radial convergence in screen-relative X direction" },
+	{ WINOPTION_RADIAL_CONVERGE_Y";fs_rconvy",					"0.0,0.0,0.0",OPTION_STRING,	"radial convergence in screen-relative Y direction" },
+	/* RGB colorspace convolution below this line */
+	{ WINOPTION_RED_RATIO";fs_redratio",    					"1.0,0.0,0.0",OPTION_STRING,	"red output signal generated by input signal" },
+	{ WINOPTION_GRN_RATIO";fs_grnratio",    					"0.0,1.0,0.0",OPTION_STRING,	"green output signal generated by input signal" },
+	{ WINOPTION_BLU_RATIO";fs_bluratio",    					"0.0,0.0,1.0",OPTION_STRING,	"blue output signal generated by input signal" },
+	{ WINOPTION_SATURATION";fs_sat(0.0-4.0)",               	"1.0",       OPTION_FLOAT,      "saturation scaling value" },
+	{ WINOPTION_OFFSET";fs_offset",         					"0.0,0.0,0.0",OPTION_STRING,    "signal offset value (additive)" },
+	{ WINOPTION_SCALE";fs_scale",           					"1.0,1.0,1.0",OPTION_STRING,    "signal scaling value (multiplicative)" },
+	{ WINOPTION_POWER";fs_power",           					"1.0,1.0,1.0",OPTION_STRING,    "signal power value (exponential)" },
+	{ WINOPTION_FLOOR";fs_floor",           					"0.0,0.0,0.0",OPTION_STRING,    "signal floor level" },
+	{ WINOPTION_PHOSPHOR";fs_phosphor",         				"0.0,0.0,0.0",OPTION_STRING,    "phosphorescence decay rate (0.0 is instant, 1.0 is forever)" },
+	/* NTSC simulation below this line */
+	{ WINOPTION_YIQ_ENABLE";yiq",           					"0",    	 OPTION_BOOLEAN,    "enable YIQ-space HLSL post-processing" },
+	{ WINOPTION_YIQ_CCVALUE";yiqcc",							"3.59754545",OPTION_FLOAT,		"Color Carrier frequency for NTSC signal processing" },
+	{ WINOPTION_YIQ_AVALUE";yiqa",								"0.5",		 OPTION_FLOAT,		"A value for NTSC signal processing" },
+	{ WINOPTION_YIQ_BVALUE";yiqb",								"0.5",  	 OPTION_FLOAT,		"B value for NTSC signal processing" },
+	{ WINOPTION_YIQ_OVALUE";yiqo",								"0.0",		 OPTION_FLOAT,		"Outgoing Color Carrier phase offset for NTSC signal processing" },
+	{ WINOPTION_YIQ_PVALUE";yiqp",								"1.0",		 OPTION_FLOAT,		"Incoming Pixel Clock scaling value for NTSC signal processing" },
+	{ WINOPTION_YIQ_NVALUE";yiqn",								"1.0",		 OPTION_FLOAT,		"Y filter notch width for NTSC signal processing" },
+	{ WINOPTION_YIQ_YVALUE";yiqy",								"6.0",		 OPTION_FLOAT,		"Y filter cutoff frequency for NTSC signal processing" },
+	{ WINOPTION_YIQ_IVALUE";yiqi",								"1.2",		 OPTION_FLOAT,		"I filter cutoff frequency for NTSC signal processing" },
+	{ WINOPTION_YIQ_QVALUE";yiqq",								"0.6",		 OPTION_FLOAT,		"Q filter cutoff frequency for NTSC signal processing" },
+	{ WINOPTION_YIQ_SCAN_TIME";yiqsc",							"52.6",	     OPTION_FLOAT,		"Horizontal scanline duration for NTSC signal processing (in usec)" },
+	{ WINOPTION_YIQ_PHASE_COUNT";yiqp",							"2",		 OPTION_INTEGER,	"Phase Count value for NTSC signal processing" },
 
 	// per-window options
-	{ NULL,                       NULL,       OPTION_HEADER,     "PER-WINDOW VIDEO OPTIONS" },
-	{ "screen",                   "auto",     0,                 "explicit name of all screens; 'auto' here will try to make a best guess" },
-	{ "aspect;screen_aspect",     "auto",     0,                 "aspect ratio for all screens; 'auto' here will try to make a best guess" },
-	{ "resolution;r",             "auto",     0,                 "preferred resolution for all screens; format is <width>x<height>[@<refreshrate>] or 'auto'" },
-	{ "view",                     "auto",     0,                 "preferred view for all screens" },
+	{ NULL,                                           NULL,       OPTION_HEADER,     "PER-WINDOW VIDEO OPTIONS" },
+	{ WINOPTION_SCREEN,                               "auto",     OPTION_STRING,     "explicit name of all screens; 'auto' here will try to make a best guess" },
+	{ WINOPTION_ASPECT ";screen_aspect",              "auto",     OPTION_STRING,     "aspect ratio for all screens; 'auto' here will try to make a best guess" },
+	{ WINOPTION_RESOLUTION ";r",                      "auto",     OPTION_STRING,     "preferred resolution for all screens; format is <width>x<height>[@<refreshrate>] or 'auto'" },
+	{ WINOPTION_VIEW,                                 "auto",     OPTION_STRING,     "preferred view for all screens" },
 
-	{ "screen0",                  "auto",     0,                 "explicit name of the first screen; 'auto' here will try to make a best guess" },
-	{ "aspect0",                  "auto",     0,                 "aspect ratio of the first screen; 'auto' here will try to make a best guess" },
-	{ "resolution0;r0",           "auto",     0,                 "preferred resolution of the first screen; format is <width>x<height>[@<refreshrate>] or 'auto'" },
-	{ "view0",                    "auto",     0,                 "preferred view for the first screen" },
+	{ WINOPTION_SCREEN "0",                           "auto",     OPTION_STRING,     "explicit name of the first screen; 'auto' here will try to make a best guess" },
+	{ WINOPTION_ASPECT "0",                           "auto",     OPTION_STRING,     "aspect ratio of the first screen; 'auto' here will try to make a best guess" },
+	{ WINOPTION_RESOLUTION "0;r0",                    "auto",     OPTION_STRING,     "preferred resolution of the first screen; format is <width>x<height>[@<refreshrate>] or 'auto'" },
+	{ WINOPTION_VIEW "0",                             "auto",     OPTION_STRING,     "preferred view for the first screen" },
 
-	{ "screen1",                  "auto",     0,                 "explicit name of the second screen; 'auto' here will try to make a best guess" },
-	{ "aspect1",                  "auto",     0,                 "aspect ratio of the second screen; 'auto' here will try to make a best guess" },
-	{ "resolution1;r1",           "auto",     0,                 "preferred resolution of the second screen; format is <width>x<height>[@<refreshrate>] or 'auto'" },
-	{ "view1",                    "auto",     0,                 "preferred view for the second screen" },
+	{ WINOPTION_SCREEN "1",                           "auto",     OPTION_STRING,     "explicit name of the second screen; 'auto' here will try to make a best guess" },
+	{ WINOPTION_ASPECT "1",                           "auto",     OPTION_STRING,     "aspect ratio of the second screen; 'auto' here will try to make a best guess" },
+	{ WINOPTION_RESOLUTION "1;r1",                    "auto",     OPTION_STRING,     "preferred resolution of the second screen; format is <width>x<height>[@<refreshrate>] or 'auto'" },
+	{ WINOPTION_VIEW "1",                             "auto",     OPTION_STRING,     "preferred view for the second screen" },
 
-	{ "screen2",                  "auto",     0,                 "explicit name of the third screen; 'auto' here will try to make a best guess" },
-	{ "aspect2",                  "auto",     0,                 "aspect ratio of the third screen; 'auto' here will try to make a best guess" },
-	{ "resolution2;r2",           "auto",     0,                 "preferred resolution of the third screen; format is <width>x<height>[@<refreshrate>] or 'auto'" },
-	{ "view2",                    "auto",     0,                 "preferred view for the third screen" },
+	{ WINOPTION_SCREEN "2",                           "auto",     OPTION_STRING,     "explicit name of the third screen; 'auto' here will try to make a best guess" },
+	{ WINOPTION_ASPECT "2",                           "auto",     OPTION_STRING,     "aspect ratio of the third screen; 'auto' here will try to make a best guess" },
+	{ WINOPTION_RESOLUTION "2;r2",                    "auto",     OPTION_STRING,     "preferred resolution of the third screen; format is <width>x<height>[@<refreshrate>] or 'auto'" },
+	{ WINOPTION_VIEW "2",                             "auto",     OPTION_STRING,     "preferred view for the third screen" },
 
-	{ "screen3",                  "auto",     0,                 "explicit name of the fourth screen; 'auto' here will try to make a best guess" },
-	{ "aspect3",                  "auto",     0,                 "aspect ratio of the fourth screen; 'auto' here will try to make a best guess" },
-	{ "resolution3;r3",           "auto",     0,                 "preferred resolution of the fourth screen; format is <width>x<height>[@<refreshrate>] or 'auto'" },
-	{ "view3",                    "auto",     0,                 "preferred view for the fourth screen" },
+	{ WINOPTION_SCREEN "3",                           "auto",     OPTION_STRING,     "explicit name of the fourth screen; 'auto' here will try to make a best guess" },
+	{ WINOPTION_ASPECT "3",                           "auto",     OPTION_STRING,     "aspect ratio of the fourth screen; 'auto' here will try to make a best guess" },
+	{ WINOPTION_RESOLUTION "3;r3",                    "auto",     OPTION_STRING,     "preferred resolution of the fourth screen; format is <width>x<height>[@<refreshrate>] or 'auto'" },
+	{ WINOPTION_VIEW "3",                             "auto",     OPTION_STRING,     "preferred view for the fourth screen" },
 
 	// full screen options
-	{ NULL,                       NULL,       OPTION_HEADER,     "FULL SCREEN OPTIONS" },
-	{ "triplebuffer;tb",          "0",        OPTION_BOOLEAN,    "enable triple buffering" },
-	{ "switchres",                "0",        OPTION_BOOLEAN,    "enable resolution switching" },
-	{ "full_screen_brightness;fsb(0.1-2.0)","1.0",     0,        "brightness value in full screen mode" },
-	{ "full_screen_contrast;fsc(0.1-2.0)", "1.0",      0,        "contrast value in full screen mode" },
-	{ "full_screen_gamma;fsg(0.1-3.0)",    "1.0",      0,        "gamma value in full screen mode" },
+	{ NULL,                                           NULL,       OPTION_HEADER,     "FULL SCREEN OPTIONS" },
+	{ WINOPTION_TRIPLEBUFFER ";tb",                   "0",        OPTION_BOOLEAN,    "enable triple buffering" },
+	{ WINOPTION_SWITCHRES,                            "0",        OPTION_BOOLEAN,    "enable resolution switching" },
+	{ WINOPTION_FULLSCREENBRIGHTNESS ";fsb(0.1-2.0)", "1.0",      OPTION_FLOAT,      "brightness value in full screen mode" },
+	{ WINOPTION_FULLSCREENCONTRAST ";fsc(0.1-2.0)",   "1.0",      OPTION_FLOAT,      "contrast value in full screen mode" },
+	{ WINOPTION_FULLSCREENGAMMA ";fsg(0.1-3.0)",      "1.0",      OPTION_FLOAT,      "gamma value in full screen mode" },
 
 	// sound options
-	{ NULL,                       NULL,       OPTION_HEADER,     "WINDOWS SOUND OPTIONS" },
-	{ "audio_latency(1-5)",       "2",        0,                 "set audio latency (increase to reduce glitches)" },
+	{ NULL,                                           NULL,       OPTION_HEADER,     "WINDOWS SOUND OPTIONS" },
+	{ WINOPTION_AUDIO_LATENCY "(1-5)",                "2",        OPTION_INTEGER,    "set audio latency (increase to reduce glitches)" },
 
 	// input options
-	{ NULL,                       NULL,       OPTION_HEADER,     "INPUT DEVICE OPTIONS" },
-	{ "dual_lightgun;dual",       "0",        OPTION_BOOLEAN,    "enable dual lightgun input" },
+	{ NULL,                                           NULL,       OPTION_HEADER,     "INPUT DEVICE OPTIONS" },
+	{ WINOPTION_DUAL_LIGHTGUN ";dual",                "0",        OPTION_BOOLEAN,    "enable dual lightgun input" },
 
 	{ NULL }
 };
-
-
 
 //**************************************************************************
 //  MAIN ENTRY POINT
@@ -419,13 +469,25 @@ int main(int argc, char *argv[])
 	// parse config and cmdline options
 	DWORD result = 0;
 	{
+		windows_options options;
 		windows_osd_interface osd;
-		result = cli_execute(argc, argv, osd, mame_win_options);
+		cli_frontend frontend(options, osd);
+		result = frontend.execute(argc, argv);
 	}
 
 	// free symbols
 	symbols = NULL;
 	return result;
+}
+
+
+//============================================================
+//  windows_options
+//============================================================
+
+windows_options::windows_options()
+{
+	add_entries(s_option_entries);
 }
 
 
@@ -522,35 +584,39 @@ void windows_osd_interface::init(running_machine &machine)
 	osd_interface::init(machine);
 
 	const char *stemp;
+	windows_options &options = downcast<windows_options &>(machine.options());
 
 	// determine if we are benchmarking, and adjust options appropriately
-	int bench = options_get_int(machine.options(), WINOPTION_BENCH);
+	int bench = options.bench();
+	astring error_string;
 	if (bench > 0)
 	{
-		options_set_bool(machine.options(), OPTION_THROTTLE, false, OPTION_PRIORITY_MAXIMUM);
-		options_set_bool(machine.options(), OPTION_SOUND, false, OPTION_PRIORITY_MAXIMUM);
-		options_set_string(machine.options(), WINOPTION_VIDEO, "none", OPTION_PRIORITY_MAXIMUM);
-		options_set_int(machine.options(), OPTION_SECONDS_TO_RUN, bench, OPTION_PRIORITY_MAXIMUM);
+		options.set_value(OPTION_THROTTLE, false, OPTION_PRIORITY_MAXIMUM, error_string);
+		options.set_value(OPTION_SOUND, false, OPTION_PRIORITY_MAXIMUM, error_string);
+		options.set_value(WINOPTION_VIDEO, "none", OPTION_PRIORITY_MAXIMUM, error_string);
+		options.set_value(OPTION_SECONDS_TO_RUN, bench, OPTION_PRIORITY_MAXIMUM, error_string);
+		assert(!error_string);
 	}
 
 	// determine if we are profiling, and adjust options appropriately
-	int profile = options_get_int(machine.options(), WINOPTION_PROFILE);
+	int profile = options.profile();
 	if (profile > 0)
 	{
-		options_set_bool(machine.options(), OPTION_THROTTLE, false, OPTION_PRIORITY_MAXIMUM);
-		options_set_bool(machine.options(), WINOPTION_MULTITHREADING, false, OPTION_PRIORITY_MAXIMUM);
-		options_set_int(machine.options(), WINOPTION_NUMPROCESSORS, 1, OPTION_PRIORITY_MAXIMUM);
+		options.set_value(OPTION_THROTTLE, false, OPTION_PRIORITY_MAXIMUM, error_string);
+		options.set_value(WINOPTION_MULTITHREADING, false, OPTION_PRIORITY_MAXIMUM, error_string);
+		options.set_value(WINOPTION_NUMPROCESSORS, 1, OPTION_PRIORITY_MAXIMUM, error_string);
+		assert(!error_string);
 	}
 
 	// thread priority
 	if (!(machine.debug_flags & DEBUG_FLAG_OSD_ENABLED))
-		SetThreadPriority(GetCurrentThread(), options_get_int(machine.options(), WINOPTION_PRIORITY));
+		SetThreadPriority(GetCurrentThread(), options.priority());
 
 	// ensure we get called on the way out
-	machine.add_notifier(MACHINE_NOTIFY_EXIT, osd_exit);
+	machine.add_notifier(MACHINE_NOTIFY_EXIT, machine_notify_delegate(FUNC(osd_exit), &machine));
 
 	// get number of processors
-	stemp = options_get_string(machine.options(), WINOPTION_NUMPROCESSORS);
+	stemp = options.numprocessors();
 
 	osd_num_processors = 0;
 
@@ -565,10 +631,10 @@ void windows_osd_interface::init(running_machine &machine)
 	}
 
 	// initialize the subsystems
-	winvideo_init(&machine);
-	winsound_init(&machine);
-	wininput_init(&machine);
-	winoutput_init(&machine);
+	winvideo_init(machine);
+	winsound_init(machine);
+	wininput_init(machine);
+	winoutput_init(machine);
 
 	// notify listeners of screen configuration
 	astring tempstring;
@@ -579,7 +645,7 @@ void windows_osd_interface::init(running_machine &machine)
 	}
 
 	// hook up the debugger log
-	if (options_get_bool(machine.options(), WINOPTION_OSLOG))
+	if (options.oslog())
 		machine.add_logerror_callback(output_oslog);
 
 	// crank up the multimedia timer resolution to its max
@@ -593,7 +659,7 @@ void windows_osd_interface::init(running_machine &machine)
 //          mm_task = (*av_set_mm_thread_characteristics)(TEXT("Playback"), &task_index);
 
 	// if a watchdog thread is requested, create one
-	int watchdog = options_get_int(machine.options(), WINOPTION_WATCHDOG);
+	int watchdog = options.watchdog();
 	if (watchdog != 0)
 	{
 		watchdog_reset_event = CreateEvent(NULL, FALSE, FALSE, NULL);
@@ -655,7 +721,7 @@ void windows_osd_interface::osd_exit(running_machine &machine)
 		timeEndPeriod(caps.wPeriodMin);
 
 	// one last pass at events
-	winwindow_process_events(&machine, 0);
+	winwindow_process_events(machine, 0);
 }
 
 
@@ -851,7 +917,7 @@ bitmap_t *windows_osd_interface::font_get_bitmap(osd_font font, unicode_char chn
 	bitmap_t *bitmap = NULL;
 	if (actbounds.max_x >= actbounds.min_x && actbounds.max_y >= actbounds.min_y)
 	{
-		bitmap = auto_alloc(&machine(), bitmap_t(actbounds.max_x + 1 - actbounds.min_x, actbounds.max_y + 1 - actbounds.min_y, BITMAP_FORMAT_ARGB32));
+		bitmap = auto_alloc(machine(), bitmap_t(actbounds.max_x + 1 - actbounds.min_x, actbounds.max_y + 1 - actbounds.min_y, BITMAP_FORMAT_ARGB32));
 
 		// copy the bits into it
 		for (int y = 0; y < bitmap->height; y++)
@@ -1071,6 +1137,12 @@ static LONG WINAPI exception_filter(struct _EXCEPTION_POINTERS *info)
 	while (walker.unwind())
 		fprintf(stderr, "  %p: %p%s\n", (void *)walker.frame(), (void *)walker.ip(), (symbols == NULL) ? "" : symbols->symbol_for_address(walker.ip()));
 
+	// flush stderr, so the data is actually written when output is being redirected
+	fflush(stderr);
+
+	// flush stderr, so the data is actually written when output is being redirected
+	fflush(stderr);
+
 	// exit
 	return EXCEPTION_CONTINUE_SEARCH;
 }
@@ -1201,8 +1273,7 @@ bool stack_walker::unwind()
 //-------------------------------------------------
 
 symbol_manager::symbol_manager(const char *argv0)
-	: m_cache(NULL),
-	  m_mapfile(argv0),
+	: m_mapfile(argv0),
 	  m_symfile(argv0),
 	  m_process(GetCurrentProcess()),
 	  m_last_base(0),
@@ -1238,13 +1309,6 @@ symbol_manager::symbol_manager(const char *argv0)
 
 symbol_manager::~symbol_manager()
 {
-	// clean up the cache
-	while (m_cache != NULL)
-	{
-		cache_entry *entry = m_cache;
-		m_cache = entry->m_next;
-		global_free(entry);
-	}
 }
 
 
@@ -1264,7 +1328,7 @@ const char *symbol_manager::symbol_for_address(FPTR address)
 	if (!query_system_for_address(address))
 	{
 		// if that fails, scan the cache if we have one
-		if (m_cache != NULL)
+		if (m_cache.first() != NULL)
 			scan_cache_for_address(address);
 
 		// or else try to open a sym/map file and find it there
@@ -1342,7 +1406,6 @@ void symbol_manager::scan_file_for_address(FPTR address, bool create_cache)
 	FPTR best_addr = 0;
 
 	// parse the file, looking for valid entries
-	cache_entry **tailptr = &m_cache;
 	astring symbol;
 	char line[1024];
 	while (fgets(line, sizeof(line) - 1, srcfile))
@@ -1363,10 +1426,7 @@ void symbol_manager::scan_file_for_address(FPTR address, bool create_cache)
 
 			// also create a cache entry if we can
 			if (create_cache)
-			{
-				*tailptr = global_alloc(cache_entry(addr, symbol));
-				tailptr = &(*tailptr)->m_next;
-			}
+				m_cache.append(*global_alloc(cache_entry(addr, symbol)));
 		}
 	}
 
@@ -1391,7 +1451,7 @@ void symbol_manager::scan_cache_for_address(FPTR address)
 	FPTR best_addr = 0;
 
 	// walk the cache, looking for valid entries
-	for (cache_entry *entry = m_cache; entry != NULL; entry = entry->m_next)
+	for (cache_entry *entry = m_cache.first(); entry != NULL; entry = entry->next())
 
 		// if this is the best one so far, remember it
 		if (entry->m_address <= address && entry->m_address > best_addr)

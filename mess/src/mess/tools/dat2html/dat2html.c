@@ -12,8 +12,7 @@
 #include <ctype.h>
 #include <time.h>
 
-#include "emu.h"
-#include "osdcore.h"
+#include "corestr.h"
 
 static void replace_lt_gt(char *line)
 {
@@ -67,11 +66,7 @@ static void a_href_url(char *line)
 }
 
 
-#ifdef _WIN32
-int CLIB_DECL utf8_main(int ac, char *av[])
-#else
 int CLIB_DECL main(int ac, char *av[])
-#endif
 {
 	char dat_filename[128] = "sysinfo.dat";
 	char html_filename[128] = "sysinfo.htm";
@@ -139,7 +134,7 @@ int CLIB_DECL main(int ac, char *av[])
 		{
 			if( line[0] == '$' )
 			{
-				if( mame_strnicmp(line + 1, "info", 4) == 0 )
+				if( core_strnicmp(line + 1, "info", 4) == 0 )
 				{
 					char *eq = strchr(line, '=');
 					strcpy(system_name, eq + 1);
@@ -176,12 +171,12 @@ int CLIB_DECL main(int ac, char *av[])
 					emptycount = 0;
 				}
 				else
-				if( mame_strnicmp(line + 1, "bio", 3) == 0 )
+				if( core_strnicmp(line + 1, "bio", 3) == 0 )
 				{
 					/* that's just fine... */
 				}
 				else
-				if( mame_strnicmp(line + 1, "end", 3) == 0 )
+				if( core_strnicmp(line + 1, "end", 3) == 0 )
 				{
 					if (html_system)
 					{

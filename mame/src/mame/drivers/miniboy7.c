@@ -152,36 +152,47 @@
 #include "machine/nvram.h"
 
 
+class miniboy7_state : public driver_device
+{
+public:
+	miniboy7_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
+
+	UINT8 *m_videoram;
+	UINT8 *m_colorram;
+	tilemap_t *m_bg_tilemap;
+};
+
+
 /***********************************
 *          Video Hardware          *
 ***********************************/
 
-static UINT8 *videoram;
-static UINT8 *colorram;
-static tilemap_t *bg_tilemap;
-
 static WRITE8_HANDLER( miniboy7_videoram_w )
 {
-	videoram[offset] = data;
-	tilemap_mark_tile_dirty(bg_tilemap, offset);
+	miniboy7_state *state = space->machine().driver_data<miniboy7_state>();
+	state->m_videoram[offset] = data;
+	tilemap_mark_tile_dirty(state->m_bg_tilemap, offset);
 }
 
 static WRITE8_HANDLER( miniboy7_colorram_w )
 {
-	colorram[offset] = data;
-	tilemap_mark_tile_dirty(bg_tilemap, offset);
+	miniboy7_state *state = space->machine().driver_data<miniboy7_state>();
+	state->m_colorram[offset] = data;
+	tilemap_mark_tile_dirty(state->m_bg_tilemap, offset);
 }
 
 static TILE_GET_INFO( get_bg_tile_info )
 {
+	miniboy7_state *state = machine.driver_data<miniboy7_state>();
 /*  - bits -
     7654 3210
     --xx xx--   tiles color?.
     ---- --x-   tiles bank.
     xx-- ---x   seems unused. */
 
-	int attr = colorram[tile_index];
-	int code = videoram[tile_index];
+	int attr = state->m_colorram[tile_index];
+	int code = state->m_videoram[tile_index];
 	int bank = (attr & 0x02) >> 1;	/* bit 1 switch the gfx banks */
 	int color = (attr & 0x3c);	/* bits 2-3-4-5 for color? */
 
@@ -193,12 +204,14 @@ static TILE_GET_INFO( get_bg_tile_info )
 
 static VIDEO_START( miniboy7 )
 {
-	bg_tilemap = tilemap_create(machine, get_bg_tile_info, tilemap_scan_rows, 8, 8, 37, 37);
+	miniboy7_state *state = machine.driver_data<miniboy7_state>();
+	state->m_bg_tilemap = tilemap_create(machine, get_bg_tile_info, tilemap_scan_rows, 8, 8, 37, 37);
 }
 
-static VIDEO_UPDATE( miniboy7 )
+static SCREEN_UPDATE( miniboy7 )
 {
-	tilemap_draw(bitmap, cliprect, bg_tilemap, 0, 0);
+	miniboy7_state *state = screen->machine().driver_data<miniboy7_state>();
+	tilemap_draw(bitmap, cliprect, state->m_bg_tilemap, 0, 0);
 	return 0;
 }
 
@@ -220,7 +233,7 @@ static PALETTE_INIT( miniboy7 )
 	/* 0000IBGR */
 	if (color_prom == 0) return;
 
-	for (i = 0;i < machine->total_colors();i++)
+	for (i = 0;i < machine.total_colors();i++)
 	{
 		int bit0, bit1, bit2, r, g, b, inten, intenmin, intenmax;
 
@@ -253,16 +266,16 @@ static PALETTE_INIT( miniboy7 )
 *      Memory Map Information      *
 ***********************************/
 
-static ADDRESS_MAP_START( miniboy7_map, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( miniboy7_map, AS_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x07ff) AM_RAM	AM_SHARE("nvram") /* battery backed RAM? */
-	AM_RANGE(0x0800, 0x0fff) AM_RAM_WRITE(miniboy7_videoram_w) AM_BASE(&videoram)
-	AM_RANGE(0x1000, 0x17ff) AM_RAM_WRITE(miniboy7_colorram_w) AM_BASE(&colorram)
+	AM_RANGE(0x0800, 0x0fff) AM_RAM_WRITE(miniboy7_videoram_w) AM_BASE_MEMBER(miniboy7_state, m_videoram)
+	AM_RANGE(0x1000, 0x17ff) AM_RAM_WRITE(miniboy7_colorram_w) AM_BASE_MEMBER(miniboy7_state, m_colorram)
 	AM_RANGE(0x1800, 0x25ff) AM_RAM	/* looks like videoram */
 	AM_RANGE(0x2600, 0x27ff) AM_RAM
-	AM_RANGE(0x2800, 0x2800) AM_DEVWRITE("crtc", mc6845_address_w)
-	AM_RANGE(0x2801, 0x2801) AM_DEVREADWRITE("crtc", mc6845_register_r, mc6845_register_w)
+	AM_RANGE(0x2800, 0x2800) AM_DEVWRITE_MODERN("crtc", mc6845_device, address_w)
+	AM_RANGE(0x2801, 0x2801) AM_DEVREADWRITE_MODERN("crtc", mc6845_device, register_r, register_w)
 	AM_RANGE(0x3000, 0x3001) AM_DEVREADWRITE("ay8910", ay8910_r, ay8910_address_data_w)	// FIXME
-	AM_RANGE(0x3080, 0x3083) AM_DEVREADWRITE("pia0", pia6821_r, pia6821_w)
+	AM_RANGE(0x3080, 0x3083) AM_DEVREADWRITE_MODERN("pia0", pia6821_device, read, write)
 	AM_RANGE(0x3800, 0x3800) AM_READNOP	// R (right after each read, another value is loaded to the ACCU, so it lacks of sense)
 	AM_RANGE(0x4000, 0xffff) AM_ROM
 ADDRESS_MAP_END
@@ -429,7 +442,7 @@ static const ay8910_interface miniboy7_ay8910_intf =
 *         Machine Drivers          *
 ***********************************/
 
-static MACHINE_CONFIG_START( miniboy7, driver_device )
+static MACHINE_CONFIG_START( miniboy7, miniboy7_state )
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M6502, MASTER_CLOCK/16)	/* guess */
@@ -446,13 +459,13 @@ static MACHINE_CONFIG_START( miniboy7, driver_device )
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE((47+1)*8, (39+1)*8)                  /* Taken from MC6845, registers 00 & 04. Normally programmed with (value-1) */
 	MCFG_SCREEN_VISIBLE_AREA(0*8, 37*8-1, 0*8, 37*8-1)    /* Taken from MC6845, registers 01 & 06 */
+	MCFG_SCREEN_UPDATE(miniboy7)
 
 	MCFG_GFXDECODE(miniboy7)
 
 	MCFG_PALETTE_INIT(miniboy7)
 	MCFG_PALETTE_LENGTH(256)
 	MCFG_VIDEO_START(miniboy7)
-	MCFG_VIDEO_UPDATE(miniboy7)
 
 	MCFG_MC6845_ADD("crtc", MC6845, MASTER_CLOCK/12, mc6845_intf) /* guess */
 

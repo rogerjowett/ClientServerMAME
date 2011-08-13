@@ -7,25 +7,26 @@
 class bogeyman_state : public driver_device
 {
 public:
-	bogeyman_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	bogeyman_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 	/* memory pointers */
-	UINT8 *    videoram;
-	UINT8 *    videoram2;
-	UINT8 *    colorram;
-	UINT8 *    colorram2;
-	UINT8 *    spriteram;
-//  UINT8 *    paletteram;  // currently this uses generic palette handling
-	size_t     spriteram_size;
+	UINT8 *    m_videoram;
+	UINT8 *    m_videoram2;
+	UINT8 *    m_colorram;
+	UINT8 *    m_colorram2;
+	UINT8 *    m_spriteram;
+//  UINT8 *    m_paletteram;  // currently this uses generic palette handling
+	size_t     m_spriteram_size;
 
 	/* video-related */
-	tilemap_t    *bg_tilemap, *fg_tilemap;
+	tilemap_t    *m_bg_tilemap;
+	tilemap_t    *m_fg_tilemap;
 
 	/* misc */
-	int        psg_latch;
-	int        last_write;
-	int        colbank;
+	int        m_psg_latch;
+	int        m_last_write;
+	int        m_colbank;
 };
 
 
@@ -39,4 +40,4 @@ WRITE8_HANDLER( bogeyman_paletteram_w );
 
 PALETTE_INIT( bogeyman );
 VIDEO_START( bogeyman );
-VIDEO_UPDATE( bogeyman );
+SCREEN_UPDATE( bogeyman );

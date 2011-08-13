@@ -118,14 +118,14 @@ INLINE tms6100_state *get_safe_token(device_t *device)
 
 static void register_for_save_states(tms6100_state *tms)
 {
-	state_save_register_device_item(tms->device, 0, tms->addr_bits);
-	state_save_register_device_item(tms->device, 0, tms->address);
-	state_save_register_device_item(tms->device, 0, tms->address_latch);
-	state_save_register_device_item(tms->device, 0, tms->data);
-	state_save_register_device_item(tms->device, 0, tms->loadptr);
-	state_save_register_device_item(tms->device, 0, tms->m0);
-	state_save_register_device_item(tms->device, 0, tms->m1);
-	state_save_register_device_item(tms->device, 0, tms->state);
+	tms->device->save_item(NAME(tms->addr_bits));
+	tms->device->save_item(NAME(tms->address));
+	tms->device->save_item(NAME(tms->address_latch));
+	tms->device->save_item(NAME(tms->data));
+	tms->device->save_item(NAME(tms->loadptr));
+	tms->device->save_item(NAME(tms->m0));
+	tms->device->save_item(NAME(tms->m1));
+	tms->device->save_item(NAME(tms->state));
 }
 
 /******************************************************************************
@@ -141,7 +141,7 @@ static DEVICE_START( tms6100 )
 
 	assert_always(tms != NULL, "Error creating TMS6100 chip");
 
-	//tms->intf = device->baseconfig().static_config ? (const tms5110_interface *)device->baseconfig().static_config : &dummy;
+	//tms->intf = device->static_config ? (const tms5110_interface *)device->static_config : &dummy;
 	tms->rom = *device->region();
 
 	tms->device = device;

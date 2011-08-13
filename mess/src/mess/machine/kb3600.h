@@ -52,50 +52,93 @@
 
 **********************************************************************/
 
+#pragma once
+
 #ifndef __AY3600__
 #define __AY3600__
 
-#include "devcb.h"
+#include "emu.h"
 
-/***************************************************************************
-    MACROS / CONSTANTS
-***************************************************************************/
 
-DECLARE_LEGACY_DEVICE(AY3600PRO002, ay3600pro002);
 
-#define MCFG_AY3600PRO002_ADD(_tag, _intf) \
-	MCFG_DEVICE_ADD(_tag, AY3600PRO002, 0) \
-	MCFG_DEVICE_CONFIG(_intf)
+//**************************************************************************
+//  INTERFACE CONFIGURATION MACROS
+//**************************************************************************
+
+#define MCFG_AY3600_ADD(_tag, _clock, _config) \
+	MCFG_DEVICE_ADD(_tag, AY3600, _clock)	\
+	MCFG_DEVICE_CONFIG(_config)
+
 
 #define AY3600_INTERFACE(name) \
 	const ay3600_interface (name) =
 
-typedef UINT16 (*ay3600_y_r)(device_t *device, int x);
-#define AY3600_Y_READ(name) UINT16 name(device_t *device, int x)
 
-/***************************************************************************
-    TYPE DEFINITIONS
-***************************************************************************/
 
-typedef struct _ay3600_interface ay3600_interface;
-struct _ay3600_interface
+//**************************************************************************
+//  TYPE DEFINITIONS
+//**************************************************************************
+
+// ======================> ay3600_interface
+
+struct ay3600_interface
 {
-	ay3600_y_r			in_y_func;
+	devcb_read16		m_in_x0_cb;
+	devcb_read16		m_in_x1_cb;
+	devcb_read16		m_in_x2_cb;
+	devcb_read16		m_in_x3_cb;
+	devcb_read16		m_in_x4_cb;
+	devcb_read16		m_in_x5_cb;
+	devcb_read16		m_in_x6_cb;
+	devcb_read16		m_in_x7_cb;
+	devcb_read16		m_in_x8_cb;
 
-	devcb_read_line		in_shift_func;
-	devcb_read_line		in_control_func;
+	devcb_read_line		m_in_shift_cb;
+	devcb_read_line		m_in_control_cb;
 
-	/* this gets called for every change of the DATA READY pin */
-	devcb_write_line	out_data_ready_func;
-
-	/* this gets called for every change of the AKO pin */
-	devcb_write_line	out_ako_func;
+	devcb_write_line	m_out_data_ready_cb;
+	devcb_write_line	m_out_ako_cb;
 };
 
-/***************************************************************************
-    PROTOTYPES
-***************************************************************************/
-/* data read */
-UINT16 ay3600_b_r(device_t *device);
+
+// ======================> ay3600_device
+
+class ay3600_device :	public device_t,
+                        public ay3600_interface
+{
+public:
+    // construction/destruction
+    ay3600_device(const machine_config &mconfig, const char *tag, device_t *owner, UINT32 clock);
+
+public:
+	UINT16 b_r();
+
+protected:
+    // device-level overrides
+    virtual void device_start();
+	virtual void device_config_complete();
+	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr);
+
+private:
+	devcb_resolved_read16		m_in_x_func[9];
+
+	devcb_resolved_read_line	m_in_shift_func;
+	devcb_resolved_read_line	m_in_control_func;
+
+	devcb_resolved_write_line	m_out_data_ready_func;
+	devcb_resolved_write_line	m_out_ako_func;
+
+	int m_b;					// output buffer
+	int m_ako;					// any key down
+
+	// timers
+	emu_timer *m_scan_timer;	// keyboard scan timer
+};
+
+
+// device type definition
+extern const device_type AY3600;
+
+
 
 #endif

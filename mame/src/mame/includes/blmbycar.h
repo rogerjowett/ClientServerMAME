@@ -7,25 +7,26 @@
 class blmbycar_state : public driver_device
 {
 public:
-	blmbycar_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	blmbycar_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 	/* memory pointers */
-	UINT16 *    vram_0;
-	UINT16 *    scroll_0;
-	UINT16 *    vram_1;
-	UINT16 *    scroll_1;
-	UINT16 *    spriteram;
-	UINT16 *    paletteram;
-	size_t      spriteram_size;
+	UINT16 *    m_vram_0;
+	UINT16 *    m_scroll_0;
+	UINT16 *    m_vram_1;
+	UINT16 *    m_scroll_1;
+	UINT16 *    m_spriteram;
+	UINT16 *    m_paletteram;
+	size_t      m_spriteram_size;
 
 	/* video-related */
-	tilemap_t     *tilemap_0, *tilemap_1;
+	tilemap_t     *m_tilemap_0;
+	tilemap_t     *m_tilemap_1;
 
 	/* input-related */
-	UINT8       pot_wheel;	// blmbycar
-	int         old_val;	// blmbycar
-	int         retvalue;	// waterball
+	UINT8       m_pot_wheel;	// blmbycar
+	int         m_old_val;	// blmbycar
+	int         m_retvalue;	// waterball
 };
 
 
@@ -37,4 +38,4 @@ WRITE16_HANDLER( blmbycar_vram_0_w );
 WRITE16_HANDLER( blmbycar_vram_1_w );
 
 VIDEO_START( blmbycar );
-VIDEO_UPDATE( blmbycar );
+SCREEN_UPDATE( blmbycar );

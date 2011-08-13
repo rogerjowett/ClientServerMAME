@@ -82,7 +82,14 @@
         FEEPROMs, you must used the algorithm specified by their respective
         manufacturer.
 
-    FIXME: Crashes when a cartridge is plugged in
+    CRDENA: This flag is used to turn on and off the HSGPL. It is used in
+    particular at start-up when the DSR detects a cartridge in the
+    cartridge slot. In that case the memory locations 6000-7fff must be
+    deactivated on the HSGPL, or it would cause a collision with the
+    cartridge. However, CRDENA must not completely turn off the HSGPL, or the
+    console will not start up at all. At least GROMs 0, 1, and 2 must remain
+    active.
+    The technical specifications are not clear enough at this point.
 */
 
 #define CRU_BASE 0x1B00
@@ -129,6 +136,8 @@ typedef struct _hsgpl_state
 INLINE hsgpl_state *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
+	assert(device->type() == HSGPL);
+
 	return (hsgpl_state *)downcast<legacy_device_base *>(device)->token();
 }
 
@@ -207,8 +216,7 @@ static READ8Z_DEVICE_HANDLER ( hsgpl_grom_rz )
 {
 	int port;
 	hsgpl_state *card = get_safe_token(device);
-
-	//activecpu_adjust_icount(-4);
+	//activedevice_adjust_icount(-4);
 
 	// 1001 10bb bbbb bba0
 	port = card->current_grom_port = (offset & 0x3fc) >> 2;
@@ -231,7 +239,9 @@ static READ8Z_DEVICE_HANDLER ( hsgpl_grom_rz )
 	}
 	else
 	{	/* read GPL data */
-		if (card->card_enabled)
+		// It is not clear what effect a CRDENA=0 really has.
+		// At least GROMs 0-2 must remain visible, or the console will lock up.
+		if (card->card_enabled || card->grom_address < 0x6000)
 		{
 			if ((port < 2) && (card->gram_enabled))
 			{
@@ -303,7 +313,7 @@ static WRITE8_DEVICE_HANDLER ( hsgpl_grom_w )
 	int port;
 	hsgpl_state *card = get_safe_token(device);
 
-	//activecpu_adjust_icount(-4);
+	//activedevice_adjust_icount(-4);
 
 	// 1001 11bb bbbb bba0
 	port = card->current_grom_port = (offset & 0x3fc) >> 2;
@@ -326,7 +336,9 @@ static WRITE8_DEVICE_HANDLER ( hsgpl_grom_w )
 	}
 	else
 	{
-		if (card->card_enabled)
+		// It is not clear what effect a CRDENA=0 really has.
+		// At least GROMs 0-2 must remain visible, or the console will lock up.
+		if (card->card_enabled || card->grom_address < 0x6000)
 		{
 			/* write GPL data */
 			if (card->write_enabled)
@@ -396,7 +408,7 @@ static READ8Z_DEVICE_HANDLER ( hsgpl_dsrspace_rz )
 	hsgpl_state *card = get_safe_token(device);
 	if (card->dsr_enabled)
 	{
-		*value = at29c040a_r(card->dsr, (offset-0x4000) + 0x2000 * card->dsr_page);
+		*value = at29c040a_r(card->dsr, (offset & 0x1fff) + 0x2000 * card->dsr_page);
 //      logerror("hsgpl: read dsr %04x[%02x] -> %02x\n", offset, card->dsr_page, *value);
 	}
 }
@@ -415,21 +427,21 @@ static READ8Z_DEVICE_HANDLER ( hsgpl_cartspace_rz )
 
 	if ((port < 2) && (card->ram_enabled))
 	{
-		*value = card->ram6[(offset-0x6000) + 0x2000*card->current_bank + 0x8000*port];
+		*value = card->ram6[(offset & 0x1fff) + 0x2000*card->current_bank + 0x8000*port];
 //      logerror("hsgpl cart ram read %04x -> %02x\n", offset, *value);
 		return;
 	}
 
 	if (port < 16)
 	{
-		*value = at29c040a_r(card->rom6, (offset-0x6000) + 0x2000*card->current_bank + 0x8000*port);
+		*value = at29c040a_r(card->rom6, (offset & 0x1fff) + 0x2000*card->current_bank + 0x8000*port);
 //      logerror("hsgpl cart read %04x -> %02x\n", offset, *value);
 	}
 	else
 	{
 		if (port==32 || port==33)
 		{
-			*value = card->ram6[(offset-0x6000) + 0x2000*card->current_bank + 0x8000*(port-32)];
+			*value = card->ram6[(offset & 0x1fff) + 0x2000*card->current_bank + 0x8000*(port-32)];
 		}
 		else
 		{
@@ -471,7 +483,7 @@ static WRITE8_DEVICE_HANDLER ( hsgpl_cartspace_w )
 	{
 		if ((port < 2) && (card->ram_enabled))
 		{
-			card->ram6[(offset-0x6000) + 0x2000*card->current_bank + 0x8000*port ] = data;
+			card->ram6[(offset & 0x1fff) + 0x2000*card->current_bank + 0x8000*port ] = data;
 		}
 		else
 		{	// keep in mind that these lines are also reached for port < 2
@@ -489,7 +501,7 @@ static WRITE8_DEVICE_HANDLER ( hsgpl_cartspace_w )
 			{
 				if (port==32 || port==33)
 				{
-					card->ram6[(offset-0x6000) + 0x2000*card->current_bank + 0x8000*(port-32)] = data;
+					card->ram6[(offset & 0x1fff) + 0x2000*card->current_bank + 0x8000*(port-32)] = data;
 				}
 				else
 				{
@@ -505,20 +517,20 @@ static WRITE8_DEVICE_HANDLER ( hsgpl_cartspace_w )
 */
 static READ8Z_DEVICE_HANDLER ( data_rz )
 {
-	if ((offset & 0xe000)==0x4000)
+	if ((offset & 0x7e000)==0x74000)
 	{
-		hsgpl_dsrspace_rz(device, offset, value);
+		hsgpl_dsrspace_rz(device, offset & 0xffff, value);
 	}
 
-	if ((offset & 0xe000)==0x6000)
+	if ((offset & 0x7e000)==0x76000)
 	{
-		hsgpl_cartspace_rz(device, offset, value);
+		hsgpl_cartspace_rz(device, offset & 0xffff, value);
 	}
 
 	// 1001 1wbb bbbb bba0
-	if ((offset & 0xfc01)==0x9800)
+	if ((offset & 0x7fc01)==0x79800)
 	{
-		hsgpl_grom_rz(device, offset, value);
+		hsgpl_grom_rz(device, offset & 0xffff, value);
 	}
 }
 
@@ -527,15 +539,15 @@ static READ8Z_DEVICE_HANDLER ( data_rz )
 */
 static WRITE8_DEVICE_HANDLER ( data_w )
 {
-	if ((offset & 0xe000)==0x6000)
+	if ((offset & 0x7e000)==0x76000)
 	{
-		hsgpl_cartspace_w(device, offset, data);
+		hsgpl_cartspace_w(device, offset & 0xffff, data);
 	}
 
 	// 1001 1wbb bbbb bba0
-	if ((offset & 0xfc01)==0x9c00)
+	if ((offset & 0x7fc01)==0x79c00)
 	{
-		hsgpl_grom_w(device, offset, data);
+		hsgpl_grom_w(device, offset & 0xffff, data);
 	}
 }
 
@@ -579,7 +591,7 @@ static DEVICE_RESET( hsgpl )
 	hsgpl_state *card = get_safe_token(device);
 
 	/* If the card is selected in the menu, register the card */
-	if (input_port_read(device->machine, "EXTCARD") & (EXT_HSGPL_ON | EXT_HSGPL_FLASH))
+	if (input_port_read(device->machine(), "EXTCARD") & (EXT_HSGPL_ON | EXT_HSGPL_FLASH))
 	{
 		device_t *peb = device->owner();
 		int success = mount_card(peb, device, &hsgpl_card, get_pebcard_config(device)->slot);
@@ -606,7 +618,7 @@ static DEVICE_RESET( hsgpl )
 		card->mbx_enabled = FALSE;
 		card->ram_enabled = FALSE;
 
-		card->flash_mode = (input_port_read(device->machine, "EXTCARD") & EXT_HSGPL_FLASH);
+		card->flash_mode = (input_port_read(device->machine(), "EXTCARD") & EXT_HSGPL_FLASH);
 		if (card->flash_mode) logerror("hsgpl: flash mode\n");
 		else logerror("hsgpl: full mode\n");
 
@@ -622,35 +634,32 @@ static DEVICE_NVRAM( hsgpl )
 {
 	// Called between START and RESET
 	hsgpl_state *card = get_safe_token(device);
-	astring *hsname = astring_assemble_3(astring_alloc(), device->machine->gamedrv->name, PATH_SEPARATOR, "hsgpl.nv");
+	astring *hsname = astring_assemble_3(astring_alloc(), device->machine().system().name, PATH_SEPARATOR, "hsgpl.nv");
 	file_error filerr;
-	mame_file *nvfile;
 
 	if (read_or_write==0)
 	{
 		logerror("hsgpl: device nvram load %s\n", astring_c(hsname));
 
-		filerr = mame_fopen(SEARCHPATH_NVRAM, astring_c(hsname), OPEN_FLAG_READ, &nvfile);
+		emu_file nvfile(device->machine().options().nvram_directory(), OPEN_FLAG_READ);
+		filerr = nvfile.open(astring_c(hsname));
 		if (filerr != FILERR_NONE)
 		{
 			logerror("hsgpl: Could not restore NVRAM\n");
 			return;
 		}
 
-		if (mame_fread(nvfile, card->flashrom, FLROMSIZE) != FLROMSIZE)
+		if (nvfile.read(card->flashrom, FLROMSIZE) != FLROMSIZE)
 		{
 			logerror("hsgpl: Error loading NVRAM; unexpected EOF\n");
-			mame_fclose(nvfile);
 			return;
 		}
 
 		if (card->flashrom[0] != NVVERSION)
 		{
 			logerror("hsgpl: Wrong NVRAM image version: %d\n", card->flashrom[0]);
-			mame_fclose(nvfile);
 			return;
 		}
-		mame_fclose(nvfile);
 	}
 	else
 	{
@@ -662,20 +671,20 @@ static DEVICE_NVRAM( hsgpl )
 			at29c040a_is_dirty(card->gromb))
 		{
 			card->flashrom[0] = NVVERSION;
-			filerr = mame_fopen(SEARCHPATH_NVRAM, astring_c(hsname), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS, &nvfile);
 
+			emu_file nvfile(device->machine().options().nvram_directory(), OPEN_FLAG_WRITE | OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_PATHS);
+			filerr = nvfile.open(astring_c(hsname));
 			if (filerr != FILERR_NONE)
 			{
 				logerror("hsgpl: Could not save NVRAM\n");
 			}
 			else
 			{
-				if (mame_fwrite(nvfile, card->flashrom, FLROMSIZE) != FLROMSIZE)
+				if (nvfile.write(card->flashrom, FLROMSIZE) != FLROMSIZE)
 				{
 					logerror("hsgpl: Error while saving contents of NVRAM.\n");
 				}
 			}
-			mame_fclose(nvfile);
 			return;
 		}
 		else

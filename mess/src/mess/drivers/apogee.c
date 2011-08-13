@@ -10,10 +10,10 @@
 #include "emu.h"
 #include "cpu/i8085/i8085.h"
 #include "sound/wave.h"
-#include "machine/i8255a.h"
-#include "machine/i8257.h"
+#include "machine/i8255.h"
+#include "machine/8257dma.h"
 #include "video/i8275.h"
-#include "devices/cassette.h"
+#include "imagedev/cassette.h"
 #include "formats/rk_cas.h"
 #include "includes/radio86.h"
 
@@ -21,19 +21,19 @@
 class apogee_state : public radio86_state
 {
 public:
-	apogee_state(running_machine &machine, const driver_device_config_base &config)
-		: radio86_state(machine, config) { }
+	apogee_state(const machine_config &mconfig, device_type type, const char *tag)
+		: radio86_state(mconfig, type, tag) { }
 
 };
 
 
 /* Address maps */
-static ADDRESS_MAP_START(apogee_mem, ADDRESS_SPACE_PROGRAM, 8)
+static ADDRESS_MAP_START(apogee_mem, AS_PROGRAM, 8)
     AM_RANGE( 0x0000, 0x0fff ) AM_RAMBANK("bank1") // First bank
     AM_RANGE( 0x1000, 0xebff ) AM_RAM  // RAM
     //AM_RANGE( 0xec00, 0xecff ) AM_RAM  // Timer
-    AM_RANGE( 0xed00, 0xed03 ) AM_DEVREADWRITE("ppi8255_1", i8255a_r, i8255a_w) AM_MIRROR(0x00fc)
-    //AM_RANGE( 0xee00, 0xee03 ) AM_DEVREADWRITE("ppi8255_2", i8255a_r, i8255a_w) AM_MIRROR(0x00fc)
+    AM_RANGE( 0xed00, 0xed03 ) AM_DEVREADWRITE_MODERN("ppi8255_1", i8255_device, read, write) AM_MIRROR(0x00fc)
+    //AM_RANGE( 0xee00, 0xee03 ) AM_DEVREADWRITE_MODERN("ppi8255_2", i8255_device, read, write) AM_MIRROR(0x00fc)
     AM_RANGE( 0xef00, 0xef01 ) AM_DEVREADWRITE("i8275", i8275_r, i8275_w) AM_MIRROR(0x00fe) // video
     AM_RANGE( 0xf000, 0xf0ff ) AM_DEVWRITE("dma8257", i8257_w)	 // DMA
     AM_RANGE( 0xf000, 0xffff ) AM_ROM  // System ROM
@@ -132,11 +132,12 @@ static INPUT_PORTS_START( apogee )
 	PORT_BIT(0x80, IP_ACTIVE_LOW, IPT_KEYBOARD) PORT_NAME("Rus/Lat") PORT_CODE(KEYCODE_LALT) PORT_CODE(KEYCODE_RALT)
 INPUT_PORTS_END
 
-static const cassette_config apogee_cassette_config =
+static const cassette_interface apogee_cassette_interface =
 {
 	rka_cassette_formats,
 	NULL,
 	(cassette_state)(CASSETTE_STOPPED | CASSETTE_SPEAKER_ENABLED | CASSETTE_MOTOR_ENABLED),
+	NULL,
 	NULL
 };
 
@@ -167,9 +168,9 @@ static MACHINE_CONFIG_START( apogee, apogee_state )
     MCFG_CPU_PROGRAM_MAP(apogee_mem)
     MCFG_MACHINE_RESET( radio86 )
 
-	MCFG_I8255A_ADD( "ppi8255_1", radio86_ppi8255_interface_1 )
+	MCFG_I8255_ADD( "ppi8255_1", radio86_ppi8255_interface_1 )
 
-	//MCFG_I8255A_ADD( "ppi8255_2", apogee_ppi8255_interface_2 )
+	//MCFG_I8255_ADD( "ppi8255_2", apogee_ppi8255_interface_2 )
 
 	MCFG_I8275_ADD	( "i8275", apogee_i8275_interface)
     /* video hardware */
@@ -179,20 +180,21 @@ static MACHINE_CONFIG_START( apogee, apogee_state )
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(78*6, 30*10)
 	MCFG_SCREEN_VISIBLE_AREA(0, 78*6-1, 0, 30*10-1)
+	MCFG_SCREEN_UPDATE(radio86)
+
 	MCFG_GFXDECODE(apogee)
 	MCFG_PALETTE_LENGTH(3)
 	MCFG_PALETTE_INIT(radio86)
 
 	MCFG_VIDEO_START(generic_bitmapped)
-	MCFG_VIDEO_UPDATE(radio86)
 
 	MCFG_SPEAKER_STANDARD_MONO("mono")
-	MCFG_SOUND_WAVE_ADD("wave", "cassette")
+	MCFG_SOUND_WAVE_ADD(WAVE_TAG, CASSETTE_TAG)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
 	MCFG_I8257_ADD("dma8257", XTAL_16MHz / 9, radio86_dma)
 
-	MCFG_CASSETTE_ADD( "cassette", apogee_cassette_config )
+	MCFG_CASSETTE_ADD( CASSETTE_TAG, apogee_cassette_interface )
 MACHINE_CONFIG_END
 
 /* ROM definition */

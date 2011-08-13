@@ -62,7 +62,7 @@
 
 /* packet retry parameters */
 #define KERMIT_MAX_RETRIES  5
-#define KERMIT_RETRY_DELAY  ATTOTIME_IN_SEC( 10 )
+#define KERMIT_RETRY_DELAY  attotime::from_seconds( 10 )
 
 
 /* packet format is:
@@ -109,6 +109,14 @@ typedef struct {
 
 } kermit;
 
+
+INLINE kermit *get_safe_token(device_t *device)
+{
+	assert(device != NULL);
+	assert(device->type() == KERMIT);
+
+	return (kermit*)downcast<legacy_device_base *>(device)->token();
+}
 
 static int kermit_is_char( UINT8 data )
 {
@@ -175,12 +183,12 @@ static void kermit_start_sending( kermit* state )
 
 	if ( state->conf && state->conf->send )
 	{
-		state->conf->send( state->machine, state->pout[ 0 ] );
+		state->conf->send( *state->machine, state->pout[ 0 ] );
 	}
 	state->posout = 1;
 
 	state->retries = KERMIT_MAX_RETRIES;
-	timer_adjust_periodic( state->resend, KERMIT_RETRY_DELAY, 0, KERMIT_RETRY_DELAY );
+	state->resend->adjust( KERMIT_RETRY_DELAY, 0, KERMIT_RETRY_DELAY );
 }
 
 static void kermit_reset( kermit* state );
@@ -197,7 +205,7 @@ static void kermit_resend( kermit* state )
 			return;
 		}
 
-		state->conf->send( state->machine, state->pout[ 0 ] );
+		state->conf->send( *state->machine, state->pout[ 0 ] );
 
 		state->posout = 1;
 		state->retries--;
@@ -352,8 +360,8 @@ static void kermit_send_string_packet( kermit* state, UINT8 h, const char* data 
 		char c = data[i];
 		if ( kermit_is_char( c ) && ( c != '_' ) && ( c != ' ' ) )
 		{
-		  state->pout[ 4 + len ] = c;
-		  len++;
+			state->pout[ 4 + len ] = c;
+			len++;
 		}
 	}
 	state->pout[ 0 ] = KERMIT_SOH;
@@ -394,14 +402,14 @@ static void kermit_reset( kermit* state )
 		state->image->fseek( SEEK_SET, 0 );
 	}
 
-	timer_adjust_periodic( state->resend, attotime_never, 0, attotime_never );
+	state->resend->adjust( attotime::never, 0, attotime::never );
 }
 
 
 /* emulated machine sends a byte to the outside (us) */
 void kermit_receive_byte( device_t *device, UINT8 data )
 {
-	kermit* state = (kermit*) downcast<legacy_device_base *>(device)->token();
+	kermit* state = get_safe_token(device);
 
 	LOG(( "get %i %2x %c (%i)\n", data, data, data, state->posin ));
 
@@ -547,7 +555,7 @@ void kermit_receive_byte( device_t *device, UINT8 data )
 							/* get conf & send file name */
 							kermit_get_conf( state );
 							kermit_send_string_packet( state, KERMIT_FILE, state->image->basename() );
-							state->state = KERMIT_SEND_DATA;;
+							state->state = KERMIT_SEND_DATA;
 							break;
 
 						case KERMIT_SEND_DATA:
@@ -610,7 +618,7 @@ void kermit_receive_byte( device_t *device, UINT8 data )
 
 void kermit_byte_transmitted( device_t *device )
 {
-	kermit* state = (kermit*) downcast<legacy_device_base *>(device)->token();
+	kermit* state = get_safe_token(device);
 
 	LOG(( "transmitted %i %2x %c, %i / %i\n", state->pout[ state->posout-1 ], state->pout[ state->posout-1 ], state->pout[ state->posout-1 ], state->posout - 1, state->nbout - 1 ));
 
@@ -626,32 +634,32 @@ void kermit_byte_transmitted( device_t *device )
 
 	if ( state->conf && state->conf->send )
 	{
-		state->conf->send( state->machine, state->pout[ state->posout ] );
+		state->conf->send(*state->machine, state->pout[ state->posout ] );
 	}
 	state->posout++;
 }
 
 static DEVICE_START( kermit )
 {
-	kermit* state = (kermit*) downcast<legacy_device_base *>(device)->token();
+	kermit* state = get_safe_token(device);
 	LOG(( "kermit: start\n" ));
 	state->image = NULL;
-	state->conf = (kermit_config*) device->baseconfig().static_config();
-	state->machine = device->machine;
-	state->resend = timer_alloc(device->machine,  kermit_resend_cb, state );
+	state->conf = (kermit_config*) device->static_config();
+	state->machine = &device->machine();
+	state->resend = device->machine().scheduler().timer_alloc(FUNC(kermit_resend_cb), state );
 	kermit_reset( state );
 }
 
 static DEVICE_RESET( kermit )
 {
-	kermit* state = (kermit*) downcast<legacy_device_base *>(device)->token();
+	kermit* state = get_safe_token(device);
 	LOG(( "kermit: reset\n" ));
 	kermit_reset( state );
 }
 
 static DEVICE_IMAGE_LOAD( kermit )
 {
-	kermit* state = (kermit*) downcast<legacy_device_base *>(&image.device())->token();
+	kermit* state = get_safe_token(&image.device());
 	LOG(( "kermit: image load\n" ));
 	state->image = &image;
 	kermit_reset( state );
@@ -660,7 +668,7 @@ static DEVICE_IMAGE_LOAD( kermit )
 
 static DEVICE_IMAGE_CREATE( kermit )
 {
-	kermit* state = (kermit*) downcast<legacy_device_base *>(&image.device())->token();
+	kermit* state = get_safe_token(&image.device());
 	LOG(( "kermit: image create\n" ));
 	state->image = &image;
 	kermit_reset( state );
@@ -669,7 +677,7 @@ static DEVICE_IMAGE_CREATE( kermit )
 
 static DEVICE_IMAGE_UNLOAD( kermit )
 {
-	kermit* state = (kermit*) downcast<legacy_device_base *>(&image.device())->token();
+	kermit* state = get_safe_token(&image.device());
 	LOG(( "kermit: image unload\n" ));
 	state->image = NULL;
 	kermit_reset( state );

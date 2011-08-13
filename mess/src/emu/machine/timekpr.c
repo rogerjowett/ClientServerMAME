@@ -5,6 +5,7 @@
     Various ST Microelectronics timekeeper SRAM implementations:
         - M48T02
         - M48T35
+        - M48T37
         - M48T58
         - MK48T08
 
@@ -12,6 +13,14 @@
 
 #include "emu.h"
 #include "machine/timekpr.h"
+
+
+// device type definition
+const device_type M48T02 = &device_creator<m48t02_device>;
+const device_type M48T35 = &device_creator<m48t35_device>;
+const device_type M48T37 = &device_creator<m48t37_device>;
+const device_type M48T58 = &device_creator<m48t58_device>;
+const device_type MK48T08 = &device_creator<mk48t08_device>;
 
 
 /***************************************************************************
@@ -34,75 +43,17 @@
 
 #define SECONDS_ST ( 0x80 )
 
-#define DAY_FT ( 0x40 ) /* not emulated */
+#define DAY_FT ( 0x40 ) /* M48T37 - not emulated */
 #define DAY_CEB ( 0x20 ) /* M48T35/M48T58 */
 #define DAY_CB ( 0x10 ) /* M48T35/M48T58 */
 
 #define DATE_BLE ( 0x80 ) /* M48T58: not emulated */
 #define DATE_BL ( 0x40 ) /* M48T58: not emulated */
 
-#define FLAGS_BL ( 0x10 ) /* MK48T08: not emulated */
+#define FLAGS_BL ( 0x10 ) /* MK48T08/M48T37: not emulated */
+#define FLAGS_AF ( 0x40 ) /* M48T37: not emulated */
+#define FLAGS_WDF ( 0x80 ) /* M48T37: not emulated */
 
-#define TIMEKPR_DEV_DERIVED_CTOR(devtype) \
-	devtype##_device::devtype##_device(running_machine &_machine, const devtype##_device_config &config) \
-		: timekeeper_device(_machine, config) \
-	{ }
-
-#define TIMEKPR_DEVCFG_DERIVED_CTOR(devtype, name) \
-	devtype##_device_config::devtype##_device_config(const machine_config &mconfig, const char *tag, const device_config *owner, UINT32 clock) \
-    : timekeeper_device_config(mconfig, name, tag, owner, clock) \
-	{ }
-
-#define TIMEKPR_DEVCFG_DERIVED_STATIC_ALLOC(devtype) \
-	device_config *devtype##_device_config::static_alloc_device_config(const machine_config &mconfig, const char *tag, const device_config *owner, UINT32 clock) \
-	{ return global_alloc(devtype##_device_config(mconfig, tag, owner, clock)); }
-
-#define TIMEKPR_DEVCFG_DERIVED_DEV_ALLOC(devtype) \
-	device_t *devtype##_device_config::alloc_device(running_machine &machine) const \
-	{ return auto_alloc(&machine, devtype##_device(machine, *this)); }
-
-#define TIMEKPR_DERIVE(devtype, name) \
-	TIMEKPR_DEV_DERIVED_CTOR(devtype) \
-	TIMEKPR_DEVCFG_DERIVED_CTOR(devtype, name) \
-	TIMEKPR_DEVCFG_DERIVED_STATIC_ALLOC(devtype) \
-	TIMEKPR_DEVCFG_DERIVED_DEV_ALLOC(devtype)
-
-
-//**************************************************************************
-//  DEVICE CONFIGURATION
-//**************************************************************************
-
-//-------------------------------------------------
-//  timekeeper_device_config - constructor
-//-------------------------------------------------
-
-timekeeper_device_config::timekeeper_device_config(const machine_config &mconfig, const char *type, const char *tag, const device_config *owner, UINT32 clock)
-    : device_config(mconfig, static_alloc_device_config, type, tag, owner, clock),
-	  device_config_nvram_interface(mconfig, *this)
-{
-
-}
-
-
-//-------------------------------------------------
-//  static_alloc_device_config - allocate a new
-//  configuration object
-//-------------------------------------------------
-
-device_config *timekeeper_device_config::static_alloc_device_config(const machine_config &mconfig, const char *tag, const device_config *owner, UINT32 clock)
-{
-    return global_alloc(timekeeper_device_config(mconfig, "TIMEKEEPER", tag, owner, clock));
-}
-
-
-//-------------------------------------------------
-//  alloc_device - allocate a new device object
-//-------------------------------------------------
-
-device_t *timekeeper_device_config::alloc_device(running_machine &machine) const
-{
-    return auto_alloc(&machine, timekeeper_device(machine, *this));
-}
 
 /***************************************************************************
     INLINE FUNCTIONS
@@ -162,77 +113,19 @@ static int counter_from_ram( UINT8 *data, int offset )
 //  LIVE DEVICE
 //**************************************************************************
 
-const device_type M48T02 = m48t02_device_config::static_alloc_device_config;
-const device_type M48T35 = m48t35_device_config::static_alloc_device_config;
-const device_type M48T58 = m48t58_device_config::static_alloc_device_config;
-const device_type MK48T08 = mk48t08_device_config::static_alloc_device_config;
-
-TIMEKPR_DERIVE(m48t02, "M48T02")
-TIMEKPR_DERIVE(m48t35, "M48T35")
-TIMEKPR_DERIVE(m48t58, "M48T58")
-TIMEKPR_DERIVE(mk48t08, "MK48T08")
-
 //-------------------------------------------------
-//  timekeeper_device - constructor
+//  timekeeper_device_config - constructor
 //-------------------------------------------------
 
-timekeeper_device::timekeeper_device(running_machine &_machine, const timekeeper_device_config &config)
-    : device_t(_machine, config),
-	  device_nvram_interface(_machine, config, *this),
-      m_config(config)
+timekeeper_device::timekeeper_device(const machine_config &mconfig, device_type type, const char *name, const char *tag, device_t *owner, UINT32 clock)
+    : device_t(mconfig, type, name, tag, owner, clock),
+	  device_nvram_interface(mconfig, *this)
 {
 
 }
 
-//-------------------------------------------------
-//  device_start - device-specific startup
-//-------------------------------------------------
-
-void timekeeper_device::device_start()
-{
-	emu_timer *timer;
-	attotime duration;
-	system_time systime;
-
-	/* validate some basic stuff */
-	assert(this != NULL);
-
-	m_machine.base_datetime(systime);
-
-	m_control = 0;
-	m_seconds = make_bcd( systime.local_time.second );
-	m_minutes = make_bcd( systime.local_time.minute );
-	m_hours = make_bcd( systime.local_time.hour );
-	m_day = make_bcd( systime.local_time.weekday + 1 );
-	m_date = make_bcd( systime.local_time.mday );
-	m_month = make_bcd( systime.local_time.month + 1 );
-	m_year = make_bcd( systime.local_time.year % 100 );
-	m_century = make_bcd( systime.local_time.year / 100 );
-	m_data = auto_alloc_array( &m_machine, UINT8, m_size );
-
-	m_default_data = *region();
-	if (m_default_data)
-	{
-		assert( region()->bytes() == m_size );
-	}
-
-	state_save_register_device_item( this, 0, m_control );
-	state_save_register_device_item( this, 0, m_seconds );
-	state_save_register_device_item( this, 0, m_minutes );
-	state_save_register_device_item( this, 0, m_hours );
-	state_save_register_device_item( this, 0, m_day );
-	state_save_register_device_item( this, 0, m_date );
-	state_save_register_device_item( this, 0, m_month );
-	state_save_register_device_item( this, 0, m_year );
-	state_save_register_device_item( this, 0, m_century );
-	state_save_register_device_item_pointer( this, 0, m_data, m_size );
-
-	timer = timer_alloc( &m_machine, timekeeper_tick_callback, (void *)this );
-	duration = ATTOTIME_IN_SEC(1);
-	timer_adjust_periodic( timer, duration, 0, duration );
-}
-
-void m48t02_device::device_start()
+m48t02_device::m48t02_device(const machine_config &mconfig, const char *tag, device_t *owner, UINT32 clock)
+	: timekeeper_device(mconfig, M48T02, "M48T02", tag, owner, clock)
 {
 	m_offset_control = 0x7f8;
 	m_offset_seconds = 0x7f9;
@@ -245,11 +138,10 @@ void m48t02_device::device_start()
 	m_offset_century = -1;
 	m_offset_flags = -1;
 	m_size = 0x800;
-
-	timekeeper_device::device_start();
 }
 
-void m48t35_device::device_start()
+m48t35_device::m48t35_device(const machine_config &mconfig, const char *tag, device_t *owner, UINT32 clock)
+	: timekeeper_device(mconfig, M48T35, "M48T35", tag, owner, clock)
 {
 	m_offset_control = 0x7ff8;
 	m_offset_seconds = 0x7ff9;
@@ -262,11 +154,26 @@ void m48t35_device::device_start()
 	m_offset_century = -1;
 	m_offset_flags = -1;
 	m_size = 0x8000;
-
-	timekeeper_device::device_start();
 }
 
-void m48t58_device::device_start()
+m48t37_device::m48t37_device(const machine_config &mconfig, const char *tag, device_t *owner, UINT32 clock)
+	: timekeeper_device(mconfig, M48T37, "M48T37", tag, owner, clock)
+{
+	m_offset_control = 0x7ff8;
+	m_offset_seconds = 0x7ff9;
+	m_offset_minutes = 0x7ffa;
+	m_offset_hours = 0x7ffb;
+	m_offset_day = 0x7ffc;
+	m_offset_date = 0x7ffd;
+	m_offset_month = 0x7ffe;
+	m_offset_year = 0x7fff;
+	m_offset_century = 0x7ff1;
+	m_offset_flags = 0x7ff0;
+	m_size = 0x8000;
+}
+
+m48t58_device::m48t58_device(const machine_config &mconfig, const char *tag, device_t *owner, UINT32 clock)
+	: timekeeper_device(mconfig, M48T58, "M48T58", tag, owner, clock)
 {
 	m_offset_control = 0x1ff8;
 	m_offset_seconds = 0x1ff9;
@@ -279,11 +186,10 @@ void m48t58_device::device_start()
 	m_offset_century = -1;
 	m_offset_flags = -1;
 	m_size = 0x2000;
-
-	timekeeper_device::device_start();
 }
 
-void mk48t08_device::device_start()
+mk48t08_device::mk48t08_device(const machine_config &mconfig, const char *tag, device_t *owner, UINT32 clock)
+	: timekeeper_device(mconfig, MK48T08, "MK48T08", tag, owner, clock)
 {
 	m_offset_control = 0x1ff8;
 	m_offset_seconds = 0x1ff9;
@@ -296,8 +202,52 @@ void mk48t08_device::device_start()
 	m_offset_century = 0x1ff1;
 	m_offset_flags = 0x1ff0;
 	m_size = 0x2000;
+}
 
-	timekeeper_device::device_start();
+
+//-------------------------------------------------
+//  device_start - device-specific startup
+//-------------------------------------------------
+
+void timekeeper_device::device_start()
+{
+	system_time systime;
+
+	/* validate some basic stuff */
+	assert(this != NULL);
+
+	machine().base_datetime(systime);
+
+	m_control = 0;
+	m_seconds = make_bcd( systime.local_time.second );
+	m_minutes = make_bcd( systime.local_time.minute );
+	m_hours = make_bcd( systime.local_time.hour );
+	m_day = make_bcd( systime.local_time.weekday + 1 );
+	m_date = make_bcd( systime.local_time.mday );
+	m_month = make_bcd( systime.local_time.month + 1 );
+	m_year = make_bcd( systime.local_time.year % 100 );
+	m_century = make_bcd( systime.local_time.year / 100 );
+	m_data = auto_alloc_array( machine(), UINT8, m_size );
+
+	m_default_data = *region();
+	if (m_default_data)
+	{
+		assert( region()->bytes() == m_size );
+	}
+
+	save_item( NAME(m_control) );
+	save_item( NAME(m_seconds) );
+	save_item( NAME(m_minutes) );
+	save_item( NAME(m_hours) );
+	save_item( NAME(m_day) );
+	save_item( NAME(m_date) );
+	save_item( NAME(m_month) );
+	save_item( NAME(m_year) );
+	save_item( NAME(m_century) );
+	save_pointer( NAME(m_data), m_size );
+
+	emu_timer *timer = timer_alloc();
+	timer->adjust(attotime::from_seconds(1), 0, attotime::from_seconds(1));
 }
 
 //-------------------------------------------------
@@ -305,10 +255,6 @@ void mk48t08_device::device_start()
 //-------------------------------------------------
 
 void timekeeper_device::device_reset() { }
-void m48t02_device::device_reset() { }
-void m48t35_device::device_reset() { }
-void m48t58_device::device_reset() { }
-void mk48t08_device::device_reset() { }
 
 void timekeeper_device::counters_to_ram()
 {
@@ -336,12 +282,7 @@ void timekeeper_device::counters_from_ram()
 	m_century = counter_from_ram( m_data, m_offset_century );
 }
 
-TIMER_CALLBACK( timekeeper_device::timekeeper_tick_callback )
-{
-    reinterpret_cast<timekeeper_device *>(ptr)->timekeeper_tick();
-}
-
-void timekeeper_device::timekeeper_tick()
+void timekeeper_device::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
 {
 	if( ( m_seconds & SECONDS_ST ) != 0 ||
 		( m_control & CONTROL_W ) != 0 )
@@ -431,21 +372,22 @@ void timekeeper_device::write(UINT16 offset, UINT8 data)
 			m_day = ( m_day & ~DAY_CEB ) | ( data & DAY_CEB );
 		}
 	}
-	else if( offset == m_offset_date && type() == M48T58 )
-	{
-		data &= ~DATE_BL;
-	}
-	else if( offset == m_offset_flags && type() == MK48T08 )
-	{
-		data &= ~FLAGS_BL;
-	}
 
 	m_data[ offset ] = data;
 }
 
 UINT8 timekeeper_device::read(UINT16 offset)
 {
-	return m_data[ offset ];
+	UINT8 result = m_data[ offset ];
+	if( offset == m_offset_date && type() == M48T58 )
+	{
+		result &= ~DATE_BL;
+	}
+	else if( offset == m_offset_flags && (type() == MK48T08 || type() == M48T37) )
+	{
+		result = 0;
+	}
+	return result;
 }
 
 //-------------------------------------------------
@@ -463,6 +405,10 @@ void timekeeper_device::nvram_default()
 	{
 		memset( m_data, 0xff, m_size );
 	}
+
+	if ( m_offset_flags >= 0 )
+		m_data[ m_offset_flags ] = 0;
+	counters_to_ram();
 }
 
 
@@ -471,9 +417,9 @@ void timekeeper_device::nvram_default()
 //  .nv file
 //-------------------------------------------------
 
-void timekeeper_device::nvram_read(mame_file &file)
+void timekeeper_device::nvram_read(emu_file &file)
 {
-	mame_fread( &file, m_data, m_size );
+	file.read( m_data, m_size );
 
 	counters_to_ram();
 }
@@ -484,9 +430,9 @@ void timekeeper_device::nvram_read(mame_file &file)
 //  .nv file
 //-------------------------------------------------
 
-void timekeeper_device::nvram_write(mame_file &file)
+void timekeeper_device::nvram_write(emu_file &file)
 {
-	mame_fwrite( &file, m_data, m_size );
+	file.write( m_data, m_size );
 }
 
 

@@ -1,6 +1,8 @@
 #ifndef __TANDY2K__
 #define __TANDY2K__
 
+#include "machine/ram.h"
+
 #define SCREEN_TAG		"screen"
 #define I80186_TAG		"u76"
 #define I8048_TAG		"m1"
@@ -15,14 +17,13 @@
 #define CRT9212_1_TAG	"u15"
 #define CRT9021B_TAG	"u14"
 #define WD1010_TAG		"u18"
-#define SPEAKER_TAG		"speaker"
 #define CENTRONICS_TAG	"centronics"
 
 class tandy2k_state : public driver_device
 {
 public:
-	tandy2k_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config),
+	tandy2k_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag),
 		  m_maincpu(*this, I80186_TAG),
 		  m_uart(*this, I8251A_TAG),
 		  m_pit(*this, I8253_TAG),
@@ -35,7 +36,7 @@ public:
 		  m_vac(*this, CRT9021B_TAG),
 		  m_centronics(*this, CENTRONICS_TAG),
 		  m_speaker(*this, SPEAKER_TAG),
-		  m_ram(*this, "messram"),
+		  m_ram(*this, RAM_TAG),
 		  m_floppy0(*this, FLOPPY_0),
 		  m_floppy1(*this, FLOPPY_1)
 	{ }
@@ -58,7 +59,7 @@ public:
 
 	virtual void machine_start();
 
-	virtual bool video_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect);
+	virtual bool screen_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect);
 
 	void speaker_update();
 	void dma_request(int line, int state);
@@ -74,6 +75,8 @@ public:
 	DECLARE_WRITE8_MEMBER( keyboard_y0_w );
 	DECLARE_WRITE8_MEMBER( keyboard_y8_w );
 	DECLARE_WRITE_LINE_MEMBER( busdmarq0_w );
+	DECLARE_WRITE_LINE_MEMBER( rxrdy_w );
+	DECLARE_WRITE_LINE_MEMBER( txrdy_w );
 	DECLARE_WRITE_LINE_MEMBER( outspkr_w );
 	DECLARE_WRITE_LINE_MEMBER( intbrclk_w );
 	DECLARE_WRITE_LINE_MEMBER( rfrqpulse_w );

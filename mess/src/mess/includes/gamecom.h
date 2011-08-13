@@ -11,6 +11,10 @@
 #ifndef GAMECOM_H_
 #define GAMECOM_H_
 
+#include "cpu/sm8500/sm8500.h"
+#include "imagedev/cartslot.h"
+#include "rendlay.h"
+#include "image.h"
 
 /* SM8521 register addresses */
 enum
@@ -204,22 +208,31 @@ typedef struct
 class gamecom_state : public driver_device
 {
 public:
-	gamecom_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	gamecom_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag),
+	m_maincpu(*this, "maincpu")
+	{ }
 
-	UINT8 *vram;
-	UINT8 *cartridge1;
-	UINT8 *cartridge2;
-	UINT8 *cartridge;
-	emu_timer *clock_timer;
-	GAMECOM_DMA dma;
-	GAMECOM_TIMER timer[2];
-	gamecom_sound_t sound;
-	UINT32 stylus_x;
-	UINT32 stylus_y;
-	int scanline;
-	unsigned int base_address;
-	emu_timer *scanline_timer;
+	required_device<cpu_device> m_maincpu;
+	DECLARE_READ8_MEMBER( gamecom_internal_r );
+	DECLARE_READ8_MEMBER( gamecom_pio_r );
+	DECLARE_WRITE8_MEMBER( gamecom_internal_w );
+	DECLARE_WRITE8_MEMBER( gamecom_pio_w );
+	UINT8 *m_p_videoram;
+	UINT8 *m_cartridge1;
+	UINT8 *m_cartridge2;
+	UINT8 *m_cartridge;
+	emu_timer *m_clock_timer;
+	emu_timer *m_scanline_timer;
+	GAMECOM_DMA m_dma;
+	GAMECOM_TIMER m_timer[2];
+	gamecom_sound_t m_sound;
+	int m_stylus_x;
+	int m_stylus_y;
+	int m_scanline;
+	unsigned int m_base_address;
+	void gamecom_set_mmu(UINT8 mmu, UINT8 data);
+	void handle_stylus_press(int column);
 };
 
 
@@ -229,11 +242,6 @@ extern MACHINE_RESET( gamecom );
 extern DRIVER_INIT( gamecom );
 extern DEVICE_IMAGE_LOAD( gamecom_cart1 );
 extern DEVICE_IMAGE_LOAD( gamecom_cart2 );
-
-extern WRITE8_HANDLER( gamecom_internal_w );
-extern READ8_HANDLER( gamecom_internal_r );
-extern WRITE8_HANDLER( gamecom_pio_w );
-extern READ8_HANDLER( gamecom_pio_r );
 
 extern void gamecom_handle_dma( device_t *device, int cycles );
 extern void gamecom_update_timers( device_t *device, int cycles );

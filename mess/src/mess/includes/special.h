@@ -7,40 +7,37 @@
 #ifndef SPECIAL_H_
 #define SPECIAL_H_
 
-#include "machine/i8255a.h"
+#include "machine/i8255.h"
 #include "machine/pit8253.h"
 
 class special_state : public driver_device
 {
 public:
-	special_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	special_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
-	UINT8 *specimx_colorram;
-	UINT8 erik_color_1;
-	UINT8 erik_color_2;
-	UINT8 erik_background;
-	UINT8 *specialist_video_ram;
-	UINT8 specimx_color;
-	device_t *specimx_audio;
-	int specialist_8255_porta;
-	int specialist_8255_portb;
-	int specialist_8255_portc;
-	UINT8 RR_register;
-	UINT8 RC_register;
+	UINT8 *m_specimx_colorram;
+	UINT8 m_erik_color_1;
+	UINT8 m_erik_color_2;
+	UINT8 m_erik_background;
+	UINT8 *m_specialist_video_ram;
+	UINT8 m_specimx_color;
+	device_t *m_specimx_audio;
+	int m_specialist_8255_porta;
+	int m_specialist_8255_portb;
+	int m_specialist_8255_portc;
+	UINT8 m_RR_register;
+	UINT8 m_RC_register;
 };
 
 
 /*----------- defined in machine/special.c -----------*/
 
 extern const struct pit8253_config specimx_pit8253_intf;
-extern const i8255a_interface specialist_ppi8255_interface;
+extern const i8255_interface specialist_ppi8255_interface;
 
 DRIVER_INIT( special );
 MACHINE_RESET( special );
-
-READ8_HANDLER( specialist_keyboard_r );
-WRITE8_HANDLER( specialist_keyboard_w );
 
 MACHINE_RESET( specimx );
 MACHINE_START ( specimx );
@@ -66,16 +63,16 @@ WRITE8_HANDLER( erik_disk_reg_w );
 /*----------- defined in video/special.c -----------*/
 
 VIDEO_START( special );
-VIDEO_UPDATE( special );
+SCREEN_UPDATE( special );
 
 VIDEO_START( specialp );
-VIDEO_UPDATE( specialp );
+SCREEN_UPDATE( specialp );
 
 VIDEO_START( specimx );
-VIDEO_UPDATE( specimx );
+SCREEN_UPDATE( specimx );
 
 VIDEO_START( erik );
-VIDEO_UPDATE( erik );
+SCREEN_UPDATE( erik );
 PALETTE_INIT( erik );
 
 PALETTE_INIT( specimx );

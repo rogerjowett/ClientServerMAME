@@ -121,15 +121,15 @@ anything in hardware. No cartridge has been found which uses them.
 #include "emu.h"
 #include "cpu/s2650/s2650.h"
 #include "includes/arcadia.h"
-#include "devices/cartslot.h"
+#include "imagedev/cartslot.h"
 
-static ADDRESS_MAP_START( arcadia_mem, ADDRESS_SPACE_PROGRAM, 8)
+static ADDRESS_MAP_START( arcadia_mem, AS_PROGRAM, 8)
 	AM_RANGE( 0x0000, 0x0fff) AM_ROM
 	AM_RANGE( 0x1800, 0x1aff) AM_READWRITE( arcadia_video_r, arcadia_video_w )
 	AM_RANGE( 0x2000, 0x2fff) AM_ROM
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( arcadia_io, ADDRESS_SPACE_IO, 8)
+static ADDRESS_MAP_START( arcadia_io, AS_IO, 8)
 //{ S2650_CTRL_PORT,S2650_CTRL_PORT, },
 //{ S2650_DATA_PORT,S2650_DATA_PORT, },
 	AM_RANGE( S2650_SENSE_PORT,S2650_SENSE_PORT) AM_READ( arcadia_vsync_r)
@@ -202,54 +202,54 @@ static INPUT_PORTS_START( arcadia )
 /* FIXME: the joystick are analog - the actual definition is merely an hack */
 
 #if 0
-    // auto centering too slow, so only using 5 bits, and scaling at videoside
-    PORT_START("controller1_joy_x")
-    PORT_BIT( 0x1fe,0x10,IPT_AD_STICK_X)
-    PORT_SENSITIVITY(1)
-    PORT_KEYDELTA(2000)
-    PORT_MINMAX(0,0x1f)
-    PORT_CODE_DEC(KEYCODE_LEFT)
-    PORT_CODE_INC(KEYCODE_RIGHT)
-    PORT_CODE_DEC(JOYCODE_1_LEFT)
-    PORT_CODE_INC(JOYCODE_1_RIGHT)
-    PORT_PLAYER(1)
-    PORT_RESET
+	// auto centering too slow, so only using 5 bits, and scaling at videoside
+	PORT_START("controller1_joy_x")
+	PORT_BIT( 0x1fe,0x10,IPT_AD_STICK_X)
+	PORT_SENSITIVITY(1)
+	PORT_KEYDELTA(2000)
+	PORT_MINMAX(0,0x1f)
+	PORT_CODE_DEC(KEYCODE_LEFT)
+	PORT_CODE_INC(KEYCODE_RIGHT)
+	PORT_CODE_DEC(JOYCODE_1_LEFT)
+	PORT_CODE_INC(JOYCODE_1_RIGHT)
+	PORT_PLAYER(1)
+	PORT_RESET
 
-    PORT_START("controller1_joy_y")
-    PORT_BIT( 0x1fe,0x10,IPT_AD_STICK_Y)
-    PORT_SENSITIVITY(1)
-    PORT_KEYDELTA(2000)
-    PORT_MINMAX(0,0x1f)
-    PORT_CODE_DEC(KEYCODE_UP)
-    PORT_CODE_INC(KEYCODE_DOWN)
-    PORT_CODE_DEC(JOYCODE_1_UP)
-    PORT_CODE_INC(JOYCODE_1_DOWN)
-    PORT_PLAYER(1)
-    PORT_RESET
+	PORT_START("controller1_joy_y")
+	PORT_BIT( 0x1fe,0x10,IPT_AD_STICK_Y)
+	PORT_SENSITIVITY(1)
+	PORT_KEYDELTA(2000)
+	PORT_MINMAX(0,0x1f)
+	PORT_CODE_DEC(KEYCODE_UP)
+	PORT_CODE_INC(KEYCODE_DOWN)
+	PORT_CODE_DEC(JOYCODE_1_UP)
+	PORT_CODE_INC(JOYCODE_1_DOWN)
+	PORT_PLAYER(1)
+	PORT_RESET
 
-    PORT_START("controller2_joy_x")
-    PORT_BIT( 0x1ff,0x10,IPT_AD_STICK_X)
-    PORT_SENSITIVITY(100)
-    PORT_KEYDELTA(10)
-    PORT_MINMAX(0,0x1f)
-    PORT_CODE_DEC(KEYCODE_DEL)
-    PORT_CODE_INC(KEYCODE_PGDN)
-    PORT_CODE_DEC(JOYCODE_2_LEFT)
-    PORT_CODE_INC(JOYCODE_2_RIGHT)
-    PORT_PLAYER(2)
-    PORT_RESET
+	PORT_START("controller2_joy_x")
+	PORT_BIT( 0x1ff,0x10,IPT_AD_STICK_X)
+	PORT_SENSITIVITY(100)
+	PORT_KEYDELTA(10)
+	PORT_MINMAX(0,0x1f)
+	PORT_CODE_DEC(KEYCODE_DEL)
+	PORT_CODE_INC(KEYCODE_PGDN)
+	PORT_CODE_DEC(JOYCODE_2_LEFT)
+	PORT_CODE_INC(JOYCODE_2_RIGHT)
+	PORT_PLAYER(2)
+	PORT_RESET
 
-    PORT_START("controller2_joy_y")
-    PORT_BIT( 0x1ff,0x10,IPT_AD_STICK_Y)
-    PORT_SENSITIVITY(100)
-    PORT_KEYDELTA(10)
-    PORT_MINMAX(0,0x1f)
-    PORT_CODE_DEC(KEYCODE_HOME)
-    PORT_CODE_INC(KEYCODE_END)
-    PORT_CODE_DEC(JOYCODE_2_UP)
-    PORT_CODE_INC(JOYCODE_2_DOWN)
-    PORT_PLAYER(2)
-    PORT_RESET
+	PORT_START("controller2_joy_y")
+	PORT_BIT( 0x1ff,0x10,IPT_AD_STICK_Y)
+	PORT_SENSITIVITY(100)
+	PORT_KEYDELTA(10)
+	PORT_MINMAX(0,0x1f)
+	PORT_CODE_DEC(KEYCODE_HOME)
+	PORT_CODE_INC(KEYCODE_END)
+	PORT_CODE_DEC(JOYCODE_2_UP)
+	PORT_CODE_INC(JOYCODE_2_DOWN)
+	PORT_PLAYER(2)
+	PORT_RESET
 #else
 	PORT_START("joysticks")
 	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_JOYSTICK_LEFT ) PORT_PLAYER(1) PORT_8WAY
@@ -341,54 +341,54 @@ static INPUT_PORTS_START( plldium )
 /* FIXME: the joystick are analog - the actual definition is merely an hack */
 
 #if 0
-    // auto centering too slow, so only using 5 bits, and scaling at videoside
-    PORT_START("controller1_joy_x")
-    PORT_BIT( 0x1fe,0x10,IPT_AD_STICK_X)
-    PORT_SENSITIVITY(1)
-    PORT_KEYDELTA(2000)
-    PORT_MINMAX(0,0x1f)
-    PORT_CODE_DEC(KEYCODE_LEFT)
-    PORT_CODE_INC(KEYCODE_RIGHT)
-    PORT_CODE_DEC(JOYCODE_1_LEFT)
-    PORT_CODE_INC(JOYCODE_1_RIGHT)
-    PORT_PLAYER(1)
-    PORT_RESET
+	// auto centering too slow, so only using 5 bits, and scaling at videoside
+	PORT_START("controller1_joy_x")
+	PORT_BIT( 0x1fe,0x10,IPT_AD_STICK_X)
+	PORT_SENSITIVITY(1)
+	PORT_KEYDELTA(2000)
+	PORT_MINMAX(0,0x1f)
+	PORT_CODE_DEC(KEYCODE_LEFT)
+	PORT_CODE_INC(KEYCODE_RIGHT)
+	PORT_CODE_DEC(JOYCODE_1_LEFT)
+	PORT_CODE_INC(JOYCODE_1_RIGHT)
+	PORT_PLAYER(1)
+	PORT_RESET
 
-    PORT_START("controller1_joy_y")
-    PORT_BIT( 0x1fe,0x10,IPT_AD_STICK_Y)
-    PORT_SENSITIVITY(1)
-    PORT_KEYDELTA(2000)
-    PORT_MINMAX(0,0x1f)
-    PORT_CODE_DEC(KEYCODE_UP)
-    PORT_CODE_INC(KEYCODE_DOWN)
-    PORT_CODE_DEC(JOYCODE_1_UP)
-    PORT_CODE_INC(JOYCODE_1_DOWN)
-    PORT_PLAYER(1)
-    PORT_RESET
+	PORT_START("controller1_joy_y")
+	PORT_BIT( 0x1fe,0x10,IPT_AD_STICK_Y)
+	PORT_SENSITIVITY(1)
+	PORT_KEYDELTA(2000)
+	PORT_MINMAX(0,0x1f)
+	PORT_CODE_DEC(KEYCODE_UP)
+	PORT_CODE_INC(KEYCODE_DOWN)
+	PORT_CODE_DEC(JOYCODE_1_UP)
+	PORT_CODE_INC(JOYCODE_1_DOWN)
+	PORT_PLAYER(1)
+	PORT_RESET
 
-    PORT_START("controller2_joy_x")
-    PORT_BIT( 0x1ff,0x10,IPT_AD_STICK_X)
-    PORT_SENSITIVITY(100)
-    PORT_KEYDELTA(10)
-    PORT_MINMAX(0,0x1f)
-    PORT_CODE_DEC(KEYCODE_DEL)
-    PORT_CODE_INC(KEYCODE_PGDN)
-    PORT_CODE_DEC(JOYCODE_2_LEFT)
-    PORT_CODE_INC(JOYCODE_2_RIGHT)
-    PORT_PLAYER(2)
-    PORT_RESET
+	PORT_START("controller2_joy_x")
+	PORT_BIT( 0x1ff,0x10,IPT_AD_STICK_X)
+	PORT_SENSITIVITY(100)
+	PORT_KEYDELTA(10)
+	PORT_MINMAX(0,0x1f)
+	PORT_CODE_DEC(KEYCODE_DEL)
+	PORT_CODE_INC(KEYCODE_PGDN)
+	PORT_CODE_DEC(JOYCODE_2_LEFT)
+	PORT_CODE_INC(JOYCODE_2_RIGHT)
+	PORT_PLAYER(2)
+	PORT_RESET
 
-    PORT_START("controller2_joy_y")
-    PORT_BIT( 0x1ff,0x10,IPT_AD_STICK_Y)
-    PORT_SENSITIVITY(100)
-    PORT_KEYDELTA(10)
-    PORT_MINMAX(0,0x1f)
-    PORT_CODE_DEC(KEYCODE_HOME)
-    PORT_CODE_INC(KEYCODE_END)
-    PORT_CODE_DEC(JOYCODE_2_UP)
-    PORT_CODE_INC(JOYCODE_2_DOWN)
-    PORT_PLAYER(2)
-    PORT_RESET
+	PORT_START("controller2_joy_y")
+	PORT_BIT( 0x1ff,0x10,IPT_AD_STICK_Y)
+	PORT_SENSITIVITY(100)
+	PORT_KEYDELTA(10)
+	PORT_MINMAX(0,0x1f)
+	PORT_CODE_DEC(KEYCODE_HOME)
+	PORT_CODE_INC(KEYCODE_END)
+	PORT_CODE_DEC(JOYCODE_2_UP)
+	PORT_CODE_INC(JOYCODE_2_DOWN)
+	PORT_PLAYER(2)
+	PORT_RESET
 #else
 	PORT_START("joysticks")
 	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_JOYSTICK_LEFT )		PORT_PLAYER(1) PORT_8WAY
@@ -448,18 +448,18 @@ static PALETTE_INIT( arcadia )
 {
 	int i;
 
-	machine->colortable = colortable_alloc(machine, 8);
+	machine.colortable = colortable_alloc(machine, 8);
 
 	for (i = 0; i < 8; i++)
-		colortable_palette_set_color(machine->colortable, i, arcadia_colors[i]);
+		colortable_palette_set_color(machine.colortable, i, arcadia_colors[i]);
 
 	for (i = 0; i < 128+8; i++)
-		colortable_entry_set_value(machine->colortable, i, arcadia_palette[i]);
+		colortable_entry_set_value(machine.colortable, i, arcadia_palette[i]);
 }
 
 static DEVICE_IMAGE_LOAD( arcadia_cart )
 {
-	UINT8 *rom = image.device().machine->region("maincpu")->base();
+	UINT8 *rom = image.device().machine().region("maincpu")->base();
 	int size;
 
 	memset(rom, 0, 0x8000);
@@ -467,8 +467,8 @@ static DEVICE_IMAGE_LOAD( arcadia_cart )
 	{
 		size = image.length();
 
-		if (size > image.device().machine->region("maincpu")->bytes())
-			size = image.device().machine->region("maincpu")->bytes();
+		if (size > image.device().machine().region("maincpu")->bytes())
+			size = image.device().machine().region("maincpu")->bytes();
 
 		if (image.fread(rom, size) != size)
 			return IMAGE_INIT_FAIL;
@@ -524,8 +524,8 @@ static DEVICE_IMAGE_LOAD( arcadia_cart )
 
 	for (i = 0; i < ARRAY_LENGTH(patch); i++)
 	{
-	    assert(rom[patch[i].address] == patch[i].old);
-	    rom[patch[i].address] = patch[i].new;
+		assert(rom[patch[i].address] == patch[i].old);
+		rom[patch[i].address] = patch[i].new;
 	}
 #endif
 	return IMAGE_INIT_PASS;
@@ -537,21 +537,22 @@ static MACHINE_CONFIG_START( arcadia, arcadia_state )
 	MCFG_CPU_PROGRAM_MAP(arcadia_mem)
 	MCFG_CPU_IO_MAP(arcadia_io)
 	MCFG_CPU_PERIODIC_INT(arcadia_video_line, 262*60)
-	MCFG_QUANTUM_TIME(HZ(60))
+	MCFG_QUANTUM_TIME(attotime::from_hz(60))
 
-    /* video hardware */
+	/* video hardware */
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(60)
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(128+2*XPOS, 262)
 	MCFG_SCREEN_VISIBLE_AREA(0, 2*XPOS+128-1, 0, 262-1)
+	MCFG_SCREEN_UPDATE( arcadia )
+
 	MCFG_GFXDECODE( arcadia )
 	MCFG_PALETTE_LENGTH(ARRAY_LENGTH(arcadia_palette))
 	MCFG_PALETTE_INIT( arcadia )
 
 	MCFG_VIDEO_START( arcadia )
-	MCFG_VIDEO_UPDATE( arcadia )
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
@@ -694,7 +695,7 @@ ROM_START(telefevr)
 	ROM_REGION(0x100,"gfx1", ROMREGION_ERASEFF)
 ROM_END
 
-ROM_START(tempest3)
+ROM_START(tempestm)
 	ROM_REGION(0x8000,"maincpu", ROMREGION_ERASEFF)
 	ROM_REGION(0x100,"gfx1", ROMREGION_ERASEFF)
 ROM_END
@@ -739,16 +740,16 @@ ROM_END
 static DRIVER_INIT( arcadia )
 {
 	int i;
-	UINT8 *gfx=machine->region("gfx1")->base();
+	UINT8 *gfx=machine.region("gfx1")->base();
 	for (i=0; i<256; i++) gfx[i]=i;
 #if 0
 	// this is here to allow developement of some simple testroutines
 	// for a real console
 	{
-	    UINT8 *rom=machine->region("maincpu")->base();
-	    /* this is a simple routine to display all rom characters
+		UINT8 *rom=machine.region("maincpu")->base();
+		/* this is a simple routine to display all rom characters
            on the display for a snapshot */
-	    static const UINT8 prog[]={ // address 0 of course
+		static const UINT8 prog[]={ // address 0 of course
 		0x20, // eorz, 0
 		0x1b, 0x01, // bctr,a $0004
 		0x17, // retc a
@@ -857,14 +858,14 @@ static DRIVER_INIT( arcadia )
 
 		// calling too many subdirectories causes cpu to reset!
 		// bxa causes trap
-	    };
+		};
 #if 1
-	    FILE *f;
-	    f=fopen("chartest.bin","wb");
-	    fwrite(prog, ARRAY_LENGTH(prog), sizeof(prog[0]), f);
-	    fclose(f);
+		FILE *f;
+		f=fopen("chartest.bin","wb");
+		fwrite(prog, ARRAY_LENGTH(prog), sizeof(prog[0]), f);
+		fclose(f);
 #endif
-	    for (i=0; i<ARRAY_LENGTH(prog); i++) rom[i]=prog[i];
+		for (i=0; i<ARRAY_LENGTH(prog); i++) rom[i]=prog[i];
 
 	}
 #endif
@@ -897,7 +898,7 @@ CONS(1982, tvg2000,   arcadia,   0,        arcadia,      arcadia,  arcadia,     
 CONS(198?, sheenhvc,  ormatu,    0,        arcadia,      arcadia,  arcadia,      "Sheen",              "Sheen Home Video Centre 2001", GAME_IMPERFECT_SOUND )     /* Australia */
 CONS(198?, soundic,   intmpt03,  0,        arcadia,      arcadia,  arcadia,      "Soundic",            "Soundic MPT-03", GAME_IMPERFECT_SOUND )             /* Finland */
 CONS(198?, telefevr,  arcadia,   0,        arcadia,      arcadia,  arcadia,      "Tchibo",             "Tele-Fever", GAME_IMPERFECT_SOUND )                 /* Germany */
-CONS(198?, tempest3,  intmpt03,  0,        arcadia,      arcadia,  arcadia,      "Tempest",            "Tempest MPT-03", GAME_IMPERFECT_SOUND )             /* Australia */
+CONS(198?, tempestm,  intmpt03,  0,        arcadia,      arcadia,  arcadia,      "Tempest",            "Tempest MPT-03", GAME_IMPERFECT_SOUND )             /* Australia */
 CONS(198?, tbbympt3,  intmpt03,  0,        arcadia,      arcadia,  arcadia,      "Tobby",              "Tobby MPT-03", GAME_IMPERFECT_SOUND )               /* ? */
 CONS(198?, trakcvg,   plldium,   0,        arcadia,      arcadia,  arcadia,      "Trakton",            "Trakton Computer Video Game", GAME_IMPERFECT_SOUND | GAME_NOT_WORKING )      /* Australia */
 CONS(1982, tunixha,   arcadia,   0,        arcadia,      arcadia,  arcadia,      "Monaco Leisure",     "Tunix Home Arcade", GAME_IMPERFECT_SOUND )          /* New Zealand */

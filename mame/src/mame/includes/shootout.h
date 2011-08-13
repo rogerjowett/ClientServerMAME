@@ -1,14 +1,15 @@
 class shootout_state : public driver_device
 {
 public:
-	shootout_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	shootout_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
-	tilemap_t *background;
-	tilemap_t *foreground;
-	UINT8 *spriteram;
-	UINT8 *videoram;
-	UINT8 *textram;
+	tilemap_t *m_background;
+	tilemap_t *m_foreground;
+	UINT8 *m_spriteram;
+	UINT8 *m_videoram;
+	UINT8 *m_textram;
+	int m_bFlicker;
 };
 
 
@@ -19,5 +20,5 @@ WRITE8_HANDLER( shootout_textram_w );
 
 PALETTE_INIT( shootout );
 VIDEO_START( shootout );
-VIDEO_UPDATE( shootout );
-VIDEO_UPDATE( shootouj );
+SCREEN_UPDATE( shootout );
+SCREEN_UPDATE( shootouj );

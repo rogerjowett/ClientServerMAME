@@ -35,12 +35,14 @@ class Span
 		Span() { }
 
 		void	Dump();
-		void	SetMachine(running_machine* machine);
+		void	SetMachine(running_machine& machine);
 
 		void	Draw1Cycle(int index, int tilenum, bool flip);
 		void	Draw2Cycle(int index, int tilenum, bool flip);
 		void	DrawCopy(int index, int tilenum, bool flip);
 		void	DrawFill(int index, int tilenum, bool flip);
+
+		running_machine &machine() const { assert(m_machine != NULL); return *m_machine; }
 
 	public:
 		int m_lx;

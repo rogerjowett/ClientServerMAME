@@ -23,17 +23,17 @@
 class sym1_state : public driver_device
 {
 public:
-	sym1_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	sym1_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
-	UINT8 *ram_1k;
-	UINT8 *ram_2k;
-	UINT8 *ram_3k;
-	UINT8 *riot_ram;
-	UINT8 *monitor;
-	UINT8 riot_port_a;
-	UINT8 riot_port_b;
-	emu_timer *led_update;
+	UINT8 *m_ram_1k;
+	UINT8 *m_ram_2k;
+	UINT8 *m_ram_3k;
+	UINT8 *m_riot_ram;
+	UINT8 *m_monitor;
+	UINT8 m_riot_port_a;
+	UINT8 m_riot_port_b;
+	emu_timer *m_led_update;
 };
 
 

@@ -10,9 +10,9 @@
 
 #include "emu.h"
 
-#include "990_dk.h"
 #include "formats/basicdsk.h"
-#include "devices/flopdrv.h"
+#include "imagedev/flopdrv.h"
+#include "990_dk.h"
 
 #define MAX_FLOPPIES 4
 
@@ -28,7 +28,7 @@ static struct
 	UINT16 cmd_reg;
 
 	int interrupt_f_f;
-	void (*interrupt_callback)(running_machine *, int state);
+	void (*interrupt_callback)(running_machine &, int state);
 
 	UINT8 buf[128];
 	int buf_pos;
@@ -72,7 +72,7 @@ enum
 FLOPPY_OPTIONS_START(fd800)
 #if 1
 	/* SSSD 8" */
-	FLOPPY_OPTION(fd800, "dsk", "TI990 8\" SSSD disk image", basicdsk_identify_default, basicdsk_construct_default,
+	FLOPPY_OPTION(fd800, "dsk", "TI990 8\" SSSD disk image", basicdsk_identify_default, basicdsk_construct_default, NULL,
 		HEADS([1])
 		TRACKS([77])
 		SECTORS([26])
@@ -80,7 +80,7 @@ FLOPPY_OPTIONS_START(fd800)
 		FIRST_SECTOR_ID([1]))
 #elif 0
 	/* DSSD 8" */
-	FLOPPY_OPTION(fd800, "dsk", "TI990 8\" DSSD disk image", basicdsk_identify_default, basicdsk_construct_default,
+	FLOPPY_OPTION(fd800, "dsk", "TI990 8\" DSSD disk image", basicdsk_identify_default, basicdsk_construct_default, NULL,
 		HEADS([2])
 		TRACKS([77])
 		SECTORS([26])
@@ -92,7 +92,7 @@ FLOPPY_OPTIONS_END
 static void fd800_field_interrupt(void)
 {
 	if (fd800.interrupt_callback)
-		(*fd800.interrupt_callback)(fd800.machine, (fd800.stat_reg & status_interrupt) && ! fd800.interrupt_f_f);
+		(*fd800.interrupt_callback)(*fd800.machine, (fd800.stat_reg & status_interrupt) && ! fd800.interrupt_f_f);
 }
 
 static void fd800_unload_proc(device_image_interface &image)
@@ -102,11 +102,11 @@ static void fd800_unload_proc(device_image_interface &image)
 	fd800.drv[unit].log_cylinder[0] = fd800.drv[unit].log_cylinder[1] = -1;
 }
 
-void fd800_machine_init(running_machine *machine, void (*interrupt_callback)(running_machine *machine, int state))
+void fd800_machine_init(running_machine &machine, void (*interrupt_callback)(running_machine &machine, int state))
 {
 	int i;
 
-	fd800.machine = machine;
+	fd800.machine = &machine;
 	fd800.interrupt_callback = interrupt_callback;
 
 	fd800.stat_reg = 0;
@@ -391,7 +391,7 @@ static void fd800_do_cmd(void)
 
 		if (!fd800.drv[unit].img->exists())
 			fd800.stat_reg |= status_drv_not_ready;	/* right??? */
-		else if (!fd800.drv[unit].img->is_writable())
+		else if (fd800.drv[unit].img->is_readonly())
 			fd800.stat_reg |= status_write_prot;
 		else
 			fd800.stat_reg |= status_OP_complete;

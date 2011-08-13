@@ -9,15 +9,15 @@
 class badlands_state : public atarigen_state
 {
 public:
-	badlands_state(running_machine &machine, const driver_device_config_base &config)
-		: atarigen_state(machine, config) { }
+	badlands_state(const machine_config &mconfig, device_type type, const char *tag)
+		: atarigen_state(mconfig, type, tag) { }
 
-	UINT8			pedal_value[2];
+	UINT8			m_pedal_value[2];
 
-	UINT8 *			bank_base;
-	UINT8 *			bank_source_data;
+	UINT8 *			m_bank_base;
+	UINT8 *			m_bank_source_data;
 
-	UINT8			playfield_tile_bank;
+	UINT8			m_playfield_tile_bank;
 };
 
 
@@ -26,4 +26,4 @@ public:
 WRITE16_HANDLER( badlands_pf_bank_w );
 
 VIDEO_START( badlands );
-VIDEO_UPDATE( badlands );
+SCREEN_UPDATE( badlands );

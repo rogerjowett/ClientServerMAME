@@ -11,11 +11,14 @@
 # MESS core defines
 #-------------------------------------------------
 
+ifeq ($(TARGET),mess)
 DEFS += -DMESS
+endif
 
 # add some additional include libraries for the mame files
-CFLAGS += \
+INCPATH += \
 	-I$(SRC)/mame \
+	-I$(OBJ)/mame/layout \
 	-I$(SRC)/mess/osd \
 	-I$(SRC)/mess/osd/$(OSD)
 
@@ -36,6 +39,7 @@ MAME_AUDIO = $(MAMEOBJ)/audio
 MAME_MACHINE = $(MAMEOBJ)/machine
 MAME_DRIVERS = $(MAMEOBJ)/drivers
 MAME_VIDEO = $(MAMEOBJ)/video
+MAME_LAYOUT = $(MAMEOBJ)/layout
 
 # MESS directories
 MESS_AUDIO = $(MESSOBJ)/audio
@@ -72,9 +76,3 @@ OBJDIRS += $(MESS_MACHINE)/ti99 \
 #-------------------------------------------------
 
 LIBOCORE_NOMAIN = $(OBJ)/libocore_nomain.a
-
-EMUOBJS += \
-	$(MESSOBJ)/mess.o		\
-	$(MESSOBJ)/uimess.o		\
-
-$(LIBEMU): $(EMUOBJS)

@@ -43,7 +43,7 @@ endif
 ifndef DIRECTINPUT
 DIRECTINPUT = 7
 endif
- 
+
 
 
 ###########################################################################
@@ -52,15 +52,10 @@ endif
 
 
 #-------------------------------------------------
-# append "ui" to the emulator name 
+# append "ui" to the emulator name
 #-------------------------------------------------
 
-ifdef PTR64
-EMULATOR = $(NAME)ui64$(EXE)
-else
-EMULATOR = $(NAME)ui32$(EXE)
-endif
-
+EMULATOR = $(PREFIX)$(NAME)ui$(SUFFIX)$(SUFFIX64)$(SUFFIXDEBUG)$(EXE)
 
 #-------------------------------------------------
 # object and source roots
@@ -202,12 +197,14 @@ LDFLAGSEMULATOR += -municode
 #-------------------------------------------------
 
 # add our prefix files to the mix, include WINSRC in UI build
-CFLAGS += -include $(WINSRC)/winprefix.h -I$(WINSRC)
+CFLAGS += -include $(WINSRC)/winprefix.h
+
+INCPATH += -I$(WINSRC)
 
 ifdef WIN95_MULTIMON
 CFLAGS += -DWIN95_MULTIMON
 endif
- 
+
 
 # add the windows libaries, 3 additional libs at the end for UI
 LIBS += \
@@ -220,7 +217,7 @@ LIBS += \
 	-ladvapi32 \
 	-lcomctl32 \
 	-lshlwapi \
-
+	-lcomdlg32 \
 
 ifeq ($(DIRECTINPUT),7)
 LIBS += -ldinput
@@ -272,6 +269,7 @@ $(LIBOCORE): $(OSDCOREOBJS)
 OSDOBJS = \
 	$(WINOBJ)/d3d9intf.o \
 	$(WINOBJ)/drawd3d.o \
+	$(WINOBJ)/d3dhlsl.o \
 	$(WINOBJ)/drawdd.o \
 	$(WINOBJ)/drawgdi.o \
 	$(WINOBJ)/drawnone.o \
@@ -280,8 +278,10 @@ OSDOBJS = \
 	$(WINOBJ)/sound.o \
 	$(WINOBJ)/video.o \
 	$(WINOBJ)/window.o \
-	$(WINOBJ)/winmain.o \
-
+	$(UIOBJ)/dialog.o	\
+	$(UIOBJ)/menu.o	\
+	$(UIOBJ)/opcntrl.o	\
+	$(UIOBJ)/winutils.o
 
 ifeq ($(DIRECT3D),8)
 OSDOBJS += $(WINOBJ)/d3d8intf.o
@@ -292,6 +292,7 @@ endif
 
 # add UI objs
 OSDOBJS += \
+	$(WINOBJ)/winmainui.o \
 	$(UIOBJ)/mui_util.o \
 	$(UIOBJ)/directinput.o \
 	$(UIOBJ)/dijoystick.o \
@@ -312,15 +313,30 @@ OSDOBJS += \
 	$(UIOBJ)/history.o \
 	$(UIOBJ)/dialogs.o \
 	$(UIOBJ)/mui_opts.o \
-	$(UIOBJ)/layout.o \
 	$(UIOBJ)/datafile.o \
 	$(UIOBJ)/dirwatch.o \
 	$(UIOBJ)/winui.o \
 	$(UIOBJ)/helpids.o \
+	$(UIOBJ)/messui.o \
+	$(UIOBJ)/optionsms.o \
+	$(UIOBJ)/msuiutil.o \
+	$(UIOBJ)/propertiesms.o \
+	$(UIOBJ)/swconfig.o \
+	$(UIOBJ)/softwarepicker.o \
+	$(UIOBJ)/softwarelist.o \
+	$(UIOBJ)/devview.o
 
+ifneq ($(TARGET),mess)
+OSDOBJS += \
+	$(UIOBJ)/layout.o
+endif
+ifeq ($(TARGET),mess)
+OSDOBJS += \
+	$(UIOBJ)/layoutms.o
+endif
 
 # extra dependencies
-$(WINOBJ)/drawdd.o : 	$(SRC)/emu/rendersw.c
+$(WINOBJ)/drawdd.o :	$(SRC)/emu/rendersw.c
 $(WINOBJ)/drawgdi.o :	$(SRC)/emu/rendersw.c
 
 # add debug-specific files
@@ -328,7 +344,7 @@ $(WINOBJ)/drawgdi.o :	$(SRC)/emu/rendersw.c
 OSDOBJS += \
 	$(WINOBJ)/debugwin.o
 
-$(WINOBJ)/winmain.o : $(WINSRC)/winmain.c
+$(WINOBJ)/winmainui.o : $(WINSRC)/winmain.c
 	@echo Compiling $<...
 	$(CC) $(CDEFS) -Dmain=utf8_main $(CFLAGS) -c $< -o $@
 
@@ -357,7 +373,7 @@ TOOLS += ledutil$(EXE)
 
 
 #-------------------------------------------------
-# rules for creating helpids.c 
+# rules for creating helpids.c
 #-------------------------------------------------
 
 $(UISRC)/helpids.c : $(UIOBJ)/mkhelp$(EXE) $(UISRC)/resource.h $(UISRC)/resource.hm $(UISRC)/mameui.rc
@@ -408,11 +424,11 @@ $(RESFILE): $(UISRC)/mameui.rc $(UIOBJ)/mamevers.rc
 #-------------------------------------------------
 # rules for resource file
 #-------------------------------------------------
-
+ifeq ($(TARGET),mame)
 $(UIOBJ)/mamevers.rc: $(OBJ)/build/verinfo$(EXE) $(SRC)/version.c
 	@echo Emitting $@...
 	@"$(OBJ)/build/verinfo$(EXE)" -b winui $(SRC)/version.c > $@
-
+endif
 
 
 

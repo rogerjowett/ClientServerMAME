@@ -1,7 +1,24 @@
+#pragma once
+
 #ifndef __KYOCERA__
 #define __KYOCERA__
 
+#define ADDRESS_MAP_MODERN
+
+#include "emu.h"
+#include "cpu/i8085/i8085.h"
+#include "imagedev/cartslot.h"
+#include "imagedev/cassette.h"
+#include "machine/ctronics.h"
+#include "machine/i8155.h"
+#include "machine/msm8251.h"
+#include "machine/ram.h"
+#include "machine/rp5c01.h"
+#include "machine/upd1990a.h"
+#include "video/hd44102.h"
 #include "video/hd61830.h"
+#include "sound/speaker.h"
+#include "rendlay.h"
 
 #define SCREEN_TAG		"screen"
 #define I8085_TAG		"m19"
@@ -19,9 +36,7 @@
 #define HD44102_7_TAG	"m8"
 #define HD44102_8_TAG	"m9"
 #define HD44102_9_TAG	"m10"
-#define CASSETTE_TAG	"cassette"
 #define CENTRONICS_TAG	"centronics"
-#define SPEAKER_TAG		"speaker"
 
 //#define I8085_TAG     "m19"
 //#define I8155_TAG     "m12"
@@ -34,8 +49,8 @@
 class kc85_state : public driver_device
 {
 public:
-	kc85_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config),
+	kc85_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag),
 		  m_maincpu(*this, I8085_TAG),
 		  m_rtc(*this, UPD1990A_TAG),
 		  m_lcdc0(*this, HD44102_0_TAG),
@@ -51,29 +66,29 @@ public:
 		  m_centronics(*this, CENTRONICS_TAG),
 		  m_speaker(*this, SPEAKER_TAG),
 		  m_cassette(*this, CASSETTE_TAG),
-		  m_ram(*this, "messram")
+		  m_ram(*this, RAM_TAG)
 	{ }
 
 	required_device<cpu_device> m_maincpu;
-	required_device<device_t> m_rtc;
-	required_device<device_t> m_lcdc0;
-	required_device<device_t> m_lcdc1;
-	required_device<device_t> m_lcdc2;
-	required_device<device_t> m_lcdc3;
-	required_device<device_t> m_lcdc4;
-	required_device<device_t> m_lcdc5;
-	required_device<device_t> m_lcdc6;
-	required_device<device_t> m_lcdc7;
-	required_device<device_t> m_lcdc8;
-	required_device<device_t> m_lcdc9;
+	required_device<upd1990a_device> m_rtc;
+	required_device<hd44102_device> m_lcdc0;
+	required_device<hd44102_device> m_lcdc1;
+	required_device<hd44102_device> m_lcdc2;
+	required_device<hd44102_device> m_lcdc3;
+	required_device<hd44102_device> m_lcdc4;
+	required_device<hd44102_device> m_lcdc5;
+	required_device<hd44102_device> m_lcdc6;
+	required_device<hd44102_device> m_lcdc7;
+	required_device<hd44102_device> m_lcdc8;
+	required_device<hd44102_device> m_lcdc9;
 	required_device<device_t> m_centronics;
 	required_device<device_t> m_speaker;
-	required_device<device_t> m_cassette;
+	required_device<cassette_image_device> m_cassette;
 	required_device<device_t> m_ram;
 
 	virtual void machine_start();
 
-	virtual bool video_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect);
+	virtual bool screen_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect);
 
 	DECLARE_READ8_MEMBER( uart_status_r );
 	DECLARE_WRITE8_MEMBER( uart_ctrl_w );
@@ -101,8 +116,8 @@ public:
 class trsm100_state : public kc85_state
 {
 public:
-	trsm100_state(running_machine &machine, const driver_device_config_base &config)
-		: kc85_state(machine, config) { }
+	trsm100_state(const machine_config &mconfig, device_type type, const char *tag)
+		: kc85_state(mconfig, type, tag) { }
 
 	virtual void machine_start();
 };
@@ -110,8 +125,8 @@ public:
 class pc8201_state : public kc85_state
 {
 public:
-	pc8201_state(running_machine &machine, const driver_device_config_base &config)
-		: kc85_state(machine, config) { }
+	pc8201_state(const machine_config &mconfig, device_type type, const char *tag)
+		: kc85_state(mconfig, type, tag) { }
 
 	virtual void machine_start();
 
@@ -137,28 +152,28 @@ public:
 class tandy200_state : public driver_device
 {
 public:
-	tandy200_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config),
+	tandy200_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag),
 		  m_maincpu(*this, I8085_TAG),
-		  m_rtc(*this, UPD1990A_TAG),
+		  m_rtc(*this, RP5C01A_TAG),
 		  m_lcdc(*this, HD61830_TAG),
 		  m_centronics(*this, CENTRONICS_TAG),
 		  m_speaker(*this, SPEAKER_TAG),
 		  m_cassette(*this, CASSETTE_TAG),
-		  m_ram(*this, "messram")
+		  m_ram(*this, RAM_TAG)
 	{ }
 
 	required_device<cpu_device> m_maincpu;
-	required_device<device_t> m_rtc;
+	required_device<rp5c01_device> m_rtc;
 	required_device<hd61830_device> m_lcdc;
 	required_device<device_t> m_centronics;
 	required_device<device_t> m_speaker;
-	required_device<device_t> m_cassette;
+	required_device<cassette_image_device> m_cassette;
 	required_device<device_t> m_ram;
 
 	virtual void machine_start();
 
-	virtual bool video_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect);
+	virtual bool screen_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect);
 
 	DECLARE_READ8_MEMBER( bank_r );
 	DECLARE_WRITE8_MEMBER( bank_w );

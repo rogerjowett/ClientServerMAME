@@ -26,10 +26,10 @@
 #include "machine/upd765.h"
 
 /* Devices */
-#include "devices/cassette.h"
-#include "devices/flopdrv.h"
+#include "imagedev/cassette.h"
+#include "imagedev/flopdrv.h"
 #include "formats/basicdsk.h"
-#include "devices/messram.h"
+#include "machine/ram.h"
 
 static READ8_HANDLER(kc85_4_port_r)
 {
@@ -61,7 +61,7 @@ static READ8_HANDLER(kc85_4_port_r)
 		case 0x08d:
 		case 0x08e:
 		case 0x08f:
-			return kc85_ctc_r(space->machine->device("z80ctc"), port&3);
+			return kc85_ctc_r(space->machine().device("z80ctc"), port&3);
 
 	}
 
@@ -105,7 +105,7 @@ static WRITE8_HANDLER(kc85_4_port_w)
 		case 0x08d:
 		case 0x08e:
 		case 0x08f:
-			kc85_ctc_w(space->machine->device("z80ctc"), port&3, data);
+			kc85_ctc_w(space->machine().device("z80ctc"), port&3, data);
 			return;
 	}
 
@@ -113,12 +113,12 @@ static WRITE8_HANDLER(kc85_4_port_w)
 }
 
 
-static ADDRESS_MAP_START(kc85_4_io, ADDRESS_SPACE_IO, 8)
+static ADDRESS_MAP_START(kc85_4_io, AS_IO, 8)
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 	AM_RANGE(0x0000, 0x0ffff) AM_READWRITE( kc85_4_port_r, kc85_4_port_w )
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START(kc85_4_mem, ADDRESS_SPACE_PROGRAM, 8)
+static ADDRESS_MAP_START(kc85_4_mem, AS_PROGRAM, 8)
 	AM_RANGE(0x0000, 0x3fff) AM_READ_BANK("bank1") AM_WRITE_BANK("bank7")
 	AM_RANGE(0x4000, 0x7fff) AM_READ_BANK("bank2") AM_WRITE_BANK("bank8")
 	AM_RANGE(0x8000, 0xa7ff) AM_READ_BANK("bank3") AM_WRITE_BANK("bank9")
@@ -128,7 +128,7 @@ static ADDRESS_MAP_START(kc85_4_mem, ADDRESS_SPACE_PROGRAM, 8)
 	AM_RANGE(0xe000, 0xffff) AM_READ_BANK("bank6")
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START(kc85_3_mem, ADDRESS_SPACE_PROGRAM, 8)
+static ADDRESS_MAP_START(kc85_3_mem, AS_PROGRAM, 8)
 	AM_RANGE(0x0000, 0x3fff) AM_READ_BANK("bank1") AM_WRITE_BANK("bank6")
 	AM_RANGE(0x4000, 0x7fff) AM_READ_BANK("bank2") AM_WRITE_BANK("bank7")
 	AM_RANGE(0x8000, 0xbfff) AM_READ_BANK("bank3") AM_WRITE_BANK("bank8")
@@ -157,7 +157,7 @@ static READ8_HANDLER(kc85_3_port_r)
 		case 0x08d:
 		case 0x08e:
 		case 0x08f:
-			return kc85_ctc_r(space->machine->device("z80ctc"), port&3);
+			return kc85_ctc_r(space->machine().device("z80ctc"), port&3);
 	}
 
 	logerror("unhandled port r: %04x\n",offset);
@@ -190,7 +190,7 @@ static WRITE8_HANDLER(kc85_3_port_w)
 		case 0x08d:
 		case 0x08e:
 		case 0x08f:
-			kc85_ctc_w(space->machine->device("z80ctc"), port&3, data);
+			kc85_ctc_w(space->machine().device("z80ctc"), port&3, data);
 			return;
 	}
 
@@ -198,7 +198,7 @@ static WRITE8_HANDLER(kc85_3_port_w)
 }
 
 
-static ADDRESS_MAP_START(kc85_3_io, ADDRESS_SPACE_IO, 8)
+static ADDRESS_MAP_START(kc85_3_io, AS_IO, 8)
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 	AM_RANGE(0x0000, 0x0ffff) AM_READWRITE(kc85_3_port_r, kc85_3_port_w)
 ADDRESS_MAP_END
@@ -329,11 +329,11 @@ static Z80CTC_INTERFACE( kc85_disc_ctc_intf )
 };
 
 
-static ADDRESS_MAP_START(kc85_disc_hw_mem, ADDRESS_SPACE_PROGRAM, 8)
+static ADDRESS_MAP_START(kc85_disc_hw_mem, AS_PROGRAM, 8)
 	AM_RANGE(0x0000, 0x0ffff) AM_RAM
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START(kc85_disc_hw_io, ADDRESS_SPACE_IO, 8)
+static ADDRESS_MAP_START(kc85_disc_hw_io, AS_IO, 8)
 	AM_RANGE(0x0f0, 0x0f0) AM_DEVREAD("upd765", upd765_status_r)
 	AM_RANGE(0x0f1, 0x0f1) AM_DEVREADWRITE("upd765", upd765_data_r, upd765_data_w)
 	AM_RANGE(0x0f2, 0x0f3) AM_DEVREADWRITE("upd765", upd765_dack_r, upd765_dack_w)
@@ -345,7 +345,7 @@ ADDRESS_MAP_END
 
 
 static FLOPPY_OPTIONS_START(kc85)
-	FLOPPY_OPTION(kc85, "img", "KC85 disk image", basicdsk_identify_default, basicdsk_construct_default,
+	FLOPPY_OPTION(kc85, "img", "KC85 disk image", basicdsk_identify_default, basicdsk_construct_default, NULL,
 		HEADS([2])
 		TRACKS([80])
 		SECTORS([9])
@@ -353,7 +353,7 @@ static FLOPPY_OPTIONS_START(kc85)
 		FIRST_SECTOR_ID([1]))
 FLOPPY_OPTIONS_END
 
-static const floppy_config kc85_floppy_config =
+static const floppy_interface kc85_floppy_interface =
 {
 	DEVCB_NULL,
 	DEVCB_NULL,
@@ -362,6 +362,7 @@ static const floppy_config kc85_floppy_config =
 	DEVCB_NULL,
 	FLOPPY_STANDARD_5_25_DSHD,
 	FLOPPY_OPTIONS_NAME(kc85),
+	NULL,
 	NULL
 };
 
@@ -385,7 +386,7 @@ static MACHINE_CONFIG_START( kc85_3, kc_state )
 	MCFG_CPU_PROGRAM_MAP(kc85_3_mem)
 	MCFG_CPU_IO_MAP(kc85_3_io)
 	MCFG_CPU_CONFIG(kc85_daisy_chain)
-	MCFG_QUANTUM_TIME(HZ(60))
+	MCFG_QUANTUM_TIME(attotime::from_hz(60))
 
 	MCFG_MACHINE_START( kc85 )
 	MCFG_MACHINE_RESET( kc85_3 )
@@ -400,26 +401,27 @@ static MACHINE_CONFIG_START( kc85_3, kc_state )
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(KC85_SCREEN_WIDTH, KC85_SCREEN_HEIGHT)
 	MCFG_SCREEN_VISIBLE_AREA(0, (KC85_SCREEN_WIDTH - 1), 0, (KC85_SCREEN_HEIGHT - 1))
+	MCFG_SCREEN_UPDATE( kc85_3 )
+
 	MCFG_PALETTE_LENGTH(KC85_PALETTE_SIZE)
 	MCFG_PALETTE_INIT( kc85 )
 
 	MCFG_VIDEO_START( kc85_3 )
-	MCFG_VIDEO_UPDATE( kc85_3 )
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
-	MCFG_SOUND_WAVE_ADD("wave", "cassette")
+	MCFG_SOUND_WAVE_ADD(WAVE_TAG, CASSETTE_TAG)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
-	MCFG_SOUND_ADD("speaker", SPEAKER_SOUND, 0)
+	MCFG_SOUND_ADD(SPEAKER_TAG, SPEAKER_SOUND, 0)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
 	/* devices */
 	MCFG_QUICKLOAD_ADD("quickload", kc, "kcc", 0)
 
-	MCFG_CASSETTE_ADD( "cassette", default_cassette_config )
+	MCFG_CASSETTE_ADD( CASSETTE_TAG, default_cassette_interface )
 
 	/* internal ram */
-	MCFG_RAM_ADD("messram")
+	MCFG_RAM_ADD(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("64K")
 MACHINE_CONFIG_END
 
@@ -433,16 +435,18 @@ static MACHINE_CONFIG_DERIVED( kc85_4, kc85_3 )
 	MCFG_MACHINE_RESET( kc85_4 )
 
 	MCFG_VIDEO_START( kc85_4 )
-	MCFG_VIDEO_UPDATE( kc85_4 )
+
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_UPDATE( kc85_4 )
 MACHINE_CONFIG_END
 
 static MACHINE_CONFIG_DERIVED( kc85_4d, kc85_4 )
 	MCFG_FRAGMENT_ADD( cpu_kc_disc )
-	MCFG_QUANTUM_TIME(HZ(120))
+	MCFG_QUANTUM_TIME(attotime::from_hz(120))
 
 	MCFG_MACHINE_RESET( kc85_4d )
 
-	MCFG_FLOPPY_4_DRIVES_ADD(kc85_floppy_config)
+	MCFG_FLOPPY_4_DRIVES_ADD(kc85_floppy_interface)
 MACHINE_CONFIG_END
 
 

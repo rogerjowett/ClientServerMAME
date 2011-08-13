@@ -24,17 +24,17 @@ typedef struct
 class bebox_state : public driver_device
 {
 public:
-	bebox_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	bebox_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
-	UINT32 cpu_imask[2];
-	UINT32 interrupts;
-	UINT32 crossproc_interrupts;
-	bebox_devices_t devices;
-	int dma_channel;
-	UINT16 dma_offset[2][4];
-	UINT8 at_pages[0x10];
-	UINT32 scsi53c810_data[0x100 / 4];
+	UINT32 m_cpu_imask[2];
+	UINT32 m_interrupts;
+	UINT32 m_crossproc_interrupts;
+	bebox_devices_t m_devices;
+	int m_dma_channel;
+	UINT16 m_dma_offset[2][4];
+	UINT8 m_at_pages[0x10];
+	UINT32 m_scsi53c810_data[0x100 / 4];
 };
 
 

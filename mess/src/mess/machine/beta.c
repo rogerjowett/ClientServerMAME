@@ -8,7 +8,7 @@
 
 *********************************************************************/
 #include "emu.h"
-#include "devices/flopdrv.h"
+#include "imagedev/flopdrv.h"
 #include "formats/trd_dsk.h"
 #include "machine/wd17xx.h"
 #include "machine/beta.h"
@@ -33,6 +33,7 @@ struct _beta_disk_state
 INLINE beta_disk_state *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
+	assert(device->type() == BETA_DISK);
 
 	return (beta_disk_state *)downcast<legacy_device_base *>(device)->token();
 }
@@ -202,7 +203,7 @@ WRITE8_DEVICE_HANDLER(betadisk_data_w)
 	}
 }
 
-static const floppy_config beta_floppy_config =
+static const floppy_interface beta_floppy_interface =
 {
 	DEVCB_NULL,
 	DEVCB_NULL,
@@ -211,12 +212,13 @@ static const floppy_config beta_floppy_config =
 	DEVCB_NULL,
 	FLOPPY_STANDARD_5_25_DSHD,
 	FLOPPY_OPTIONS_NAME(trd),
+	NULL,
 	NULL
 };
 
 static MACHINE_CONFIG_FRAGMENT( beta_disk )
-	MCFG_WD179X_ADD("wd179x", beta_wd17xx_interface )
-	MCFG_FLOPPY_4_DRIVES_ADD(beta_floppy_config)
+	MCFG_WD2793_ADD("wd179x", beta_wd17xx_interface ) // KR1818VG93
+	MCFG_FLOPPY_4_DRIVES_ADD(beta_floppy_interface)
 MACHINE_CONFIG_END
 
 ROM_START( beta_disk )
@@ -315,7 +317,7 @@ static DEVICE_START( beta_disk )
 
 	/* find our WD179x */
 	astring_printf(&tempstring, "%s:%s", device->tag(), "wd179x");
-	beta->wd179x = device->machine->device(astring_c(&tempstring));
+	beta->wd179x = device->machine().device(astring_c(&tempstring));
 }
 
 /*-------------------------------------------------
@@ -349,6 +351,7 @@ DEVICE_GET_INFO( beta_disk )
 
 		/* --- the following bits of info are returned as NULL-terminated strings --- */
 		case DEVINFO_STR_NAME:							strcpy(info->s, "Beta Disk Interface");						break;
+		case DEVINFO_STR_SHORTNAME:						strcpy(info->s, "betadisk");								break;
 		case DEVINFO_STR_FAMILY:						strcpy(info->s, "Beta Disk Interface");						break;
 		case DEVINFO_STR_VERSION:						strcpy(info->s, "1.0");										break;
 		case DEVINFO_STR_SOURCE_FILE:					strcpy(info->s, __FILE__);									break;

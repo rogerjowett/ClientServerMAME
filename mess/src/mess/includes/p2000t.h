@@ -11,15 +11,15 @@
 class p2000t_state : public driver_device
 {
 public:
-	p2000t_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	p2000t_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
-	UINT8 *videoram;
-	UINT8 port_101f;
-	UINT8 port_202f;
-	UINT8 port_303f;
-	UINT8 port_707f;
-	INT8 frame_count;
+	UINT8 *m_videoram;
+	UINT8 m_port_101f;
+	UINT8 m_port_202f;
+	UINT8 m_port_303f;
+	UINT8 m_port_707f;
+	INT8 m_frame_count;
 };
 
 
@@ -39,7 +39,7 @@ extern WRITE8_HANDLER( p2000t_port_9494_w );
 /*----------- defined in video/p2000m.c -----------*/
 
 extern VIDEO_START( p2000m );
-extern VIDEO_UPDATE( p2000m );
+extern SCREEN_UPDATE( p2000m );
 
 
 #endif /* P2000T_H_ */

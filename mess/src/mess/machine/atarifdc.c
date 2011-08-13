@@ -16,7 +16,8 @@
 #include "ataridev.h"
 #include "sound/pokey.h"
 #include "machine/6821pia.h"
-#include "devices/flopdrv.h"
+#include "imagedev/flopdrv.h"
+#include "formats/atari_dsk.h"
 #include "image.h"
 
 #define VERBOSE_SERIAL	0
@@ -72,6 +73,7 @@ struct _atari_fdc_t
 INLINE atari_fdc_t *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
+	assert(device->type() == ATARI_FDC);
 
 	return (atari_fdc_t *)downcast<legacy_device_base *>(device)->token();
 }
@@ -154,12 +156,12 @@ static void atari_load_proc(device_image_interface &image)
 	int size, i;
 	const char *ext;
 
-	fdc->drv[id].image = (UINT8*)image.image_malloc(MAXSIZE);
+	fdc->drv[id].image = auto_alloc_array(image.device().machine(),UINT8,MAXSIZE);
 	if (!fdc->drv[id].image)
 		return;
 
 	/* tell whether the image is writable */
-	fdc->drv[id].mode = image.is_writable();
+	fdc->drv[id].mode = !image.is_readonly();
 	/* set up image if it has been created */
 	if (image.has_been_created())
 	{
@@ -179,7 +181,7 @@ static void atari_load_proc(device_image_interface &image)
 		return;
 	}
 	/* re allocate the buffer; we don't want to be too lazy ;) */
-    fdc->drv[id].image = (UINT8*)image.image_realloc(fdc->drv[id].image, size);
+    //fdc->drv[id].image = (UINT8*)image.image_realloc(fdc->drv[id].image, size);
 
 	ext = image.filetype();
     /* no extension: assume XFD format (no header) */
@@ -420,7 +422,7 @@ static void add_serout(device_t *device,int expect_data)
 static void clr_serin(device_t *device, int ser_delay)
 {
 	atari_fdc_t *fdc = get_safe_token(device);
-	device_t *pokey = device->machine->device("pokey");
+	device_t *pokey = device->machine().device("pokey");
 	fdc->serin_chksum = 0;
 	fdc->serin_offs = 0;
 	fdc->serin_count = 0;
@@ -705,7 +707,7 @@ READ8_DEVICE_HANDLER ( atari_serin_r )
 
 	if (fdc->serin_count)
 	{
-		device_t *pokey = device->machine->device("pokey");
+		device_t *pokey = device->machine().device("pokey");
 
 		data = fdc->serin_buff[fdc->serin_offs];
 		ser_delay = 2 * 40;
@@ -730,7 +732,7 @@ READ8_DEVICE_HANDLER ( atari_serin_r )
 
 WRITE8_DEVICE_HANDLER ( atari_serout_w )
 {
-	device_t *pia = device->machine->device( "pia" );
+	pia6821_device *pia = device->machine().device<pia6821_device>( "pia" );
 	atari_fdc_t *fdc = get_safe_token(device);
 
 	/* ignore serial commands if no floppy image is specified */
@@ -750,7 +752,7 @@ WRITE8_DEVICE_HANDLER ( atari_serout_w )
 			/* exclusive or written checksum with calculated */
 			fdc->serout_chksum ^= data;
 			/* if the attention line is high, this should be data */
-			if (pia6821_get_irq_b(pia))
+			if (pia->irq_b_state())
 				a800_serial_write(device);
 		}
 		else
@@ -774,30 +776,7 @@ WRITE_LINE_DEVICE_HANDLER(atarifdc_pia_cb2_w)
 	}
 }
 
-static FLOPPY_IDENTIFY( atari_dsk_identify )
-{
-	*vote = 100;
-	return FLOPPY_ERROR_SUCCESS;
-}
-
-
-static FLOPPY_CONSTRUCT( atari_dsk_construct )
-{
-	return FLOPPY_ERROR_SUCCESS;
-}
-
-FLOPPY_OPTIONS_START( atari_only )
-	FLOPPY_OPTION(
-		atari_dsk,
-		"atr,dsk,xfd",
-		"Atari floppy disk image",
-		atari_dsk_identify,
-		atari_dsk_construct,
-		NULL
-	)
-FLOPPY_OPTIONS_END0
-
-static const floppy_config atari_floppy_config =
+static const floppy_interface atari_floppy_interface =
 {
 	DEVCB_NULL,
 	DEVCB_NULL,
@@ -806,11 +785,12 @@ static const floppy_config atari_floppy_config =
 	DEVCB_NULL,
 	FLOPPY_STANDARD_5_25_DSHD,
 	FLOPPY_OPTIONS_NAME(atari_only),
+	NULL,
 	NULL
 };
 
 static MACHINE_CONFIG_FRAGMENT( atari_fdc )
-	MCFG_FLOPPY_4_DRIVES_ADD(atari_floppy_config)
+	MCFG_FLOPPY_4_DRIVES_ADD(atari_floppy_interface)
 MACHINE_CONFIG_END
 
 device_t *atari_floppy_get_device_child(device_t *device,int drive)

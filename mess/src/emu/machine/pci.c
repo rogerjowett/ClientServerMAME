@@ -222,10 +222,10 @@ READ64_DEVICE_HANDLER(pci_64be_r) { return read64be_with_32le_device_handler(pci
 WRITE64_DEVICE_HANDLER(pci_64be_w) { write64be_with_32le_device_handler(pci_32le_w, device, offset, data, mem_mask); }
 
 
-int pci_add_sibling( running_machine *machine, char *pcitag, char *sibling )
+int pci_add_sibling( running_machine &machine, char *pcitag, char *sibling )
 {
-	device_t *device1 = machine->device(pcitag);
-	device_t *device2 = machine->device(sibling);
+	device_t *device1 = machine.device(pcitag);
+	device_t *device2 = machine.device(sibling);
 	pci_bus_state *pcibus1 = get_safe_token(device1);
 	pci_bus_state *pcibus2 = get_safe_token(device2);
 	pci_bus_config *config2;
@@ -234,7 +234,7 @@ int pci_add_sibling( running_machine *machine, char *pcitag, char *sibling )
 		return 0;
 	if (pcibus1->siblings_count == 8)
 		return 0;
-	config2 = (pci_bus_config *)downcast<const legacy_device_config_base &>(device2->baseconfig()).inline_config();
+	config2 = (pci_bus_config *)downcast<const legacy_device_base *>(device2)->inline_config();
 	pcibus1->siblings[pcibus1->siblings_count] = get_safe_token(device2);
 	pcibus1->siblings_busnum[pcibus1->siblings_count] = config2->busnum;
 	pcibus1->siblings_count++;
@@ -247,10 +247,8 @@ int pci_add_sibling( running_machine *machine, char *pcitag, char *sibling )
 ***************************************************************************/
 
 
-static STATE_POSTLOAD( pci_bus_postload )
+static void pci_bus_postload(pci_bus_state *pcibus)
 {
-	pci_bus_state *pcibus = (pci_bus_state *)param;
-
 	if (pcibus->devicenum != -1)
 	{
 		pcibus->busnumaddr = pci_search_bustree(pcibus->busnum, pcibus->devicenum, pcibus);
@@ -269,30 +267,28 @@ static DEVICE_START( pci_bus )
 
 	/* validate some basic stuff */
 	assert(device != NULL);
-	assert(device->baseconfig().static_config() == NULL);
-	assert(downcast<const legacy_device_config_base &>(device->baseconfig()).inline_config() != NULL);
-	assert(device->machine != NULL);
-	assert(device->machine->config != NULL);
+	assert(device->static_config() == NULL);
+	assert(downcast<const legacy_device_base *>(device)->inline_config() != NULL);
 
 	/* store a pointer back to the device */
-	pcibus->config = (const pci_bus_config *)downcast<const legacy_device_config_base &>(device->baseconfig()).inline_config();
+	pcibus->config = (const pci_bus_config *)downcast<const legacy_device_base *>(device)->inline_config();
 	pcibus->busdevice = device;
 	pcibus->devicenum = -1;
 
 	/* find all our devices */
 	for (devicenum = 0; devicenum < ARRAY_LENGTH(pcibus->device); devicenum++)
 		if (pcibus->config->device[devicenum].devtag != NULL)
-			pcibus->device[devicenum] = device->machine->device(pcibus->config->device[devicenum].devtag);
+			pcibus->device[devicenum] = device->machine().device(pcibus->config->device[devicenum].devtag);
 
 	if (pcibus->config->father != NULL)
-		pci_add_sibling(device->machine, (char *)pcibus->config->father, (char *)device->tag());
+		pci_add_sibling(device->machine(), (char *)pcibus->config->father, (char *)device->tag());
 
 	/* register pci states */
-	state_save_register_device_item(device, 0, pcibus->address);
-	state_save_register_device_item(device, 0, pcibus->devicenum);
-	state_save_register_device_item(device, 0, pcibus->busnum);
+	device->save_item(NAME(pcibus->address));
+	device->save_item(NAME(pcibus->devicenum));
+	device->save_item(NAME(pcibus->busnum));
 
-	state_save_register_postload(device->machine, pci_bus_postload, pcibus);
+	device->machine().save().register_postload(save_prepost_delegate(FUNC(pci_bus_postload), pcibus));
 }
 
 

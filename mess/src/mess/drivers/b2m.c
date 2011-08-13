@@ -9,20 +9,20 @@
 
 #include "emu.h"
 #include "cpu/i8085/i8085.h"
-#include "devices/cassette.h"
-#include "machine/i8255a.h"
+#include "imagedev/cassette.h"
+#include "machine/i8255.h"
 #include "machine/pit8253.h"
 #include "machine/pic8259.h"
 #include "machine/msm8251.h"
 #include "machine/wd17xx.h"
-#include "devices/flopdrv.h"
+#include "imagedev/flopdrv.h"
 #include "formats/basicdsk.h"
-#include "devices/messram.h"
+#include "machine/ram.h"
 #include "includes/b2m.h"
 
 
 /* Address maps */
-static ADDRESS_MAP_START(b2m_mem, ADDRESS_SPACE_PROGRAM, 8)
+static ADDRESS_MAP_START(b2m_mem, AS_PROGRAM, 8)
 	AM_RANGE (0x0000, 0x27ff) AM_RAMBANK("bank1")
 	AM_RANGE (0x2800, 0x2fff) AM_RAMBANK("bank2")
 	AM_RANGE (0x3000, 0x6fff) AM_RAMBANK("bank3")
@@ -30,11 +30,11 @@ static ADDRESS_MAP_START(b2m_mem, ADDRESS_SPACE_PROGRAM, 8)
 	AM_RANGE (0xe000, 0xffff) AM_RAMBANK("bank5")
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( b2m_io, ADDRESS_SPACE_IO, 8 )
+static ADDRESS_MAP_START( b2m_io, AS_IO, 8 )
 	ADDRESS_MAP_GLOBAL_MASK(0x1f)
 	AM_RANGE(0x00, 0x03) AM_DEVREADWRITE("pit8253", pit8253_r,pit8253_w)
-	AM_RANGE(0x04, 0x07) AM_DEVREADWRITE("ppi8255_2", i8255a_r, i8255a_w)
-	AM_RANGE(0x08, 0x0b) AM_DEVREADWRITE("ppi8255_1", i8255a_r, i8255a_w)
+	AM_RANGE(0x04, 0x07) AM_DEVREADWRITE_MODERN("ppi8255_2", i8255_device, read, write)
+	AM_RANGE(0x08, 0x0b) AM_DEVREADWRITE_MODERN("ppi8255_1", i8255_device, read, write)
     AM_RANGE(0x0c, 0x0c) AM_READWRITE(b2m_localmachine_r,b2m_localmachine_w)
 	AM_RANGE(0x10, 0x13) AM_READWRITE(b2m_palette_r,b2m_palette_w)
 	AM_RANGE(0x14, 0x15) AM_DEVREADWRITE("pic8259", pic8259_r, pic8259_w )
@@ -46,11 +46,11 @@ static ADDRESS_MAP_START( b2m_io, ADDRESS_SPACE_IO, 8 )
 	AM_RANGE(0x1f, 0x1f) AM_DEVREADWRITE("wd1793", wd17xx_data_r,wd17xx_data_w)
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( b2m_rom_io, ADDRESS_SPACE_IO, 8 )
+static ADDRESS_MAP_START( b2m_rom_io, AS_IO, 8 )
 	ADDRESS_MAP_GLOBAL_MASK(0x1f)
 	AM_RANGE(0x00, 0x03) AM_DEVREADWRITE("pit8253", pit8253_r,pit8253_w)
-	AM_RANGE(0x04, 0x07) AM_DEVREADWRITE("ppi8255_3", i8255a_r, i8255a_w)
-	AM_RANGE(0x08, 0x0b) AM_DEVREADWRITE("ppi8255_1", i8255a_r, i8255a_w)
+	AM_RANGE(0x04, 0x07) AM_DEVREADWRITE_MODERN("ppi8255_3", i8255_device, read, write)
+	AM_RANGE(0x08, 0x0b) AM_DEVREADWRITE_MODERN("ppi8255_1", i8255_device, read, write)
     AM_RANGE(0x0c, 0x0c) AM_READWRITE(b2m_localmachine_r,b2m_localmachine_w)
 	AM_RANGE(0x10, 0x13) AM_READWRITE(b2m_palette_r,b2m_palette_w)
 	AM_RANGE(0x14, 0x15) AM_DEVREADWRITE("pic8259", pic8259_r, pic8259_w )
@@ -177,7 +177,7 @@ static INPUT_PORTS_START( b2m )
 INPUT_PORTS_END
 
 static FLOPPY_OPTIONS_START(b2m)
-	FLOPPY_OPTION(b2m, "cpm", "Bashkiria-2M disk image", basicdsk_identify_default, basicdsk_construct_default,
+	FLOPPY_OPTION(b2m, "cpm", "Bashkiria-2M disk image", basicdsk_identify_default, basicdsk_construct_default, NULL,
 		HEADS([2])
 		TRACKS([80])
 		SECTORS([5])
@@ -185,7 +185,7 @@ static FLOPPY_OPTIONS_START(b2m)
 		FIRST_SECTOR_ID([1]))
 FLOPPY_OPTIONS_END
 
-static const floppy_config b2m_floppy_config =
+static const floppy_interface b2m_floppy_interface =
 {
 	DEVCB_NULL,
 	DEVCB_NULL,
@@ -194,6 +194,7 @@ static const floppy_config b2m_floppy_config =
 	DEVCB_NULL,
 	FLOPPY_STANDARD_5_25_DSHD,
 	FLOPPY_OPTIONS_NAME(b2m),
+	NULL,
 	NULL
 };
 
@@ -215,36 +216,37 @@ static MACHINE_CONFIG_START( b2m, b2m_state )
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(384, 256)
 	MCFG_SCREEN_VISIBLE_AREA(0, 384-1, 0, 256-1)
+    MCFG_SCREEN_UPDATE(b2m)
+
 	MCFG_PALETTE_LENGTH(4)
 	MCFG_PALETTE_INIT(b2m)
 
 	MCFG_PIT8253_ADD( "pit8253", b2m_pit8253_intf )
 
-	MCFG_I8255A_ADD( "ppi8255_1", b2m_ppi8255_interface_1 )
+	MCFG_I8255_ADD( "ppi8255_1", b2m_ppi8255_interface_1 )
 
-	MCFG_I8255A_ADD( "ppi8255_2", b2m_ppi8255_interface_2 )
+	MCFG_I8255_ADD( "ppi8255_2", b2m_ppi8255_interface_2 )
 
-	MCFG_I8255A_ADD( "ppi8255_3", b2m_ppi8255_interface_3 )
+	MCFG_I8255_ADD( "ppi8255_3", b2m_ppi8255_interface_3 )
 
 	MCFG_PIC8259_ADD( "pic8259", b2m_pic8259_config )
 
 	MCFG_VIDEO_START(b2m)
-    MCFG_VIDEO_UPDATE(b2m)
 
 	/* sound */
     MCFG_SPEAKER_STANDARD_MONO("mono")
-	MCFG_SOUND_ADD("speaker", SPEAKER_SOUND, 0)
-	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
+	MCFG_SOUND_ADD(SPEAKER_TAG, SPEAKER_SOUND, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
 	/* uart */
 	MCFG_MSM8251_ADD("uart", default_msm8251_interface)
 
-	MCFG_WD1793_ADD("wd1793", default_wd17xx_interface_2_drives )
+	MCFG_FD1793_ADD("wd1793", default_wd17xx_interface_2_drives )
 
-	MCFG_FLOPPY_2_DRIVES_ADD(b2m_floppy_config)
+	MCFG_FLOPPY_2_DRIVES_ADD(b2m_floppy_interface)
 
 	/* internal ram */
-	MCFG_RAM_ADD("messram")
+	MCFG_RAM_ADD(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("128K")
 	MCFG_RAM_DEFAULT_VALUE(0x00)
 MACHINE_CONFIG_END

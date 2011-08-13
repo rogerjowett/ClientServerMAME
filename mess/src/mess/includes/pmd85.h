@@ -8,34 +8,34 @@
 #define PMD85_H_
 
 #include "machine/serial.h"
-#include "machine/i8255a.h"
+#include "machine/i8255.h"
 
 class pmd85_state : public driver_device
 {
 public:
-	pmd85_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	pmd85_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
-	UINT8 rom_module_present;
-	UINT8 ppi_port_outputs[4][3];
-	UINT8 startup_mem_map;
-	UINT8 pmd853_memory_mapping;
-	int previous_level;
-	int clk_level;
-	int clk_level_tape;
-	UINT8 model;
-	emu_timer * cassette_timer;
-	void (*update_memory)(running_machine *);
-	serial_connection cassette_serial_connection;
+	UINT8 m_rom_module_present;
+	UINT8 m_ppi_port_outputs[4][3];
+	UINT8 m_startup_mem_map;
+	UINT8 m_pmd853_memory_mapping;
+	int m_previous_level;
+	int m_clk_level;
+	int m_clk_level_tape;
+	UINT8 m_model;
+	emu_timer * m_cassette_timer;
+	void (*update_memory)(running_machine &);
+	serial_connection m_cassette_serial_connection;
 };
 
 
 /*----------- defined in machine/pmd85.c -----------*/
 
 extern const struct pit8253_config pmd85_pit8253_interface;
-extern const i8255a_interface pmd85_ppi8255_interface[4];
-extern const i8255a_interface alfa_ppi8255_interface[3];
-extern const i8255a_interface mato_ppi8255_interface;
+extern const i8255_interface pmd85_ppi8255_interface[4];
+extern const i8255_interface alfa_ppi8255_interface[3];
+extern const i8255_interface mato_ppi8255_interface;
 
  READ8_HANDLER ( pmd85_io_r );
 WRITE8_HANDLER ( pmd85_io_w );
@@ -53,7 +53,7 @@ extern MACHINE_RESET( pmd85 );
 /*----------- defined in video/pmd85.c -----------*/
 
 extern VIDEO_START( pmd85 );
-extern VIDEO_UPDATE( pmd85 );
+extern SCREEN_UPDATE( pmd85 );
 extern const unsigned char pmd85_palette[3*3];
 extern PALETTE_INIT( pmd85 );
 

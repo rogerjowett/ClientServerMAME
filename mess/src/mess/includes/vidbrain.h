@@ -9,13 +9,12 @@
 #define DISCRETE_TAG		"discrete"
 #define TIMER_Y_ODD_TAG		"odd"
 #define TIMER_Y_EVEN_TAG	"even"
-#define CASSETTE_TAG		"cassette"
 
 class vidbrain_state : public driver_device
 {
 public:
-	vidbrain_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config),
+	vidbrain_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag),
 		  m_maincpu(*this, F3850_TAG),
 		  m_discrete(*this, DISCRETE_TAG),
 		  m_screen(*this, SCREEN_TAG),
@@ -32,7 +31,7 @@ public:
 	virtual void machine_start();
 
 	virtual void video_start();
-	virtual bool video_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect);
+	virtual bool screen_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect);
 
 	DECLARE_WRITE8_MEMBER( keyboard_w );
 	DECLARE_READ8_MEMBER( keyboard_r );

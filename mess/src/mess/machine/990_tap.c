@@ -126,6 +126,7 @@ static int tape_get_id(device_t *image)
 INLINE tap_990_t *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
+	assert(device->type() == TI990_TAPE_CTRL);
 
 	return (tap_990_t *)downcast<legacy_device_base *>(device)->token();
 }
@@ -158,7 +159,7 @@ static DEVICE_IMAGE_LOAD( ti990_tape )
 	memset(t, 0, sizeof(*t));
 
 	/* tell whether the image is writable */
-	t->wp = ! image.is_writable();
+	t->wp = image.is_readonly();
 
 	t->bot = 1;
 
@@ -213,7 +214,7 @@ static void update_interrupt(device_t *device)
 {
 	tap_990_t *tpc = get_safe_token(device);
 	if (tpc->intf->interrupt_callback)
-		(*tpc->intf->interrupt_callback)(device->machine, (tpc->w[7] & w7_idle)
+		(*tpc->intf->interrupt_callback)(device->machine(), (tpc->w[7] & w7_idle)
 									&& (((tpc->w[7] & w7_int_enable) && (tpc->w[7] & (w7_complete | w7_error)))
 										|| ((tpc->w[0] & ~(tpc->w[0] >> 4)) & w0_rewind_mask)));
 }
@@ -357,7 +358,7 @@ static void cmd_read_binary_forward(device_t *device)
 		/* DMA */
 		for (i=0; i<bytes_read; i+=2)
 		{
-			cputag_get_address_space(device->machine,"maincpu", ADDRESS_SPACE_PROGRAM)->write_word(dma_address, (((int) buffer[i]) << 8) | buffer[i+1]);
+			device->machine().device("maincpu")->memory().space(AS_PROGRAM)->write_word(dma_address, (((int) buffer[i]) << 8) | buffer[i+1]);
 			dma_address = (dma_address + 2) & 0x1ffffe;
 		}
 
@@ -1040,10 +1041,10 @@ static DEVICE_START(tap_990)
 {
 	tap_990_t *tpc = get_safe_token(device);
 	/* verify that we have an interface assigned */
-	assert(device->baseconfig().static_config() != NULL);
+	assert(device->static_config() != NULL);
 
 	/* copy interface pointer */
-	tpc->intf = (const ti990_tpc_interface*)device->baseconfig().static_config();
+	tpc->intf = (const ti990_tpc_interface*)device->static_config();
 
 	memset(tpc->w, 0, sizeof(tpc->w));
 	/* The PE bit is always set for the MT3200 (but not MT1600) */

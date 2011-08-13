@@ -17,7 +17,7 @@
 #include "cpu/m6502/m6502.h"
 #include "sound/pokey.h"
 #include "sound/tiaintf.h"
-#include "devices/cartslot.h"
+#include "imagedev/cartslot.h"
 #include "machine/6532riot.h"
 #include "includes/a7800.h"
 
@@ -30,7 +30,7 @@
     ADDRESS MAPS
 ***************************************************************************/
 
-static ADDRESS_MAP_START( a7800_mem, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( a7800_mem, AS_PROGRAM, 8 )
 	AM_RANGE(0x0000, 0x001f) AM_MIRROR(0x300) AM_READWRITE(a7800_TIA_r, a7800_TIA_w)
 	AM_RANGE(0x0020, 0x003f) AM_MIRROR(0x300) AM_READWRITE(a7800_MARIA_r, a7800_MARIA_w)
 	AM_RANGE(0x0040, 0x00ff) AM_READ_BANK("bank5") AM_WRITE(a7800_RAM0_w)	/* RAM (6116 block 0) */
@@ -265,11 +265,12 @@ static MACHINE_CONFIG_START( a7800_ntsc, a7800_state )
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(640,262)
 	MCFG_SCREEN_VISIBLE_AREA(0,319,25,45+204)
+	MCFG_SCREEN_UPDATE(a7800)
+
 	MCFG_PALETTE_LENGTH(ARRAY_LENGTH(a7800_palette))
 	MCFG_PALETTE_INIT(a7800)
 
 	MCFG_VIDEO_START(a7800)
-	MCFG_VIDEO_UPDATE(a7800)
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
@@ -287,6 +288,10 @@ static MACHINE_CONFIG_START( a7800_ntsc, a7800_state )
 	MCFG_CARTSLOT_START(a7800_cart)
 	MCFG_CARTSLOT_LOAD(a7800_cart)
 	MCFG_CARTSLOT_PARTIALHASH(a7800_partialhash)
+	MCFG_CARTSLOT_INTERFACE("a7800_cart")
+
+	/* software lists */
+	MCFG_SOFTWARE_LIST_ADD("cart_list","a7800")
 MACHINE_CONFIG_END
 
 
@@ -318,8 +323,8 @@ MACHINE_CONFIG_END
 ***************************************************************************/
 
 ROM_START( a7800 )
-    ROM_REGION(0x30000, "maincpu", 0)
-	ROM_FILL(0x0000, 0x30000, 0xff)
+    ROM_REGION(0x40000, "maincpu", 0)
+	ROM_FILL(0x0000, 0x40000, 0xff)
     ROM_SYSTEM_BIOS( 0, "a7800", "Atari 7800" )
     ROMX_LOAD("7800.u7", 0xf000, 0x1000, CRC(5d13730c) SHA1(d9d134bb6b36907c615a594cc7688f7bfcef5b43), ROM_BIOS(1))
     ROM_SYSTEM_BIOS( 1, "a7800pr", "Atari 7800 (prototype with Asteroids)" )
@@ -327,8 +332,8 @@ ROM_START( a7800 )
 ROM_END
 
 ROM_START( a7800p )
-    ROM_REGION(0x30000, "maincpu", 0)
-	ROM_FILL(0x0000, 0x30000, 0xff)
+    ROM_REGION(0x40000, "maincpu", 0)
+	ROM_FILL(0x0000, 0x40000, 0xff)
     ROM_LOAD("7800pal.rom", 0xc000, 0x4000, CRC(d5b61170) SHA1(5a140136a16d1d83e4ff32a19409ca376a8df874))
 ROM_END
 

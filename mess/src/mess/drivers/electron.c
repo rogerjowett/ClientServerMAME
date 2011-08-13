@@ -25,7 +25,7 @@ Missing:
 #include "emu.h"
 #include "cpu/m6502/m6502.h"
 #include "includes/electron.h"
-#include "devices/cassette.h"
+#include "imagedev/cassette.h"
 #include "formats/uef_cas.h"
 #include "sound/beep.h"
 
@@ -46,7 +46,7 @@ static PALETTE_INIT( electron )
 	palette_set_colors(machine, 0, electron_palette, ARRAY_LENGTH(electron_palette));
 }
 
-static ADDRESS_MAP_START(electron_mem, ADDRESS_SPACE_PROGRAM, 8)
+static ADDRESS_MAP_START(electron_mem, AS_PROGRAM, 8)
 	AM_RANGE(0x0000, 0x7fff) AM_RAM AM_REGION("maincpu",  0x00000)	/* 32KB of RAM */
 	AM_RANGE(0x8000, 0xbfff) AM_ROMBANK("bank2")								/* Banked ROM pages */
 	AM_RANGE(0xc000, 0xfbff) AM_ROM AM_REGION("user1", 0x40000)	/* OS ROM */
@@ -167,37 +167,39 @@ ROM_START(electron)
         /* 3c000 15 */
 ROM_END
 
-static const cassette_config electron_cassette_config =
+static const cassette_interface electron_cassette_interface =
 {
 	uef_cassette_formats,
 	NULL,
 	(cassette_state)(CASSETTE_PLAY),
+	NULL,
 	NULL
 };
 
 static MACHINE_CONFIG_START( electron, electron_state )
 	MCFG_CPU_ADD( "maincpu", M6502, 2000000 )
 	MCFG_CPU_PROGRAM_MAP( electron_mem)
-	MCFG_SCREEN_ADD("screen", RASTER)
-	MCFG_SCREEN_REFRESH_RATE( 50.08 )
 
 	MCFG_MACHINE_START( electron )
 
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_REFRESH_RATE( 50.08 )
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE( 640, 312 )
 	MCFG_SCREEN_VISIBLE_AREA( 0, 640-1, 0, 256-1 )
+	MCFG_SCREEN_UPDATE(electron)
+
 	MCFG_PALETTE_LENGTH( 16 )
 	MCFG_PALETTE_INIT(electron)
 
 	MCFG_VIDEO_START(electron)
-	MCFG_VIDEO_UPDATE(electron)
 	MCFG_VIDEO_ATTRIBUTES(VIDEO_UPDATE_SCANLINE)
 
 	MCFG_SPEAKER_STANDARD_MONO( "mono" )
-	MCFG_SOUND_ADD( "beep", BEEP, 0 )
+	MCFG_SOUND_ADD( BEEPER_TAG, BEEP, 0 )
 	MCFG_SOUND_ROUTE( ALL_OUTPUTS, "mono", 1.00 )
 
-	MCFG_CASSETTE_ADD( "cassette", electron_cassette_config )
+	MCFG_CASSETTE_ADD( CASSETTE_TAG, electron_cassette_interface )
 MACHINE_CONFIG_END
 
 

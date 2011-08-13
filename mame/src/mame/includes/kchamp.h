@@ -7,27 +7,27 @@
 class kchamp_state : public driver_device
 {
 public:
-	kchamp_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	kchamp_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 	/* memory pointers */
-	UINT8 *    videoram;
-	UINT8 *    colorram;
-	UINT8 *    spriteram;
-	size_t     spriteram_size;
+	UINT8 *    m_videoram;
+	UINT8 *    m_colorram;
+	UINT8 *    m_spriteram;
+	size_t     m_spriteram_size;
 
 	/* video-related */
-	tilemap_t    *bg_tilemap;
+	tilemap_t    *m_bg_tilemap;
 
 	/* misc */
-	int        nmi_enable;
-	int        sound_nmi_enable;
-	int        msm_data;
-	int        msm_play_lo_nibble;
-	int        counter;
+	int        m_nmi_enable;
+	int        m_sound_nmi_enable;
+	int        m_msm_data;
+	int        m_msm_play_lo_nibble;
+	int        m_counter;
 
 	/* devices */
-	device_t *audiocpu;
+	device_t *m_audiocpu;
 };
 
 
@@ -39,5 +39,5 @@ WRITE8_HANDLER( kchamp_flipscreen_w );
 
 PALETTE_INIT( kchamp );
 VIDEO_START( kchamp );
-VIDEO_UPDATE( kchamp );
-VIDEO_UPDATE( kchampvs );
+SCREEN_UPDATE( kchamp );
+SCREEN_UPDATE( kchampvs );

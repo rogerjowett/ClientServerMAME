@@ -10,21 +10,21 @@
 class copsnrob_state : public driver_device
 {
 public:
-	copsnrob_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	copsnrob_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 	/* memory pointers */
-	UINT8 *        videoram;
-	UINT8 *        trucky;
-	UINT8 *        truckram;
-	UINT8 *        bulletsram;
-	UINT8 *        cary;
-	UINT8 *        carimage;
-	size_t         videoram_size;
+	UINT8 *        m_videoram;
+	UINT8 *        m_trucky;
+	UINT8 *        m_truckram;
+	UINT8 *        m_bulletsram;
+	UINT8 *        m_cary;
+	UINT8 *        m_carimage;
+	size_t         m_videoram_size;
 
 	/* misc */
-	UINT8          misc;
-	UINT8          ic_h3_data;
+	UINT8          m_misc;
+	UINT8          m_ic_h3_data;
 };
 
 
@@ -35,7 +35,7 @@ READ8_HANDLER( copsnrob_gun_position_r );
 
 /*----------- defined in video/copsnrob.c -----------*/
 
-VIDEO_UPDATE( copsnrob );
+SCREEN_UPDATE( copsnrob );
 
 
 /*----------- defined in audio/copsnrob.c -----------*/

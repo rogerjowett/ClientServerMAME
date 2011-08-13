@@ -12,8 +12,8 @@
 class ti68k_state : public driver_device
 {
 public:
-	ti68k_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config),
+	ti68k_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag),
 		  m_maincpu(*this, "maincpu"),
 		  m_flash(*this, "flash")
 		{ }
@@ -22,7 +22,7 @@ public:
 	required_device<sharp_unk128mbit_device> m_flash;
 
 	// hardware versions
-	enum { HW1=1, HW2, HW3, HW4 };
+	enum { m_HW1=1, m_HW2, m_HW3, m_HW4 };
 
 	// HW specifications
 	UINT8 m_hw_version;
@@ -51,16 +51,16 @@ public:
 
 	virtual void machine_start();
 	virtual void machine_reset();
-	bool video_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect);
+	virtual bool screen_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect);
 
-	UINT8 keypad_r (running_machine *machine);
-	WRITE16_MEMBER ( ti68k_io_w );
-	READ16_MEMBER ( ti68k_io_r );
-	WRITE16_MEMBER ( ti68k_io2_w );
-	READ16_MEMBER ( ti68k_io2_r );
-	WRITE16_MEMBER ( flash_w );
-	READ16_MEMBER ( flash_r );
-	UINT64 timer;
+	UINT8 keypad_r (running_machine &machine);
+	DECLARE_WRITE16_MEMBER ( ti68k_io_w );
+	DECLARE_READ16_MEMBER ( ti68k_io_r );
+	DECLARE_WRITE16_MEMBER ( ti68k_io2_w );
+	DECLARE_READ16_MEMBER ( ti68k_io2_r );
+	DECLARE_WRITE16_MEMBER ( flash_w );
+	DECLARE_READ16_MEMBER ( flash_r );
+	UINT64 m_timer;
 };
 
 #endif // TI89_H_

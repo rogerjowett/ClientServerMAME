@@ -67,31 +67,31 @@ INLINE e05a03_state *get_safe_token(device_t *device)
 static DEVICE_START( e05a03 )
 {
 	e05a03_state *e05a03 = get_safe_token(device);
-	const e05a03_interface *intf = (const e05a03_interface *)device->baseconfig().static_config();
+	const e05a03_interface *intf = (const e05a03_interface *)device->static_config();
 
 	/* validate some basic stuff */
-	assert(device->baseconfig().static_config() != NULL);
+	assert(device->static_config() != NULL);
 
 	/* resolve callbacks */
-	devcb_resolve_write_line(&e05a03->out_nlq_lp_func, &intf->out_nlq_lp_func, device);
-	devcb_resolve_write_line(&e05a03->out_pe_lp_func, &intf->out_pe_lp_func, device);
-	devcb_resolve_write_line(&e05a03->out_reso_func, &intf->out_reso_func, device);
-	devcb_resolve_write_line(&e05a03->out_pe_func, &intf->out_pe_func, device);
-	devcb_resolve_read8(&e05a03->in_data_func, &intf->in_data_func, device);
+	e05a03->out_nlq_lp_func.resolve(intf->out_nlq_lp_func, *device);
+	e05a03->out_pe_lp_func.resolve(intf->out_pe_lp_func, *device);
+	e05a03->out_reso_func.resolve(intf->out_reso_func, *device);
+	e05a03->out_pe_func.resolve(intf->out_pe_func, *device);
+	e05a03->in_data_func.resolve(intf->in_data_func, *device);
 
 	/* register for state saving */
-	state_save_register_device_item(device, 0, e05a03->shift);
-	state_save_register_device_item(device, 0, e05a03->busy_leading);
-	state_save_register_device_item(device, 0, e05a03->busy_software);
-	state_save_register_device_item(device, 0, e05a03->nlqlp);
-	state_save_register_device_item(device, 0, e05a03->cndlp);
+	device->save_item(NAME(e05a03->shift));
+	device->save_item(NAME(e05a03->busy_leading));
+	device->save_item(NAME(e05a03->busy_software));
+	device->save_item(NAME(e05a03->nlqlp));
+	device->save_item(NAME(e05a03->cndlp));
 #if 0
-	state_save_register_device_item(device, 0, e05a03->pe);
-	state_save_register_device_item(device, 0, e05a03->pelp);
+	device->save_item(NAME(e05a03->pe));
+	device->save_item(NAME(e05a03->pelp));
 #endif
-	state_save_register_device_item(device, 0, e05a03->printhead);
-	state_save_register_device_item(device, 0, e05a03->pf_motor);
-	state_save_register_device_item(device, 0, e05a03->cr_motor);
+	device->save_item(NAME(e05a03->printhead));
+	device->save_item(NAME(e05a03->pf_motor));
+	device->save_item(NAME(e05a03->cr_motor));
 }
 
 static DEVICE_RESET( e05a03 )
@@ -102,8 +102,8 @@ static DEVICE_RESET( e05a03 )
 	e05a03->pf_motor = 0x00;
 	e05a03->cr_motor = 0x0f;
 
-	devcb_call_write_line(&e05a03->out_pe_func, 0);
-	devcb_call_write_line(&e05a03->out_pe_lp_func, 1);
+	e05a03->out_pe_func(0);
+	e05a03->out_pe_lp_func(1);
 
 	e05a03->busy_software = 1;
 	e05a03->nlqlp = 1;
@@ -141,7 +141,7 @@ WRITE8_DEVICE_HANDLER( e05a03_w )
 {
 	e05a03_state *e05a03 = get_safe_token(device);
 
-	logerror("%s: e05a03_w(%02x): %02x\n", cpuexec_describe_context(device->machine), offset, data);
+	logerror("%s: e05a03_w(%02x): %02x\n", device->machine().describe_context(), offset, data);
 
 	switch (offset)
 	{
@@ -156,8 +156,8 @@ WRITE8_DEVICE_HANDLER( e05a03_w )
 		e05a03->nlqlp = BIT(data, 4);
 		e05a03->cndlp = BIT(data, 3);
 
-		devcb_call_write_line(&e05a03->out_pe_func, BIT(data, 2));
-		devcb_call_write_line(&e05a03->out_pe_lp_func, !BIT(data, 2));
+		e05a03->out_pe_func(BIT(data, 2));
+		e05a03->out_pe_lp_func(!BIT(data, 2));
 
 #if 0
 		e05a03->pe = BIT(data, 2);
@@ -181,7 +181,7 @@ READ8_DEVICE_HANDLER( e05a03_r )
 	e05a03_state *e05a03 = get_safe_token(device);
 	UINT8 result = 0;
 
-	logerror("%s: e05a03_r(%02x)\n", cpuexec_describe_context(device->machine), offset);
+	logerror("%s: e05a03_r(%02x)\n", device->machine().describe_context(), offset);
 
 	switch (offset)
 	{
@@ -192,7 +192,7 @@ READ8_DEVICE_HANDLER( e05a03_r )
 		break;
 
 	case 0x02:
-		result = devcb_call_read8(&e05a03->in_data_func, 0);
+		result = e05a03->in_data_func(0);
 		break;
 
 	case 0x03:
@@ -230,7 +230,7 @@ WRITE_LINE_DEVICE_HANDLER( e05a03_resi_w )
 	if (!state)
 	{
 		DEVICE_RESET_CALL( e05a03 );
-		devcb_call_write_line(&e05a03->out_reso_func, 1);
+		e05a03->out_reso_func(1);
 	}
 }
 

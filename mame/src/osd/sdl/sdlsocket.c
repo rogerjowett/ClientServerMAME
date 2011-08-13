@@ -26,7 +26,22 @@
 #include "emu.h"
 #include "sdlfile.h"
 
-const char *sdlfile_socket_identifier  = "/dev/socket";
+const char *sdlfile_socket_identifier  = "socket.";
+
+/*
+    Checks whether the path is a socket specification. A valid socket
+    specification has the format "socket." host ":" port. Host may be simple
+    or fully qualified. Port must be between 1 and 65535.
+*/
+bool sdl_check_socket_path(const char *path)
+{
+#ifndef SDLMAME_WIN32
+	if (strlen(sdlfile_socket_identifier) > 0 &&
+		strncmp(path, sdlfile_socket_identifier, strlen(sdlfile_socket_identifier)) == 0 &&
+		strchr(path, ':') != NULL) return true;
+#endif
+	return false;
+}
 
 file_error sdl_open_socket(const char *path, UINT32 openflags, osd_file **file, UINT64 *filesize)
 {
@@ -37,7 +52,7 @@ file_error sdl_open_socket(const char *path, UINT32 openflags, osd_file **file, 
 	int flag = 1;
 	int port;
 
-	sscanf( path+strlen(sdlfile_socket_identifier), ":%255[^:]:%d", hostname, &port );
+	sscanf( path+strlen(sdlfile_socket_identifier), "%255[^:]:%d", hostname, &port );
 
 	printf("Connecting to server '%s' on port '%d'\n", hostname, port);
 
@@ -111,7 +126,7 @@ file_error sdl_read_socket(osd_file *file, void *buffer, UINT64 offset, UINT32 c
 file_error sdl_write_socket(osd_file *file, const void *buffer, UINT64 offset, UINT32 count, UINT32 *actual)
 {
 #ifndef SDLMAME_WIN32
-	UINT32 result;
+	ssize_t result;
 
 	result = write(file->handle, buffer, count);
 

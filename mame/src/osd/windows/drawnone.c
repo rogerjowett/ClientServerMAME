@@ -44,7 +44,7 @@
 #include <windows.h>
 
 // MAME headers
-#include "emucore.h"
+#include "emu.h"
 
 // MAMEOS headers
 #include "window.h"
@@ -68,13 +68,15 @@ static int drawnone_window_draw(win_window_info *window, HDC dc, int update);
 //  drawnone_init
 //============================================================
 
-int drawnone_init(win_draw_callbacks *callbacks)
+int drawnone_init(running_machine &machine, win_draw_callbacks *callbacks)
 {
 	// fill in the callbacks
 	callbacks->exit = drawnone_exit;
 	callbacks->window_init = drawnone_window_init;
 	callbacks->window_get_primitives = drawnone_window_get_primitives;
 	callbacks->window_draw = drawnone_window_draw;
+	callbacks->window_save = NULL;
+	callbacks->window_record = NULL;
 	callbacks->window_destroy = drawnone_window_destroy;
 	return 0;
 }

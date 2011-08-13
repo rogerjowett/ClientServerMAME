@@ -79,9 +79,12 @@ History:
 
 #define LOG(LEVEL,N,M,A)  \
 	do { \
-		if( M ) \
-			logerror("%-24s",(char*)M ); \
-		logerror A; \
+		if(LEVEL>=N) \
+		{ \
+			if( M ) \
+				logerror("%-24s",(char*)M ); \
+			logerror A; \
+		} \
 	} while (0)
 
 
@@ -106,6 +109,7 @@ static const char * const device_tags[NUM_TYPES] = { "ins8250", "ins8250a", "ns1
 #define COM_LOG(n,m,a) LOG(VERBOSE_COM,n,m,a)
 
 typedef struct {
+	devcb_resolved_write_line	out_intr_func;
 	const ins8250_interface *interface;
 	int	device_type;
 
@@ -212,8 +216,7 @@ static void ins8250_update_interrupt(device_t *device)
 	}
 
 	/* set or clear the int */
-	if (ins8250->interface->interrupt)
-		ins8250->interface->interrupt(device, state);
+	ins8250->out_intr_func(state);
 }
 
 
@@ -434,7 +437,7 @@ READ8_DEVICE_HANDLER( ins8250_r )
 		case 5:
 
 #if 0
-			if (ins8250->send.active && (timer_get_time(machine)-ins8250->send.time>uart_byte_time(n)))
+			if (ins8250->send.active && (machine.time()-ins8250->send.time>uart_byte_time(n)))
 			{
 				// currently polling is enough for pc1512
 				ins8250->lsr |= 0x40; /* set TSRE */
@@ -446,7 +449,7 @@ READ8_DEVICE_HANDLER( ins8250_r )
 				}
 			}
 #endif
-			ins8250->lsr |= 0x20; /* set THRE */
+			ins8250->lsr |= 0x60; /* set THRE */
 			data = ins8250->lsr;
 			if( ins8250->lsr & 0x1f )
 			{
@@ -544,8 +547,10 @@ static void common_start( device_t *device, int device_type )
 {
 	ins8250_t	*ins8250 = get_safe_token(device);
 
-	ins8250->interface = (const ins8250_interface*)device->baseconfig().static_config();
+	ins8250->interface = (const ins8250_interface*)device->static_config();
 	ins8250->device_type = device_type;
+
+	ins8250->out_intr_func.resolve(ins8250->interface->out_intr_cb, *device);
 }
 
 

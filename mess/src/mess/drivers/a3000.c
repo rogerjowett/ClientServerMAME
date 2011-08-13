@@ -5,6 +5,7 @@
     Skeleton driver
 
 ***************************************************************************/
+#define ADDRESS_MAP_MODERN
 
 #include "emu.h"
 #include "cpu/m68000/m68000.h"
@@ -13,8 +14,8 @@
 class a3000_state : public driver_device
 {
 public:
-	a3000_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	a3000_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 };
 
@@ -31,7 +32,7 @@ public:
     ADDRESS MAPS
 ***************************************************************************/
 
-static ADDRESS_MAP_START( a3000_mem, ADDRESS_SPACE_PROGRAM, 32 )
+static ADDRESS_MAP_START( a3000_mem, AS_PROGRAM, 32, a3000_state )
 	ADDRESS_MAP_UNMAP_HIGH
 	AM_RANGE(0x000000, 0x1fffff) AM_RAMBANK("chipram")
 	AM_RANGE(0xf80000, 0xffffff) AM_ROM AM_REGION("kickstart", 0)

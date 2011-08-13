@@ -61,19 +61,19 @@ Timings:
 #include "emu.h"
 #include "cpu/i8085/i8085.h"
 #include "sound/wave.h"
-#include "machine/i8255a.h"
+#include "machine/i8255.h"
 #include "includes/dai.h"
 #include "machine/pit8253.h"
 #include "machine/tms5501.h"
-#include "devices/cassette.h"
-#include "devices/messram.h"
+#include "imagedev/cassette.h"
+#include "machine/ram.h"
 
 /* I/O ports */
-static ADDRESS_MAP_START( dai_io , ADDRESS_SPACE_IO, 8)
+static ADDRESS_MAP_START( dai_io , AS_IO, 8)
 ADDRESS_MAP_END
 
 /* memory w/r functions */
-static ADDRESS_MAP_START( dai_mem , ADDRESS_SPACE_PROGRAM, 8)
+static ADDRESS_MAP_START( dai_mem , AS_PROGRAM, 8)
 	AM_RANGE( 0x0000, 0xbfff) AM_RAMBANK("bank1")
 	AM_RANGE( 0xc000, 0xdfff) AM_ROM
 	AM_RANGE( 0xe000, 0xefff) AM_ROMBANK("bank2")
@@ -82,7 +82,7 @@ static ADDRESS_MAP_START( dai_mem , ADDRESS_SPACE_PROGRAM, 8)
 	AM_RANGE( 0xfb00, 0xfbff) AM_READWRITE( dai_amd9511_r, dai_amd9511_w )
 	AM_RANGE( 0xfc00, 0xfcff) AM_DEVREADWRITE("pit8253", pit8253_r, pit8253_w )
 	AM_RANGE( 0xfd00, 0xfdff) AM_READWRITE( dai_io_discrete_devices_r, dai_io_discrete_devices_w )
-	AM_RANGE( 0xfe00, 0xfeff) AM_DEVREADWRITE("ppi8255", i8255a_r, i8255a_w )
+	AM_RANGE( 0xfe00, 0xfeff) AM_DEVREADWRITE_MODERN("ppi8255", i8255_device, read, write)
 	AM_RANGE( 0xff00, 0xffff) AM_DEVREADWRITE("tms5501", tms5501_r, tms5501_w )
 ADDRESS_MAP_END
 
@@ -174,11 +174,12 @@ static const struct CassetteOptions dai_cassette_options = {
 	44100		/* sample frequency */
 };
 
-static const cassette_config dai_cassette_config =
+static const cassette_interface dai_cassette_interface =
 {
 	cassette_default_formats,
 	&dai_cassette_options,
 	(cassette_state)(CASSETTE_PLAY | CASSETTE_MOTOR_DISABLED | CASSETTE_SPEAKER_ENABLED),
+	NULL,
 	NULL
 };
 
@@ -206,14 +207,14 @@ static MACHINE_CONFIG_START( dai, dai_state )
 	MCFG_CPU_ADD("maincpu", I8080, 2000000)
 	MCFG_CPU_PROGRAM_MAP(dai_mem)
 	MCFG_CPU_IO_MAP(dai_io)
-	MCFG_QUANTUM_TIME(HZ(60))
+	MCFG_QUANTUM_TIME(attotime::from_hz(60))
 
 	MCFG_MACHINE_START( dai )
 	MCFG_MACHINE_RESET( dai )
 
 	MCFG_PIT8253_ADD( "pit8253", dai_pit8253_intf )
 
-	MCFG_I8255A_ADD( "ppi8255", dai_ppi82555_intf )
+	MCFG_I8255_ADD( "ppi8255", dai_ppi82555_intf )
 
 	/* video hardware */
 	MCFG_SCREEN_ADD("screen", RASTER)
@@ -222,30 +223,31 @@ static MACHINE_CONFIG_START( dai, dai_state )
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(1056, 542)
 	MCFG_SCREEN_VISIBLE_AREA(0, 1056-1, 0, 302-1)
+	MCFG_SCREEN_UPDATE( dai )
+
 	MCFG_GFXDECODE(dai)
 	MCFG_PALETTE_LENGTH(sizeof (dai_palette) / 3)
 	MCFG_PALETTE_INIT( dai )
 
 	MCFG_VIDEO_START( dai )
-	MCFG_VIDEO_UPDATE( dai )
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
-	MCFG_SOUND_WAVE_ADD("wave", "cassette")
-	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+	MCFG_SOUND_WAVE_ADD(WAVE_TAG, CASSETTE_TAG)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 	MCFG_SOUND_ADD("custom", DAI, 0)
 	MCFG_SOUND_ROUTE(0, "lspeaker", 0.50)
 	MCFG_SOUND_ROUTE(1, "rspeaker", 0.50)
 
 	/* cassette */
-	MCFG_CASSETTE_ADD( "cassette", dai_cassette_config )
+	MCFG_CASSETTE_ADD( CASSETTE_TAG, dai_cassette_interface )
 
 	/* tms5501 */
 	MCFG_TMS5501_ADD( "tms5501", dai_tms5501_interface )
 
 	/* internal ram */
-	MCFG_RAM_ADD("messram")
+	MCFG_RAM_ADD(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("48K")
 MACHINE_CONFIG_END
 

@@ -9,8 +9,8 @@
 class skullxbo_state : public atarigen_state
 {
 public:
-	skullxbo_state(running_machine &machine, const driver_device_config_base &config)
-		: atarigen_state(machine, config) { }
+	skullxbo_state(const machine_config &mconfig, device_type type, const char *tag)
+		: atarigen_state(mconfig, type, tag) { }
 };
 
 
@@ -22,6 +22,6 @@ WRITE16_HANDLER( skullxbo_yscroll_w );
 WRITE16_HANDLER( skullxbo_mobmsb_w );
 
 VIDEO_START( skullxbo );
-VIDEO_UPDATE( skullxbo );
+SCREEN_UPDATE( skullxbo );
 
-void skullxbo_scanline_update(running_machine *machine, int param);
+void skullxbo_scanline_update(running_machine &machine, int param);

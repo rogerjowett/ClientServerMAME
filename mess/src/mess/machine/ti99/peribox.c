@@ -130,13 +130,14 @@ do not depend on the card being active at that time.
 #include "hsgpl.h"
 #include "spchsyn.h"
 #include "evpc.h"
+#include "memex.h"
 
-#include "devices/flopdrv.h"
-#include "devices/harddriv.h"
+#include "imagedev/flopdrv.h"
+#include "imagedev/harddriv.h"
 #include "formats/ti99_dsk.h"
-#include "devices/ti99_hd.h"
+#include "ti99_hd.h"
 
-static const floppy_config ti99_4_floppy_config =
+static const floppy_interface ti99_4_floppy_interface =
 {
 	DEVCB_NULL,
 	DEVCB_NULL,
@@ -145,6 +146,7 @@ static const floppy_config ti99_4_floppy_config =
 	DEVCB_NULL,
 	FLOPPY_STANDARD_5_25_DSHD,
 	FLOPPY_OPTIONS_NAME(ti99),
+	NULL,
 	NULL
 };
 
@@ -166,6 +168,9 @@ typedef struct _ti99_peb_state
 
 	int						highest;
 
+	/* Address bits that are preset to 1 (AMA/AMB/AMC) */
+	int						address_prefix;
+
 	// Callback to the main system
 	ti99_peb_connect		lines;
 
@@ -174,6 +179,8 @@ typedef struct _ti99_peb_state
 INLINE ti99_peb_state *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
+	assert(device->type() == PBOX4 || device->type() == PBOX4A || device->type() == PBOX8 || device->type() == PBOXEV || device->type() == PBOXSG || device->type() == PBOXGEN);
+
 	return (ti99_peb_state *)downcast<legacy_device_base *>(device)->token();
 }
 
@@ -181,14 +188,15 @@ INLINE const ti99_peb_config *get_config(device_t *device)
 {
 	assert(device != NULL);
 	assert(device->type() == PBOX4 || device->type() == PBOX4A || device->type() == PBOX8 || device->type() == PBOXEV || device->type() == PBOXSG || device->type() == PBOXGEN);
-	return (const ti99_peb_config *) downcast<const legacy_device_config_base &>(device->baseconfig()).inline_config();
+
+	return (const ti99_peb_config *) downcast<const legacy_device_base *>(device)->inline_config();
 }
 
 /* Callbacks */
 static WRITE_LINE_DEVICE_HANDLER( inta )
 {
 	int slot = get_pebcard_config(device)->slot;
-	ti99_peb_state *peb = (ti99_peb_state*)downcast<legacy_device_base *>(device->owner())->token();
+	ti99_peb_state *peb = get_safe_token(device->owner());
 	if (state==TRUE)
 	{
 		// The flags are stored as inverted (inta_state=0 if all lines are H)
@@ -201,29 +209,29 @@ static WRITE_LINE_DEVICE_HANDLER( inta )
 	}
 	// Call back the main system, setting the line to L if any PEB card set it to L
 	// This is the case when inta_state is not 0
-	devcb_call_write_line( &peb->lines.inta, (peb->inta_state == 0) );
+	peb->lines.inta((peb->inta_state == 0));
 }
 
 static WRITE_LINE_DEVICE_HANDLER( intb )
 {
 	int slot = get_pebcard_config(device)->slot;
-	ti99_peb_state *peb = (ti99_peb_state*)downcast<legacy_device_base *>(device->owner())->token();
+	ti99_peb_state *peb = get_safe_token(device->owner());
 	if (state==TRUE)
 		peb->intb_state &= ~(1 << slot);
 	else
 		peb->intb_state |= (1 << slot);
-	devcb_call_write_line( &peb->lines.intb, (peb->intb_state == 0) );
+	peb->lines.intb((peb->intb_state == 0));
 }
 
 static WRITE_LINE_DEVICE_HANDLER( ready )
 {
 	int slot = get_pebcard_config(device)->slot;
-	ti99_peb_state *peb = (ti99_peb_state*)downcast<legacy_device_base *>(device->owner())->token();
+	ti99_peb_state *peb = get_safe_token(device->owner());
 	if (state==TRUE)
 		peb->ready_state &= ~(1 << slot);
 	else
 		peb->ready_state |= (1 << slot);
-	devcb_call_write_line( &peb->lines.ready, (peb->ready_state == 0) );
+	peb->lines.ready((peb->ready_state == 0));
 }
 
 /*
@@ -286,7 +294,7 @@ READ8Z_DEVICE_HANDLER( ti99_peb_data_rz )
 	for (i=1; i <= peb->highest; i++)
 	{
 		if ((peb->slot[i].card != NULL) && (*peb->slot[i].intf->card_read_data))
-			(*peb->slot[i].intf->card_read_data)(peb->slot[i].card, offset, value);
+			(*peb->slot[i].intf->card_read_data)(peb->slot[i].card, peb->address_prefix | offset, value);
 	}
 }
 
@@ -297,7 +305,7 @@ WRITE8_DEVICE_HANDLER( ti99_peb_data_w )
 	for (i=1; i <= peb->highest; i++)
 	{
 		if ((peb->slot[i].card != NULL) && (*peb->slot[i].intf->card_write_data))
-			(*peb->slot[i].intf->card_write_data)(peb->slot[i].card, offset, data);
+			(*peb->slot[i].intf->card_write_data)(peb->slot[i].card, peb->address_prefix | offset, data);
 	}
 }
 
@@ -333,7 +341,7 @@ READ16Z_DEVICE_HANDLER( ti99_peb_data16_rz )
 	for (i=1; i <= peb->highest; i++)
 	{
 		if ((peb->slot[i].card != NULL) && (*peb->slot[i].intf->card_read_data16))
-			(*peb->slot[i].intf->card_read_data16)(peb->slot[i].card, offset, value);
+			(*peb->slot[i].intf->card_read_data16)(peb->slot[i].card, peb->address_prefix | offset, value);
 	}
 }
 
@@ -347,7 +355,7 @@ WRITE16_DEVICE_HANDLER( ti99_peb_data16_w )
 	for (i=1; i <= peb->highest; i++)
 	{
 		if ((peb->slot[i].card != NULL) && (*peb->slot[i].intf->card_write_data16))
-			(*peb->slot[i].intf->card_write_data16)(peb->slot[i].card, offset, data);
+			(*peb->slot[i].intf->card_write_data16)(peb->slot[i].card, peb->address_prefix | offset, data);
 	}
 }
 
@@ -395,9 +403,11 @@ static DEVICE_START( ti99_peb )
 	devcb_write_line intb = DEVCB_LINE(pebconf->intb);
 	devcb_write_line ready = DEVCB_LINE(pebconf->ready);
 
-	devcb_resolve_write_line(&peb->lines.ready, &ready, device);
-	devcb_resolve_write_line(&peb->lines.inta, &inta, device);
-	devcb_resolve_write_line(&peb->lines.intb, &intb, device);
+	peb->lines.ready.resolve(ready, *device);
+	peb->lines.inta.resolve(inta, *device);
+	peb->lines.intb.resolve(intb, *device);
+
+	peb->address_prefix = (pebconf->amx << 16);
 }
 
 static DEVICE_STOP( ti99_peb )
@@ -451,7 +461,7 @@ static MACHINE_CONFIG_FRAGMENT( ti99_peb )
 	MCFG_PBOXCARD_ADD( "hfdc",			HFDC,	  8 )
 	MCFG_PBOXCARD_ADD( "bwg",			BWG,	  8 )
 
-	MCFG_FLOPPY_4_DRIVES_ADD(ti99_4_floppy_config)
+	MCFG_FLOPPY_4_DRIVES_ADD(ti99_4_floppy_interface)
 	MCFG_MFMHD_3_DRIVES_ADD()
 MACHINE_CONFIG_END
 
@@ -469,7 +479,7 @@ static MACHINE_CONFIG_FRAGMENT( ti994a_peb )
 	MCFG_PBOXCARD_ADD( "hfdc",			HFDC,	  8 )
 	MCFG_PBOXCARD_ADD( "bwg",			BWG,	  8 )
 
-	MCFG_FLOPPY_4_DRIVES_ADD(ti99_4_floppy_config)
+	MCFG_FLOPPY_4_DRIVES_ADD(ti99_4_floppy_interface)
 	MCFG_MFMHD_3_DRIVES_ADD()
 MACHINE_CONFIG_END
 
@@ -488,7 +498,7 @@ static MACHINE_CONFIG_FRAGMENT( ti99ev_peb )
 	MCFG_PBOXCARD_ADD( "bwg",			BWG,	  8 )
 	MCFG_PBOXCARD_ADD( "evpc",			EVPC,	  9 )
 
-	MCFG_FLOPPY_4_DRIVES_ADD(ti99_4_floppy_config)
+	MCFG_FLOPPY_4_DRIVES_ADD(ti99_4_floppy_interface)
 	MCFG_MFMHD_3_DRIVES_ADD()
 MACHINE_CONFIG_END
 
@@ -501,7 +511,7 @@ static MACHINE_CONFIG_FRAGMENT( ti998_peb )
 	MCFG_PBOXCARD_ADD( "hfdc",			HFDC,	  8 )
 	MCFG_PBOXCARD_ADD( "bwg",			BWG,	  8 )
 
-	MCFG_FLOPPY_4_DRIVES_ADD(ti99_4_floppy_config)
+	MCFG_FLOPPY_4_DRIVES_ADD(ti99_4_floppy_interface)
 	MCFG_MFMHD_3_DRIVES_ADD()
 MACHINE_CONFIG_END
 
@@ -516,20 +526,21 @@ static MACHINE_CONFIG_FRAGMENT( ti99sg_peb )
 	MCFG_PBOXCARD_ADD( "bwg",			BWG,	  7 )
 	MCFG_PBOXCARD_ADD( "evpc",			EVPC,	  8 )
 
-	MCFG_FLOPPY_4_DRIVES_ADD(ti99_4_floppy_config)
+	MCFG_FLOPPY_4_DRIVES_ADD(ti99_4_floppy_interface)
 	MCFG_MFMHD_3_DRIVES_ADD()
 MACHINE_CONFIG_END
 
 static MACHINE_CONFIG_FRAGMENT( geneve_peb )
-	MCFG_PBOXCARD_ADD( "speech",		TISPEECH, 1 )
-	MCFG_PBOXCARD_ADD( "usbsmart",		USBSMART, 2 )
-	MCFG_PBOXCARD_ADD( "ide",			TNIDE,	  3 )
+	MCFG_PBOXCARD_ADD( "memex",			GENMEMEX, 1 )
+	MCFG_PBOXCARD_ADD( "speech",		TISPEECH, 2 )
+	MCFG_PBOXCARD_ADD( "usbsmart",		USBSMART, 3 )
+	MCFG_PBOXCARD_ADD( "ide",			TNIDE,	  4 )
 	MCFG_PBOXCARD_ADD( "rs232_card",	TIRS232,  6 )
 	MCFG_PBOXCARD_ADD( "ti_fdc",		TIFDC,	  7 )
 	MCFG_PBOXCARD_ADD( "hfdc",			HFDC,	  7 )
 	MCFG_PBOXCARD_ADD( "bwg",			BWG,	  7 )
 
-	MCFG_FLOPPY_4_DRIVES_ADD(ti99_4_floppy_config)
+	MCFG_FLOPPY_4_DRIVES_ADD(ti99_4_floppy_interface)
 	MCFG_MFMHD_3_DRIVES_ADD()
 MACHINE_CONFIG_END
 

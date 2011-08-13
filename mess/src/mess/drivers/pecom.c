@@ -10,12 +10,11 @@
 #include "cpu/cosmac/cosmac.h"
 #include "sound/cdp1869.h"
 #include "sound/wave.h"
-#include "devices/cassette.h"
+#include "machine/ram.h"
 #include "includes/pecom.h"
-#include "devices/messram.h"
 
 /* Address maps */
-static ADDRESS_MAP_START(pecom64_mem, ADDRESS_SPACE_PROGRAM, 8)
+static ADDRESS_MAP_START(pecom64_mem, AS_PROGRAM, 8)
 	AM_RANGE( 0x0000, 0x3fff ) AM_RAMBANK("bank1")
 	AM_RANGE( 0x4000, 0x7fff ) AM_RAMBANK("bank2")
     AM_RANGE( 0x8000, 0xbfff ) AM_ROM  // ROM 1
@@ -24,7 +23,7 @@ static ADDRESS_MAP_START(pecom64_mem, ADDRESS_SPACE_PROGRAM, 8)
     AM_RANGE( 0xf800, 0xffff ) AM_RAMBANK("bank4") // CDP1869 / ROM
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( pecom64_io, ADDRESS_SPACE_IO, 8 )
+static ADDRESS_MAP_START( pecom64_io, AS_IO, 8 )
 	AM_RANGE(0x01, 0x01) AM_WRITE(pecom_bank_w)
 	AM_RANGE(0x03, 0x03) AM_READ(pecom_keyboard_r)
 	AM_RANGE(0x03, 0x07) AM_WRITE(pecom_cdp1869_w)
@@ -50,7 +49,7 @@ mappings, this is another situation where natural keyboard comes very handy!    
 
 static INPUT_CHANGED( ef_w )
 {
-	cputag_set_input_line(field->port->machine, CDP1802_TAG, (int)(FPTR)param, newval);
+	cputag_set_input_line(field.machine(), CDP1802_TAG, (int)(FPTR)param, newval);
 }
 
 static INPUT_PORTS_START( pecom )
@@ -165,11 +164,12 @@ static INPUT_PORTS_START( pecom )
 	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_KEYBOARD ) PORT_NAME("Break") PORT_CODE(KEYCODE_MINUS) PORT_CHANGED(ef_w, (void*)COSMAC_INPUT_LINE_EF4)
 INPUT_PORTS_END
 
-static const cassette_config pecom_cassette_config =
+static const cassette_interface pecom_cassette_interface =
 {
 	cassette_default_formats,
 	NULL,
 	(cassette_state)(CASSETTE_STOPPED | CASSETTE_MOTOR_ENABLED | CASSETTE_SPEAKER_ENABLED),
+	NULL,
 	NULL
 };
 
@@ -189,10 +189,10 @@ static MACHINE_CONFIG_START( pecom64, pecom_state )
 
 	MCFG_FRAGMENT_ADD(pecom_video)
 
-	MCFG_CASSETTE_ADD( "cassette", pecom_cassette_config )
+	MCFG_CASSETTE_ADD( CASSETTE_TAG, pecom_cassette_interface )
 
 	/* internal ram */
-	MCFG_RAM_ADD("messram")
+	MCFG_RAM_ADD(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("32K")
 	MCFG_RAM_DEFAULT_VALUE(0x00)
 MACHINE_CONFIG_END

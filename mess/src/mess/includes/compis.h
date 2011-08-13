@@ -15,6 +15,7 @@
 #include "emu.h"
 #include "machine/msm8251.h"
 #include "machine/upd765.h"
+#include "video/upd7220.h"
 
 
 struct mem_state
@@ -122,18 +123,26 @@ typedef struct
 class compis_state : public driver_device
 {
 public:
-	compis_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	compis_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag),
+		  m_hgdc(*this, "upd7220")
+		  { }
 
-	i186_state i186;
-	compis_devices_t devices;
-	TYP_COMPIS compis;
+	required_device<upd7220_device> m_hgdc;
+
+	virtual void video_start();
+	virtual bool screen_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect);
+	UINT8 *m_char_rom;
+
+	i186_state m_i186;
+	compis_devices_t m_devices;
+	TYP_COMPIS m_compis;
 };
 
 
 /*----------- defined in machine/compis.c -----------*/
 
-extern const i8255a_interface compis_ppi_interface;
+extern const i8255_interface compis_ppi_interface;
 extern const struct pit8253_config compis_pit8253_config;
 extern const struct pit8253_config compis_pit8254_config;
 extern const struct pic8259_interface compis_pic8259_master_config;
@@ -160,8 +169,8 @@ WRITE16_HANDLER (compis_i186_internal_port_w);
 
 /* FDC 8272 */
 READ16_HANDLER (compis_fdc_dack_r);
-READ16_HANDLER (compis_fdc_r);
-WRITE16_HANDLER (compis_fdc_w);
+READ8_HANDLER (compis_fdc_r);
+WRITE8_HANDLER (compis_fdc_w);
 
 
 #endif /* COMPIS_H_ */

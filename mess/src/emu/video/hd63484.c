@@ -64,7 +64,7 @@ INLINE const hd63484_interface *get_interface( device_t *device )
 {
 	assert(device != NULL);
 	assert(device->type() == HD63484);
-	return (const hd63484_interface *) device->baseconfig().static_config();
+	return (const hd63484_interface *) device->static_config();
 }
 
 /*****************************************************************************
@@ -677,7 +677,7 @@ static void ptn( device_t *device, int opcode, int src_x, int src_y, INT16 _ax, 
 	int src_step1_x,src_step1_y,src_step2_x,src_step2_y;
 	int ax = _ax;
 	int ay = _ay;
-	int ax_neg,ay_neg;
+	int ax_neg; //,ay_neg;
 	int xxs = src_x;
 	int yys = src_y;
 	int xxd = hd63484->cpx;
@@ -688,10 +688,10 @@ static void ptn( device_t *device, int opcode, int src_x, int src_y, INT16 _ax, 
 		ax_neg = -1;
 	else
 		ax_neg = 1;
-	if (ay < 0)
-		ay_neg = -1;
-	else
-		ay_neg = 1;
+/*  if (ay < 0)
+        ay_neg = -1;
+    else
+        ay_neg = 1;*/
 
 	if (opcode & 0x0800)
 		switch (opcode & 0x0700)
@@ -1037,7 +1037,7 @@ static void hd63484_command_w(device_t *device, UINT16 cmd)
 #if LOG_COMMANDS
 		int i;
 
-		logerror("%s: HD63484 command %s (%04x) ", cpuexec_describe_context(device->machine), instruction_name[hd63484->fifo[0] >> 10], hd63484->fifo[0]);
+		logerror("%s: HD63484 command %s (%04x) ", device->machine().describe_context(), instruction_name[hd63484->fifo[0] >> 10], hd63484->fifo[0]);
 		for (i = 1; i < hd63484->fifo_counter; i++)
 			logerror("%04x ", hd63484->fifo[i]);
 		logerror("\n");
@@ -1467,10 +1467,10 @@ static void hd63484_command_w(device_t *device, UINT16 cmd)
 
 READ16_DEVICE_HANDLER( hd63484_status_r )
 {
-//  if (cpu_get_pc(space->cpu) != 0xfced6 && cpu_get_pc(space->cpu) != 0xfe1d6)
-//      logerror("%05x: HD63484 status read\n",cpu_get_pc(space->cpu));
+//  if (cpu_get_pc(&space->device()) != 0xfced6 && cpu_get_pc(&space->device()) != 0xfe1d6)
+//      logerror("%05x: HD63484 status read\n",cpu_get_pc(&space->device()));
 
-	return 0xff22 | (device->machine->rand() & 0x0004);	/* write FIFO ready + command end    +  (read FIFO ready or read FIFO not ready) */
+	return 0xff22 | (device->machine().rand() & 0x0004);	/* write FIFO ready + command end    +  (read FIFO ready or read FIFO not ready) */
 }
 
 WRITE16_DEVICE_HANDLER( hd63484_address_w )
@@ -1495,7 +1495,7 @@ WRITE16_DEVICE_HANDLER( hd63484_data_w )
 		hd63484->regno += 2;	/* autoincrement */
 
 #if LOG_COMMANDS
-//  logerror("PC %05x: HD63484 register %02x write %04x\n", cpu_get_pc(space->cpu), hd63484->regno, hd63484->reg[hd63484->regno/2]);
+//  logerror("PC %05x: HD63484 register %02x write %04x\n", cpu_get_pc(&space->device()), hd63484->regno, hd63484->reg[hd63484->regno/2]);
 #endif
 
 	if (hd63484->regno == 0)	/* FIFO */
@@ -1508,18 +1508,18 @@ READ16_DEVICE_HANDLER( hd63484_data_r )
 	int res;
 
 	if (hd63484->regno == 0x80)
-		res = device->machine->primary_screen->vpos();
+		res = device->machine().primary_screen->vpos();
 	else if (hd63484->regno == 0)
 	{
 #if LOG_COMMANDS
-//      logerror("%05x: HD63484 read FIFO\n", cpu_get_pc(space->cpu));
+//      logerror("%05x: HD63484 read FIFO\n", cpu_get_pc(&space->device()));
 #endif
 		res = hd63484->readfifo;
 	}
 	else
 	{
 #if LOG_COMMANDS
-//      logerror("%05x: HD63484 read register %02x\n", cpu_get_pc(space->cpu), hd63484->regno);
+//      logerror("%05x: HD63484 read register %02x\n", cpu_get_pc(&space->device()), hd63484->regno);
 #endif
 		res = 0;
 	}
@@ -1562,11 +1562,11 @@ static DEVICE_START( hd63484 )
 	const hd63484_interface *intf = get_interface(device);
 
 	hd63484->skattva_hack = intf->skattva_hack;
-	hd63484->ram = auto_alloc_array_clear(device->machine, UINT16, HD63484_RAM_SIZE);
+	hd63484->ram = auto_alloc_array_clear(device->machine(), UINT16, HD63484_RAM_SIZE);
 
-//  state_save_register_device_item(device, 0, hd63484->clear_bitmap);
-//  state_save_register_device_item_pointer(device, 0, hd63484->spriteram, 0x1000);
-//  state_save_register_device_item_bitmap(device, 0, hd63484->sprites_bitmap);
+//  device->save_item(NAME(hd63484->clear_bitmap));
+//  device->save_pointer(NAME(hd63484->spriteram), 0x1000);
+//  device->save_item(NAME(*hd63484->sprites_bitmap));
 }
 
 static DEVICE_RESET( hd63484 )

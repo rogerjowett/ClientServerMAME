@@ -149,9 +149,9 @@ struct _mc6847_state
 	unsigned int hs : 1;
 
 	/* to be cleaned up... */
-	int (*new_frame_callback)(running_machine *machine);	/* returns whether the M6847 is in charge of this frame */
+	int (*new_frame_callback)(running_machine &machine);	/* returns whether the M6847 is in charge of this frame */
 	void (*custom_prepare_scanline)(int scanline);
-	UINT8 (*get_char_rom)(running_machine *machine, UINT8 ch,int line);
+	UINT8 (*get_char_rom)(running_machine &machine, UINT8 ch,int line);
 
 	/* timers */
 	emu_timer *fs_rise_timer;
@@ -176,7 +176,7 @@ struct _mc6847_state
 	unsigned int text_offset : 2;			/* needed for CoCo 3 */
 
 	/* video state; every scanline the video state for the scanline is copied
-     * here and only rendered in VIDEO_UPDATE */
+     * here and only rendered in SCREEN_UPDATE */
 	int dirty;
 	int using_custom;
 	UINT32 border[384];
@@ -979,7 +979,7 @@ enum
  * VOL ("Output Low") = 1.0V; VR ("Reference"?) = 1.5V; VIH ("Input High") = 2.0V.
  *
  * Color composition:
- * 
+ *
  * COLOR       |  Y  | phiA | phiB
  * ------------+-----+------+------
  * GREEN       | VWM | VOL  | VOL
@@ -1008,7 +1008,7 @@ enum
  * R = Y' + 1.13983 x U
  * G = Y' - 0.39465 x U - 0.58060 x V
  * B = Y' + 2.03211 x V
- * 
+ *
  * So we get:
  * GREEN = Y'UV(153,-128,-128) = RGB(7,277,-107) --> #07ff00
  * YELLOW = Y'UV(255,-128,0) = RGB(255,305,-5) --> #ffff00
@@ -1186,9 +1186,7 @@ static int get_scanline(mc6847_state *mc6847)
 	attotime duration;
 
 	/* get the time since last field sync */
-	duration = attotime_sub(
-		timer_starttime(mc6847->hs_rise_timer),
-		timer_starttime(mc6847->fs_rise_timer));
+	duration = mc6847->hs_rise_timer->start() - mc6847->fs_rise_timer->start();
 	assert_always(duration.seconds == 0, "get_scanline(): duration exceeds one second");
 
 	if (duration.attoseconds < mc6847->vblank_period)
@@ -1238,29 +1236,29 @@ static offs_t scanline_to_address(mc6847_state *mc6847, int scanline)
 /* TODO: attributes should be read on demand rather then all at once */
 static UINT8 update_attributes(mc6847_state *mc6847)
 {
-	if (mc6847->in_gm0_func.read != NULL)
-		mc6847->gm0 = devcb_call_read_line(&mc6847->in_gm0_func);
-	if (mc6847->in_gm1_func.read != NULL)
-		mc6847->gm1 = devcb_call_read_line(&mc6847->in_gm1_func);
-	if (mc6847->in_gm2_func.read != NULL)
-		mc6847->gm2 = devcb_call_read_line(&mc6847->in_gm2_func);
-	if (mc6847->in_css_func.read != NULL)
-		mc6847->css = devcb_call_read_line(&mc6847->in_css_func);
-	if (mc6847->in_inv_func.read != NULL)
-		mc6847->inv = devcb_call_read_line(&mc6847->in_inv_func);
-	if (mc6847->in_intext_func.read != NULL)
-		mc6847->intext = devcb_call_read_line(&mc6847->in_intext_func);
-	if (mc6847->in_as_func.read != NULL)
-		mc6847->as = devcb_call_read_line(&mc6847->in_as_func);
-	if (mc6847->in_ag_func.read != NULL)
-		mc6847->ag = devcb_call_read_line(&mc6847->in_ag_func);
+	if (!mc6847->in_gm0_func.isnull())
+		mc6847->gm0 = mc6847->in_gm0_func();
+	if (!mc6847->in_gm1_func.isnull())
+		mc6847->gm1 = mc6847->in_gm1_func();
+	if (!mc6847->in_gm2_func.isnull())
+		mc6847->gm2 = mc6847->in_gm2_func();
+	if (!mc6847->in_css_func.isnull())
+		mc6847->css = mc6847->in_css_func();
+	if (!mc6847->in_inv_func.isnull())
+		mc6847->inv = mc6847->in_inv_func();
+	if (!mc6847->in_intext_func.isnull())
+		mc6847->intext = mc6847->in_intext_func();
+	if (!mc6847->in_as_func.isnull())
+		mc6847->as = mc6847->in_as_func();
+	if (!mc6847->in_ag_func.isnull())
+		mc6847->ag = mc6847->in_ag_func();
 
 	return (mc6847->ag << 7) | (mc6847->as << 6) | (mc6847->intext << 5) | (mc6847->inv << 4) |
 	       (mc6847->css << 3) | (mc6847->gm2 << 2) | (mc6847->gm1 << 1) | mc6847->gm0;
 }
 
 
-INLINE void prepare_scanline(running_machine *machine, mc6847_state *mc6847, int xpos)
+INLINE void prepare_scanline(running_machine &machine, mc6847_state *mc6847, int xpos)
 {
 	UINT8 attrs, data, attr;
 	int scanline;
@@ -1314,7 +1312,7 @@ INLINE void prepare_scanline(running_machine *machine, mc6847_state *mc6847, int
 
 				for (i = xpos; i < 32; i++)
 				{
-					data = devcb_call_read8(&mc6847->in_dd_func, addr + i);
+					data = mc6847->in_dd_func(addr + i);
 					attr = update_attributes(mc6847);
 
 					if ((data != scanline_data[i].data)	|| (attr != scanline_data[i].attr))
@@ -1351,10 +1349,10 @@ static TIMER_CALLBACK( hs_fall )
 	mc6847_state *mc6847 = (mc6847_state *) ptr;
 
 	if (LOG_HS)
-		logerror("hs_fall(): time=%s\n", attotime_string(timer_get_time(machine), ATTOTIME_STRING_PRECISION));
+		logerror("hs_fall(): time=%s\n", machine.time().as_string(ATTOTIME_STRING_PRECISION));
 
 	mc6847->hs = ASSERT_LINE;
-	devcb_call_write_line(&mc6847->out_hs_func, mc6847->hs);
+	mc6847->out_hs_func(mc6847->hs);
 }
 
 static TIMER_CALLBACK( hs_rise )
@@ -1362,15 +1360,15 @@ static TIMER_CALLBACK( hs_rise )
 	mc6847_state *mc6847 = (mc6847_state *) ptr;
 
 	if (LOG_HS)
-		logerror("hs_rise(): time=%s\n", attotime_string(timer_get_time(machine), ATTOTIME_STRING_PRECISION));
+		logerror("hs_rise(): time=%s\n", machine.time().as_string(ATTOTIME_STRING_PRECISION));
 
-	timer_adjust_oneshot(mc6847->hs_rise_timer,
-		attotime_make(0, mc6847->scanline_period), 0);
-	timer_adjust_oneshot(mc6847->hs_fall_timer,
-		attotime_make(0, mc6847->horizontal_sync_period), 0);
+	mc6847->hs_rise_timer->adjust(
+		attotime(0, mc6847->scanline_period), 0);
+	mc6847->hs_fall_timer->adjust(
+		attotime(0, mc6847->horizontal_sync_period), 0);
 
 	mc6847->hs = CLEAR_LINE;
-	devcb_call_write_line(&mc6847->out_hs_func, mc6847->hs);
+	mc6847->out_hs_func(mc6847->hs);
 
 	prepare_scanline(machine, mc6847, 0);
 }
@@ -1380,10 +1378,10 @@ static TIMER_CALLBACK( fs_fall )
 	mc6847_state *mc6847 = (mc6847_state *) ptr;
 
 	if (LOG_FS)
-		logerror("fs_fall(): time=%s scanline=%d\n", attotime_string(timer_get_time(machine), ATTOTIME_STRING_PRECISION), get_scanline(mc6847));
+		logerror("fs_fall(): time=%s scanline=%d\n", machine.time().as_string(ATTOTIME_STRING_PRECISION), get_scanline(mc6847));
 
 	mc6847->fs = ASSERT_LINE;
-	devcb_call_write_line(&mc6847->out_fs_func, mc6847->fs);
+	mc6847->out_fs_func(mc6847->fs);
 }
 
 static TIMER_CALLBACK( fs_rise )
@@ -1391,21 +1389,21 @@ static TIMER_CALLBACK( fs_rise )
 	mc6847_state *mc6847 = (mc6847_state *) ptr;
 
 	if (LOG_FS)
-		logerror("fs_rise(): time=%s scanline=%d\n", attotime_string(timer_get_time(machine), ATTOTIME_STRING_PRECISION), get_scanline(mc6847));
+		logerror("fs_rise(): time=%s scanline=%d\n", machine.time().as_string(ATTOTIME_STRING_PRECISION), get_scanline(mc6847));
 
 	/* adjust field sync falling edge timer */
-	timer_adjust_oneshot(mc6847->fs_fall_timer,
-		attotime_make(0, mc6847->field_sync_period), 0);
+	mc6847->fs_fall_timer->adjust(
+		attotime(0, mc6847->field_sync_period), 0);
 
 	/* adjust horizontal sync rising timer */
-	timer_adjust_oneshot(mc6847->hs_rise_timer, attotime_zero, 0);
+	mc6847->hs_rise_timer->adjust(attotime::zero);
 
 	/* this is a hook for the CoCo 3 code to extend this stuff */
 	if (mc6847->new_frame_callback)
 		mc6847->using_custom = !mc6847->new_frame_callback(machine);
 
 	mc6847->fs = CLEAR_LINE;
-	devcb_call_write_line(&mc6847->out_fs_func, mc6847->fs);
+	mc6847->out_fs_func(mc6847->fs);
 }
 
 
@@ -1423,25 +1421,25 @@ static int get_beamx(mc6847_state *mc6847)
 	attotime scanline_time;
 	int result;
 
-	scanline_time = timer_timeelapsed(mc6847->hs_rise_timer);
+	scanline_time = mc6847->hs_rise_timer->elapsed();
 	if (scanline_time.seconds != 0)
 		return 0;
-	assert(attotime_to_attoseconds(scanline_time) < mc6847->scanline_period);
+	assert(scanline.as_attoseconds() < mc6847->scanline_period);
 
-	if (attotime_to_attoseconds(scanline_time) < (mc6847->clock_period * 42))
+	if (scanline.as_attoseconds() < (mc6847->clock_period * 42))
 	{
 		/* hsync */
 		result = 0;
 	}
-	else if (attotime_to_attoseconds(scanline_time) < (mc6847->clock_period * 95 / 2))
+	else if (scanline.as_attoseconds() < (mc6847->clock_period * 95 / 2))
 	{
 		/* left border */
 		result = 0;
 	}
-	else if (attotime_to_attoseconds(scanline_time) < (mc6847->clock_period * 351 / 2))
+	else if (scanline.as_attoseconds() < (mc6847->clock_period * 351 / 2))
 	{
 		/* body */
-		result = (attotime_to_attoseconds(scanline_time) - (mc6847->clock_period * 95 / 2))
+		result = (scanline.as_attoseconds() - (mc6847->clock_period * 95 / 2))
 			/ mc6847->clock_period * 2;
 	}
 	else
@@ -1464,18 +1462,18 @@ static void execute_m6847_dumpscanline(device_t *device, int ref, int params, co
 
 	for (i = 0; i < beamx; i++)
 	{
-		debug_console_printf(device->machine, "[%02d]: 0x%02X (", i, pixel[i].data);
+		debug_console_printf(device->machine(), "[%02d]: 0x%02X (", i, pixel[i].data);
 
-		if (pixel[i].attr & M6847_AG)		debug_console_printf(device->machine, " AG");
-		if (pixel[i].attr & M6847_AS)		debug_console_printf(device->machine, " AS");
-		if (pixel[i].attr & M6847_INTEXT)	debug_console_printf(device->machine, " INTEXT");
-		if (pixel[i].attr & M6847_INV)		debug_console_printf(device->machine, " INV");
-		if (pixel[i].attr & M6847_CSS)		debug_console_printf(device->machine, " CSS");
-		if (pixel[i].attr & M6847_GM2)		debug_console_printf(device->machine, " GM2");
-		if (pixel[i].attr & M6847_GM1)		debug_console_printf(device->machine, " GM1");
-		if (pixel[i].attr & M6847_GM0)		debug_console_printf(device->machine, " GM0");
+		if (pixel[i].attr & M6847_AG)		debug_console_printf(device->machine(), " AG");
+		if (pixel[i].attr & M6847_AS)		debug_console_printf(device->machine(), " AS");
+		if (pixel[i].attr & M6847_INTEXT)	debug_console_printf(device->machine(), " INTEXT");
+		if (pixel[i].attr & M6847_INV)		debug_console_printf(device->machine(), " INV");
+		if (pixel[i].attr & M6847_CSS)		debug_console_printf(device->machine(), " CSS");
+		if (pixel[i].attr & M6847_GM2)		debug_console_printf(device->machine(), " GM2");
+		if (pixel[i].attr & M6847_GM1)		debug_console_printf(device->machine(), " GM1");
+		if (pixel[i].attr & M6847_GM0)		debug_console_printf(device->machine(), " GM0");
 
-		debug_console_printf(device->machine, " )\n");
+		debug_console_printf(device->machine(), " )\n");
 	}
 }
 #endif
@@ -1720,13 +1718,13 @@ static void text_mode(device_t *device, int scanline, UINT32 *RESTRICT line, con
 
 		if( (!mc6847->has_lowercase) && (attr & M6847_INTEXT) && !(attr & M6847_AS)) {
 			if (mc6847->get_char_rom) {
-				char_data = mc6847->get_char_rom(device->machine,byte,scanline % 12);
+				char_data = mc6847->get_char_rom(device->machine(),byte,scanline % 12);
 			} else {
 				char_data = 0xff;
 			}
 		} else {
 			if ((attr & M6847_INTEXT) && !(attr & M6847_AS) && mc6847->get_char_rom)
-				char_data = mc6847->get_char_rom(device->machine,byte,scanline % 12);
+				char_data = mc6847->get_char_rom(device->machine(),byte,scanline % 12);
 			else
 				char_data = mc6847->fontdata[attr_index][byte][scanline % 12];
 		}
@@ -1814,16 +1812,16 @@ static void set_dirty(mc6847_state *mc6847)
     DEVICE INTERFACE
 *****************************************************************************/
 
-static STATE_POSTLOAD( mc6847_postload )
+static void mc6847_postload(mc6847_state *state)
 {
-	set_dirty((mc6847_state *)param);
+	set_dirty(state);
 }
 
 static DEVICE_START( mc6847 )
 {
 	mc6847_state *mc6847 = get_safe_token(device);
-	const mc6847_interface *intf = (mc6847_interface *)device->baseconfig().static_config();
-	const mc6847_config *cfg = (mc6847_config *)downcast<const legacy_device_config_base &>(device->baseconfig()).inline_config();
+	const mc6847_interface *intf = (mc6847_interface *)device->static_config();
+	const mc6847_config *cfg = (mc6847_config *)downcast<const legacy_device_base *>(device)->inline_config();
 
 	const m6847_variant *v;
 	UINT32 frequency;
@@ -1831,8 +1829,8 @@ static DEVICE_START( mc6847 )
 	double total_scanlines;
 
 	/* validate some basic stuff */
-	assert(device->baseconfig().static_config() != NULL);
-	assert(downcast<const legacy_device_config_base &>(device->baseconfig()).inline_config() != NULL);
+	assert(device->static_config() != NULL);
+	assert(downcast<const legacy_device_base *>(device)->inline_config() != NULL);
 
 	/* identify proper M6847 variant */
 	assert(cfg->type < ARRAY_LENGTH(variants));
@@ -1867,10 +1865,10 @@ static DEVICE_START( mc6847 )
 	}
 
 	/* allocate timers */
-	mc6847->fs_rise_timer = timer_alloc(device->machine, fs_rise, mc6847);
-	mc6847->fs_fall_timer = timer_alloc(device->machine, fs_fall, mc6847);
-	mc6847->hs_rise_timer = timer_alloc(device->machine, hs_rise, mc6847);
-	mc6847->hs_fall_timer = timer_alloc(device->machine, hs_fall, mc6847);
+	mc6847->fs_rise_timer = device->machine().scheduler().timer_alloc(FUNC(fs_rise), mc6847);
+	mc6847->fs_fall_timer = device->machine().scheduler().timer_alloc(FUNC(fs_fall), mc6847);
+	mc6847->hs_rise_timer = device->machine().scheduler().timer_alloc(FUNC(hs_rise), mc6847);
+	mc6847->hs_fall_timer = device->machine().scheduler().timer_alloc(FUNC(hs_fall), mc6847);
 
 	/* setup dimensions */
 	mc6847->top_border_scanlines = v->top_border_scanlines;
@@ -1898,7 +1896,7 @@ static DEVICE_START( mc6847 )
 	/* setup timing */
 	frame_period = period *
 		(UINT32) (v->clocks_per_scanline * total_scanlines * GROSS_FACTOR);
-	timer_adjust_periodic(mc6847->fs_rise_timer, attotime_zero, 0, attotime_make(0, frame_period));
+	mc6847->fs_rise_timer->adjust(attotime::zero, 0, attotime(0, frame_period));
 
 	/* build font */
 	build_fontdata(device, v);
@@ -1907,37 +1905,37 @@ static DEVICE_START( mc6847 )
 	if (LOG_STATS)
 	{
 		logerror("m6847_init():\n");
-		logerror("\tclock:      %30s sec\n", attotime_string(attotime_make(0, period * GROSS_FACTOR), ATTOTIME_STRING_PRECISION));
-		logerror("\tscanline:   %30s sec\n", attotime_string(attotime_make(0, mc6847->scanline_period), ATTOTIME_STRING_PRECISION));
-		logerror("\tfield sync: %30s sec\n", attotime_string(attotime_make(0, mc6847->field_sync_period), ATTOTIME_STRING_PRECISION));
-		logerror("\thorz sync:  %30s sec\n", attotime_string(attotime_make(0, mc6847->horizontal_sync_period), ATTOTIME_STRING_PRECISION));
-		logerror("\tvblank:     %30s sec\n", attotime_string(attotime_make(0, mc6847->vblank_period), ATTOTIME_STRING_PRECISION));
-		logerror("\tframe:      %30s sec\n", attotime_string(attotime_make(0, frame_period), ATTOTIME_STRING_PRECISION));
+		logerror("\tclock:      %30s sec\n", attotime(0, period * GROSS_FACTOR).as_string(ATTOTIME_STRING_PRECISION));
+		logerror("\tscanline:   %30s sec\n", attotime(0, mc6847->scanline_period).as_string(ATTOTIME_STRING_PRECISION));
+		logerror("\tfield sync: %30s sec\n", attotime(0, mc6847->field_sync_period).as_string(ATTOTIME_STRING_PRECISION));
+		logerror("\thorz sync:  %30s sec\n", attotime(0, mc6847->horizontal_sync_period).as_string(ATTOTIME_STRING_PRECISION));
+		logerror("\tvblank:     %30s sec\n", attotime(0, mc6847->vblank_period).as_string(ATTOTIME_STRING_PRECISION));
+		logerror("\tframe:      %30s sec\n", attotime(0, frame_period).as_string(ATTOTIME_STRING_PRECISION));
 		logerror("\n");
 	}
 
 #if 0
 	/* setup debug commands */
-	if (device->machine->debug_flags & DEBUG_FLAG_ENABLED)
-		debug_console_register_command(device->machine, "m6847_dumpscanline", CMDFLAG_NONE, 0, 0, 0, execute_m6847_dumpscanline);
+	if (device->machine().debug_flags & DEBUG_FLAG_ENABLED)
+		debug_console_register_command(device->machine(), "m6847_dumpscanline", CMDFLAG_NONE, 0, 0, 0, execute_m6847_dumpscanline);
 #endif
 
 
 	/* resolve callbacks */
-	devcb_resolve_read8(&mc6847->in_dd_func, &intf->in_dd_func, device);
-	devcb_resolve_read_line(&mc6847->in_gm2_func, &intf->in_gm2_func, device);
-	devcb_resolve_read_line(&mc6847->in_gm1_func, &intf->in_gm1_func, device);
-	devcb_resolve_read_line(&mc6847->in_gm0_func, &intf->in_gm0_func, device);
-	devcb_resolve_read_line(&mc6847->in_intext_func, &intf->in_intext_func, device);
-	devcb_resolve_read_line(&mc6847->in_inv_func, &intf->in_inv_func, device);
-	devcb_resolve_read_line(&mc6847->in_as_func, &intf->in_as_func, device);
-	devcb_resolve_read_line(&mc6847->in_ag_func, &intf->in_ag_func, device);
-	devcb_resolve_write_line(&mc6847->out_fs_func, &intf->out_fs_func, device);
-	devcb_resolve_write_line(&mc6847->out_hs_func, &intf->out_hs_func, device);
-	devcb_resolve_read_line(&mc6847->in_css_func, &intf->in_css_func, device);
+	mc6847->in_dd_func.resolve(intf->in_dd_func, *device);
+	mc6847->in_gm2_func.resolve(intf->in_gm2_func, *device);
+	mc6847->in_gm1_func.resolve(intf->in_gm1_func, *device);
+	mc6847->in_gm0_func.resolve(intf->in_gm0_func, *device);
+	mc6847->in_intext_func.resolve(intf->in_intext_func, *device);
+	mc6847->in_inv_func.resolve(intf->in_inv_func, *device);
+	mc6847->in_as_func.resolve(intf->in_as_func, *device);
+	mc6847->in_ag_func.resolve(intf->in_ag_func, *device);
+	mc6847->out_fs_func.resolve(intf->out_fs_func, *device);
+	mc6847->out_hs_func.resolve(intf->out_hs_func, *device);
+	mc6847->in_css_func.resolve(intf->in_css_func, *device);
 
 	/* setup save states */
-	state_save_register_postload(device->machine, mc6847_postload, mc6847);
+	device->machine().save().register_postload(save_prepost_delegate(FUNC(mc6847_postload), mc6847));
 }
 
 static DEVICE_RESET( mc6847 )
@@ -2122,7 +2120,7 @@ static void apply_artifacts(device_t *device, UINT32 *line)
 	int i;
 
 	/* are we artifacting? */
-	artifacting = input_port_read_safe(device->machine, "artifacting", 0x00) & 0x03;
+	artifacting = input_port_read_safe(device->machine(), "artifacting", 0x00) & 0x03;
 	if (artifacting == 0x00)
 		return;
 	artifacting &= 0x01;

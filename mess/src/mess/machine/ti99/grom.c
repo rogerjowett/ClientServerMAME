@@ -92,7 +92,8 @@ typedef struct _ti99grom_state ti99grom_state;
 INLINE ti99grom_state *get_safe_token(device_t *device)
 {
 	assert(device != NULL);
-	assert(downcast<legacy_device_base *>(device)->token() != NULL);
+	assert(device->type() == GROM);
+
 	return (ti99grom_state *)downcast<legacy_device_base *>(device)->token();
 }
 
@@ -100,7 +101,8 @@ INLINE const ti99grom_config *get_config(device_t *device)
 {
 	assert(device != NULL);
 	assert(device->type() == GROM);
-	return (const ti99grom_config *) downcast<const legacy_device_config_base &>(device->baseconfig()).inline_config();
+
+	return (const ti99grom_config *) downcast<const legacy_device_base *>(device)->inline_config();
 }
 
 /*
@@ -268,9 +270,9 @@ static DEVICE_START( ti99grom )
 	grom->rollover = gromconf->rollover;
 
 	devcb_write_line ready = DEVCB_LINE(gromconf->ready);
-	devcb_resolve_write_line(&grom->gromready, &ready, device);
+	grom->gromready.resolve(ready, *device);
 	// Test
-	// devcb_call_write_line(&grom->gromready, ASSERT_LINE);
+	// grom->gromready(ASSERT_LINE);
 }
 
 static DEVICE_STOP( ti99grom )
@@ -290,7 +292,7 @@ static DEVICE_RESET( ti99grom )
 	if (gromconf->region==NULL)
 		grom->memptr = (*gromconf->get_memory)(device->owner());
 	else
-		grom->memptr = device->machine->region(gromconf->region)->base();
+		grom->memptr = device->machine().region(gromconf->region)->base();
 
 	//  TODO: Check whether this may be 0 for console GROMs.
 	//  assert (grom->memptr!=NULL);

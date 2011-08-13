@@ -67,8 +67,8 @@ PCB-002B
     |---------------|
 |---|      CN1      |---------------------------------------------------|
 |                                                                       |
-|   LS06	LS04	LS04						LS06	LS00	LS123	|
-|	LS74					PROM		MCU				4051	900C	|
+|   LS06    LS04    LS04                        LS06    LS00    LS123   |
+|   LS74                    PROM        MCU             4051    900C    |
 |                                                                       |
 |                                                                       |
 |                                                                       |
@@ -83,8 +83,8 @@ Notes:
     All IC's shown.
 
     MCU         - General Instruments 30293B-013 20-04592-013 (?)
-	PROM		- Synertek N82S141N 512x8 bipolar PROM "053"
-	900C		- Interdesign 900C (?)
+    PROM        - Synertek N82S141N 512x8 bipolar PROM "053"
+    900C        - Interdesign 900C (?)
     CN1         - keyboard data connector
 
 
@@ -94,8 +94,8 @@ PCB-201C
     |---------------|
 |---|      CN1      |---------------------------------------------------|
 |                                                                       |
-|   LS06	LS04	LS04								LS00	LS123	|
-|										MCU				4051	900C	|
+|   LS06    LS04    LS04                                LS00    LS123   |
+|                                       MCU             4051    900C    |
 |                                                                       |
 |                                                                       |
 |                                                                       |
@@ -110,7 +110,7 @@ Notes:
     All IC's shown.
 
     MCU         - General Instruments 30293B-047 20-04592-047 (?)
-	900C		- Interdesign 900C (?)
+    900C        - Interdesign 900C (?)
     CN1         - keyboard data connector
 
 
@@ -124,24 +124,24 @@ DOS PCB Layout
 |                                   |
 |                                   |
 |                                   |
-|   ROM3		ROM2                |
+|   ROM3        ROM2                |
 |                                   |
 |                                   |
 |                                   |
 |                                   |
 |                                   |
-|				ROM1		ROM0    |
+|               ROM1        ROM0    |
 |                                   |
 |                                   |
 |                                   |
 |                                   |
 |                                   |
 |                                   |
-|           LS02			LS139   |
+|           LS02            LS139   |
 |                                   |
 |                                   |
 |                                   |
-|   LS367	LS241	LS241           |
+|   LS367   LS241   LS241           |
 |                                   |
 |                                   |
 |                                   |
@@ -153,9 +153,9 @@ Notes:
     All IC's shown.
 
     ROM0    - Synertek C55022 4Kx8 ROM "DOSDD80"
-	ROM1	- Motorola MCM2708C 1Kx8 EPROM "9704"
-	ROM2	- empty socket
-	ROM3	- empty socket
+    ROM1    - Motorola MCM2708C 1Kx8 EPROM "9704"
+    ROM2    - empty socket
+    ROM3    - empty socket
     CON1    - ABC bus connector
 
 */
@@ -181,13 +181,12 @@ Notes:
 #include "emu.h"
 #include "cpu/z80/z80.h"
 #include "cpu/z80/z80daisy.h"
-#include "devices/cassette.h"
-#include "devices/flopdrv.h"
-#include "devices/messram.h"
-#include "devices/printer.h"
+#include "imagedev/flopdrv.h"
+#include "machine/ram.h"
+#include "imagedev/printer.h"
 #include "machine/abcbus.h"
 #include "machine/abc830.h"
-#include "machine/rs232.h"
+#include "machine/lux10828.h"
 #include "machine/z80pio.h"
 #include "sound/sn76477.h"
 #include "includes/abc80.h"
@@ -195,7 +194,7 @@ Notes:
 
 
 //**************************************************************************
-//	KEYBOARD HACK
+//  KEYBOARD HACK
 //**************************************************************************
 
 static INPUT_PORTS_START( fake_keyboard )
@@ -321,14 +320,14 @@ static const UINT8 abc80_keycodes[7*4][8] =
 
 static TIMER_CALLBACK( keyboard_data_clear )
 {
-	abc80_state *state = machine->driver_data<abc80_state>();
+	abc80_state *state = machine.driver_data<abc80_state>();
 
 	state->m_key_data = 0;
 }
 
-static void abc80_keyboard_scan(running_machine *machine)
+static void abc80_keyboard_scan(running_machine &machine)
 {
-	abc80_state *state = machine->driver_data<abc80_state>();
+	abc80_state *state = machine.driver_data<abc80_state>();
 
 	static const char *const keynames[] = { "ROW0", "ROW1", "ROW2", "ROW3", "ROW4", "ROW5", "ROW6" };
 	int table = 0, row, col;
@@ -379,41 +378,74 @@ static void abc80_keyboard_scan(running_machine *machine)
 	if (!state->m_key_strobe && state->m_key_data)
 	{
 		z80pio_pa_w(state->m_pio, 0, state->m_key_data);
-		timer_set(machine, ATTOTIME_IN_MSEC(50), NULL, 0, keyboard_data_clear);
+		machine.scheduler().timer_set(attotime::from_msec(50), FUNC(keyboard_data_clear));
 	}
 }
 
 static TIMER_DEVICE_CALLBACK( abc80_keyboard_tick )
 {
-	abc80_keyboard_scan(timer.machine);
+	abc80_keyboard_scan(timer.machine());
 }
 
 
 
 //**************************************************************************
-//	SOUND
+//  SOUND
 //**************************************************************************
 
 //-------------------------------------------------
 //  vco_voltage_w - CSG VCO voltage select
 //-------------------------------------------------
 
-static WRITE_LINE_DEVICE_HANDLER( vco_voltage_w )
+WRITE_LINE_DEVICE_HANDLER( vco_voltage_w )
 {
 	sn76477_vco_voltage_w(device, state ? 2.5 : 0);
 }
 
+WRITE_LINE_DEVICE_HANDLER(port_sn76477_enable_w)
+{
+	sn76477_enable_w(device,state);
+}
 
+WRITE_LINE_DEVICE_HANDLER(port_sn76477_vco_w)
+{
+	sn76477_vco_w(device,state);
+}
+
+WRITE_LINE_DEVICE_HANDLER(port_sn76477_mixer_b_w)
+{
+	sn76477_mixer_b_w(device,state);
+}
+
+WRITE_LINE_DEVICE_HANDLER(port_sn76477_mixer_a_w)
+{
+	sn76477_mixer_a_w(device,state);
+}
+
+WRITE_LINE_DEVICE_HANDLER(port_sn76477_mixer_c_w)
+{
+	sn76477_mixer_c_w(device,state);
+}
+
+WRITE_LINE_DEVICE_HANDLER(port_sn76477_envelope_2_w)
+{
+	sn76477_envelope_2_w(device,state);
+}
+
+WRITE_LINE_DEVICE_HANDLER(port_sn76477_envelope_1_w)
+{
+	sn76477_envelope_1_w(device,state);
+}
 
 //**************************************************************************
-//	ADDRESS MAPS
+//  ADDRESS MAPS
 //**************************************************************************
 
 //-------------------------------------------------
 //  ADDRESS_MAP( abc80_mem )
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( abc80_mem, ADDRESS_SPACE_PROGRAM, 8, abc80_state )
+static ADDRESS_MAP_START( abc80_mem, AS_PROGRAM, 8, abc80_state )
 	ADDRESS_MAP_UNMAP_HIGH
 	AM_RANGE(0x0000, 0x3fff) AM_ROM
 	AM_RANGE(0x6000, 0x6fff) AM_ROM
@@ -429,24 +461,24 @@ ADDRESS_MAP_END
 //  ADDRESS_MAP( abc80_io )
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( abc80_io, ADDRESS_SPACE_IO, 8, abc80_state )
+static ADDRESS_MAP_START( abc80_io, AS_IO, 8, abc80_state )
 	ADDRESS_MAP_UNMAP_HIGH
 	ADDRESS_MAP_GLOBAL_MASK(0x17)
-	AM_RANGE(0x00, 0x00) AM_DEVREADWRITE_LEGACY(ABCBUS_TAG, abcbus_inp_r, abcbus_utp_w)
-	AM_RANGE(0x01, 0x01) AM_DEVREADWRITE_LEGACY(ABCBUS_TAG, abcbus_stat_r, abcbus_cs_w)
-	AM_RANGE(0x02, 0x02) AM_DEVWRITE_LEGACY(ABCBUS_TAG, abcbus_c1_w)
-	AM_RANGE(0x03, 0x03) AM_DEVWRITE_LEGACY(ABCBUS_TAG, abcbus_c2_w)
-	AM_RANGE(0x04, 0x04) AM_DEVWRITE_LEGACY(ABCBUS_TAG, abcbus_c3_w)
-	AM_RANGE(0x05, 0x05) AM_DEVWRITE_LEGACY(ABCBUS_TAG, abcbus_c4_w)
+	AM_RANGE(0x00, 0x00) AM_DEVREADWRITE(ABCBUS_TAG, abcbus_device, inp_r, utp_w)
+	AM_RANGE(0x01, 0x01) AM_DEVREADWRITE(ABCBUS_TAG, abcbus_device, stat_r, cs_w)
+	AM_RANGE(0x02, 0x02) AM_DEVWRITE(ABCBUS_TAG, abcbus_device, c1_w)
+	AM_RANGE(0x03, 0x03) AM_DEVWRITE(ABCBUS_TAG, abcbus_device, c2_w)
+	AM_RANGE(0x04, 0x04) AM_DEVWRITE(ABCBUS_TAG, abcbus_device, c3_w)
+	AM_RANGE(0x05, 0x05) AM_DEVWRITE(ABCBUS_TAG, abcbus_device, c4_w)
 	AM_RANGE(0x06, 0x06) AM_WRITE_PORT("SN76477")
-	AM_RANGE(0x07, 0x07) AM_DEVREAD_LEGACY(ABCBUS_TAG, abcbus_rst_r)
+	AM_RANGE(0x07, 0x07) AM_DEVREAD(ABCBUS_TAG, abcbus_device, rst_r)
 	AM_RANGE(0x10, 0x13) AM_MIRROR(0x04) AM_DEVREADWRITE_LEGACY(Z80PIO_TAG, z80pio_ba_cd_r, z80pio_ba_cd_w)
 ADDRESS_MAP_END
 
 
 
 //**************************************************************************
-//	INPUT PORTS
+//  INPUT PORTS
 //**************************************************************************
 
 //-------------------------------------------------
@@ -457,22 +489,20 @@ static INPUT_PORTS_START( abc80 )
 	PORT_INCLUDE(fake_keyboard)
 
 	PORT_START("SN76477")
-	PORT_BIT(0x01, IP_ACTIVE_LOW, IPT_SPECIAL) PORT_WRITE_LINE_DEVICE(SN76477_TAG, sn76477_enable_w)
+	PORT_BIT(0x01, IP_ACTIVE_LOW, IPT_SPECIAL) PORT_WRITE_LINE_DEVICE(SN76477_TAG, port_sn76477_enable_w)
 	PORT_BIT(0x02, IP_ACTIVE_HIGH, IPT_SPECIAL) PORT_WRITE_LINE_DEVICE(SN76477_TAG, vco_voltage_w)
-	PORT_BIT(0x04, IP_ACTIVE_HIGH, IPT_SPECIAL) PORT_WRITE_LINE_DEVICE(SN76477_TAG, sn76477_vco_w)
-	PORT_BIT(0x08, IP_ACTIVE_HIGH, IPT_SPECIAL) PORT_WRITE_LINE_DEVICE(SN76477_TAG, sn76477_mixer_b_w)
-	PORT_BIT(0x10, IP_ACTIVE_HIGH, IPT_SPECIAL) PORT_WRITE_LINE_DEVICE(SN76477_TAG, sn76477_mixer_a_w)
-	PORT_BIT(0x20, IP_ACTIVE_HIGH, IPT_SPECIAL) PORT_WRITE_LINE_DEVICE(SN76477_TAG, sn76477_mixer_c_w)
-	PORT_BIT(0x40, IP_ACTIVE_HIGH, IPT_SPECIAL) PORT_WRITE_LINE_DEVICE(SN76477_TAG, sn76477_envelope_2_w)
-	PORT_BIT(0x80, IP_ACTIVE_HIGH, IPT_SPECIAL) PORT_WRITE_LINE_DEVICE(SN76477_TAG, sn76477_envelope_1_w)
-
-	PORT_INCLUDE(luxor_55_10828)
+	PORT_BIT(0x04, IP_ACTIVE_HIGH, IPT_SPECIAL) PORT_WRITE_LINE_DEVICE(SN76477_TAG, port_sn76477_vco_w)
+	PORT_BIT(0x08, IP_ACTIVE_HIGH, IPT_SPECIAL) PORT_WRITE_LINE_DEVICE(SN76477_TAG, port_sn76477_mixer_b_w)
+	PORT_BIT(0x10, IP_ACTIVE_HIGH, IPT_SPECIAL) PORT_WRITE_LINE_DEVICE(SN76477_TAG, port_sn76477_mixer_a_w)
+	PORT_BIT(0x20, IP_ACTIVE_HIGH, IPT_SPECIAL) PORT_WRITE_LINE_DEVICE(SN76477_TAG, port_sn76477_mixer_c_w)
+	PORT_BIT(0x40, IP_ACTIVE_HIGH, IPT_SPECIAL) PORT_WRITE_LINE_DEVICE(SN76477_TAG, port_sn76477_envelope_2_w)
+	PORT_BIT(0x80, IP_ACTIVE_HIGH, IPT_SPECIAL) PORT_WRITE_LINE_DEVICE(SN76477_TAG, port_sn76477_envelope_1_w)
 INPUT_PORTS_END
 
 
 
 //**************************************************************************
-//	DEVICE CONFIGURATION
+//  DEVICE CONFIGURATION
 //**************************************************************************
 
 //-------------------------------------------------
@@ -506,7 +536,7 @@ static const sn76477_interface csg_intf =
 
 static TIMER_DEVICE_CALLBACK( z80pio_astb_tick )
 {
-	abc80_state *state = timer.machine->driver_data<abc80_state>();
+	abc80_state *state = timer.machine().driver_data<abc80_state>();
 
 	/* toggle ASTB every other video line */
 	state->m_pio_astb = !state->m_pio_astb;
@@ -554,18 +584,15 @@ READ8_MEMBER( abc80_state::pio_pb_r )
     */
 
 	UINT8 data = 0;
-	
+
 	/* serial receive */
-	data |= rs232_rd_r(m_rs232);
 
 	/* clear to send */
-	data |= rs232_cts_r(m_rs232) << 1;
 
 	/* data connection detect */
-	data |= rs232_dcd_r(m_rs232) << 2;
 
 	/* cassette data */
-	data |= (cassette_input(m_cassette) > +1.0) << 7;
+	data |= ((m_cassette)->input() > +1.0) << 7;
 
 	return data;
 };
@@ -588,16 +615,14 @@ WRITE8_MEMBER( abc80_state::pio_pb_w )
     */
 
 	/* transmit */
-	rs232_td_w(m_rs232, m_pio, BIT(data, 3));
 
 	/* request to send */
-	rs232_rts_w(m_rs232, BIT(data, 4));
 
 	/* cassette motor */
-	cassette_change_state(m_cassette, BIT(data, 5) ? CASSETTE_MOTOR_ENABLED : CASSETTE_MOTOR_DISABLED, CASSETTE_MASK_MOTOR);
+	m_cassette->change_state(BIT(data,5) ? CASSETTE_MOTOR_ENABLED : CASSETTE_MOTOR_DISABLED, CASSETTE_MASK_MOTOR);
 
 	/* cassette data */
-	cassette_output(m_cassette, BIT(data, 6) ? -1.0 : +1.0);
+	m_cassette->output( BIT(data, 6) ? -1.0 : +1.0);
 };
 
 static Z80PIO_INTERFACE( pio_intf )
@@ -624,39 +649,30 @@ static const z80_daisy_config abc80_daisy_chain[] =
 
 
 //-------------------------------------------------
-//  cassette_config abc80_cassette_config
+//  cassette_interface abc80_cassette_interface
 //-------------------------------------------------
 
-static const cassette_config abc80_cassette_config =
+static const cassette_interface abc80_cassette_interface =
 {
 	cassette_default_formats,
 	NULL,
 	(cassette_state)(CASSETTE_STOPPED | CASSETTE_MOTOR_DISABLED | CASSETTE_SPEAKER_MUTED),
+	NULL,
 	NULL
 };
 
 
 //-------------------------------------------------
-//  ABCBUS_DAISY( abcbus_daisy )
+//  ABCBUS_INTERFACE( abcbus_intf )
 //-------------------------------------------------
 
-static ABCBUS_DAISY( abcbus_daisy )
+static SLOT_INTERFACE_START( abc80_abcbus_cards )
+	SLOT_INTERFACE("slow", LUXOR_55_10828)
+SLOT_INTERFACE_END
+
+
+static ABCBUS_INTERFACE( abcbus_intf )
 {
-	{ LUXOR_55_10828_ABCBUS("luxor_55_10828") },
-	{ NULL }
-};
-
-
-//-------------------------------------------------
-//  RS232_INTERFACE( rs232_intf )
-//-------------------------------------------------
-
-static RS232_INTERFACE( rs232_intf )
-{
-	{ Z80PIO_TAG },
-	DEVCB_NULL,
-	DEVCB_NULL,
-	DEVCB_NULL,
 	DEVCB_NULL,
 	DEVCB_NULL,
 	DEVCB_NULL,
@@ -666,7 +682,7 @@ static RS232_INTERFACE( rs232_intf )
 
 
 //**************************************************************************
-//	MACHINE INITIALIZATION
+//  MACHINE INITIALIZATION
 //**************************************************************************
 
 //-------------------------------------------------
@@ -676,21 +692,21 @@ static RS232_INTERFACE( rs232_intf )
 void abc80_state::machine_start()
 {
 	/* configure RAM expansion */
-	if (messram_get_size(m_ram) == 16 * 1024)
+	if (ram_get_size(m_ram) == 16 * 1024)
 	{
-		memory_unmap_readwrite(cpu_get_address_space(m_maincpu, ADDRESS_SPACE_PROGRAM), 0x8000, 0xbfff, 0, 0);
+		m_maincpu->memory().space(AS_PROGRAM)->unmap_readwrite(0x8000, 0xbfff);
 	}
 
 	/* register for state saving */
-	state_save_register_global(machine, m_key_data);
-	state_save_register_global(machine, m_key_strobe);
-	state_save_register_global(machine, m_pio_astb);
+	state_save_register_global(machine(), m_key_data);
+	state_save_register_global(machine(), m_key_strobe);
+	state_save_register_global(machine(), m_pio_astb);
 }
 
 
 
 //**************************************************************************
-//	MACHINE DRIVERS
+//  MACHINE DRIVERS
 //**************************************************************************
 
 //-------------------------------------------------
@@ -714,29 +730,36 @@ static MACHINE_CONFIG_START( abc80, abc80_state )
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
 	/* keyboard */
-	MCFG_TIMER_ADD_PERIODIC("keyboard", abc80_keyboard_tick, USEC(2500))
-
-	/* Luxor Conkort 55-10828 */
-	MCFG_ABCBUS_ADD(ABCBUS_TAG, abcbus_daisy, Z80_TAG)
-	MCFG_ABC830_PIO_ADD("luxor_55_10828", ABCBUS_TAG, DRIVE_MPI_51)
+	MCFG_TIMER_ADD_PERIODIC("keyboard", abc80_keyboard_tick, attotime::from_usec(2500))
 
 	/* devices */
 	MCFG_TIMER_ADD_SCANLINE("pio_astb", z80pio_astb_tick, SCREEN_TAG, 0, 1)
 	MCFG_Z80PIO_ADD(Z80PIO_TAG, ABC80_XTAL/2/2, pio_intf)
-	MCFG_RS232_ADD(RS232_TAG, rs232_intf)
 	MCFG_PRINTER_ADD("printer")
-	MCFG_CASSETTE_ADD(CASSETTE_TAG, abc80_cassette_config)
+	MCFG_CASSETTE_ADD(CASSETTE_TAG, abc80_cassette_interface)
+	MCFG_ABC830_ADD()
+
+	// ABC bus
+	MCFG_ABCBUS_ADD(Z80_TAG, abcbus_intf)
+	MCFG_ABCBUS_SLOT_ADD( 1, "abc1", abc80_abcbus_cards, "slow")
+	MCFG_ABCBUS_SLOT_ADD( 2, "abc2", abc80_abcbus_cards, NULL)
+	MCFG_ABCBUS_SLOT_ADD( 3, "abc3", abc80_abcbus_cards, NULL)
+	MCFG_ABCBUS_SLOT_ADD( 4, "abc4", abc80_abcbus_cards, NULL)
+	MCFG_ABCBUS_SLOT_ADD( 5, "abc5", abc80_abcbus_cards, NULL)
 
 	/* internal ram */
-	MCFG_RAM_ADD("messram")
+	MCFG_RAM_ADD(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("16K")
 	MCFG_RAM_EXTRA_OPTIONS("32K")
+
+	// software list
+	MCFG_SOFTWARE_LIST_ADD("flop_list", "abc80")
 MACHINE_CONFIG_END
 
 
 
 //**************************************************************************
-//	ROMS
+//  ROMS
 //**************************************************************************
 
 //-------------------------------------------------
@@ -784,7 +807,7 @@ ROM_END
 
 
 //**************************************************************************
-//	SYSTEM DRIVERS
+//  SYSTEM DRIVERS
 //**************************************************************************
 
 //    YEAR  NAME    PARENT  COMPAT  MACHINE INPUT   INIT    COMPANY                             FULLNAME    FLAGS

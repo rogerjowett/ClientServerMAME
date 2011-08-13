@@ -281,6 +281,26 @@ endif
 
 
 #-------------------------------------------------
+# LMC1992 mixer chip
+#-------------------------------------------------
+
+ifneq ($(filter LMC1992,$(SOUNDS)),)
+SOUNDOBJS += $(SOUNDOBJ)/lmc1992.o
+endif
+
+
+
+#-------------------------------------------------
+# MAS 3507D MPEG 1/2 Layer 2/3 Audio Decoder
+#-------------------------------------------------
+
+ifneq ($(filter MAS3507D,$(SOUNDS)),)
+SOUNDOBJS += $(SOUNDOBJ)/mas3507d.o
+endif
+
+
+
+#-------------------------------------------------
 # MOS 6560VIC
 #-------------------------------------------------
 
@@ -346,6 +366,10 @@ endif
 # OKI ADPCM sample players
 #-------------------------------------------------
 
+ifneq ($(filter OKIM6258 OKIM9810,$(SOUNDS)),)
+SOUNDOBJS += $(SOUNDOBJ)/okiadpcm.o
+endif
+
 ifneq ($(filter MSM5205,$(SOUNDS)),)
 SOUNDOBJS += $(SOUNDOBJ)/msm5205.o
 endif
@@ -364,6 +388,10 @@ endif
 
 ifneq ($(filter OKIM6258,$(SOUNDS)),)
 SOUNDOBJS += $(SOUNDOBJ)/okim6258.o
+endif
+
+ifneq ($(filter OKIM9810,$(SOUNDS)),)
+SOUNDOBJS += $(SOUNDOBJ)/okim9810.o
 endif
 
 
@@ -489,10 +517,9 @@ endif
 # Sony custom sound chips
 #-------------------------------------------------
 
-ifneq ($(filter PSXSPU,$(SOUNDS)),)
-SOUNDOBJS += $(SOUNDOBJ)/psx.o
+ifneq ($(filter SPU,$(SOUNDS)),)
+SOUNDOBJS += $(SOUNDOBJ)/spu.o $(SOUNDOBJ)/spu_tables.o $(SOUNDOBJ)/spureverb.o
 endif
-
 
 
 #-------------------------------------------------

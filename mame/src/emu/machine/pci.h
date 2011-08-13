@@ -64,12 +64,10 @@ WRITE32_DEVICE_HANDLER( pci_32le_w );
 READ64_DEVICE_HANDLER( pci_64be_r );
 WRITE64_DEVICE_HANDLER( pci_64be_w );
 
-int pci_add_sibling( running_machine *machine, char *pcitag, char *sibling );
+int pci_add_sibling( running_machine &machine, char *pcitag, char *sibling );
 
 /* ----- device interface ----- */
 
 DECLARE_LEGACY_DEVICE(PCI_BUS, pci_bus);
 
 #endif /* PCI_H */
-
-

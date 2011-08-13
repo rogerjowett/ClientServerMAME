@@ -196,7 +196,7 @@ Known Issues (MZ, 2010-11-07)
 //#include "video/tms9928a.h"
 #include "sound/wave.h"
 #include "machine/tms9901.h"
-#include "devices/cassette.h"
+#include "imagedev/cassette.h"
 
 #include "machine/ti99/tiboard.h"
 
@@ -214,8 +214,8 @@ Known Issues (MZ, 2010-11-07)
 class ti99_8_state : public driver_device
 {
 public:
-	ti99_8_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	ti99_8_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 };
 
@@ -224,7 +224,7 @@ public:
     Memory map - see description above
 */
 
-static ADDRESS_MAP_START(ti99_8_memmap, ADDRESS_SPACE_PROGRAM, 8)
+static ADDRESS_MAP_START(ti99_8_memmap, AS_PROGRAM, 8)
 	AM_RANGE(0x0000, 0xffff) AM_DEVREADWRITE("mapper", ti99_mapper8_r, ti99_mapper8_w )
 ADDRESS_MAP_END
 
@@ -233,7 +233,7 @@ ADDRESS_MAP_END
     CRU map - see description above
 */
 
-static ADDRESS_MAP_START(ti99_8_cru_map, ADDRESS_SPACE_IO, 8)
+static ADDRESS_MAP_START(ti99_8_cru_map, AS_IO, 8)
 	AM_RANGE(0x0000, 0x007f) AM_DEVREAD("tms9901", tms9901_cru_r)
 	AM_RANGE(0x0000, 0x02ff) AM_DEVREAD("crubus", ti99_crubus_r )
 
@@ -305,6 +305,12 @@ static INPUT_PORTS_START(ti99_8)
 	PORT_CONFNAME( 0x01, 0x01, "Floppy and HD speed" ) PORT_CONDITION( "DISKCTRL", 0x07, PORTCOND_EQUALS, 0x03 )
 		PORT_CONFSETTING( 0x00, "No delay")
 		PORT_CONFSETTING( 0x01, "Realistic")
+
+	// We do not want to show this setting; makes only sense for Geneve
+	PORT_START( "MODE" )
+	PORT_CONFNAME( 0x01, 0x00, "Ext. cards modification" ) PORT_CONDITION( "HFDCDIP", 0xff, PORTCOND_EQUALS, GM_NEVER )
+		PORT_CONFSETTING(    0x00, "Standard" )
+		PORT_CONFSETTING(    GENMOD, "GenMod" )
 
 	/* 3 ports for mouse */
 	PORT_START("MOUSEX") /* Mouse - X AXIS */
@@ -599,8 +605,8 @@ static MACHINE_CONFIG_START( ti99_8_60hz, ti99_8_state )
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
-	MCFG_SOUND_WAVE_ADD("wave", "cassette")
-	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.20)
+	MCFG_SOUND_WAVE_ADD(WAVE_TAG, CASSETTE_TAG)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 	MCFG_SOUND_ADD("soundgen", SN76496, 3579545)	/* 3.579545 MHz */
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.75)
 
@@ -619,7 +625,7 @@ static MACHINE_CONFIG_START( ti99_8_60hz, ti99_8_state )
 	MCFG_GROM_ADD( "grom_2", 2, region_grom, 0x4000, 0x1800, console_ready )
 
 	MCFG_PBOX8_ADD( "peribox", console_extint, console_notconnected, console_ready )
-	MCFG_CASSETTE_ADD( "cassette", default_cassette_config )
+	MCFG_CASSETTE_ADD( CASSETTE_TAG, default_cassette_interface )
 
 	MCFG_TI99_GROMPORT_ADD( "gromport", console_ready )
 	MCFG_MECMOUSE_ADD( "mecmouse" )
@@ -644,8 +650,8 @@ static MACHINE_CONFIG_START( ti99_8_50hz, ti99_8_state )
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
-	MCFG_SOUND_WAVE_ADD("wave", "cassette")
-	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.20)
+	MCFG_SOUND_WAVE_ADD(WAVE_TAG, CASSETTE_TAG)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 	MCFG_SOUND_ADD("soundgen", SN76496, 3579545)	/* 3.579545 MHz */
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.75)
 
@@ -664,7 +670,7 @@ static MACHINE_CONFIG_START( ti99_8_50hz, ti99_8_state )
 	MCFG_GROM_ADD( "grom_2", 2, region_grom, 0x4000, 0x1800, console_ready )
 
 	MCFG_PBOX8_ADD( "peribox", console_extint, console_notconnected, console_ready )
-	MCFG_CASSETTE_ADD( "cassette", default_cassette_config )
+	MCFG_CASSETTE_ADD( CASSETTE_TAG, default_cassette_interface )
 
 	MCFG_TI99_GROMPORT_ADD( "gromport", console_ready )
 	MCFG_MECMOUSE_ADD( "mecmouse" )

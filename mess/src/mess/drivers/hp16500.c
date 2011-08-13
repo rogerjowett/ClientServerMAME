@@ -17,6 +17,8 @@
     IRQ 7 = 35d4 (jump 840120)
 */
 
+#define ADDRESS_MAP_MODERN
+
 #include "emu.h"
 #include "cpu/m68000/m68000.h"
 #include "video/generic.h"
@@ -25,13 +27,13 @@
 class hp16500_state : public driver_device
 {
 public:
-	hp16500_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	hp16500_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 };
 
 
-static ADDRESS_MAP_START(hp16500_map, ADDRESS_SPACE_PROGRAM, 32)
+static ADDRESS_MAP_START(hp16500_map, AS_PROGRAM, 32, hp16500_state)
 	AM_RANGE(0x00000000, 0x0001ffff) AM_ROM AM_REGION("bios", 0)
 	AM_RANGE(0x00600000, 0x0063ffff) AM_RAM
 	AM_RANGE(0x00800000, 0x009fffff) AM_RAM	    // 284e end of test - d0 = 0 for pass
@@ -41,7 +43,7 @@ static VIDEO_START( hp16500 )
 {
 }
 
-static VIDEO_UPDATE( hp16500 )
+static SCREEN_UPDATE( hp16500 )
 {
 	return 0;
 }
@@ -58,10 +60,11 @@ static MACHINE_CONFIG_START( hp16500, hp16500_state )
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_RGB32)
 	MCFG_SCREEN_SIZE(1024, 768)
 	MCFG_SCREEN_VISIBLE_AREA(0, 640-1, 0, 480-1)
+	MCFG_SCREEN_UPDATE(hp16500)
+
 	MCFG_PALETTE_LENGTH(256)
 
 	MCFG_VIDEO_START(hp16500)
-	MCFG_VIDEO_UPDATE(hp16500)
 
 	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 MACHINE_CONFIG_END

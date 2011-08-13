@@ -13,12 +13,12 @@
 class llc_state : public driver_device
 {
 public:
-	llc_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	llc_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
-	UINT8 *video_ram;
-	UINT8 s_code;
-	UINT8 llc1_key_state;
+	UINT8 *m_video_ram;
+	UINT8 m_s_code;
+	UINT8 m_llc1_key_state;
 };
 
 
@@ -41,8 +41,8 @@ extern WRITE8_HANDLER(llc2_basic_enable_w);
 /*----------- defined in video/llc.c -----------*/
 
 extern VIDEO_START( llc1 );
-extern VIDEO_UPDATE( llc1 );
+extern SCREEN_UPDATE( llc1 );
 extern VIDEO_START( llc2 );
-extern VIDEO_UPDATE( llc2 );
+extern SCREEN_UPDATE( llc2 );
 
 #endif

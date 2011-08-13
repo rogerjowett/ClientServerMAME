@@ -7,29 +7,29 @@
 class jack_state : public driver_device
 {
 public:
-	jack_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	jack_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 	/* memory pointers */
-	UINT8 *    videoram;
-	UINT8 *    colorram;
-	UINT8 *    spriteram;
+	UINT8 *    m_videoram;
+	UINT8 *    m_colorram;
+	UINT8 *    m_spriteram;
 //  UINT8 *    paletteram;  // currently this uses generic palette handling
-	size_t     spriteram_size;
+	size_t     m_spriteram_size;
 
 	/* video-related */
-	tilemap_t    *bg_tilemap;
+	tilemap_t    *m_bg_tilemap;
 
 	/* misc */
-	int timer_rate;
-	int joinem_snd_bit;
-	int question_address;
-	int question_rom;
-	int remap_address[16];
+	int m_timer_rate;
+	int m_joinem_snd_bit;
+	int m_question_address;
+	int m_question_rom;
+	int m_remap_address[16];
 
 
 	/* devices */
-	cpu_device *audiocpu;
+	cpu_device *m_audiocpu;
 };
 
 
@@ -42,8 +42,8 @@ READ8_HANDLER( jack_flipscreen_r );
 WRITE8_HANDLER( jack_flipscreen_w );
 
 VIDEO_START( jack );
-VIDEO_UPDATE( jack );
+SCREEN_UPDATE( jack );
 
 PALETTE_INIT( joinem );
 VIDEO_START( joinem );
-VIDEO_UPDATE( joinem );
+SCREEN_UPDATE( joinem );

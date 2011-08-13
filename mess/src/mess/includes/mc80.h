@@ -14,11 +14,11 @@
 class mc80_state : public driver_device
 {
 public:
-	mc80_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	mc80_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
-	UINT8* mc8020_video_ram;
-	UINT8 *mc8030_video_mem;
+	UINT8* m_mc8020_video_ram;
+	UINT8 *m_mc8030_video_mem;
 };
 
 
@@ -55,7 +55,7 @@ extern const z80sio_interface mc8030_asp_z80sio_intf;
 
 
 extern VIDEO_START( mc8020 );
-extern VIDEO_UPDATE( mc8020 );
+extern SCREEN_UPDATE( mc8020 );
 
 /*****************************************************************************/
 /*                            Implementation for MC80.3x                     */
@@ -63,6 +63,6 @@ extern VIDEO_UPDATE( mc8020 );
 
 
 extern VIDEO_START( mc8030 );
-extern VIDEO_UPDATE( mc8030 );
+extern SCREEN_UPDATE( mc8030 );
 
 #endif /* MC80_H_ */

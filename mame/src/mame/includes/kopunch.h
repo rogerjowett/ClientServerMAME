@@ -7,22 +7,23 @@
 class kopunch_state : public driver_device
 {
 public:
-	kopunch_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	kopunch_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 	/* memory pointers */
-	UINT8 *    videoram;
-	UINT8 *    videoram2;
-	UINT8 *    colorram;
-	UINT8 *    spriteram;
-	size_t     spriteram_size;
+	UINT8 *    m_videoram;
+	UINT8 *    m_videoram2;
+	UINT8 *    m_colorram;
+	UINT8 *    m_spriteram;
+	size_t     m_spriteram_size;
 
 	/* video-related */
-	tilemap_t    *bg_tilemap, *fg_tilemap;
-	int        gfxbank;
+	tilemap_t    *m_bg_tilemap;
+	tilemap_t    *m_fg_tilemap;
+	int        m_gfxbank;
 
 	/* devices */
-	device_t *maincpu;
+	device_t *m_maincpu;
 };
 
 /*----------- defined in video/kopunch.c -----------*/
@@ -35,4 +36,4 @@ WRITE8_HANDLER( kopunch_gfxbank_w );
 
 PALETTE_INIT( kopunch );
 VIDEO_START( kopunch );
-VIDEO_UPDATE( kopunch );
+SCREEN_UPDATE( kopunch );

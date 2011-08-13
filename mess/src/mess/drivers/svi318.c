@@ -15,33 +15,33 @@
 #include "video/mc6845.h"
 #include "includes/svi318.h"
 #include "video/tms9928a.h"
-#include "machine/i8255a.h"
+#include "machine/i8255.h"
 #include "machine/wd17xx.h"
 #include "machine/ctronics.h"
-#include "devices/flopdrv.h"
+#include "imagedev/flopdrv.h"
 #include "formats/svi_dsk.h"
-#include "devices/cartslot.h"
-#include "devices/cassette.h"
+#include "imagedev/cartslot.h"
+#include "imagedev/cassette.h"
 #include "formats/svi_cas.h"
 #include "sound/dac.h"
 #include "sound/ay8910.h"
-#include "devices/messram.h"
+#include "machine/ram.h"
 #include "rendlay.h"
 
-static ADDRESS_MAP_START( svi318_mem, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( svi318_mem, AS_PROGRAM, 8 )
 	AM_RANGE( 0x0000, 0x7fff) AM_READ_BANK("bank1") AM_WRITE( svi318_writemem1 )
 	AM_RANGE( 0x8000, 0xbfff) AM_READ_BANK("bank2") AM_WRITE( svi318_writemem2 )
 	AM_RANGE( 0xc000, 0xffff) AM_READ_BANK("bank3") AM_WRITE( svi318_writemem3 )
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( svi328_806_mem, ADDRESS_SPACE_PROGRAM, 8 )
+static ADDRESS_MAP_START( svi328_806_mem, AS_PROGRAM, 8 )
 	AM_RANGE( 0x0000, 0x7fff) AM_READ_BANK("bank1") AM_WRITE( svi318_writemem1 )
 	AM_RANGE( 0x8000, 0xbfff) AM_READ_BANK("bank2") AM_WRITE( svi318_writemem2 )
 	AM_RANGE( 0xc000, 0xefff) AM_READ_BANK("bank3") AM_WRITE( svi318_writemem3 )
 	AM_RANGE( 0xf000, 0xffff) AM_READ_BANK("bank4") AM_WRITE( svi318_writemem4 )
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( svi318_io, ADDRESS_SPACE_IO, 8 )
+static ADDRESS_MAP_START( svi318_io, AS_IO, 8 )
 	ADDRESS_MAP_UNMAP_HIGH
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 	AM_RANGE( 0x00, 0x38) AM_READWRITE( svi318_io_ext_r, svi318_io_ext_w )
@@ -52,11 +52,11 @@ static ADDRESS_MAP_START( svi318_io, ADDRESS_SPACE_IO, 8 )
 	AM_RANGE( 0x88, 0x88) AM_DEVWRITE("ay8910", ay8910_address_w )
 	AM_RANGE( 0x8c, 0x8c) AM_DEVWRITE("ay8910", ay8910_data_w )
 	AM_RANGE( 0x90, 0x90) AM_DEVREAD("ay8910", ay8910_r )
-	AM_RANGE( 0x96, 0x97) AM_DEVWRITE("ppi8255", svi318_ppi_w )
-	AM_RANGE( 0x98, 0x9a) AM_DEVREAD("ppi8255", svi318_ppi_r )
+	AM_RANGE( 0x96, 0x97) AM_WRITE(svi318_ppi_w)
+	AM_RANGE( 0x98, 0x9a) AM_DEVREAD_MODERN("ppi8255", i8255_device, read)
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( svi328_806_io, ADDRESS_SPACE_IO, 8 )
+static ADDRESS_MAP_START( svi328_806_io, AS_IO, 8 )
 	ADDRESS_MAP_UNMAP_HIGH
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 	AM_RANGE( 0x00, 0x58) AM_READWRITE( svi318_io_ext_r, svi318_io_ext_w )
@@ -67,8 +67,8 @@ static ADDRESS_MAP_START( svi328_806_io, ADDRESS_SPACE_IO, 8 )
 	AM_RANGE( 0x88, 0x88) AM_DEVWRITE("ay8910", ay8910_address_w )
 	AM_RANGE( 0x8c, 0x8c) AM_DEVWRITE("ay8910", ay8910_data_w )
 	AM_RANGE( 0x90, 0x90) AM_DEVREAD("ay8910", ay8910_r )
-	AM_RANGE( 0x96, 0x97) AM_DEVWRITE("ppi8255", svi318_ppi_w )
-	AM_RANGE( 0x98, 0x9a) AM_DEVREAD("ppi8255", svi318_ppi_r )
+	AM_RANGE( 0x96, 0x97) AM_WRITE(svi318_ppi_w)
+	AM_RANGE( 0x98, 0x9a) AM_DEVREAD_MODERN("ppi8255", i8255_device, read)
 ADDRESS_MAP_END
 
 /*
@@ -265,15 +265,16 @@ static const ay8910_interface svi318_ay8910_interface =
 	DEVCB_MEMORY_HANDLER("maincpu", PROGRAM, svi318_psg_port_b_w)
 };
 
-static const cassette_config svi318_cassette_config =
+static const cassette_interface svi318_cassette_interface =
 {
 	svi_cassette_formats,
 	NULL,
 	(cassette_state)(CASSETTE_PLAY),
+	"svi318_cass",
 	NULL
 };
 
-static const floppy_config svi318_floppy_config =
+static const floppy_interface svi318_floppy_interface =
 {
 	DEVCB_NULL,
 	DEVCB_NULL,
@@ -282,6 +283,7 @@ static const floppy_config svi318_floppy_config =
 	DEVCB_NULL,
 	FLOPPY_STANDARD_5_25_DSHD,
 	FLOPPY_OPTIONS_NAME(svi318),
+	"floppy_5_25",
 	NULL
 };
 
@@ -304,12 +306,12 @@ static MACHINE_CONFIG_START( svi318, svi318_state )
 	MCFG_CPU_PROGRAM_MAP( svi318_mem)
 	MCFG_CPU_IO_MAP( svi318_io)
 	MCFG_CPU_VBLANK_INT("screen", svi318_interrupt)
-	MCFG_QUANTUM_TIME(HZ(60))
+	MCFG_QUANTUM_TIME(attotime::from_hz(60))
 
 	MCFG_MACHINE_START( svi318_pal )
 	MCFG_MACHINE_RESET( svi318 )
 
-	MCFG_I8255A_ADD( "ppi8255", svi318_ppi8255_interface )
+	MCFG_I8255_ADD( "ppi8255", svi318_ppi8255_interface )
 
 	MCFG_INS8250_ADD( "ins8250_0", svi318_ins8250_interface[0] )
 	MCFG_INS8250_ADD( "ins8250_1", svi318_ins8250_interface[1] )
@@ -324,7 +326,7 @@ static MACHINE_CONFIG_START( svi318, svi318_state )
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 	MCFG_SOUND_ADD("dac", DAC, 0)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
-	MCFG_SOUND_WAVE_ADD("wave", "cassette")
+	MCFG_SOUND_WAVE_ADD(WAVE_TAG, CASSETTE_TAG)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 	MCFG_SOUND_ADD("ay8910", AY8910, 1789773)
 	MCFG_SOUND_CONFIG(svi318_ay8910_interface)
@@ -333,16 +335,20 @@ static MACHINE_CONFIG_START( svi318, svi318_state )
 	/* printer */
 	MCFG_CENTRONICS_ADD("centronics", standard_centronics)
 
-	MCFG_CASSETTE_ADD( "cassette", svi318_cassette_config )
+	MCFG_CASSETTE_ADD( CASSETTE_TAG, svi318_cassette_interface )
 
-	MCFG_WD179X_ADD("wd179x", svi_wd17xx_interface )
+	MCFG_FD1793_ADD("wd179x", svi_wd17xx_interface )
 
-	MCFG_FLOPPY_2_DRIVES_ADD(svi318_floppy_config)
+	MCFG_FLOPPY_2_DRIVES_ADD(svi318_floppy_interface)
+
+	/* Software lists */
+	MCFG_SOFTWARE_LIST_ADD("cass_list","svi318_flop")
+	MCFG_SOFTWARE_LIST_ADD("disk_list","svi318_cass")
 
 	MCFG_FRAGMENT_ADD( svi318_cartslot )
 
 	/* internal ram */
-	MCFG_RAM_ADD("messram")
+	MCFG_RAM_ADD(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("16K")
 	MCFG_RAM_EXTRA_OPTIONS("32K,96K,160K")
 MACHINE_CONFIG_END
@@ -359,7 +365,7 @@ MACHINE_CONFIG_END
 static MACHINE_CONFIG_DERIVED( svi328, svi318 )
 
 	/* internal ram */
-	MCFG_RAM_MODIFY("messram")
+	MCFG_RAM_MODIFY(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("64K")
 	MCFG_RAM_EXTRA_OPTIONS("96K,160K")
 MACHINE_CONFIG_END
@@ -367,7 +373,7 @@ MACHINE_CONFIG_END
 static MACHINE_CONFIG_DERIVED( svi328n, svi318n )
 
 	/* internal ram */
-	MCFG_RAM_MODIFY("messram")
+	MCFG_RAM_MODIFY(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("64K")
 	MCFG_RAM_EXTRA_OPTIONS("96K,160K")
 MACHINE_CONFIG_END
@@ -410,7 +416,7 @@ static MACHINE_CONFIG_START( svi328_806, svi318_state )
 	MCFG_CPU_PROGRAM_MAP( svi328_806_mem)
 	MCFG_CPU_IO_MAP( svi328_806_io)
 	MCFG_CPU_VBLANK_INT("screen", svi318_interrupt)
-	MCFG_QUANTUM_TIME(HZ(60))
+	MCFG_QUANTUM_TIME(attotime::from_hz(60))
 
 	MCFG_MACHINE_START( svi318_pal )
 	MCFG_MACHINE_RESET( svi328_806 )
@@ -435,18 +441,19 @@ static MACHINE_CONFIG_START( svi328_806, svi318_state )
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500))
 	MCFG_SCREEN_SIZE(640, 400)
 	MCFG_SCREEN_VISIBLE_AREA(0, 640-1, 0, 400-1)
+	MCFG_SCREEN_UPDATE( svi328_806 )
+
 	MCFG_GFXDECODE(svi328)
 
 	MCFG_MC6845_ADD("crtc", MC6845, XTAL_12MHz / 8, svi806_crtc6845_interface)
 
 	MCFG_VIDEO_START( svi328_806 )
-	MCFG_VIDEO_UPDATE( svi328_806 )
 
 	/* Sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 	MCFG_SOUND_ADD("dac", DAC, 0)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
-	MCFG_SOUND_WAVE_ADD("wave", "cassette")
+	MCFG_SOUND_WAVE_ADD(WAVE_TAG, CASSETTE_TAG)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 	MCFG_SOUND_ADD("ay8910", AY8910, 1789773)
 	MCFG_SOUND_CONFIG(svi318_ay8910_interface)
@@ -455,16 +462,16 @@ static MACHINE_CONFIG_START( svi328_806, svi318_state )
 	/* printer */
 	MCFG_CENTRONICS_ADD("centronics", standard_centronics)
 
-	MCFG_CASSETTE_ADD( "cassette", svi318_cassette_config )
+	MCFG_CASSETTE_ADD( CASSETTE_TAG, svi318_cassette_interface )
 
-	MCFG_WD179X_ADD("wd179x", svi_wd17xx_interface )
+	MCFG_FD1793_ADD("wd179x", svi_wd17xx_interface )
 
-	MCFG_FLOPPY_2_DRIVES_ADD(svi318_floppy_config)
+	MCFG_FLOPPY_2_DRIVES_ADD(svi318_floppy_interface)
 
 	MCFG_FRAGMENT_ADD( svi318_cartslot )
 
 	/* internal ram */
-	MCFG_RAM_ADD("messram")
+	MCFG_RAM_ADD(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("64K")
 	MCFG_RAM_EXTRA_OPTIONS("96K,160K")
 MACHINE_CONFIG_END

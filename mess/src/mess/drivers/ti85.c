@@ -187,15 +187,14 @@ TI-86 ports:
 
 #include "emu.h"
 #include "cpu/z80/z80.h"
-#include "sound/speaker.h"
-#include "includes/ti85.h"
-#include "devices/snapquik.h"
-#include "formats/ti85_ser.h"
+#include "imagedev/snapquik.h"
+#include "machine/ti85_ser.h"
 #include "machine/nvram.h"
+#include "includes/ti85.h"
 
 /* port i/o functions */
 
-static ADDRESS_MAP_START( ti81_io, ADDRESS_SPACE_IO, 8)
+static ADDRESS_MAP_START( ti81_io, AS_IO, 8)
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 	AM_RANGE(0x0000, 0x0000) AM_READWRITE( ti85_port_0000_r, ti85_port_0000_w )
 	AM_RANGE(0x0001, 0x0001) AM_READWRITE( ti8x_keypad_r, ti8x_keypad_w )
@@ -206,7 +205,7 @@ static ADDRESS_MAP_START( ti81_io, ADDRESS_SPACE_IO, 8)
 	AM_RANGE(0x0007, 0x0007) AM_WRITE( ti81_port_0007_w)
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( ti85_io, ADDRESS_SPACE_IO, 8)
+static ADDRESS_MAP_START( ti85_io, AS_IO, 8)
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 	AM_RANGE(0x0000, 0x0000) AM_READWRITE( ti85_port_0000_r, ti85_port_0000_w )
 	AM_RANGE(0x0001, 0x0001) AM_READWRITE( ti8x_keypad_r, ti8x_keypad_w )
@@ -215,46 +214,56 @@ static ADDRESS_MAP_START( ti85_io, ADDRESS_SPACE_IO, 8)
 	AM_RANGE(0x0004, 0x0004) AM_READWRITE( ti85_port_0004_r, ti85_port_0004_w )
 	AM_RANGE(0x0005, 0x0005) AM_READWRITE( ti85_port_0005_r, ti85_port_0005_w )
 	AM_RANGE(0x0006, 0x0006) AM_READWRITE( ti85_port_0006_r, ti85_port_0006_w )
-	AM_RANGE(0x0007, 0x0007) AM_READWRITE( ti85_port_0007_r, ti85_port_0007_w )
+	AM_RANGE(0x0007, 0x0007) AM_READWRITE( ti8x_serial_r, ti8x_serial_w )
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( ti82_io, ADDRESS_SPACE_IO, 8)
+static ADDRESS_MAP_START( ti82_io, AS_IO, 8)
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x0000, 0x0000) AM_READWRITE( ti82_port_0000_r, ti82_port_0000_w )	//TODO
+	AM_RANGE(0x0000, 0x0000) AM_READWRITE( ti8x_serial_r, ti8x_serial_w )
 	AM_RANGE(0x0001, 0x0001) AM_READWRITE( ti8x_keypad_r, ti8x_keypad_w )
 	AM_RANGE(0x0002, 0x0002) AM_READWRITE( ti82_port_0002_r, ti82_port_0002_w )
 	AM_RANGE(0x0003, 0x0003) AM_READWRITE( ti85_port_0003_r, ti85_port_0003_w )
 	AM_RANGE(0x0004, 0x0004) AM_READWRITE( ti85_port_0004_r, ti85_port_0004_w )
-	AM_RANGE(0x0010, 0x0010) AM_READWRITE( ti82_port_0010_r, ti82_port_0010_w )
-	AM_RANGE(0x0011, 0x0011) AM_READWRITE( ti82_port_0011_r, ti82_port_0011_w )
+	AM_RANGE(0x0010, 0x0010) AM_DEVREADWRITE_MODERN("t6a04", t6a04_device, control_read, control_write)
+	AM_RANGE(0x0011, 0x0011) AM_DEVREADWRITE_MODERN("t6a04", t6a04_device, data_read, data_write)
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( ti83_io, ADDRESS_SPACE_IO, 8)
+static ADDRESS_MAP_START( ti81v2_io, AS_IO, 8)
+	ADDRESS_MAP_GLOBAL_MASK(0xff)
+	AM_RANGE(0x0001, 0x0001) AM_READWRITE( ti8x_keypad_r, ti8x_keypad_w )
+	AM_RANGE(0x0002, 0x0002) AM_READWRITE( ti82_port_0002_r, ti82_port_0002_w )
+	AM_RANGE(0x0003, 0x0003) AM_READWRITE( ti85_port_0003_r, ti85_port_0003_w )
+	AM_RANGE(0x0004, 0x0004) AM_READWRITE( ti85_port_0004_r, ti85_port_0004_w )
+	AM_RANGE(0x0010, 0x0010) AM_DEVREADWRITE_MODERN("t6a04", t6a04_device, control_read, control_write)
+	AM_RANGE(0x0011, 0x0011) AM_DEVREADWRITE_MODERN("t6a04", t6a04_device, data_read, data_write)
+ADDRESS_MAP_END
+
+static ADDRESS_MAP_START( ti83_io, AS_IO, 8)
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 	AM_RANGE(0x0000, 0x0000) AM_READWRITE( ti83_port_0000_r, ti83_port_0000_w )	//TODO
 	AM_RANGE(0x0001, 0x0001) AM_READWRITE( ti8x_keypad_r, ti8x_keypad_w )
 	AM_RANGE(0x0002, 0x0002) AM_READWRITE( ti83_port_0002_r, ti83_port_0002_w )
 	AM_RANGE(0x0003, 0x0003) AM_READWRITE( ti83_port_0003_r, ti83_port_0003_w )
 	AM_RANGE(0x0004, 0x0004) AM_READWRITE( ti85_port_0004_r, ti85_port_0004_w )
-	AM_RANGE(0x0010, 0x0010) AM_READWRITE( ti82_port_0010_r, ti82_port_0010_w )
-	AM_RANGE(0x0011, 0x0011) AM_READWRITE( ti82_port_0011_r, ti82_port_0011_w )
+	AM_RANGE(0x0010, 0x0010) AM_DEVREADWRITE_MODERN("t6a04", t6a04_device, control_read, control_write)
+	AM_RANGE(0x0011, 0x0011) AM_DEVREADWRITE_MODERN("t6a04", t6a04_device, data_read, data_write)
 	AM_RANGE(0x0014, 0x0014) AM_READ_PORT( "BATTERY" )
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( ti83p_io, ADDRESS_SPACE_IO, 8)
+static ADDRESS_MAP_START( ti83p_io, AS_IO, 8)
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x0000, 0x0000) AM_READWRITE( ti82_port_0000_r, ti82_port_0000_w)	//TODO
+	AM_RANGE(0x0000, 0x0000) AM_READWRITE( ti8x_plus_serial_r, ti8x_plus_serial_w)
 	AM_RANGE(0x0001, 0x0001) AM_READWRITE( ti8x_keypad_r, ti8x_keypad_w )
 	AM_RANGE(0x0002, 0x0002) AM_READWRITE( ti83p_port_0002_r, ti83p_port_0002_w )
 	AM_RANGE(0x0003, 0x0003) AM_READWRITE( ti83_port_0003_r, ti83p_port_0003_w )
 	AM_RANGE(0x0004, 0x0004) AM_READWRITE( ti83_port_0003_r, ti83p_port_0004_w )
 	AM_RANGE(0x0006, 0x0006) AM_READWRITE( ti86_port_0005_r, ti83p_port_0006_w )
 	AM_RANGE(0x0007, 0x0007) AM_READWRITE( ti86_port_0006_r, ti83p_port_0007_w )
-	AM_RANGE(0x0010, 0x0010) AM_READWRITE( ti82_port_0010_r, ti83p_port_0010_w )
-	AM_RANGE(0x0011, 0x0011) AM_READWRITE( ti82_port_0011_r, ti82_port_0011_w )
+	AM_RANGE(0x0010, 0x0010) AM_DEVREADWRITE_MODERN("t6a04", t6a04_device, control_read, control_write)
+	AM_RANGE(0x0011, 0x0011) AM_DEVREADWRITE_MODERN("t6a04", t6a04_device, data_read, data_write)
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( ti86_io, ADDRESS_SPACE_IO, 8)
+static ADDRESS_MAP_START( ti86_io, AS_IO, 8)
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 	AM_RANGE(0x0000, 0x0000) AM_READWRITE( ti85_port_0000_r, ti85_port_0000_w )
 	AM_RANGE(0x0001, 0x0001) AM_READWRITE( ti8x_keypad_r, ti8x_keypad_w )
@@ -263,18 +272,18 @@ static ADDRESS_MAP_START( ti86_io, ADDRESS_SPACE_IO, 8)
 	AM_RANGE(0x0004, 0x0004) AM_READWRITE( ti85_port_0006_r, ti85_port_0006_w )
 	AM_RANGE(0x0005, 0x0005) AM_READWRITE( ti86_port_0005_r, ti86_port_0005_w )
 	AM_RANGE(0x0006, 0x0006) AM_READWRITE( ti86_port_0006_r, ti86_port_0006_w )
-	AM_RANGE(0x0007, 0x0007) AM_READWRITE( ti85_port_0007_r, ti85_port_0007_w )
+	AM_RANGE(0x0007, 0x0007) AM_READWRITE( ti8x_serial_r, ti8x_serial_w )
 ADDRESS_MAP_END
 
 /* memory w/r functions */
 
-static ADDRESS_MAP_START( ti81_mem , ADDRESS_SPACE_PROGRAM, 8)
+static ADDRESS_MAP_START( ti81_mem , AS_PROGRAM, 8)
 	AM_RANGE(0x0000, 0x3fff) AM_ROMBANK("bank1")
 	AM_RANGE(0x4000, 0x7fff) AM_ROMBANK("bank2")
 	AM_RANGE(0x8000, 0xffff) AM_RAM AM_SHARE("nvram")
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( ti86_mem , ADDRESS_SPACE_PROGRAM, 8)
+static ADDRESS_MAP_START( ti86_mem , AS_PROGRAM, 8)
 	AM_RANGE(0x0000, 0x3fff) AM_ROMBANK("bank1")
 	AM_RANGE(0x4000, 0x7fff) AM_RAMBANK("bank2")
 	AM_RANGE(0x8000, 0xbfff) AM_RAMBANK("bank3")
@@ -405,10 +414,6 @@ static INPUT_PORTS_START (ti85)
 		PORT_BIT(0x40, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_NAME("MORE    (MODE)") PORT_CODE(KEYCODE_TILDE)
 	PORT_START("ON")   /* ON */
 		PORT_BIT(0x01, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_NAME("ON/OFF") PORT_CODE(KEYCODE_Q)
-	PORT_START("SERIAL")   /* receive data from calculator */
-		PORT_BIT(0x01, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_NAME("Receive data") PORT_CODE(KEYCODE_R)
-	PORT_START("DUMP")   /* screen dump requesting */
-		PORT_BIT(0x01, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_NAME("Screen dump request") PORT_CODE(KEYCODE_S)
 INPUT_PORTS_END
 
 static INPUT_PORTS_START (ti82)
@@ -471,10 +476,6 @@ static INPUT_PORTS_START (ti82)
 		PORT_BIT(0x40, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_NAME("DEL") PORT_CODE(KEYCODE_DEL)
 	PORT_START("ON")   /* ON */
 		PORT_BIT(0x01, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_NAME("ON/OFF") PORT_CODE(KEYCODE_Q)
-	PORT_START("SERIAL")   /* receive data from calculator */
-		PORT_BIT(0x01, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_NAME("Receive data") PORT_CODE(KEYCODE_R)
-	PORT_START("DUMP")   /* screen dump requesting */
-		PORT_BIT(0x01, IP_ACTIVE_HIGH, IPT_KEYBOARD) PORT_NAME("Screen dump request") PORT_CODE(KEYCODE_S)
 INPUT_PORTS_END
 
 static INPUT_PORTS_START (ti83)
@@ -492,22 +493,23 @@ static MACHINE_CONFIG_START( ti81, ti85_state )
 	MCFG_CPU_ADD("maincpu", Z80, 2000000)        /* 2 MHz */
 	MCFG_CPU_PROGRAM_MAP(ti81_mem)
 	MCFG_CPU_IO_MAP(ti81_io)
-	MCFG_SCREEN_ADD("screen", LCD)
-	MCFG_SCREEN_REFRESH_RATE(50)
-	MCFG_SCREEN_VBLANK_TIME(0)
-	MCFG_QUANTUM_TIME(HZ(60))
+	MCFG_QUANTUM_TIME(attotime::from_hz(60))
 
 	MCFG_MACHINE_START( ti81 )
 
     /* video hardware */
+	MCFG_SCREEN_ADD("screen", LCD)
+	MCFG_SCREEN_REFRESH_RATE(50)
+	MCFG_SCREEN_VBLANK_TIME(0)
 	MCFG_SCREEN_FORMAT(BITMAP_FORMAT_INDEXED16)
 	MCFG_SCREEN_SIZE(96, 64)
 	MCFG_SCREEN_VISIBLE_AREA(0, 96-1, 0, 64-1)
+	MCFG_SCREEN_UPDATE( ti85 )
+
 	MCFG_PALETTE_LENGTH(224)
 	MCFG_PALETTE_INIT( ti85 )
 
 	MCFG_VIDEO_START( ti85 )
-	MCFG_VIDEO_UPDATE( ti85 )
 
 	MCFG_NVRAM_ADD_0FILL("nvram")
 MACHINE_CONFIG_END
@@ -518,7 +520,6 @@ static MACHINE_CONFIG_DERIVED( ti85, ti81 )
 	MCFG_CPU_CLOCK( 6000000)		/* 6 MHz */
 	MCFG_CPU_IO_MAP(ti85_io)
 
-	MCFG_MACHINE_START( ti85 )
 	MCFG_MACHINE_RESET( ti85 )
 
 	MCFG_SCREEN_MODIFY("screen")
@@ -527,26 +528,49 @@ static MACHINE_CONFIG_DERIVED( ti85, ti81 )
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
-	MCFG_SOUND_ADD("speaker", SPEAKER_SOUND, 0)
+	MCFG_SOUND_ADD(SPEAKER_TAG, SPEAKER_SOUND, 0)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 MACHINE_CONFIG_END
 
 
 static MACHINE_CONFIG_DERIVED( ti85d, ti85 )
 	MCFG_SNAPSHOT_ADD("snapshot", ti8x, "sav", 0)
-	MCFG_TI85SERIAL_ADD( "ti85serial" )
+	MCFG_TI85SERIAL_ADD( "tiserial" )
 MACHINE_CONFIG_END
 
+
+static const t6a04_interface ti82_display =
+{
+	64,					// number of lines
+	96,					// pixels for line
+};
 
 static MACHINE_CONFIG_DERIVED( ti82, ti81 )
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_CLOCK( 6000000)		/* 6 MHz */
 	MCFG_CPU_IO_MAP(ti82_io)
 
-	MCFG_MACHINE_START( ti82 )
 	MCFG_MACHINE_RESET( ti85 )
 
-	MCFG_VIDEO_UPDATE( ti82 )
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_UPDATE( ti82 )
+	MCFG_PALETTE_LENGTH(2)
+	MCFG_PALETTE_INIT( ti82 )
+
+	MCFG_T6A04_ADD("t6a04", ti82_display)
+
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD(SPEAKER_TAG, SPEAKER_SOUND, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+
+	MCFG_TI82SERIAL_ADD( "tiserial" )
+MACHINE_CONFIG_END
+
+static MACHINE_CONFIG_DERIVED( ti81v2, ti82 )
+	MCFG_CPU_MODIFY("maincpu")
+	MCFG_CPU_IO_MAP(ti81v2_io)
+
+	MCFG_DEVICE_REMOVE( "tiserial" )
 MACHINE_CONFIG_END
 
 static MACHINE_CONFIG_DERIVED( ti83, ti81 )
@@ -554,10 +578,14 @@ static MACHINE_CONFIG_DERIVED( ti83, ti81 )
 	MCFG_CPU_CLOCK( 6000000)		/* 6 MHz */
 	MCFG_CPU_IO_MAP(ti83_io)
 
-	MCFG_MACHINE_START( ti82 )
 	MCFG_MACHINE_RESET( ti85 )
 
-	MCFG_VIDEO_UPDATE( ti82 )
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_UPDATE( ti82 )
+	MCFG_PALETTE_LENGTH(2)
+	MCFG_PALETTE_INIT( ti82 )
+
+	MCFG_T6A04_ADD("t6a04", ti82_display)
 MACHINE_CONFIG_END
 
 static MACHINE_CONFIG_DERIVED( ti86, ti85 )
@@ -570,6 +598,9 @@ static MACHINE_CONFIG_DERIVED( ti86, ti85 )
 
 	MCFG_DEVICE_REMOVE("nvram")
 	MCFG_NVRAM_HANDLER( ti86 )
+
+	MCFG_SNAPSHOT_ADD("snapshot", ti8x, "sav", 0)
+	MCFG_TI86SERIAL_ADD( "tiserial" )
 MACHINE_CONFIG_END
 
 static MACHINE_CONFIG_DERIVED( ti83p, ti81 )
@@ -583,15 +614,26 @@ static MACHINE_CONFIG_DERIVED( ti83p, ti81 )
 	MCFG_MACHINE_START( ti83p )
 	MCFG_MACHINE_RESET( ti85 )
 
-	MCFG_VIDEO_UPDATE( ti82 )
+	MCFG_SCREEN_MODIFY("screen")
+	MCFG_SCREEN_UPDATE( ti82 )
+	MCFG_PALETTE_LENGTH(2)
+	MCFG_PALETTE_INIT( ti82 )
+
+	MCFG_T6A04_ADD("t6a04", ti82_display)
 
 	MCFG_DEVICE_REMOVE("nvram")
 	MCFG_NVRAM_HANDLER(ti83p)
+
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD(SPEAKER_TAG, SPEAKER_SOUND, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
+
+	MCFG_TI83PSERIAL_ADD( "tiserial" )
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( ti86d, ti86 )
-	MCFG_SNAPSHOT_ADD("snapshot", ti8x, "sav", 0)
-	MCFG_TI86SERIAL_ADD( "ti85serial" )
+static MACHINE_CONFIG_DERIVED( ti73, ti83p )
+	MCFG_DEVICE_REMOVE( "tiserial" )
+	MCFG_TI73SERIAL_ADD( "tiserial" )
 MACHINE_CONFIG_END
 
 ROM_START (ti73)
@@ -739,10 +781,10 @@ ROM_END
 COMP( 1990, ti81,       0,      0,      ti81,   ti81,   0,     "Texas Instruments",    "TI-81",                        GAME_NO_SOUND )
 COMP( 1992, ti85,       0,      0,      ti85d,  ti85,   0,     "Texas Instruments",    "TI-85",                        GAME_NO_SOUND )
 COMP( 1993, ti82,       0,      0,      ti82,   ti82,   0,     "Texas Instruments",    "TI-82",                        GAME_NO_SOUND )
-COMP( 1994, ti81v2,     ti81,   0,      ti82,   ti81,   0,     "Texas Instruments",    "TI-81 v2.0",                   GAME_NO_SOUND )
+COMP( 1994, ti81v2,     ti81,   0,      ti81v2, ti81,   0,     "Texas Instruments",    "TI-81 v2.0",                   GAME_NO_SOUND )
 COMP( 1996, ti83,       0,      0,      ti83,   ti83,   0,     "Texas Instruments",    "TI-83",                        GAME_NO_SOUND )
-COMP( 1997, ti86,       0,      0,      ti86d,  ti85,   0,     "Texas Instruments",    "TI-86",                        GAME_NO_SOUND )
-COMP( 1998, ti73,       0,      0,      ti83p,  ti82,   0,     "Texas Instruments",    "TI-73",                        GAME_NOT_WORKING | GAME_NO_SOUND)
+COMP( 1997, ti86,       0,      0,      ti86,   ti85,   0,     "Texas Instruments",    "TI-86",                        GAME_NO_SOUND )
+COMP( 1998, ti73,       0,      0,      ti73,   ti82,   0,     "Texas Instruments",    "TI-73",                        GAME_NOT_WORKING | GAME_NO_SOUND)
 COMP( 1999, ti83p,      0,      0,      ti83p,  ti82,   0,     "Texas Instruments",    "TI-83 Plus",                   GAME_NO_SOUND )
 COMP( 2001, ti83pse,    0,      0,      ti85,   ti85,   0,     "Texas Instruments",    "TI-83 Plus Silver Edition",    GAME_NOT_WORKING | GAME_NO_SOUND)
 //COMP( 2004, ti84p,      0,      0,      ti85,   ti85,   0,   "Texas Instruments",    "TI-84 Plus",                   GAME_NOT_WORKING | GAME_NO_SOUND)

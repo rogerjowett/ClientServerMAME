@@ -14,13 +14,14 @@
       * properly implement Z80 daisy chain in 16 bit board
 
 ****************************************************************************/
+#define ADDRESS_MAP_MODERN
 
 #include "emu.h"
 #include "cpu/z80/z80.h"
 #include "cpu/z8000/z8000.h"
 #include "cpu/z80/z80daisy.h"
 #include "formats/basicdsk.h"
-#include "devices/flopdrv.h"
+#include "imagedev/flopdrv.h"
 #include "machine/upd765.h"
 #include "machine/z80ctc.h"
 #include "machine/z80pio.h"
@@ -32,33 +33,33 @@
 class p8k_state : public driver_device
 {
 public:
-	p8k_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	p8k_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 };
 
 
 
-static ADDRESS_MAP_START(p8k_memmap, ADDRESS_SPACE_PROGRAM, 8)
+static ADDRESS_MAP_START(p8k_memmap, AS_PROGRAM, 8, p8k_state)
 	AM_RANGE(0x0000, 0x1fff) AM_ROM
 	AM_RANGE(0x2000, 0xffff) AM_RAM
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START(p8k_iomap, ADDRESS_SPACE_IO, 8)
+static ADDRESS_MAP_START(p8k_iomap, AS_IO, 8, p8k_state)
 //  AM_RANGE(0x00, 0x07) // MH7489
-	AM_RANGE(0x08, 0x0b) AM_DEVREADWRITE("z80ctc_0", z80ctc_r, z80ctc_w)
-	AM_RANGE(0x0c, 0x0f) AM_DEVREADWRITE("z80pio_0", z80pio_ba_cd_r, z80pio_ba_cd_w)
-	AM_RANGE(0x18, 0x1b) AM_DEVREADWRITE("z80pio_1", z80pio_ba_cd_r, z80pio_ba_cd_w)
-	AM_RANGE(0x1c, 0x1f) AM_DEVREADWRITE("z80pio_2", z80pio_ba_cd_r, z80pio_ba_cd_w)
-	AM_RANGE(0x20, 0x20) AM_DEVREADWRITE("i8272", upd765_data_r, upd765_data_w)
-	AM_RANGE(0x21, 0x21) AM_DEVREAD("i8272", upd765_status_r)
-	AM_RANGE(0x24, 0x27) AM_DEVREADWRITE("z80sio_0", z80sio_ba_cd_r, z80sio_ba_cd_w)
-	AM_RANGE(0x28, 0x2b) AM_DEVREADWRITE("z80sio_1", z80sio_ba_cd_r, z80sio_ba_cd_w)
-	AM_RANGE(0x2c, 0x2f) AM_DEVREADWRITE("z80ctc_1", z80ctc_r, z80ctc_w)
-	AM_RANGE(0x3c, 0x3c) AM_DEVREADWRITE("z80dma", z80dma_r, z80dma_w)
+	AM_RANGE(0x08, 0x0b) AM_DEVREADWRITE_LEGACY("z80ctc_0", z80ctc_r, z80ctc_w)
+	AM_RANGE(0x0c, 0x0f) AM_DEVREADWRITE_LEGACY("z80pio_0", z80pio_ba_cd_r, z80pio_ba_cd_w)
+	AM_RANGE(0x18, 0x1b) AM_DEVREADWRITE_LEGACY("z80pio_1", z80pio_ba_cd_r, z80pio_ba_cd_w)
+	AM_RANGE(0x1c, 0x1f) AM_DEVREADWRITE_LEGACY("z80pio_2", z80pio_ba_cd_r, z80pio_ba_cd_w)
+	AM_RANGE(0x20, 0x20) AM_DEVREADWRITE_LEGACY("i8272", upd765_data_r, upd765_data_w)
+	AM_RANGE(0x21, 0x21) AM_DEVREAD_LEGACY("i8272", upd765_status_r)
+	AM_RANGE(0x24, 0x27) AM_DEVREADWRITE_LEGACY("z80sio_0", z80sio_ba_cd_r, z80sio_ba_cd_w)
+	AM_RANGE(0x28, 0x2b) AM_DEVREADWRITE_LEGACY("z80sio_1", z80sio_ba_cd_r, z80sio_ba_cd_w)
+	AM_RANGE(0x2c, 0x2f) AM_DEVREADWRITE_LEGACY("z80ctc_1", z80ctc_r, z80ctc_w)
+	AM_RANGE(0x3c, 0x3c) AM_DEVREADWRITE_LEGACY("z80dma", z80dma_r, z80dma_w)
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START(p8k_16_memmap, ADDRESS_SPACE_PROGRAM, 16)
+static ADDRESS_MAP_START(p8k_16_memmap, AS_PROGRAM, 16, p8k_state)
 	AM_RANGE(0x00000, 0x03fff) AM_ROM
 	AM_RANGE(0x04000, 0x07fff) AM_RAM
 	AM_RANGE(0x08000, 0xfffff) AM_RAM
@@ -126,7 +127,7 @@ static WRITE16_DEVICE_HANDLER( p8k_16_ctc_w )
 	z80ctc_w(device, (offset & 0x06) >> 1, (UINT8)(data & 0xff));
 }
 
-static ADDRESS_MAP_START(p8k_16_iomap, ADDRESS_SPACE_IO, 16)
+static ADDRESS_MAP_START(p8k_16_iomap, AS_IO, 16, p8k_state)
 //  AM_RANGE(0x0fef0, 0x0feff) // clock
 	AM_RANGE(0x0ff80, 0x0ff87) AM_DEVREADWRITE("z80sio_0", p8k_16_sio_r, p8k_16_sio_w)
 	AM_RANGE(0x0ff88, 0x0ff8f) AM_DEVREADWRITE("z80sio_1", p8k_16_sio_r, p8k_16_sio_w)
@@ -164,9 +165,9 @@ static VIDEO_START( p8k )
 {
 }
 
-static VIDEO_UPDATE( p8k )
+static SCREEN_UPDATE( p8k )
 {
-    return 0;
+	return 0;
 }
 
 
@@ -178,7 +179,7 @@ static VIDEO_UPDATE( p8k )
 
 static void p8k_daisy_interrupt(device_t *device, int state)
 {
-	cputag_set_input_line(device->machine, "maincpu", 0, state);
+	cputag_set_input_line(device->machine(), "maincpu", 0, state);
 }
 
 /* Z80 DMA */
@@ -187,7 +188,7 @@ static WRITE_LINE_DEVICE_HANDLER( p8k_dma_irq_w )
 {
 	if (state)
 	{
-		device_t *i8272 = device->machine->device("i8272");
+		device_t *i8272 = device->machine().device("i8272");
 		upd765_tc_w(i8272, state);
 	}
 
@@ -328,7 +329,7 @@ static const z80_daisy_config p8k_daisy_chain[] =
 
 static WRITE_LINE_DEVICE_HANDLER( p8k_i8272_irq_w )
 {
-	device_t *z80pio = device->machine->device("z80pio_2");
+	device_t *z80pio = device->machine().device("z80pio_2");
 
 	z80pio_pb_w(z80pio, 0, (state) ? 0x10 : 0x00);
 }
@@ -342,7 +343,7 @@ static const struct upd765_interface p8k_i8272_intf =
 	{ FLOPPY_0, FLOPPY_1, NULL, NULL }
 };
 
-static const floppy_config p8k_floppy_config =
+static const floppy_interface p8k_floppy_interface =
 {
 	DEVCB_NULL,
 	DEVCB_NULL,
@@ -351,6 +352,7 @@ static const floppy_config p8k_floppy_config =
 	DEVCB_NULL,
 	FLOPPY_STANDARD_5_25_DSHD,
 	FLOPPY_OPTIONS_NAME(default),
+	NULL,
 	NULL
 };
 
@@ -519,12 +521,12 @@ static MACHINE_CONFIG_START( p8k, p8k_state )
 	MCFG_Z80PIO_ADD("z80pio_1", 1229000, p8k_pio_1_intf)
 	MCFG_Z80PIO_ADD("z80pio_2", 1229000, p8k_pio_2_intf)
 	MCFG_UPD765A_ADD("i8272", p8k_i8272_intf)
-	MCFG_FLOPPY_2_DRIVES_ADD(p8k_floppy_config)
+	MCFG_FLOPPY_2_DRIVES_ADD(p8k_floppy_interface)
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MCFG_SOUND_ADD("beep", BEEP, 0)
+	MCFG_SOUND_ADD(BEEPER_TAG, BEEP, 0)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.5)
 
 	/* video hardware */
@@ -533,12 +535,13 @@ static MACHINE_CONFIG_START( p8k, p8k_state )
 	MCFG_SCREEN_REFRESH_RATE(15)
 	MCFG_SCREEN_SIZE(640,480)
 	MCFG_SCREEN_VISIBLE_AREA(0, 640-1, 0, 480-1)
+	MCFG_SCREEN_UPDATE(p8k)
+
 	MCFG_GFXDECODE(p8k)
 	MCFG_PALETTE_LENGTH(2)
 	MCFG_PALETTE_INIT(black_and_white)
 
 	MCFG_VIDEO_START(p8k)
-	MCFG_VIDEO_UPDATE(p8k)
 MACHINE_CONFIG_END
 
 static MACHINE_CONFIG_START( p8k_16, p8k_state )
@@ -563,7 +566,7 @@ static MACHINE_CONFIG_START( p8k_16, p8k_state )
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 
-	MCFG_SOUND_ADD("beep", BEEP, 0)
+	MCFG_SOUND_ADD(BEEPER_TAG, BEEP, 0)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.5)
 
 	/* video hardware */
@@ -572,12 +575,13 @@ static MACHINE_CONFIG_START( p8k_16, p8k_state )
 	MCFG_SCREEN_REFRESH_RATE(15)
 	MCFG_SCREEN_SIZE(640,480)
 	MCFG_SCREEN_VISIBLE_AREA(0, 640-1, 0, 480-1)
+	MCFG_SCREEN_UPDATE(p8k)
+
 	MCFG_GFXDECODE(p8k)
 	MCFG_PALETTE_LENGTH(2)
 	MCFG_PALETTE_INIT(black_and_white)
 
 	MCFG_VIDEO_START(p8k)
-	MCFG_VIDEO_UPDATE(p8k)
 MACHINE_CONFIG_END
 
 /* ROM definition */

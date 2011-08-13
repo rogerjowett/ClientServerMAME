@@ -38,6 +38,9 @@
 		<Unit filename="..\src\build\makedep.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\build\makelist.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\build\png2bdc.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -84,6 +87,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\config.h" />
+		<Unit filename="..\src\emu\cothread.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\cothread.h" />
 		<Unit filename="..\src\emu\cpu\adsp2100\2100dasm.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -158,13 +165,6 @@
 		<Unit filename="..\src\emu\cpu\ccpu\ccpudasm.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="..\src\emu\cpu\cdp1802\1802dasm.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="..\src\emu\cpu\cdp1802\cdp1802.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="..\src\emu\cpu\cdp1802\cdp1802.h" />
 		<Unit filename="..\src\emu\cpu\cop400\cop400.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -205,6 +205,7 @@
 		<Unit filename="..\src\emu\cpu\drcbec.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\emu\cpu\drcbec.h" />
 		<Unit filename="..\src\emu\cpu\drcbeut.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -212,9 +213,11 @@
 		<Unit filename="..\src\emu\cpu\drcbex64.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\emu\cpu\drcbex64.h" />
 		<Unit filename="..\src\emu\cpu\drcbex86.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\emu\cpu\drcbex86.h" />
 		<Unit filename="..\src\emu\cpu\drccache.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -228,6 +231,13 @@
 		</Unit>
 		<Unit filename="..\src\emu\cpu\drcuml.h" />
 		<Unit filename="..\src\emu\cpu\drcumlsh.h" />
+		<Unit filename="..\src\emu\cpu\dsp16\dsp16.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\cpu\dsp16\dsp16.h" />
+		<Unit filename="..\src\emu\cpu\dsp16\dsp16dis.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\emu\cpu\dsp32\dsp32.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -356,6 +366,13 @@
 		<Unit filename="..\src\emu\cpu\hcd62121\hcd62121d.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\emu\cpu\hd61700\hd61700.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\cpu\hd61700\hd61700.h" />
+		<Unit filename="..\src\emu\cpu\hd61700\hd61700d.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\emu\cpu\hd6309\6309dasm.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -442,10 +459,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\cpu\i86\i86.h" />
-		<Unit filename="..\src\emu\cpu\i86\i86mem.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="..\src\emu\cpu\i86\i86mem.h" />
 		<Unit filename="..\src\emu\cpu\i86\i86priv.h" />
 		<Unit filename="..\src\emu\cpu\i86\i86time.c">
 			<Option compilerVar="CC" />
@@ -606,10 +619,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\cpu\m68000\m68kmmu.h" />
-		<Unit filename="..\src\emu\cpu\m68000\m68kops.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="..\src\emu\cpu\m68000\m68kops.h" />
 		<Unit filename="..\src\emu\cpu\m6800\6800dasm.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -699,9 +708,6 @@
 		<Unit filename="..\src\emu\cpu\minx\minxopce.h" />
 		<Unit filename="..\src\emu\cpu\minx\minxopcf.h" />
 		<Unit filename="..\src\emu\cpu\minx\minxops.h" />
-		<Unit filename="..\src\emu\cpu\mips\dismips.c">
-			<Option compilerVar="CC" />
-		</Unit>
 		<Unit filename="..\src\emu\cpu\mips\mips3.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -720,13 +726,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\cpu\mips\mips3fe.h" />
-		<Unit filename="..\src\emu\cpu\mips\psx.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="..\src\emu\cpu\mips\psx.h" />
-		<Unit filename="..\src\emu\cpu\mips\psxdasm.c">
-			<Option compilerVar="CC" />
-		</Unit>
 		<Unit filename="..\src\emu\cpu\mips\r3000.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -749,11 +748,11 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\cpu\nec\necea.h" />
-		<Unit filename="..\src\emu\cpu\nec\nechost.h" />
 		<Unit filename="..\src\emu\cpu\nec\necinstr.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\cpu\nec\necinstr.h" />
+		<Unit filename="..\src\emu\cpu\nec\necmacro.h" />
 		<Unit filename="..\src\emu\cpu\nec\necmodrm.h" />
 		<Unit filename="..\src\emu\cpu\nec\necpriv.h" />
 		<Unit filename="..\src\emu\cpu\nec\v25.c">
@@ -839,6 +838,47 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\cpu\powerpc\ppcfe.h" />
+		<Unit filename="..\src\emu\cpu\pps4\pps4.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\cpu\pps4\pps4.h" />
+		<Unit filename="..\src\emu\cpu\pps4\pps4dasm.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\cpu\psx\dismips.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\cpu\psx\dma.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\cpu\psx\dma.h" />
+		<Unit filename="..\src\emu\cpu\psx\gte.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\cpu\psx\gte.h" />
+		<Unit filename="..\src\emu\cpu\psx\irq.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\cpu\psx\irq.h" />
+		<Unit filename="..\src\emu\cpu\psx\mdec.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\cpu\psx\mdec.h" />
+		<Unit filename="..\src\emu\cpu\psx\psx.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\cpu\psx\psx.h" />
+		<Unit filename="..\src\emu\cpu\psx\psxdasm.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\cpu\psx\rcnt.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\cpu\psx\rcnt.h" />
+		<Unit filename="..\src\emu\cpu\psx\sio.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\cpu\psx\sio.h" />
 		<Unit filename="..\src\emu\cpu\rsp\rsp.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -1098,6 +1138,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\cpu\tms57002\tms57002.h" />
+		<Unit filename="..\src\emu\cpu\tms57002\tms57kdec.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\cpu\tms57002\tms57kpr.h" />
 		<Unit filename="..\src\emu\cpu\tms57002\tmsmake.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -1132,6 +1176,10 @@
 		<Unit filename="..\src\emu\cpu\tms9900\tms9995.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\emu\cpu\uml.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\cpu\uml.h" />
 		<Unit filename="..\src\emu\cpu\unsp\unsp.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -1139,6 +1187,13 @@
 		<Unit filename="..\src\emu\cpu\unsp\unspdasm.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\emu\cpu\upd7725\dasm7725.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\cpu\upd7725\upd7725.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\cpu\upd7725\upd7725.h" />
 		<Unit filename="..\src\emu\cpu\upd7810\7810dasm.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -1202,9 +1257,6 @@
 		</Unit>
 		<Unit filename="..\src\emu\cpu\v60\v60.h" />
 		<Unit filename="..\src\emu\cpu\v60\v60d.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="..\src\emu\cpu\v60\v60mem.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\cpu\v810\v810.c">
@@ -1297,10 +1349,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\debug\debugcmd.h" />
-		<Unit filename="..\src\emu\debug\debugcmt.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="..\src\emu\debug\debugcmt.h" />
 		<Unit filename="..\src\emu\debug\debugcon.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -1395,6 +1443,14 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\dinvram.h" />
+		<Unit filename="..\src\emu\dirtc.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\dirtc.h" />
+		<Unit filename="..\src\emu\dislot.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\dislot.h" />
 		<Unit filename="..\src\emu\disound.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -1439,6 +1495,7 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\emupal.h" />
+		<Unit filename="..\src\emu\emutempl.h" />
 		<Unit filename="..\src\emu\fileio.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -1455,6 +1512,42 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\image.h" />
+		<Unit filename="..\src\emu\imagedev\bitbngr.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\imagedev\bitbngr.h" />
+		<Unit filename="..\src\emu\imagedev\cartslot.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\imagedev\cartslot.h" />
+		<Unit filename="..\src\emu\imagedev\cassette.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\imagedev\cassette.h" />
+		<Unit filename="..\src\emu\imagedev\chd_cd.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\imagedev\chd_cd.h" />
+		<Unit filename="..\src\emu\imagedev\flopdrv.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\imagedev\flopdrv.h" />
+		<Unit filename="..\src\emu\imagedev\harddriv.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\imagedev\harddriv.h" />
+		<Unit filename="..\src\emu\imagedev\multcart.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\imagedev\multcart.h" />
+		<Unit filename="..\src\emu\imagedev\printer.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\imagedev\printer.h" />
+		<Unit filename="..\src\emu\imagedev\snapquik.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\imagedev\snapquik.h" />
 		<Unit filename="..\src\emu\info.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -1468,14 +1561,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\input.h" />
-		<Unit filename="..\src\emu\inputseq.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="..\src\emu\inputseq.h" />
-		<Unit filename="..\src\emu\ioprocs.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="..\src\emu\ioprocs.h" />
 		<Unit filename="..\src\emu\machine.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -1488,6 +1573,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\machine\6522via.h" />
+		<Unit filename="..\src\emu\machine\6525tpi.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\machine\6525tpi.h" />
 		<Unit filename="..\src\emu\machine\6526cia.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -1548,6 +1637,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\machine\8257dma.h" />
+		<Unit filename="..\src\emu\machine\adc0808.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\machine\adc0808.h" />
 		<Unit filename="..\src\emu\machine\adc083x.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -1572,10 +1665,22 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\machine\cdp1852.h" />
+		<Unit filename="..\src\emu\machine\cdp1871.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\machine\cdp1871.h" />
+		<Unit filename="..\src\emu\machine\com8116.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\machine\com8116.h" />
 		<Unit filename="..\src\emu\machine\cr589.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\machine\cr589.h" />
+		<Unit filename="..\src\emu\machine\ctronics.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\machine\ctronics.h" />
 		<Unit filename="..\src\emu\machine\devhelpr.h" />
 		<Unit filename="..\src\emu\machine\ds1302.c">
 			<Option compilerVar="CC" />
@@ -1589,6 +1694,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\machine\ds2404.h" />
+		<Unit filename="..\src\emu\machine\e0516.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\machine\e0516.h" />
 		<Unit filename="..\src\emu\machine\eeprom.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -1609,14 +1718,30 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\machine\i2cmem.h" />
+		<Unit filename="..\src\emu\machine\i8155.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\machine\i8155.h" />
+		<Unit filename="..\src\emu\machine\i8212.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\machine\i8212.h" />
+		<Unit filename="..\src\emu\machine\i8214.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\machine\i8214.h" />
 		<Unit filename="..\src\emu\machine\i8243.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\machine\i8243.h" />
-		<Unit filename="..\src\emu\machine\i8255a.c">
+		<Unit filename="..\src\emu\machine\i8255.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="..\src\emu\machine\i8255a.h" />
+		<Unit filename="..\src\emu\machine\i8255.h" />
+		<Unit filename="..\src\emu\machine\i8355.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\machine\i8355.h" />
 		<Unit filename="..\src\emu\machine\idectrl.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -1633,10 +1758,22 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\machine\intelfsh.h" />
+		<Unit filename="..\src\emu\machine\jvsdev.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\machine\jvsdev.h" />
+		<Unit filename="..\src\emu\machine\jvshost.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\machine\jvshost.h" />
 		<Unit filename="..\src\emu\machine\k033906.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\machine\k033906.h" />
+		<Unit filename="..\src\emu\machine\k053252.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\machine\k053252.h" />
 		<Unit filename="..\src\emu\machine\k056230.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -1659,6 +1796,10 @@
 		<Unit filename="..\src\emu\machine\ldvp931.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\emu\machine\matsucd.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\machine\matsucd.h" />
 		<Unit filename="..\src\emu\machine\mb14241.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -1675,14 +1816,46 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\machine\mc146818.h" />
+		<Unit filename="..\src\emu\machine\mc6852.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\machine\mc6852.h" />
+		<Unit filename="..\src\emu\machine\mc68901.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\machine\mc68901.h" />
+		<Unit filename="..\src\emu\machine\mccs1850.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\machine\mccs1850.h" />
 		<Unit filename="..\src\emu\machine\microtch.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\machine\microtch.h" />
+		<Unit filename="..\src\emu\machine\mm74c922.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\machine\mm74c922.h" />
+		<Unit filename="..\src\emu\machine\mos6529.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\machine\mos6529.h" />
+		<Unit filename="..\src\emu\machine\msm5832.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\machine\msm5832.h" />
+		<Unit filename="..\src\emu\machine\msm58321.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\machine\msm58321.h" />
 		<Unit filename="..\src\emu\machine\msm6242.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\machine\msm6242.h" />
+		<Unit filename="..\src\emu\machine\nmc9306.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\machine\nmc9306.h" />
 		<Unit filename="..\src\emu\machine\nvram.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -1709,11 +1882,23 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\machine\pit8253.h" />
+		<Unit filename="..\src\emu\machine\ram.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\machine\ram.h" />
 		<Unit filename="..\src\emu\machine\rescap.h" />
 		<Unit filename="..\src\emu\machine\roc10937.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\machine\roc10937.h" />
+		<Unit filename="..\src\emu\machine\rp5c01.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\machine\rp5c01.h" />
+		<Unit filename="..\src\emu\machine\rp5c15.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\machine\rp5c15.h" />
 		<Unit filename="..\src\emu\machine\rp5h01.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -1753,6 +1938,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\machine\scsihd.h" />
+		<Unit filename="..\src\emu\machine\secflash.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\machine\secflash.h" />
 		<Unit filename="..\src\emu\machine\smc91c9x.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -1769,10 +1958,22 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\machine\tms6100.h" />
+		<Unit filename="..\src\emu\machine\upd1990a.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\machine\upd1990a.h" />
 		<Unit filename="..\src\emu\machine\upd4701.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\machine\upd4701.h" />
+		<Unit filename="..\src\emu\machine\upd7201.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\machine\upd7201.h" />
+		<Unit filename="..\src\emu\machine\wd17xx.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\machine\wd17xx.h" />
 		<Unit filename="..\src\emu\machine\wd33c93.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -1813,6 +2014,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\machine\z80sti.h" />
+		<Unit filename="..\src\emu\machine\z8536.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\machine\z8536.h" />
 		<Unit filename="..\src\emu\mame.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -1857,6 +2062,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\romload.h" />
+		<Unit filename="..\src\emu\save.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\save.h" />
 		<Unit filename="..\src\emu\schedule.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -1984,24 +2193,29 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\sound\digitalk.h" />
+		<Unit filename="..\src\emu\sound\disc_cls.h" />
 		<Unit filename="..\src\emu\sound\disc_dev.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\emu\sound\disc_dev.h" />
 		<Unit filename="..\src\emu\sound\disc_flt.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\emu\sound\disc_flt.h" />
 		<Unit filename="..\src\emu\sound\disc_inp.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\sound\disc_mth.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\emu\sound\disc_mth.h" />
 		<Unit filename="..\src\emu\sound\disc_sys.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\sound\disc_wav.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\emu\sound\disc_wav.h" />
 		<Unit filename="..\src\emu\sound\discrete.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -2085,6 +2299,14 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\sound\k056800.h" />
+		<Unit filename="..\src\emu\sound\lmc1992.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\sound\lmc1992.h" />
+		<Unit filename="..\src\emu\sound\mas3507d.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\sound\mas3507d.h" />
 		<Unit filename="..\src\emu\sound\mos6560.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -2118,6 +2340,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\sound\nile.h" />
+		<Unit filename="..\src\emu\sound\okiadpcm.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\sound\okiadpcm.h" />
 		<Unit filename="..\src\emu\sound\okim6258.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -2130,14 +2356,14 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\sound\okim6376.h" />
+		<Unit filename="..\src\emu\sound\okim9810.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\sound\okim9810.h" />
 		<Unit filename="..\src\emu\sound\pokey.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\sound\pokey.h" />
-		<Unit filename="..\src\emu\sound\psx.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="..\src\emu\sound\psx.h" />
 		<Unit filename="..\src\emu\sound\qsound.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -2224,6 +2450,17 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\sound\speaker.h" />
+		<Unit filename="..\src\emu\sound\spu.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\sound\spu.h" />
+		<Unit filename="..\src\emu\sound\spu_tables.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\sound\spureverb.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\sound\spureverb.h" />
 		<Unit filename="..\src\emu\sound\st0016.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -2322,14 +2559,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\sound\zsg2.h" />
-		<Unit filename="..\src\emu\state.c">
+		<Unit filename="..\src\emu\speaker.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="..\src\emu\state.h" />
-		<Unit filename="..\src\emu\streams.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="..\src\emu\streams.h" />
+		<Unit filename="..\src\emu\speaker.h" />
 		<Unit filename="..\src\emu\tilemap.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -2338,7 +2571,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\timer.h" />
-		<Unit filename="..\src\emu\tokenize.h" />
 		<Unit filename="..\src\emu\ui.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -2359,6 +2591,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\uimenu.h" />
+		<Unit filename="..\src\emu\uiswlist.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\uiswlist.h" />
 		<Unit filename="..\src\emu\validity.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -2367,30 +2603,74 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\video.h" />
+		<Unit filename="..\src\emu\video\cdp1861.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\video\cdp1861.h" />
+		<Unit filename="..\src\emu\video\cdp1862.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\video\cdp1862.h" />
+		<Unit filename="..\src\emu\video\crt9007.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\video\crt9007.h" />
+		<Unit filename="..\src\emu\video\crt9021.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\video\crt9021.h" />
+		<Unit filename="..\src\emu\video\crt9212.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\video\crt9212.h" />
+		<Unit filename="..\src\emu\video\dm9368.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\video\dm9368.h" />
 		<Unit filename="..\src\emu\video\generic.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\video\generic.h" />
+		<Unit filename="..\src\emu\video\hd44102.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\video\hd44102.h" />
+		<Unit filename="..\src\emu\video\hd61830.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\video\hd61830.h" />
 		<Unit filename="..\src\emu\video\hd63484.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\video\hd63484.h" />
+		<Unit filename="..\src\emu\video\i8275.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\video\i8275.h" />
+		<Unit filename="..\src\emu\video\k053250.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\video\k053250.h" />
 		<Unit filename="..\src\emu\video\mc6845.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\video\mc6845.h" />
+		<Unit filename="..\src\emu\video\msm6255.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\video\msm6255.h" />
 		<Unit filename="..\src\emu\video\pc_vga.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\video\pc_vga.h" />
-		<Unit filename="..\src\emu\video\pc_video.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="..\src\emu\video\pc_video.h" />
 		<Unit filename="..\src\emu\video\poly.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\video\poly.h" />
+		<Unit filename="..\src\emu\video\psx.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\video\psx.h" />
 		<Unit filename="..\src\emu\video\resnet.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -2410,6 +2690,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\video\saa5050.h" />
+		<Unit filename="..\src\emu\video\sed1330.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\video\sed1330.h" />
 		<Unit filename="..\src\emu\video\tlc34076.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -2426,6 +2710,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\video\tms9928a.h" />
+		<Unit filename="..\src\emu\video\upd3301.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\emu\video\upd3301.h" />
 		<Unit filename="..\src\emu\video\v9938.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -2446,10 +2734,255 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\emu\watchdog.h" />
-		<Unit filename="..\src\ldplayer\ldpdriv.c">
+		<Unit filename="..\src\ldplayer\ldplayer.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="..\src\ldplayer\ldplayer.c">
+		<Unit filename="..\src\lib\RakNet\AutopatcherPatchContext.h" />
+		<Unit filename="..\src\lib\RakNet\AutopatcherRepositoryInterface.h" />
+		<Unit filename="..\src\lib\RakNet\BitStream.cpp" />
+		<Unit filename="..\src\lib\RakNet\BitStream.h" />
+		<Unit filename="..\src\lib\RakNet\CCRakNetSlidingWindow.cpp" />
+		<Unit filename="..\src\lib\RakNet\CCRakNetSlidingWindow.h" />
+		<Unit filename="..\src\lib\RakNet\CCRakNetUDT.cpp" />
+		<Unit filename="..\src\lib\RakNet\CCRakNetUDT.h" />
+		<Unit filename="..\src\lib\RakNet\CheckSum.cpp" />
+		<Unit filename="..\src\lib\RakNet\CheckSum.h" />
+		<Unit filename="..\src\lib\RakNet\CommandParserInterface.cpp" />
+		<Unit filename="..\src\lib\RakNet\CommandParserInterface.h" />
+		<Unit filename="..\src\lib\RakNet\ConnectionGraph2.cpp" />
+		<Unit filename="..\src\lib\RakNet\ConnectionGraph2.h" />
+		<Unit filename="..\src\lib\RakNet\ConsoleServer.cpp" />
+		<Unit filename="..\src\lib\RakNet\ConsoleServer.h" />
+		<Unit filename="..\src\lib\RakNet\DS_BPlusTree.h" />
+		<Unit filename="..\src\lib\RakNet\DS_BinarySearchTree.h" />
+		<Unit filename="..\src\lib\RakNet\DS_BytePool.cpp" />
+		<Unit filename="..\src\lib\RakNet\DS_BytePool.h" />
+		<Unit filename="..\src\lib\RakNet\DS_ByteQueue.cpp" />
+		<Unit filename="..\src\lib\RakNet\DS_ByteQueue.h" />
+		<Unit filename="..\src\lib\RakNet\DS_Heap.h" />
+		<Unit filename="..\src\lib\RakNet\DS_HuffmanEncodingTree.cpp" />
+		<Unit filename="..\src\lib\RakNet\DS_HuffmanEncodingTree.h" />
+		<Unit filename="..\src\lib\RakNet\DS_HuffmanEncodingTreeFactory.h" />
+		<Unit filename="..\src\lib\RakNet\DS_HuffmanEncodingTreeNode.h" />
+		<Unit filename="..\src\lib\RakNet\DS_LinkedList.h" />
+		<Unit filename="..\src\lib\RakNet\DS_List.h" />
+		<Unit filename="..\src\lib\RakNet\DS_Map.h" />
+		<Unit filename="..\src\lib\RakNet\DS_MemoryPool.h" />
+		<Unit filename="..\src\lib\RakNet\DS_Multilist.h" />
+		<Unit filename="..\src\lib\RakNet\DS_OrderedChannelHeap.h" />
+		<Unit filename="..\src\lib\RakNet\DS_OrderedList.h" />
+		<Unit filename="..\src\lib\RakNet\DS_Queue.h" />
+		<Unit filename="..\src\lib\RakNet\DS_QueueLinkedList.h" />
+		<Unit filename="..\src\lib\RakNet\DS_RangeList.h" />
+		<Unit filename="..\src\lib\RakNet\DS_StringKeyedHash.h" />
+		<Unit filename="..\src\lib\RakNet\DS_Table.cpp" />
+		<Unit filename="..\src\lib\RakNet\DS_Table.h" />
+		<Unit filename="..\src\lib\RakNet\DS_ThreadsafeAllocatingQueue.h" />
+		<Unit filename="..\src\lib\RakNet\DS_Tree.h" />
+		<Unit filename="..\src\lib\RakNet\DS_WeightedGraph.h" />
+		<Unit filename="..\src\lib\RakNet\DataCompressor.cpp" />
+		<Unit filename="..\src\lib\RakNet\DataCompressor.h" />
+		<Unit filename="..\src\lib\RakNet\DirectoryDeltaTransfer.cpp" />
+		<Unit filename="..\src\lib\RakNet\DirectoryDeltaTransfer.h" />
+		<Unit filename="..\src\lib\RakNet\EmailSender.cpp" />
+		<Unit filename="..\src\lib\RakNet\EmailSender.h" />
+		<Unit filename="..\src\lib\RakNet\EncodeClassName.cpp" />
+		<Unit filename="..\src\lib\RakNet\EpochTimeToString.cpp" />
+		<Unit filename="..\src\lib\RakNet\EpochTimeToString.h" />
+		<Unit filename="..\src\lib\RakNet\Export.h" />
+		<Unit filename="..\src\lib\RakNet\FileList.cpp" />
+		<Unit filename="..\src\lib\RakNet\FileList.h" />
+		<Unit filename="..\src\lib\RakNet\FileListNodeContext.h" />
+		<Unit filename="..\src\lib\RakNet\FileListTransfer.cpp" />
+		<Unit filename="..\src\lib\RakNet\FileListTransfer.h" />
+		<Unit filename="..\src\lib\RakNet\FileListTransferCBInterface.h" />
+		<Unit filename="..\src\lib\RakNet\FileOperations.cpp" />
+		<Unit filename="..\src\lib\RakNet\FileOperations.h" />
+		<Unit filename="..\src\lib\RakNet\FormatString.cpp" />
+		<Unit filename="..\src\lib\RakNet\FormatString.h" />
+		<Unit filename="..\src\lib\RakNet\FullyConnectedMesh2.cpp" />
+		<Unit filename="..\src\lib\RakNet\FullyConnectedMesh2.h" />
+		<Unit filename="..\src\lib\RakNet\GetTime.cpp" />
+		<Unit filename="..\src\lib\RakNet\GetTime.h" />
+		<Unit filename="..\src\lib\RakNet\Getche.cpp" />
+		<Unit filename="..\src\lib\RakNet\Getche.h" />
+		<Unit filename="..\src\lib\RakNet\Gets.cpp" />
+		<Unit filename="..\src\lib\RakNet\Gets.h" />
+		<Unit filename="..\src\lib\RakNet\GridSectorizer.cpp" />
+		<Unit filename="..\src\lib\RakNet\GridSectorizer.h" />
+		<Unit filename="..\src\lib\RakNet\HTTPConnection.cpp" />
+		<Unit filename="..\src\lib\RakNet\HTTPConnection.h" />
+		<Unit filename="..\src\lib\RakNet\IncrementalReadInterface.cpp" />
+		<Unit filename="..\src\lib\RakNet\IncrementalReadInterface.h" />
+		<Unit filename="..\src\lib\RakNet\InternalPacket.h" />
+		<Unit filename="..\src\lib\RakNet\Itoa.cpp" />
+		<Unit filename="..\src\lib\RakNet\Itoa.h" />
+		<Unit filename="..\src\lib\RakNet\Kbhit.h" />
+		<Unit filename="..\src\lib\RakNet\LinuxStrings.cpp" />
+		<Unit filename="..\src\lib\RakNet\LinuxStrings.h" />
+		<Unit filename="..\src\lib\RakNet\LogCommandParser.cpp" />
+		<Unit filename="..\src\lib\RakNet\LogCommandParser.h" />
+		<Unit filename="..\src\lib\RakNet\MTUSize.h" />
+		<Unit filename="..\src\lib\RakNet\MessageFilter.cpp" />
+		<Unit filename="..\src\lib\RakNet\MessageFilter.h" />
+		<Unit filename="..\src\lib\RakNet\MessageIdentifiers.h" />
+		<Unit filename="..\src\lib\RakNet\NatPunchthroughClient.cpp" />
+		<Unit filename="..\src\lib\RakNet\NatPunchthroughClient.h" />
+		<Unit filename="..\src\lib\RakNet\NatPunchthroughServer.cpp" />
+		<Unit filename="..\src\lib\RakNet\NatPunchthroughServer.h" />
+		<Unit filename="..\src\lib\RakNet\NatTypeDetectionClient.cpp" />
+		<Unit filename="..\src\lib\RakNet\NatTypeDetectionClient.h" />
+		<Unit filename="..\src\lib\RakNet\NatTypeDetectionCommon.cpp" />
+		<Unit filename="..\src\lib\RakNet\NatTypeDetectionCommon.h" />
+		<Unit filename="..\src\lib\RakNet\NatTypeDetectionServer.cpp" />
+		<Unit filename="..\src\lib\RakNet\NatTypeDetectionServer.h" />
+		<Unit filename="..\src\lib\RakNet\NativeFeatureIncludes.h" />
+		<Unit filename="..\src\lib\RakNet\NativeFeatureIncludesOverrides.h" />
+		<Unit filename="..\src\lib\RakNet\NativeTypes.h" />
+		<Unit filename="..\src\lib\RakNet\NetworkIDManager.cpp" />
+		<Unit filename="..\src\lib\RakNet\NetworkIDManager.h" />
+		<Unit filename="..\src\lib\RakNet\NetworkIDObject.cpp" />
+		<Unit filename="..\src\lib\RakNet\NetworkIDObject.h" />
+		<Unit filename="..\src\lib\RakNet\PacketConsoleLogger.cpp" />
+		<Unit filename="..\src\lib\RakNet\PacketConsoleLogger.h" />
+		<Unit filename="..\src\lib\RakNet\PacketFileLogger.cpp" />
+		<Unit filename="..\src\lib\RakNet\PacketFileLogger.h" />
+		<Unit filename="..\src\lib\RakNet\PacketLogger.cpp" />
+		<Unit filename="..\src\lib\RakNet\PacketLogger.h" />
+		<Unit filename="..\src\lib\RakNet\PacketOutputWindowLogger.cpp" />
+		<Unit filename="..\src\lib\RakNet\PacketOutputWindowLogger.h" />
+		<Unit filename="..\src\lib\RakNet\PacketPool.h" />
+		<Unit filename="..\src\lib\RakNet\PacketPriority.h" />
+		<Unit filename="..\src\lib\RakNet\PacketizedTCP.cpp" />
+		<Unit filename="..\src\lib\RakNet\PacketizedTCP.h" />
+		<Unit filename="..\src\lib\RakNet\PluginInterface2.cpp" />
+		<Unit filename="..\src\lib\RakNet\PluginInterface2.h" />
+		<Unit filename="..\src\lib\RakNet\RPC4Plugin.cpp" />
+		<Unit filename="..\src\lib\RakNet\RPC4Plugin.h" />
+		<Unit filename="..\src\lib\RakNet\RakAlloca.h" />
+		<Unit filename="..\src\lib\RakNet\RakAssert.h" />
+		<Unit filename="..\src\lib\RakNet\RakMemoryOverride.cpp" />
+		<Unit filename="..\src\lib\RakNet\RakMemoryOverride.h" />
+		<Unit filename="..\src\lib\RakNet\RakNetCommandParser.cpp" />
+		<Unit filename="..\src\lib\RakNet\RakNetCommandParser.h" />
+		<Unit filename="..\src\lib\RakNet\RakNetDefines.h" />
+		<Unit filename="..\src\lib\RakNet\RakNetDefinesOverrides.h" />
+		<Unit filename="..\src\lib\RakNet\RakNetSmartPtr.h" />
+		<Unit filename="..\src\lib\RakNet\RakNetSocket.cpp" />
+		<Unit filename="..\src\lib\RakNet\RakNetSocket.h" />
+		<Unit filename="..\src\lib\RakNet\RakNetStatistics.cpp" />
+		<Unit filename="..\src\lib\RakNet\RakNetStatistics.h" />
+		<Unit filename="..\src\lib\RakNet\RakNetTime.h" />
+		<Unit filename="..\src\lib\RakNet\RakNetTransport2.cpp" />
+		<Unit filename="..\src\lib\RakNet\RakNetTransport2.h" />
+		<Unit filename="..\src\lib\RakNet\RakNetTypes.cpp" />
+		<Unit filename="..\src\lib\RakNet\RakNetTypes.h" />
+		<Unit filename="..\src\lib\RakNet\RakNetVersion.h" />
+		<Unit filename="..\src\lib\RakNet\RakPeer.cpp" />
+		<Unit filename="..\src\lib\RakNet\RakPeer.h" />
+		<Unit filename="..\src\lib\RakNet\RakPeerInterface.h" />
+		<Unit filename="..\src\lib\RakNet\RakSleep.cpp" />
+		<Unit filename="..\src\lib\RakNet\RakSleep.h" />
+		<Unit filename="..\src\lib\RakNet\RakString.cpp" />
+		<Unit filename="..\src\lib\RakNet\RakString.h" />
+		<Unit filename="..\src\lib\RakNet\RakThread.cpp" />
+		<Unit filename="..\src\lib\RakNet\RakThread.h" />
+		<Unit filename="..\src\lib\RakNet\Rand.cpp" />
+		<Unit filename="..\src\lib\RakNet\Rand.h" />
+		<Unit filename="..\src\lib\RakNet\ReadyEvent.cpp" />
+		<Unit filename="..\src\lib\RakNet\ReadyEvent.h" />
+		<Unit filename="..\src\lib\RakNet\RefCountedObj.h" />
+		<Unit filename="..\src\lib\RakNet\ReliabilityLayer.cpp" />
+		<Unit filename="..\src\lib\RakNet\ReliabilityLayer.h" />
+		<Unit filename="..\src\lib\RakNet\Replica.h" />
+		<Unit filename="..\src\lib\RakNet\ReplicaEnums.h" />
+		<Unit filename="..\src\lib\RakNet\ReplicaManager3.cpp" />
+		<Unit filename="..\src\lib\RakNet\ReplicaManager3.h" />
+		<Unit filename="..\src\lib\RakNet\Router2.cpp" />
+		<Unit filename="..\src\lib\RakNet\Router2.h" />
+		<Unit filename="..\src\lib\RakNet\SHA1.cpp" />
+		<Unit filename="..\src\lib\RakNet\SHA1.h" />
+		<Unit filename="..\src\lib\RakNet\SecureHandshake.cpp" />
+		<Unit filename="..\src\lib\RakNet\SecureHandshake.h" />
+		<Unit filename="..\src\lib\RakNet\SendToThread.cpp" />
+		<Unit filename="..\src\lib\RakNet\SendToThread.h" />
+		<Unit filename="..\src\lib\RakNet\SignaledEvent.cpp" />
+		<Unit filename="..\src\lib\RakNet\SignaledEvent.h" />
+		<Unit filename="..\src\lib\RakNet\SimpleMutex.cpp" />
+		<Unit filename="..\src\lib\RakNet\SimpleMutex.h" />
+		<Unit filename="..\src\lib\RakNet\SimpleTCPServer.h" />
+		<Unit filename="..\src\lib\RakNet\SingleProducerConsumer.h" />
+		<Unit filename="..\src\lib\RakNet\SocketIncludes.h" />
+		<Unit filename="..\src\lib\RakNet\SocketLayer.cpp" />
+		<Unit filename="..\src\lib\RakNet\SocketLayer.h" />
+		<Unit filename="..\src\lib\RakNet\StringCompressor.cpp" />
+		<Unit filename="..\src\lib\RakNet\StringCompressor.h" />
+		<Unit filename="..\src\lib\RakNet\StringTable.cpp" />
+		<Unit filename="..\src\lib\RakNet\StringTable.h" />
+		<Unit filename="..\src\lib\RakNet\SuperFastHash.cpp" />
+		<Unit filename="..\src\lib\RakNet\SuperFastHash.h" />
+		<Unit filename="..\src\lib\RakNet\TCPInterface.cpp" />
+		<Unit filename="..\src\lib\RakNet\TCPInterface.h" />
+		<Unit filename="..\src\lib\RakNet\TableSerializer.cpp" />
+		<Unit filename="..\src\lib\RakNet\TableSerializer.h" />
+		<Unit filename="..\src\lib\RakNet\TeamBalancer.cpp" />
+		<Unit filename="..\src\lib\RakNet\TeamBalancer.h" />
+		<Unit filename="..\src\lib\RakNet\TelnetTransport.cpp" />
+		<Unit filename="..\src\lib\RakNet\TelnetTransport.h" />
+		<Unit filename="..\src\lib\RakNet\ThreadPool.h" />
+		<Unit filename="..\src\lib\RakNet\ThreadsafePacketLogger.cpp" />
+		<Unit filename="..\src\lib\RakNet\ThreadsafePacketLogger.h" />
+		<Unit filename="..\src\lib\RakNet\TransportInterface.h" />
+		<Unit filename="..\src\lib\RakNet\UDPForwarder.cpp" />
+		<Unit filename="..\src\lib\RakNet\UDPForwarder.h" />
+		<Unit filename="..\src\lib\RakNet\UDPProxyClient.cpp" />
+		<Unit filename="..\src\lib\RakNet\UDPProxyClient.h" />
+		<Unit filename="..\src\lib\RakNet\UDPProxyCommon.h" />
+		<Unit filename="..\src\lib\RakNet\UDPProxyCoordinator.cpp" />
+		<Unit filename="..\src\lib\RakNet\UDPProxyCoordinator.h" />
+		<Unit filename="..\src\lib\RakNet\UDPProxyServer.cpp" />
+		<Unit filename="..\src\lib\RakNet\UDPProxyServer.h" />
+		<Unit filename="..\src\lib\RakNet\VariableDeltaSerializer.cpp" />
+		<Unit filename="..\src\lib\RakNet\VariableDeltaSerializer.h" />
+		<Unit filename="..\src\lib\RakNet\VariableListDeltaTracker.cpp" />
+		<Unit filename="..\src\lib\RakNet\VariableListDeltaTracker.h" />
+		<Unit filename="..\src\lib\RakNet\VariadicSQLParser.cpp" />
+		<Unit filename="..\src\lib\RakNet\VariadicSQLParser.h" />
+		<Unit filename="..\src\lib\RakNet\WSAStartupSingleton.cpp" />
+		<Unit filename="..\src\lib\RakNet\WSAStartupSingleton.h" />
+		<Unit filename="..\src\lib\RakNet\WindowsIncludes.h" />
+		<Unit filename="..\src\lib\RakNet\_FindFirst.cpp" />
+		<Unit filename="..\src\lib\RakNet\_FindFirst.h" />
+		<Unit filename="..\src\lib\RakNet\gettimeofday.cpp" />
+		<Unit filename="..\src\lib\RakNet\gettimeofday.h" />
+		<Unit filename="..\src\lib\RakNet\rdlmalloc-options.h" />
+		<Unit filename="..\src\lib\RakNet\rdlmalloc.cpp" />
+		<Unit filename="..\src\lib\RakNet\rdlmalloc.h" />
+		<Unit filename="..\src\lib\cothread\amd64.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\cothread\doc\amd64.asm" />
+		<Unit filename="..\src\lib\cothread\doc\x86.asm" />
+		<Unit filename="..\src\lib\cothread\fiber.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\cothread\libco.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\cothread\libco.h" />
+		<Unit filename="..\src\lib\cothread\ppc.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\cothread\sjlj.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\cothread\test\test.h" />
+		<Unit filename="..\src\lib\cothread\test\test_args.cpp" />
+		<Unit filename="..\src\lib\cothread\test\test_timing.cpp" />
+		<Unit filename="..\src\lib\cothread\ucontext.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\cothread\x86.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\lib\expat\ascii.h" />
@@ -2480,6 +3013,288 @@
 		<Unit filename="..\src\lib\expat\xmltok_ns.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\lib\formats\a26_cas.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\a26_cas.h" />
+		<Unit filename="..\src\lib\formats\ace_tap.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\ace_tap.h" />
+		<Unit filename="..\src\lib\formats\ami_dsk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\ami_dsk.h" />
+		<Unit filename="..\src\lib\formats\ap2_dsk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\ap2_dsk.h" />
+		<Unit filename="..\src\lib\formats\ap_dsk35.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\ap_dsk35.h" />
+		<Unit filename="..\src\lib\formats\apf_apt.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\apf_apt.h" />
+		<Unit filename="..\src\lib\formats\apridisk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\apridisk.h" />
+		<Unit filename="..\src\lib\formats\atari_dsk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\atari_dsk.h" />
+		<Unit filename="..\src\lib\formats\atarist_dsk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\atarist_dsk.h" />
+		<Unit filename="..\src\lib\formats\atom_tap.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\atom_tap.h" />
+		<Unit filename="..\src\lib\formats\basicdsk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\basicdsk.h" />
+		<Unit filename="..\src\lib\formats\cassimg.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\cassimg.h" />
+		<Unit filename="..\src\lib\formats\cbm_tap.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\cbm_tap.h" />
+		<Unit filename="..\src\lib\formats\cgen_cas.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\cgen_cas.h" />
+		<Unit filename="..\src\lib\formats\coco_cas.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\coco_cas.h" />
+		<Unit filename="..\src\lib\formats\coco_dsk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\coco_dsk.h" />
+		<Unit filename="..\src\lib\formats\comx35_dsk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\comx35_dsk.h" />
+		<Unit filename="..\src\lib\formats\coupedsk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\coupedsk.h" />
+		<Unit filename="..\src\lib\formats\cpis_dsk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\cpis_dsk.h" />
+		<Unit filename="..\src\lib\formats\cqm_dsk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\csw_cas.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\csw_cas.h" />
+		<Unit filename="..\src\lib\formats\d64_dsk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\d64_dsk.h" />
+		<Unit filename="..\src\lib\formats\d81_dsk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\d81_dsk.h" />
+		<Unit filename="..\src\lib\formats\d88_dsk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\dim_dsk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\dim_dsk.h" />
+		<Unit filename="..\src\lib\formats\dsk_dsk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\fdi_dsk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\flopimg.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\flopimg.h" />
+		<Unit filename="..\src\lib\formats\fm7_cas.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\fm7_cas.h" />
+		<Unit filename="..\src\lib\formats\fmsx_cas.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\fmsx_cas.h" />
+		<Unit filename="..\src\lib\formats\g64_dsk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\g64_dsk.h" />
+		<Unit filename="..\src\lib\formats\gtp_cas.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\gtp_cas.h" />
+		<Unit filename="..\src\lib\formats\hect_dsk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\hect_dsk.h" />
+		<Unit filename="..\src\lib\formats\hect_tap.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\hect_tap.h" />
+		<Unit filename="..\src\lib\formats\imageutl.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\imageutl.h" />
+		<Unit filename="..\src\lib\formats\imd_dsk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\ioprocs.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\ioprocs.h" />
+		<Unit filename="..\src\lib\formats\kim1_cas.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\kim1_cas.h" />
+		<Unit filename="..\src\lib\formats\lviv_lvt.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\lviv_lvt.h" />
+		<Unit filename="..\src\lib\formats\msx_dsk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\msx_dsk.h" />
+		<Unit filename="..\src\lib\formats\mz_cas.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\mz_cas.h" />
+		<Unit filename="..\src\lib\formats\nes_dsk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\nes_dsk.h" />
+		<Unit filename="..\src\lib\formats\orao_cas.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\orao_cas.h" />
+		<Unit filename="..\src\lib\formats\oric_dsk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\oric_dsk.h" />
+		<Unit filename="..\src\lib\formats\oric_tap.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\oric_tap.h" />
+		<Unit filename="..\src\lib\formats\p6001_cas.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\p6001_cas.h" />
+		<Unit filename="..\src\lib\formats\pc_dsk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\pc_dsk.h" />
+		<Unit filename="..\src\lib\formats\pmd_pmd.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\pmd_pmd.h" />
+		<Unit filename="..\src\lib\formats\primoptp.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\primoptp.h" />
+		<Unit filename="..\src\lib\formats\rk_cas.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\rk_cas.h" />
+		<Unit filename="..\src\lib\formats\smx_dsk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\smx_dsk.h" />
+		<Unit filename="..\src\lib\formats\sorc_dsk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\sorc_dsk.h" />
+		<Unit filename="..\src\lib\formats\sord_cas.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\sord_cas.h" />
+		<Unit filename="..\src\lib\formats\svi_cas.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\svi_cas.h" />
+		<Unit filename="..\src\lib\formats\svi_dsk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\svi_dsk.h" />
+		<Unit filename="..\src\lib\formats\td0_dsk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\thom_cas.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\thom_cas.h" />
+		<Unit filename="..\src\lib\formats\thom_dsk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\thom_dsk.h" />
+		<Unit filename="..\src\lib\formats\ti99_dsk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\ti99_dsk.h" />
+		<Unit filename="..\src\lib\formats\trd_dsk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\trd_dsk.h" />
+		<Unit filename="..\src\lib\formats\trs_cas.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\trs_cas.h" />
+		<Unit filename="..\src\lib\formats\trs_dsk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\trs_dsk.h" />
+		<Unit filename="..\src\lib\formats\tzx_cas.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\tzx_cas.h" />
+		<Unit filename="..\src\lib\formats\uef_cas.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\uef_cas.h" />
+		<Unit filename="..\src\lib\formats\vg5k_cas.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\vg5k_cas.h" />
+		<Unit filename="..\src\lib\formats\vt_cas.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\vt_cas.h" />
+		<Unit filename="..\src\lib\formats\vt_dsk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\vt_dsk.h" />
+		<Unit filename="..\src\lib\formats\vtech1_dsk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\vtech1_dsk.h" />
+		<Unit filename="..\src\lib\formats\wavfile.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\wavfile.h" />
+		<Unit filename="..\src\lib\formats\x1_tap.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\x1_tap.h" />
+		<Unit filename="..\src\lib\formats\z80ne_dsk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\z80ne_dsk.h" />
+		<Unit filename="..\src\lib\formats\zx81_p.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\formats\zx81_p.h" />
 		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\bsdqueue.h" />
 		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\codelength.h" />
 		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\connecthostport.c">
@@ -2550,6 +3365,28 @@
 		<Unit filename="..\src\lib\miniupnpc-1.4.20100609\wingenminiupnpcstrings.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\lib\p7zip\LzFind.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\p7zip\LzFind.h" />
+		<Unit filename="..\src\lib\p7zip\LzHash.h" />
+		<Unit filename="..\src\lib\p7zip\Lzma2Dec.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\p7zip\Lzma2Dec.h" />
+		<Unit filename="..\src\lib\p7zip\Lzma2Enc.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\p7zip\Lzma2Enc.h" />
+		<Unit filename="..\src\lib\p7zip\LzmaDec.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\p7zip\LzmaDec.h" />
+		<Unit filename="..\src\lib\p7zip\LzmaEnc.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\lib\p7zip\LzmaEnc.h" />
+		<Unit filename="..\src\lib\p7zip\Types.h" />
 		<Unit filename="..\src\lib\softfloat\mamesf.h" />
 		<Unit filename="..\src\lib\softfloat\milieu.h" />
 		<Unit filename="..\src\lib\softfloat\softfloat.c">
@@ -2600,10 +3437,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\lib\util\huffman.h" />
-		<Unit filename="..\src\lib\util\imageutl.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="..\src\lib\util\imageutl.h" />
 		<Unit filename="..\src\lib\util\jedparse.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -2732,13 +3565,13 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\audio\atarijsa.h" />
-		<Unit filename="..\src\mame\audio\attckufo.c">
-			<Option compilerVar="CC" />
-		</Unit>
 		<Unit filename="..\src\mame\audio\avalnche.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\audio\aztarac.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\audio\beezer.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\audio\blockade.c">
@@ -2766,6 +3599,7 @@
 		<Unit filename="..\src\mame\audio\cclimber.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\audio\cclimber.h" />
 		<Unit filename="..\src\mame\audio\cinemat.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -2803,9 +3637,11 @@
 		<Unit filename="..\src\mame\audio\exidy.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\audio\exidy.h" />
 		<Unit filename="..\src\mame\audio\exidy440.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\audio\exidy440.h" />
 		<Unit filename="..\src\mame\audio\firetrk.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -2818,6 +3654,7 @@
 		<Unit filename="..\src\mame\audio\galaxian.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\audio\galaxian.h" />
 		<Unit filename="..\src\mame\audio\geebee.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -2908,10 +3745,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\audio\namco54.h" />
-		<Unit filename="..\src\mame\audio\namcoc7x.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="..\src\mame\audio\namcoc7x.h" />
 		<Unit filename="..\src\mame\audio\nitedrvr.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -3039,9 +3872,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\audio\timeplt.h" />
-		<Unit filename="..\src\mame\audio\toaplan2.c">
-			<Option compilerVar="CC" />
-		</Unit>
 		<Unit filename="..\src\mame\audio\trackfld.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -3071,6 +3901,7 @@
 		<Unit filename="..\src\mame\audio\wiping.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\audio\wiping.h" />
 		<Unit filename="..\src\mame\audio\wow.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -3095,7 +3926,7 @@
 		<Unit filename="..\src\mame\drivers\39in1.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="..\src\mame\drivers\3super8.c">
+		<Unit filename="..\src\mame\drivers\3do.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\40love.c">
@@ -3111,9 +3942,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\8080bw.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="..\src\mame\drivers\86lions.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\88games.c">
@@ -3146,9 +3974,6 @@
 		<Unit filename="..\src\mame\drivers\ajax.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="..\src\mame\drivers\aladbl.c">
-			<Option compilerVar="CC" />
-		</Unit>
 		<Unit filename="..\src\mame\drivers\albazc.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -3161,10 +3986,19 @@
 		<Unit filename="..\src\mame\drivers\alg.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\drivers\alien.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\drivers\aliens.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\drivers\allied.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\drivers\alpha68k.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\alvg.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\amaticmg.c">
@@ -3239,6 +4073,15 @@
 		<Unit filename="..\src\mame\drivers\asuka.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\drivers\atari_s1.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\atari_s2.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\atari_s3.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\drivers\atarifb.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -3270,6 +4113,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\attckufo.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\atvtrack.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\avalnche.c">
@@ -3353,10 +4199,10 @@
 		<Unit filename="..\src\mame\drivers\bigevglf.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="..\src\mame\drivers\bigfghtr.c">
+		<Unit filename="..\src\mame\drivers\bigstrkb.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="..\src\mame\drivers\bigstrkb.c">
+		<Unit filename="..\src\mame\drivers\bingo.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\bingoc.c">
@@ -3369,9 +4215,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\bishi.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="..\src\mame\drivers\bishjan.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\bking.c">
@@ -3461,6 +4304,21 @@
 		<Unit filename="..\src\mame\drivers\bwing.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\drivers\by17.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\by35.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\by6803.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\by68701.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\byvid.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\drivers\bzone.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -3485,6 +4343,9 @@
 		<Unit filename="..\src\mame\drivers\capbowl.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\drivers\capcom.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\drivers\cardline.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -3501,6 +4362,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\cave.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\cavesh3.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\cb2001.c">
@@ -3527,10 +4391,16 @@
 		<Unit filename="..\src\mame\drivers\cclimber.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\drivers\cd32.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\drivers\cdi.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\centiped.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\cesclass.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\chaknpop.c">
@@ -3617,9 +4487,6 @@
 		<Unit filename="..\src\mame\drivers\coinmvga.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="..\src\mame\drivers\cojag.c">
-			<Option compilerVar="CC" />
-		</Unit>
 		<Unit filename="..\src\mame\drivers\combatsc.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -3645,6 +4512,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\copsnrob.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\corona.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\cosmic.c">
@@ -3684,9 +4554,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\cubeqst.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="..\src\mame\drivers\cubocd32.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\cultures.c">
@@ -3767,6 +4634,18 @@
 		<Unit filename="..\src\mame\drivers\ddz.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\drivers\de_1.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\de_2.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\de_3.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\de_3b.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\drivers\deadang.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -3798,6 +4677,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\destroyr.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\dfruit.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\dgpix.c">
@@ -3956,6 +4838,9 @@
 		<Unit filename="..\src\mame\drivers\f1gp.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\drivers\famibox.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\drivers\fantland.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -3995,6 +4880,9 @@
 		<Unit filename="..\src\mame\drivers\fitfight.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\drivers\flicker.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\drivers\flkatck.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -4025,6 +4913,9 @@
 		<Unit filename="..\src\mame\drivers\fromance.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\drivers\funkball.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\drivers\funkybee.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -4041,6 +4932,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\fuukifg3.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\g627.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\gaelco.c">
@@ -4178,6 +5072,12 @@
 		<Unit filename="..\src\mame\drivers\gotya.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\drivers\gp_1.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\gp_2.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\drivers\gpworld.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -4205,6 +5105,21 @@
 		<Unit filename="..\src\mame\drivers\gticlub.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\drivers\gts1.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\gts3.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\gts80.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\gts80a.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\gts80b.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\drivers\guab.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -4230,6 +5145,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\hanaawas.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\hankin.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\harddriv.c">
@@ -4298,6 +5216,9 @@
 		<Unit filename="..\src\mame\drivers\hyprduel.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\drivers\icecold.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\drivers\igs009.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -4316,10 +5237,10 @@
 		<Unit filename="..\src\mame\drivers\ikki.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="..\src\mame\drivers\ilpag.c">
+		<Unit filename="..\src\mame\drivers\imolagp.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="..\src\mame\drivers\imolagp.c">
+		<Unit filename="..\src\mame\drivers\inder.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\intrscti.c">
@@ -4367,6 +5288,9 @@
 		<Unit filename="..\src\mame\drivers\jackpool.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\drivers\jaguar.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\drivers\jailbrek.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -4394,6 +5318,9 @@
 		<Unit filename="..\src\mame\drivers\jongkyo.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\drivers\jp.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\drivers\jpmimpct.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -4407,6 +5334,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\junofrst.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\jvh.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\kaneko16.c">
@@ -4434,6 +5364,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\kinst.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\kissproto.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\klax.c">
@@ -4496,6 +5429,9 @@
 		<Unit filename="..\src\mame\drivers\lasso.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\drivers\lastbank.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\drivers\lastduel.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -4551,6 +5487,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\ltcasino.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\ltd.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\luckgrln.c">
@@ -4637,6 +5576,9 @@
 		<Unit filename="..\src\mame\drivers\mainsnk.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\drivers\majorpkr.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\drivers\malzak.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -4694,9 +5636,6 @@
 		<Unit filename="..\src\mame\drivers\mediagx.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="..\src\mame\drivers\megadriv.c">
-			<Option compilerVar="CC" />
-		</Unit>
 		<Unit filename="..\src\mame\drivers\megadrvb.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -4713,6 +5652,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\meijinsn.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\mephisto.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\merit.c">
@@ -4743,6 +5685,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\micro3d.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\micropin.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\midas.c">
@@ -4838,6 +5783,9 @@
 		<Unit filename="..\src\mame\drivers\mpoker.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\drivers\mpu3.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\drivers\mpu4.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -4854,6 +5802,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\mrflea.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\mrgame.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\mrjong.c">
@@ -4884,6 +5835,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\mustache.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\mw18w.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\mw8080bw.c">
@@ -5012,6 +5966,9 @@
 		<Unit filename="..\src\mame\drivers\nova2001.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\drivers\nsm.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\drivers\nsmpoker.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -5126,6 +6083,9 @@
 		<Unit filename="..\src\mame\drivers\peplus.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\drivers\peyper.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\drivers\pgm.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -5163,6 +6123,18 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\pktgaldx.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\play_1.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\play_2.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\play_3.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\play_5.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\playch10.c">
@@ -5342,6 +6314,9 @@
 		<Unit filename="..\src\mame\drivers\rgum.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\drivers\rltennis.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\drivers\rmhaihai.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -5369,6 +6344,9 @@
 		<Unit filename="..\src\mame\drivers\route16.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\drivers\rowamet.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\drivers\royalmah.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -5381,6 +6359,39 @@
 		<Unit filename="..\src\mame\drivers\rungun.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\drivers\s11.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\s11a.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\s11b.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\s11c.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\s3.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\s4.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\s6.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\s6a.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\s7.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\s8.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\s9.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\drivers\safarir.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -5388,6 +6399,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\sangho.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\saturn.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\sauro.c">
@@ -5442,9 +6456,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\segald.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="..\src\mame\drivers\segamsys.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\segaorun.c">
@@ -5585,6 +6596,9 @@
 		<Unit filename="..\src\mame\drivers\slapshot.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\drivers\sleic.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\drivers\sliver.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -5651,6 +6665,9 @@
 		<Unit filename="..\src\mame\drivers\spiders.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\drivers\spinb.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\drivers\splash.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -5687,13 +6704,7 @@
 		<Unit filename="..\src\mame\drivers\srumbler.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="..\src\mame\drivers\ssf2md.c">
-			<Option compilerVar="CC" />
-		</Unit>
 		<Unit filename="..\src\mame\drivers\ssfindo.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="..\src\mame\drivers\ssgbl.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\sshangha.c">
@@ -5721,6 +6732,12 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\st0016.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\st_mp100.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\st_mp200.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\stactics.c">
@@ -5756,9 +6773,6 @@
 		<Unit filename="..\src\mame\drivers\strnskil.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="..\src\mame\drivers\stv.c">
-			<Option compilerVar="CC" />
-		</Unit>
 		<Unit filename="..\src\mame\drivers\stvinit.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -5769,6 +6783,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\subsino.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\subsino2.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\suna16.c">
@@ -5793,6 +6810,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\supertnk.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\superwng.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\suprgolf.c">
@@ -5823,6 +6843,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\tail2nos.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\taito.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\taito_b.c">
@@ -5901,6 +6924,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\tcl.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\techno.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\tecmo.c">
@@ -5994,9 +7020,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\toobin.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="..\src\mame\drivers\topshoot.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\topspeed.c">
@@ -6125,6 +7148,12 @@
 		<Unit filename="..\src\mame\drivers\vcombat.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\drivers\vd.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\vectrex.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\drivers\vega.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -6188,6 +7217,9 @@
 		<Unit filename="..\src\mame\drivers\wardner.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\drivers\warpsped.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\drivers\warpwarp.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -6212,6 +7244,15 @@
 		<Unit filename="..\src\mame\drivers\wheelfir.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\drivers\white_mod.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\whitestar.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\wico.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\drivers\williams.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -6231,6 +7272,27 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\wolfpack.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\wpc_95.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\wpc_an.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\wpc_dcs.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\wpc_dot.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\wpc_flip1.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\wpc_flip2.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\wpc_s.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\drivers\wrally.c">
@@ -6281,6 +7343,15 @@
 		<Unit filename="..\src\mame\drivers\zac2650.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\drivers\zac_1.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\zac_2.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\drivers\zac_proto.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\drivers\zaccaria.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -6308,8 +7379,10 @@
 		<Unit filename="..\src\mame\includes\1942.h" />
 		<Unit filename="..\src\mame\includes\1943.h" />
 		<Unit filename="..\src\mame\includes\20pacgal.h" />
+		<Unit filename="..\src\mame\includes\3do.h" />
 		<Unit filename="..\src\mame\includes\40love.h" />
 		<Unit filename="..\src\mame\includes\4enraya.h" />
+		<Unit filename="..\src\mame\includes\8080bw.h" />
 		<Unit filename="..\src\mame\includes\88games.h" />
 		<Unit filename="..\src\mame\includes\actfancr.h" />
 		<Unit filename="..\src\mame\includes\aeroboto.h" />
@@ -6401,6 +7474,7 @@
 		<Unit filename="..\src\mame\includes\cchasm.h" />
 		<Unit filename="..\src\mame\includes\cchip.h" />
 		<Unit filename="..\src\mame\includes\cclimber.h" />
+		<Unit filename="..\src\mame\includes\cd32.h" />
 		<Unit filename="..\src\mame\includes\cdi.h" />
 		<Unit filename="..\src\mame\includes\centiped.h" />
 		<Unit filename="..\src\mame\includes\chaknpop.h" />
@@ -6433,7 +7507,6 @@
 		<Unit filename="..\src\mame\includes\crimfght.h" />
 		<Unit filename="..\src\mame\includes\crospang.h" />
 		<Unit filename="..\src\mame\includes\crshrace.h" />
-		<Unit filename="..\src\mame\includes\cubocd32.h" />
 		<Unit filename="..\src\mame\includes\cvs.h" />
 		<Unit filename="..\src\mame\includes\cyberbal.h" />
 		<Unit filename="..\src\mame\includes\darius.h" />
@@ -6517,6 +7590,7 @@
 		<Unit filename="..\src\mame\includes\galaxian.h" />
 		<Unit filename="..\src\mame\includes\galaxold.h" />
 		<Unit filename="..\src\mame\includes\galivan.h" />
+		<Unit filename="..\src\mame\includes\galpani2.h" />
 		<Unit filename="..\src\mame\includes\galpanic.h" />
 		<Unit filename="..\src\mame\includes\galspnbl.h" />
 		<Unit filename="..\src\mame\includes\gameplan.h" />
@@ -6569,7 +7643,6 @@
 		<Unit filename="..\src\mame\includes\inufuku.h" />
 		<Unit filename="..\src\mame\includes\iqblock.h" />
 		<Unit filename="..\src\mame\includes\iremipt.h" />
-		<Unit filename="..\src\mame\includes\iremz80.h" />
 		<Unit filename="..\src\mame\includes\irobot.h" />
 		<Unit filename="..\src\mame\includes\ironhors.h" />
 		<Unit filename="..\src\mame\includes\itech32.h" />
@@ -6638,6 +7711,7 @@
 		<Unit filename="..\src\mame\includes\matmania.h" />
 		<Unit filename="..\src\mame\includes\mcatadv.h" />
 		<Unit filename="..\src\mame\includes\mcr.h" />
+		<Unit filename="..\src\mame\includes\mcr3.h" />
 		<Unit filename="..\src\mame\includes\mcr68.h" />
 		<Unit filename="..\src\mame\includes\meadows.h" />
 		<Unit filename="..\src\mame\includes\megadriv.h" />
@@ -6653,6 +7727,7 @@
 		<Unit filename="..\src\mame\includes\midtunit.h" />
 		<Unit filename="..\src\mame\includes\midvunit.h" />
 		<Unit filename="..\src\mame\includes\midwunit.h" />
+		<Unit filename="..\src\mame\includes\midxunit.h" />
 		<Unit filename="..\src\mame\includes\midyunit.h" />
 		<Unit filename="..\src\mame\includes\midzeus.h" />
 		<Unit filename="..\src\mame\includes\mikie.h" />
@@ -6693,6 +7768,7 @@
 		<Unit filename="..\src\mame\includes\naomibd.h" />
 		<Unit filename="..\src\mame\includes\naughtyb.h" />
 		<Unit filename="..\src\mame\includes\nb1413m3.h" />
+		<Unit filename="..\src\mame\includes\nb1414m4.h" />
 		<Unit filename="..\src\mame\includes\nbmj8688.h" />
 		<Unit filename="..\src\mame\includes\nbmj8891.h" />
 		<Unit filename="..\src\mame\includes\nbmj8900.h" />
@@ -6770,6 +7846,7 @@
 		<Unit filename="..\src\mame\includes\relief.h" />
 		<Unit filename="..\src\mame\includes\renegade.h" />
 		<Unit filename="..\src\mame\includes\retofinv.h" />
+		<Unit filename="..\src\mame\includes\rltennis.h" />
 		<Unit filename="..\src\mame\includes\rockrage.h" />
 		<Unit filename="..\src\mame\includes\rocnrope.h" />
 		<Unit filename="..\src\mame\includes\rohga.h" />
@@ -6783,6 +7860,7 @@
 		<Unit filename="..\src\mame\includes\sbasketb.h" />
 		<Unit filename="..\src\mame\includes\sbugger.h" />
 		<Unit filename="..\src\mame\includes\scotrsht.h" />
+		<Unit filename="..\src\mame\includes\scramble.h" />
 		<Unit filename="..\src\mame\includes\sderby.h" />
 		<Unit filename="..\src\mame\includes\segag80r.h" />
 		<Unit filename="..\src\mame\includes\segag80v.h" />
@@ -6822,6 +7900,7 @@
 		<Unit filename="..\src\mame\includes\snk6502.h" />
 		<Unit filename="..\src\mame\includes\snk68.h" />
 		<Unit filename="..\src\mame\includes\snookr10.h" />
+		<Unit filename="..\src\mame\includes\snowbros.h" />
 		<Unit filename="..\src\mame\includes\solomon.h" />
 		<Unit filename="..\src\mame\includes\sonson.h" />
 		<Unit filename="..\src\mame\includes\spacefb.h" />
@@ -6943,6 +8022,7 @@
 		<Unit filename="..\src\mame\includes\vaportra.h" />
 		<Unit filename="..\src\mame\includes\vastar.h" />
 		<Unit filename="..\src\mame\includes\vball.h" />
+		<Unit filename="..\src\mame\includes\vectrex.h" />
 		<Unit filename="..\src\mame\includes\vendetta.h" />
 		<Unit filename="..\src\mame\includes\vertigo.h" />
 		<Unit filename="..\src\mame\includes\vicdual.h" />
@@ -6982,6 +8062,9 @@
 		<Unit filename="..\src\mame\includes\zaxxon.h" />
 		<Unit filename="..\src\mame\includes\zerozone.h" />
 		<Unit filename="..\src\mame\includes\zodiack.h" />
+		<Unit filename="..\src\mame\machine\3do.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\machine\acitya.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -7062,6 +8145,9 @@
 		<Unit filename="..\src\mame\machine\cclimber.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\machine\cd32.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\machine\cdi070.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -7077,13 +8163,7 @@
 		<Unit filename="..\src\mame\machine\chaknpop.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="..\src\mame\machine\copsnrob.c">
-			<Option compilerVar="CC" />
-		</Unit>
 		<Unit filename="..\src\mame\machine\cps2crpt.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="..\src\mame\machine\cubocd32.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\machine\cx4data.c">
@@ -7098,6 +8178,10 @@
 		<Unit filename="..\src\mame\machine\cx4ops.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\machine\dc-ctrl.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\machine\dc-ctrl.h" />
 		<Unit filename="..\src\mame\machine\dc.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -7141,6 +8225,10 @@
 		<Unit filename="..\src\mame\machine\gaelco2.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\machine\gaelco3d.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\machine\gaelco3d.h" />
 		<Unit filename="..\src\mame\machine\gaelcrpt.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -7153,6 +8241,10 @@
 		<Unit filename="..\src\mame\machine\gdcrypt.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\machine\gdrom.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\machine\gdrom.h" />
 		<Unit filename="..\src\mame\machine\harddriv.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -7163,9 +8255,17 @@
 		<Unit filename="..\src\mame\machine\irobot.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\machine\jalcrpt.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\machine\jalcrpt.h" />
 		<Unit filename="..\src\mame\machine\jumpshot.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\machine\jvs13551.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\machine\jvs13551.h" />
 		<Unit filename="..\src\mame\machine\kabuki.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -7200,6 +8300,14 @@
 		<Unit filename="..\src\mame\machine\maniach.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\machine\maple-dc.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\machine\maple-dc.h" />
+		<Unit filename="..\src\mame\machine\mapledev.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\machine\mapledev.h" />
 		<Unit filename="..\src\mame\machine\mathbox.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -7212,6 +8320,12 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\machine\mcr68.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\machine\md_cart.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\machine\megadriv.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\machine\meters.c">
@@ -7237,9 +8351,16 @@
 		<Unit filename="..\src\mame\machine\midwunit.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\machine\midxunit.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\machine\midyunit.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\machine\mie.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\machine\mie.h" />
 		<Unit filename="..\src\mame\machine\model1.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -7268,6 +8389,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\machine\namco53.h" />
+		<Unit filename="..\src\mame\machine\namco62.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\machine\namco62.h" />
 		<Unit filename="..\src\mame\machine\namcoio.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -7287,7 +8412,14 @@
 		<Unit filename="..\src\mame\machine\naomibd.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\machine\naomim4decoder.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\machine\naomim4decoder.h" />
 		<Unit filename="..\src\mame\machine\nb1413m3.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\machine\nb1414m4.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\machine\neoboot.c">
@@ -7381,11 +8513,12 @@
 		<Unit filename="..\src\mame\machine\segag80.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\machine\segag80.h" />
 		<Unit filename="..\src\mame\machine\segaic16.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\machine\segaic16.h" />
-		<Unit filename="..\src\mame\machine\segas24.c">
+		<Unit filename="..\src\mame\machine\segamsys.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\machine\segas32.c">
@@ -7394,6 +8527,7 @@
 		<Unit filename="..\src\mame\machine\seibuspi.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\machine\seibuspi.h" />
 		<Unit filename="..\src\mame\machine\seicop.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -7423,19 +8557,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\machine\snescx4.h" />
-		<Unit filename="..\src\mame\machine\snesdsp1.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="..\src\mame\machine\snesdsp2.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="..\src\mame\machine\snesdsp3.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="..\src\mame\machine\snesdsp4.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="..\src\mame\machine\snesdsp4.h" />
 		<Unit filename="..\src\mame\machine\snesobc1.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -7443,9 +8564,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\machine\snessdd1.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="..\src\mame\machine\snesst10.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\machine\spisprit.c">
@@ -7472,6 +8590,10 @@
 		<Unit filename="..\src\mame\machine\subs.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\machine\subsino.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\machine\subsino.h" />
 		<Unit filename="..\src\mame\machine\tait8741.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -7508,6 +8630,9 @@
 		<Unit filename="..\src\mame\machine\tx1.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\machine\vectrex.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\machine\vertigo.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -7534,12 +8659,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\machine\zs01.h" />
-		<Unit filename="..\src\mame\mamedriv.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="..\src\mame\tiny.c">
-			<Option compilerVar="CC" />
-		</Unit>
 		<Unit filename="..\src\mame\video\1942.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -7987,6 +9106,18 @@
 		<Unit filename="..\src\mame\video\dec8.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\video\decbac06.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\video\decbac06.h" />
+		<Unit filename="..\src\mame\video\deckarn.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\video\deckarn.h" />
+		<Unit filename="..\src\mame\video\decmxc06.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\video\decmxc06.h" />
 		<Unit filename="..\src\mame\video\deco16ic.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -8000,6 +9131,14 @@
 		<Unit filename="..\src\mame\video\decocass.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\video\decocomn.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\video\decocomn.h" />
+		<Unit filename="..\src\mame\video\decospr.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\video\decospr.h" />
 		<Unit filename="..\src\mame\video\deniam.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -8779,6 +9918,9 @@
 		<Unit filename="..\src\mame\video\oneshot.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\video\opwolf.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\video\orbit.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -8894,9 +10036,6 @@
 		<Unit filename="..\src\mame\video\psikyosh.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="..\src\mame\video\psx.c">
-			<Option compilerVar="CC" />
-		</Unit>
 		<Unit filename="..\src\mame\video\psychic5.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -8924,6 +10063,9 @@
 		<Unit filename="..\src\mame\video\raiden.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\video\rainbow.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\video\rallyx.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -8941,17 +10083,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\video\rdpfb.h" />
-		<Unit filename="..\src\mame\video\rdpfetch.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="..\src\mame\video\rdpfetch.h" />
 		<Unit filename="..\src\mame\video\rdpfiltr.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="..\src\mame\video\rdpfrect.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="..\src\mame\video\rdpfrect.h" />
 		<Unit filename="..\src\mame\video\rdpspn16.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -8960,10 +10094,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\video\rdptpipe.h" />
-		<Unit filename="..\src\mame\video\rdptrect.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="..\src\mame\video\rdptrect.h" />
 		<Unit filename="..\src\mame\video\rdptri.h" />
 		<Unit filename="..\src\mame\video\realbrk.c">
 			<Option compilerVar="CC" />
@@ -8981,6 +10111,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\video\retofinv.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\video\rltennis.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\video\rockrage.c">
@@ -9084,6 +10217,10 @@
 		<Unit filename="..\src\mame\video\seta.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\video\seta001.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\video\seta001.h" />
 		<Unit filename="..\src\mame\video\seta2.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -9126,6 +10263,10 @@
 		<Unit filename="..\src\mame\video\simpsons.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\mame\video\sknsspr.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\mame\video\sknsspr.h" />
 		<Unit filename="..\src\mame\video\skullxbo.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -9300,7 +10441,6 @@
 		<Unit filename="..\src\mame\video\system1.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="..\src\mame\video\system1.h" />
 		<Unit filename="..\src\mame\video\system16.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -9523,6 +10663,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\mame\video\vdc.h" />
+		<Unit filename="..\src\mame\video\vectrex.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\mame\video\vendetta.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -9771,6 +10914,9 @@
 		<Unit filename="..\src\osd\sdl\sdlptty_macosx.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\osd\sdl\sdlptty_os2.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\osd\sdl\sdlptty_unix.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -9838,6 +10984,10 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\osd\sdl\video.h" />
+		<Unit filename="..\src\osd\sdl\watchdog.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\osd\sdl\watchdog.h" />
 		<Unit filename="..\src\osd\sdl\window.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -9848,6 +10998,11 @@
 		<Unit filename="..\src\osd\windows\d3d9intf.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\osd\windows\d3dcomm.h" />
+		<Unit filename="..\src\osd\windows\d3dhlsl.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="..\src\osd\windows\d3dhlsl.h" />
 		<Unit filename="..\src\osd\windows\d3dintf.h" />
 		<Unit filename="..\src\osd\windows\debugwin.c">
 			<Option compilerVar="CC" />
@@ -9856,6 +11011,7 @@
 		<Unit filename="..\src\osd\windows\drawd3d.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="..\src\osd\windows\drawd3d.h" />
 		<Unit filename="..\src\osd\windows\drawdd.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -9901,9 +11057,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\osd\windows\video.h" />
-		<Unit filename="..\src\osd\windows\winalloc.c">
-			<Option compilerVar="CC" />
-		</Unit>
 		<Unit filename="..\src\osd\windows\winclip.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -9921,6 +11074,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="..\src\osd\windows\winmain.h" />
+		<Unit filename="..\src\osd\windows\winmenu.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="..\src\osd\windows\winmisc.c">
 			<Option compilerVar="CC" />
 		</Unit>

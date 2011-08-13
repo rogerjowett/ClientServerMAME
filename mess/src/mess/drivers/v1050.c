@@ -102,24 +102,7 @@ Notes:
 
 */
 
-#define ADDRESS_MAP_MODERN
-
-#include "emu.h"
 #include "includes/v1050.h"
-#include "cpu/z80/z80.h"
-#include "cpu/m6502/m6502.h"
-#include "cpu/mcs48/mcs48.h"
-#include "devices/flopdrv.h"
-#include "devices/messram.h"
-#include "formats/basicdsk.h"
-#include "machine/ctronics.h"
-#include "machine/i8214.h"
-#include "machine/i8255a.h"
-#include "machine/msm58321.h"
-#include "machine/msm8251.h"
-#include "machine/wd17xx.h"
-#include "video/mc6845.h"
-#include "sound/discrete.h"
 
 void v1050_state::set_interrupt(UINT8 mask, int state)
 {
@@ -132,42 +115,42 @@ void v1050_state::set_interrupt(UINT8 mask, int state)
 		m_int_state &= ~mask;
 	}
 
-	i8214_r_w(m_pic, 0, ~(m_int_state & m_int_mask));
+	m_pic->r_w(~(m_int_state & m_int_mask));
 }
 
 void v1050_state::bankswitch()
 {
-	address_space *program = cpu_get_address_space(m_maincpu, ADDRESS_SPACE_PROGRAM);
+	address_space *program = m_maincpu->memory().space(AS_PROGRAM);
 
 	int bank = (m_bank >> 1) & 0x03;
 
 	if (BIT(m_bank, 0))
 	{
-		memory_install_readwrite_bank(program, 0x0000, 0x1fff, 0, 0, "bank1");
-		memory_set_bank(machine, "bank1", bank);
+		program->install_readwrite_bank(0x0000, 0x1fff, "bank1");
+		memory_set_bank(machine(), "bank1", bank);
 	}
 	else
 	{
-		memory_install_read_bank(program, 0x0000, 0x1fff, 0, 0, "bank1");
-		memory_unmap_write(program, 0x0000, 0x1fff, 0, 0);
-		memory_set_bank(machine, "bank1", 3);
+		program->install_read_bank(0x0000, 0x1fff, "bank1");
+		program->unmap_write(0x0000, 0x1fff);
+		memory_set_bank(machine(), "bank1", 3);
 	}
 
-	memory_set_bank(machine, "bank2", bank);
+	memory_set_bank(machine(), "bank2", bank);
 
 	if (bank == 2)
 	{
-		memory_unmap_readwrite(program, 0x4000, 0xbfff, 0, 0);
+		program->unmap_readwrite(0x4000, 0xbfff);
 	}
 	else
 	{
-		memory_install_readwrite_bank(program, 0x4000, 0x7fff, 0, 0, "bank3");
-		memory_install_readwrite_bank(program, 0x8000, 0xbfff, 0, 0, "bank4");
-		memory_set_bank(machine, "bank3", bank);
-		memory_set_bank(machine, "bank4", bank);
+		program->install_readwrite_bank(0x4000, 0x7fff, "bank3");
+		program->install_readwrite_bank(0x8000, 0xbfff, "bank4");
+		memory_set_bank(machine(), "bank3", bank);
+		memory_set_bank(machine(), "bank4", bank);
 	}
 
-	memory_set_bank(machine, "bank5", bank);
+	memory_set_bank(machine(), "bank5", bank);
 }
 
 /* Keyboard HACK */
@@ -241,7 +224,7 @@ void v1050_state::scan_keyboard()
 	int table = 0, row, col;
 	int keydata = 0xff;
 
-	UINT8 line_mod = input_port_read(machine, "ROW12");
+	UINT8 line_mod = input_port_read(machine(), "ROW12");
 
 	if((line_mod & 0x07) && (line_mod & 0x18))
 	{
@@ -259,7 +242,7 @@ void v1050_state::scan_keyboard()
 	/* scan keyboard */
 	for (row = 0; row < 12; row++)
 	{
-		UINT8 data = input_port_read(machine, keynames[row]);
+		UINT8 data = input_port_read(machine(), keynames[row]);
 
 		for (col = 0; col < 8; col++)
 		{
@@ -285,7 +268,7 @@ void v1050_state::scan_keyboard()
 
 static TIMER_DEVICE_CALLBACK( v1050_keyboard_tick )
 {
-	v1050_state *state = timer.machine->driver_data<v1050_state>();
+	v1050_state *state = timer.machine().driver_data<v1050_state>();
 
 	state->scan_keyboard();
 }
@@ -310,7 +293,8 @@ READ8_MEMBER( v1050_state::kb_status_r )
 
 WRITE8_MEMBER( v1050_state::v1050_i8214_w )
 {
-	i8214_b_w(m_pic, 0, (data >> 1) & 0x0f);
+	m_pic->b_w((data >> 1) & 0x07);
+	m_pic->sgs_w(BIT(data, 4));
 }
 
 READ8_MEMBER( v1050_state::vint_clr_r )
@@ -353,7 +337,7 @@ WRITE8_MEMBER( v1050_state::dint_w )
 
 WRITE8_MEMBER( v1050_state::dvint_clr_w )
 {
-	cpu_set_input_line(m_subcpu, INPUT_LINE_IRQ0, CLEAR_LINE);
+	device_set_input_line(m_subcpu, INPUT_LINE_IRQ0, CLEAR_LINE);
 }
 
 /* i8049 Read/Write Handlers */
@@ -362,7 +346,7 @@ READ8_MEMBER( v1050_state::keyboard_r )
 {
     static const char *const KEY_ROW[] = { "X0", "X1", "X2", "X3", "X4", "X5", "X6", "X7", "X8", "X9", "XA", "XB" };
 
-    return input_port_read(machine, KEY_ROW[m_keylatch]);
+    return input_port_read(machine(), KEY_ROW[m_keylatch]);
 }
 
 WRITE8_MEMBER( v1050_state::keyboard_w )
@@ -374,18 +358,18 @@ WRITE8_MEMBER( v1050_state::p2_w )
 {
 	/*
 
-		bit     description
+        bit     description
 
-		P20
-		P21
-		P22
-		P23
-		P24
-		P25     led output
-		P26     speaker (NE555) output
-		P27     serial output
+        P20
+        P21
+        P22
+        P23
+        P24
+        P25     led output
+        P26     speaker (NE555) output
+        P27     serial output
 
-	*/
+    */
 
 	// led output
 	output_set_led_value(0, BIT(data, 5));
@@ -399,7 +383,7 @@ WRITE8_MEMBER( v1050_state::p2_w )
 
 /* Memory Maps */
 
-static ADDRESS_MAP_START( v1050_mem, ADDRESS_SPACE_PROGRAM, 8, v1050_state )
+static ADDRESS_MAP_START( v1050_mem, AS_PROGRAM, 8, v1050_state )
 	ADDRESS_MAP_UNMAP_HIGH
 	AM_RANGE(0x0000, 0x1fff) AM_RAMBANK("bank1")
 	AM_RANGE(0x2000, 0x3fff) AM_RAMBANK("bank2")
@@ -408,19 +392,19 @@ static ADDRESS_MAP_START( v1050_mem, ADDRESS_SPACE_PROGRAM, 8, v1050_state )
 	AM_RANGE(0xc000, 0xffff) AM_RAMBANK("bank5")
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( v1050_io, ADDRESS_SPACE_IO, 8, v1050_state )
+static ADDRESS_MAP_START( v1050_io, AS_IO, 8, v1050_state )
 	ADDRESS_MAP_UNMAP_HIGH
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x84, 0x87) AM_DEVREADWRITE_LEGACY(I8255A_DISP_TAG, i8255a_r, i8255a_w)
+	AM_RANGE(0x84, 0x87) AM_DEVREADWRITE(I8255A_DISP_TAG, i8255_device, read, write)
 //  AM_RANGE(0x88, 0x88) AM_DEVREADWRITE_LEGACY(I8251A_KB_TAG, msm8251_data_r, msm8251_data_w)
 //  AM_RANGE(0x89, 0x89) AM_DEVREADWRITE_LEGACY(I8251A_KB_TAG, msm8251_status_r, msm8251_control_w)
 	AM_RANGE(0x88, 0x88) AM_READ(kb_data_r) AM_DEVWRITE_LEGACY(I8251A_KB_TAG, msm8251_data_w)
 	AM_RANGE(0x89, 0x89) AM_READ(kb_status_r) AM_DEVWRITE_LEGACY(I8251A_KB_TAG, msm8251_control_w)
 	AM_RANGE(0x8c, 0x8c) AM_DEVREADWRITE_LEGACY(I8251A_SIO_TAG, msm8251_data_r, msm8251_data_w)
 	AM_RANGE(0x8d, 0x8d) AM_DEVREADWRITE_LEGACY(I8251A_SIO_TAG, msm8251_status_r, msm8251_control_w)
-	AM_RANGE(0x90, 0x93) AM_DEVREADWRITE_LEGACY(I8255A_MISC_TAG, i8255a_r, i8255a_w)
+	AM_RANGE(0x90, 0x93) AM_DEVREADWRITE(I8255A_MISC_TAG, i8255_device, read, write)
 	AM_RANGE(0x94, 0x97) AM_DEVREADWRITE_LEGACY(MB8877_TAG, wd17xx_r, wd17xx_w)
-	AM_RANGE(0x9c, 0x9f) AM_DEVREADWRITE_LEGACY(I8255A_RTC_TAG, i8255a_r, i8255a_w)
+	AM_RANGE(0x9c, 0x9f) AM_DEVREADWRITE(I8255A_RTC_TAG, i8255_device, read, write)
 	AM_RANGE(0xa0, 0xa0) AM_READWRITE(vint_clr_r, vint_clr_w)
 	AM_RANGE(0xb0, 0xb0) AM_READWRITE(dint_clr_r, dint_clr_w)
 	AM_RANGE(0xc0, 0xc0) AM_WRITE(v1050_i8214_w)
@@ -428,146 +412,146 @@ static ADDRESS_MAP_START( v1050_io, ADDRESS_SPACE_IO, 8, v1050_state )
 //  AM_RANGE(0xe0, 0xe3) AM_DEVREADWRITE(S1410_TAG, s1410_r, s1410_w)
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( v1050_crt_mem, ADDRESS_SPACE_PROGRAM, 8, v1050_state )
+static ADDRESS_MAP_START( v1050_crt_mem, AS_PROGRAM, 8, v1050_state )
 	AM_RANGE(0x0000, 0x7fff) AM_READWRITE(videoram_r, videoram_w) AM_BASE(m_video_ram)
-	AM_RANGE(0x8000, 0x8000) AM_DEVWRITE_LEGACY(H46505_TAG, mc6845_address_w)
-	AM_RANGE(0x8001, 0x8001) AM_DEVREADWRITE_LEGACY(H46505_TAG, mc6845_register_r, mc6845_register_w)
-	AM_RANGE(0x9000, 0x9003) AM_DEVREADWRITE_LEGACY(I8255A_M6502_TAG, i8255a_r, i8255a_w)
+	AM_RANGE(0x8000, 0x8000) AM_DEVWRITE(H46505_TAG, mc6845_device, address_w)
+	AM_RANGE(0x8001, 0x8001) AM_DEVREADWRITE(H46505_TAG, mc6845_device, register_r, register_w)
+	AM_RANGE(0x9000, 0x9003) AM_DEVREADWRITE(I8255A_M6502_TAG, i8255_device, read, write)
 	AM_RANGE(0xa000, 0xa000) AM_READWRITE(attr_r, attr_w)
 	AM_RANGE(0xb000, 0xb000) AM_WRITE(dint_w)
 	AM_RANGE(0xc000, 0xc000) AM_WRITE(dvint_clr_w)
 	AM_RANGE(0xe000, 0xffff) AM_ROM
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( v1050_kbd_io, ADDRESS_SPACE_IO, 8, v1050_state )
+static ADDRESS_MAP_START( v1050_kbd_io, AS_IO, 8, v1050_state )
 	AM_RANGE(MCS48_PORT_P1, MCS48_PORT_P1) AM_READWRITE(keyboard_r, keyboard_w)
 	AM_RANGE(MCS48_PORT_P2, MCS48_PORT_P2) AM_WRITE(p2_w)
 ADDRESS_MAP_END
 
 /* Input Ports */
-
+/*
 static INPUT_PORTS_START( v1050_real )
-	PORT_START("X0")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Left Shift") PORT_CODE(KEYCODE_LSHIFT) PORT_CHAR(UCHAR_SHIFT_1)
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Ctrl") PORT_CODE(KEYCODE_LCONTROL) PORT_CHAR(UCHAR_MAMEKEY(LCONTROL))
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Caps Lock") PORT_CODE(KEYCODE_CAPSLOCK) PORT_CHAR(UCHAR_MAMEKEY(CAPSLOCK))
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Right Shift") PORT_CODE(KEYCODE_RSHIFT)
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Help")
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Esc") PORT_CODE(KEYCODE_ESC) PORT_CHAR(UCHAR_MAMEKEY(ESC))
-	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Tab") PORT_CODE(KEYCODE_TAB) PORT_CHAR(UCHAR_MAMEKEY(TAB))
-	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("No Scrl")
+    PORT_START("X0")
+    PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Left Shift") PORT_CODE(KEYCODE_LSHIFT) PORT_CHAR(UCHAR_SHIFT_1)
+    PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Ctrl") PORT_CODE(KEYCODE_LCONTROL) PORT_CHAR(UCHAR_MAMEKEY(LCONTROL))
+    PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Caps Lock") PORT_CODE(KEYCODE_CAPSLOCK) PORT_CHAR(UCHAR_MAMEKEY(CAPSLOCK))
+    PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Right Shift") PORT_CODE(KEYCODE_RSHIFT)
+    PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Help")
+    PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Esc") PORT_CODE(KEYCODE_ESC) PORT_CHAR(UCHAR_MAMEKEY(ESC))
+    PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Tab") PORT_CODE(KEYCODE_TAB) PORT_CHAR(UCHAR_MAMEKEY(TAB))
+    PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("No Scrl")
 
-	PORT_START("X1")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad Enter DelCh") PORT_CODE(KEYCODE_ENTER_PAD) PORT_CHAR(UCHAR_MAMEKEY(ENTER_PAD))
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad 6 Pg Dn") PORT_CODE(KEYCODE_6_PAD) PORT_CHAR(UCHAR_MAMEKEY(6_PAD))
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad 3 \xE2\x86\x92") PORT_CODE(KEYCODE_3_PAD) PORT_CHAR(UCHAR_MAMEKEY(3_PAD))
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_UNUSED )
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad - DelLn") PORT_CODE(KEYCODE_MINUS_PAD) PORT_CHAR(UCHAR_MAMEKEY(MINUS_PAD))
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad 9 End") PORT_CODE(KEYCODE_9_PAD) PORT_CHAR(UCHAR_MAMEKEY(9_PAD))
-	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad , DelWd")
-	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad . Wd\xE2\x86\x92") PORT_CODE(KEYCODE_DEL_PAD) PORT_CHAR(UCHAR_MAMEKEY(DEL_PAD))
+    PORT_START("X1")
+    PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad Enter DelCh") PORT_CODE(KEYCODE_ENTER_PAD) PORT_CHAR(UCHAR_MAMEKEY(ENTER_PAD))
+    PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad 6 Pg Dn") PORT_CODE(KEYCODE_6_PAD) PORT_CHAR(UCHAR_MAMEKEY(6_PAD))
+    PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad 3 \xE2\x86\x92") PORT_CODE(KEYCODE_3_PAD) PORT_CHAR(UCHAR_MAMEKEY(3_PAD))
+    PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_UNUSED )
+    PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad - DelLn") PORT_CODE(KEYCODE_MINUS_PAD) PORT_CHAR(UCHAR_MAMEKEY(MINUS_PAD))
+    PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad 9 End") PORT_CODE(KEYCODE_9_PAD) PORT_CHAR(UCHAR_MAMEKEY(9_PAD))
+    PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad , DelWd")
+    PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad . Wd\xE2\x86\x92") PORT_CODE(KEYCODE_DEL_PAD) PORT_CHAR(UCHAR_MAMEKEY(DEL_PAD))
 
-	PORT_START("X2")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("F14 OnSer")
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("F16 Print")
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("F12 Copy") PORT_CODE(KEYCODE_F12) PORT_CHAR(UCHAR_MAMEKEY(F12))
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("F10 End") PORT_CODE(KEYCODE_F10) PORT_CHAR(UCHAR_MAMEKEY(F10))
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("F15 Quick")
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("F11 Move") PORT_CODE(KEYCODE_F11) PORT_CHAR(UCHAR_MAMEKEY(F11))
-	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("F17 Block")
-	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("F13 Hide")
+    PORT_START("X2")
+    PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("F14 OnSer")
+    PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("F16 Print")
+    PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("F12 Copy") PORT_CODE(KEYCODE_F12) PORT_CHAR(UCHAR_MAMEKEY(F12))
+    PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("F10 End") PORT_CODE(KEYCODE_F10) PORT_CHAR(UCHAR_MAMEKEY(F10))
+    PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("F15 Quick")
+    PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("F11 Move") PORT_CODE(KEYCODE_F11) PORT_CHAR(UCHAR_MAMEKEY(F11))
+    PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("F17 Block")
+    PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("F13 Hide")
 
-	PORT_START("X3")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Line Feed")
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_BACKSLASH) PORT_CHAR('|') PORT_CHAR('\\')
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Retn") PORT_CODE(KEYCODE_ENTER) PORT_CHAR(13)
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Num Lock") PORT_CODE(KEYCODE_NUMLOCK) PORT_CHAR(UCHAR_MAMEKEY(NUMLOCK))
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Break Stop")
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Back Space") PORT_CODE(KEYCODE_BACKSPACE) PORT_CHAR(8)
-	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Del") PORT_CODE(KEYCODE_DEL) PORT_CHAR(UCHAR_MAMEKEY(DEL))
-	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad 0 Wd\xE2\x86\x90") PORT_CODE(KEYCODE_0_PAD) PORT_CHAR(UCHAR_MAMEKEY(0_PAD))
+    PORT_START("X3")
+    PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Line Feed")
+    PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_BACKSLASH) PORT_CHAR('|') PORT_CHAR('\\')
+    PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Retn") PORT_CODE(KEYCODE_ENTER) PORT_CHAR(13)
+    PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Num Lock") PORT_CODE(KEYCODE_NUMLOCK) PORT_CHAR(UCHAR_MAMEKEY(NUMLOCK))
+    PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Break Stop")
+    PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Back Space") PORT_CODE(KEYCODE_BACKSPACE) PORT_CHAR(8)
+    PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Del") PORT_CODE(KEYCODE_DEL) PORT_CHAR(UCHAR_MAMEKEY(DEL))
+    PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad 0 Wd\xE2\x86\x90") PORT_CODE(KEYCODE_0_PAD) PORT_CHAR(UCHAR_MAMEKEY(0_PAD))
 
-	PORT_START("X4")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_UNUSED )
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad 5 \xE2\x86\x91") PORT_CODE(KEYCODE_5_PAD) PORT_CHAR(UCHAR_MAMEKEY(5_PAD))
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad 1 \xE2\x86\x90") PORT_CODE(KEYCODE_1_PAD) PORT_CHAR(UCHAR_MAMEKEY(1_PAD))
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_UNUSED )
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad 7 Home") PORT_CODE(KEYCODE_7_PAD) PORT_CHAR(UCHAR_MAMEKEY(7_PAD))
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad 8 Last") PORT_CODE(KEYCODE_8_PAD) PORT_CHAR(UCHAR_MAMEKEY(8_PAD))
-	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad 4 PgUp") PORT_CODE(KEYCODE_4_PAD) PORT_CHAR(UCHAR_MAMEKEY(4_PAD))
-	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad 2 \xE2\x86\x93") PORT_CODE(KEYCODE_2_PAD) PORT_CHAR(UCHAR_MAMEKEY(2_PAD))
+    PORT_START("X4")
+    PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_UNUSED )
+    PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad 5 \xE2\x86\x91") PORT_CODE(KEYCODE_5_PAD) PORT_CHAR(UCHAR_MAMEKEY(5_PAD))
+    PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad 1 \xE2\x86\x90") PORT_CODE(KEYCODE_1_PAD) PORT_CHAR(UCHAR_MAMEKEY(1_PAD))
+    PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_UNUSED )
+    PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad 7 Home") PORT_CODE(KEYCODE_7_PAD) PORT_CHAR(UCHAR_MAMEKEY(7_PAD))
+    PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad 8 Last") PORT_CODE(KEYCODE_8_PAD) PORT_CHAR(UCHAR_MAMEKEY(8_PAD))
+    PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad 4 PgUp") PORT_CODE(KEYCODE_4_PAD) PORT_CHAR(UCHAR_MAMEKEY(4_PAD))
+    PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("Keypad 2 \xE2\x86\x93") PORT_CODE(KEYCODE_2_PAD) PORT_CHAR(UCHAR_MAMEKEY(2_PAD))
 
-	PORT_START("X5")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_K) PORT_CHAR('k') PORT_CHAR('K')
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_P) PORT_CHAR('p') PORT_CHAR('P')
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_H) PORT_CHAR('h') PORT_CHAR('H')
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_L) PORT_CHAR('l') PORT_CHAR('L')
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_U) PORT_CHAR('u') PORT_CHAR('U')
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_I) PORT_CHAR('i') PORT_CHAR('I')
-	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_O) PORT_CHAR('o') PORT_CHAR('O')
-	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_J) PORT_CHAR('j') PORT_CHAR('J')
+    PORT_START("X5")
+    PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_K) PORT_CHAR('k') PORT_CHAR('K')
+    PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_P) PORT_CHAR('p') PORT_CHAR('P')
+    PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_H) PORT_CHAR('h') PORT_CHAR('H')
+    PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_L) PORT_CHAR('l') PORT_CHAR('L')
+    PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_U) PORT_CHAR('u') PORT_CHAR('U')
+    PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_I) PORT_CHAR('i') PORT_CHAR('I')
+    PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_O) PORT_CHAR('o') PORT_CHAR('O')
+    PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_J) PORT_CHAR('j') PORT_CHAR('J')
 
-	PORT_START("X6")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_V) PORT_CHAR('v') PORT_CHAR('V')
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_6) PORT_CHAR('6') PORT_CHAR('^')
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_F) PORT_CHAR('f') PORT_CHAR('F')
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_N) PORT_CHAR('n') PORT_CHAR('N')
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_T) PORT_CHAR('t') PORT_CHAR('T')
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_SPACE) PORT_CHAR(' ')
-	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_Y) PORT_CHAR('y') PORT_CHAR('Y')
-	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_8) PORT_CHAR('8') PORT_CHAR('*')
+    PORT_START("X6")
+    PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_V) PORT_CHAR('v') PORT_CHAR('V')
+    PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_6) PORT_CHAR('6') PORT_CHAR('^')
+    PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_F) PORT_CHAR('f') PORT_CHAR('F')
+    PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_N) PORT_CHAR('n') PORT_CHAR('N')
+    PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_T) PORT_CHAR('t') PORT_CHAR('T')
+    PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_SPACE) PORT_CHAR(' ')
+    PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_Y) PORT_CHAR('y') PORT_CHAR('Y')
+    PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_8) PORT_CHAR('8') PORT_CHAR('*')
 
-	PORT_START("X7")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("F8 Insert") PORT_CODE(KEYCODE_F8) PORT_CHAR(UCHAR_MAMEKEY(F8))
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("F5") PORT_CODE(KEYCODE_F5) PORT_CHAR(UCHAR_MAMEKEY(F5))
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("F6 InsCr") PORT_CODE(KEYCODE_F6) PORT_CHAR(UCHAR_MAMEKEY(F6))
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("F9 Begin") PORT_CODE(KEYCODE_F9) PORT_CHAR(UCHAR_MAMEKEY(F9))
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("F3 Rept") PORT_CODE(KEYCODE_F3) PORT_CHAR(UCHAR_MAMEKEY(F3))
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("F2 Find") PORT_CODE(KEYCODE_F2) PORT_CHAR(UCHAR_MAMEKEY(F2))
-	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("F4	Again") PORT_CODE(KEYCODE_F4) PORT_CHAR(UCHAR_MAMEKEY(F4))
-	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("F7 Refs") PORT_CODE(KEYCODE_F7) PORT_CHAR(UCHAR_MAMEKEY(F7))
+    PORT_START("X7")
+    PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("F8 Insert") PORT_CODE(KEYCODE_F8) PORT_CHAR(UCHAR_MAMEKEY(F8))
+    PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("F5") PORT_CODE(KEYCODE_F5) PORT_CHAR(UCHAR_MAMEKEY(F5))
+    PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("F6 InsCr") PORT_CODE(KEYCODE_F6) PORT_CHAR(UCHAR_MAMEKEY(F6))
+    PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("F9 Begin") PORT_CODE(KEYCODE_F9) PORT_CHAR(UCHAR_MAMEKEY(F9))
+    PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("F3 Rept") PORT_CODE(KEYCODE_F3) PORT_CHAR(UCHAR_MAMEKEY(F3))
+    PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("F2 Find") PORT_CODE(KEYCODE_F2) PORT_CHAR(UCHAR_MAMEKEY(F2))
+    PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("F4 Again") PORT_CODE(KEYCODE_F4) PORT_CHAR(UCHAR_MAMEKEY(F4))
+    PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("F7 Refs") PORT_CODE(KEYCODE_F7) PORT_CHAR(UCHAR_MAMEKEY(F7))
 
-	PORT_START("X8")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_X) PORT_CHAR('x') PORT_CHAR('X')
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_R) PORT_CHAR('r') PORT_CHAR('R')
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_D) PORT_CHAR('d') PORT_CHAR('D')
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_C) PORT_CHAR('c') PORT_CHAR('C')
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("F1 Save") PORT_CODE(KEYCODE_F1) PORT_CHAR(UCHAR_MAMEKEY(F1))
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_1) PORT_CHAR('1') PORT_CHAR('!')
-	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_E) PORT_CHAR('e') PORT_CHAR('E')
-	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_S) PORT_CHAR('s') PORT_CHAR('S')
+    PORT_START("X8")
+    PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_X) PORT_CHAR('x') PORT_CHAR('X')
+    PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_R) PORT_CHAR('r') PORT_CHAR('R')
+    PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_D) PORT_CHAR('d') PORT_CHAR('D')
+    PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_C) PORT_CHAR('c') PORT_CHAR('C')
+    PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_NAME("F1 Save") PORT_CODE(KEYCODE_F1) PORT_CHAR(UCHAR_MAMEKEY(F1))
+    PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_1) PORT_CHAR('1') PORT_CHAR('!')
+    PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_E) PORT_CHAR('e') PORT_CHAR('E')
+    PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_S) PORT_CHAR('s') PORT_CHAR('S')
 
-	PORT_START("X9")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_A) PORT_CHAR('a') PORT_CHAR('A')
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_W) PORT_CHAR('w') PORT_CHAR('W')
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_4) PORT_CHAR('4') PORT_CHAR('$')
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_Z) PORT_CHAR('z') PORT_CHAR('Z')
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_2) PORT_CHAR('2') PORT_CHAR('@')
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_3) PORT_CHAR('3') PORT_CHAR('#')
-	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_Q) PORT_CHAR('q') PORT_CHAR('Q')
-	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_5) PORT_CHAR('5') PORT_CHAR('%')
+    PORT_START("X9")
+    PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_A) PORT_CHAR('a') PORT_CHAR('A')
+    PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_W) PORT_CHAR('w') PORT_CHAR('W')
+    PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_4) PORT_CHAR('4') PORT_CHAR('$')
+    PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_Z) PORT_CHAR('z') PORT_CHAR('Z')
+    PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_2) PORT_CHAR('2') PORT_CHAR('@')
+    PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_3) PORT_CHAR('3') PORT_CHAR('#')
+    PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_Q) PORT_CHAR('q') PORT_CHAR('Q')
+    PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_5) PORT_CHAR('5') PORT_CHAR('%')
 
-	PORT_START("XA")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_TILDE) PORT_CHAR('~') PORT_CHAR('\'')
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_9) PORT_CHAR('0') PORT_CHAR(')')
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_0) PORT_CHAR('9') PORT_CHAR('(')
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_EQUALS) PORT_CHAR('=') PORT_CHAR('+')
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_6) PORT_CHAR('6') PORT_CHAR('^')
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_MINUS) PORT_CHAR('-') PORT_CHAR('_')
-	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_8) PORT_CHAR('8') PORT_CHAR('*')
-	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_7) PORT_CHAR('7') PORT_CHAR('&')
+    PORT_START("XA")
+    PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_TILDE) PORT_CHAR('~') PORT_CHAR('\'')
+    PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_9) PORT_CHAR('0') PORT_CHAR(')')
+    PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_0) PORT_CHAR('9') PORT_CHAR('(')
+    PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_EQUALS) PORT_CHAR('=') PORT_CHAR('+')
+    PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_6) PORT_CHAR('6') PORT_CHAR('^')
+    PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_MINUS) PORT_CHAR('-') PORT_CHAR('_')
+    PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_8) PORT_CHAR('8') PORT_CHAR('*')
+    PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_7) PORT_CHAR('7') PORT_CHAR('&')
 
-	PORT_START("XB")
-	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_COMMA) PORT_CHAR(',') PORT_CHAR('<')
-	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_COLON) PORT_CHAR(';') PORT_CHAR(':')
-	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_QUOTE) PORT_CHAR('\'') PORT_CHAR('"')
-	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_STOP) PORT_CHAR('.') PORT_CHAR('>')
-	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_OPENBRACE) PORT_CHAR('[') PORT_CHAR('{')
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_SLASH) PORT_CHAR('/') PORT_CHAR('?')
-	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_CLOSEBRACE) PORT_CHAR(']') PORT_CHAR('}')
-	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD )
+    PORT_START("XB")
+    PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_COMMA) PORT_CHAR(',') PORT_CHAR('<')
+    PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_COLON) PORT_CHAR(';') PORT_CHAR(':')
+    PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_QUOTE) PORT_CHAR('\'') PORT_CHAR('"')
+    PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_STOP) PORT_CHAR('.') PORT_CHAR('>')
+    PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_OPENBRACE) PORT_CHAR('[') PORT_CHAR('{')
+    PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_SLASH) PORT_CHAR('/') PORT_CHAR('?')
+    PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_KEYBOARD ) PORT_CODE(KEYCODE_CLOSEBRACE) PORT_CHAR(']') PORT_CHAR('}')
+    PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_KEYBOARD )
 INPUT_PORTS_END
-
+*/
 static INPUT_PORTS_START( v1050 )
 	PORT_START("ROW0")
 	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_KEYBOARD ) /* HELP */
@@ -718,7 +702,7 @@ static WRITE_LINE_DEVICE_HANDLER( pic_int_w )
 {
 	if (state == ASSERT_LINE)
 	{
-		cpu_set_input_line(device, INPUT_LINE_IRQ0, ASSERT_LINE);
+		device_set_input_line(device, INPUT_LINE_IRQ0, ASSERT_LINE);
 	}
 }
 
@@ -739,33 +723,37 @@ static MSM58321_INTERFACE( rtc_intf )
 
 static WRITE8_DEVICE_HANDLER( disp_ppi_pc_w )
 {
-	i8255a_pc2_w(device, BIT(data, 6));
-	i8255a_pc4_w(device, BIT(data, 7));
+	i8255_device *ppi = static_cast<i8255_device*>(device);
+
+	ppi->pc2_w(BIT(data, 6));
+	ppi->pc4_w(BIT(data, 7));
 }
 
 static I8255A_INTERFACE( disp_ppi_intf )
 {
-	DEVCB_DEVICE_HANDLER(I8255A_M6502_TAG, i8255a_pb_r),	// Port A read
-	DEVCB_NULL,							// Port B read
-	DEVCB_NULL,							// Port C read
+	DEVCB_DEVICE_MEMBER(I8255A_M6502_TAG, i8255_device, pb_r),	// Port A read
 	DEVCB_NULL,							// Port A write
+	DEVCB_NULL,							// Port B read
 	DEVCB_NULL,							// Port B write
+	DEVCB_NULL,							// Port C read
 	DEVCB_DEVICE_HANDLER(I8255A_M6502_TAG, disp_ppi_pc_w)		// Port C write
 };
 
 static WRITE8_DEVICE_HANDLER( m6502_ppi_pc_w )
 {
-	i8255a_pc2_w(device, BIT(data, 7));
-	i8255a_pc4_w(device, BIT(data, 6));
+	i8255_device *ppi = static_cast<i8255_device*>(device);
+
+	ppi->pc2_w(BIT(data, 7));
+	ppi->pc4_w(BIT(data, 6));
 }
 
 static I8255A_INTERFACE( m6502_ppi_intf )
 {
-	DEVCB_DEVICE_HANDLER(I8255A_DISP_TAG, i8255a_pb_r),	// Port A read
-	DEVCB_NULL,							// Port B read
-	DEVCB_NULL,							// Port C read
+	DEVCB_DEVICE_MEMBER(I8255A_DISP_TAG, i8255_device, pb_r),	// Port A read
 	DEVCB_NULL,							// Port A write
+	DEVCB_NULL,							// Port B read
 	DEVCB_NULL,							// Port B write
+	DEVCB_NULL,							// Port C read
 	DEVCB_DEVICE_HANDLER(I8255A_DISP_TAG, m6502_ppi_pc_w)	// Port C write
 };
 
@@ -865,7 +853,7 @@ WRITE8_MEMBER( v1050_state::misc_ppi_pc_w )
 	if (!m_f_int_enb)
 	{
 		set_interrupt(INT_FLOPPY, 0);
-		cpu_set_input_line(m_maincpu, INPUT_LINE_NMI, CLEAR_LINE);
+		device_set_input_line(m_maincpu, INPUT_LINE_NMI, CLEAR_LINE);
 	}
 
 	/* baud select */
@@ -873,17 +861,17 @@ WRITE8_MEMBER( v1050_state::misc_ppi_pc_w )
 
 	if (baud_sel != m_baud_sel)
 	{
-		attotime period = attotime_never;
+		attotime period = attotime::never;
 
 		switch (baud_sel)
 		{
-		case 0:	period = ATTOTIME_IN_HZ((double)XTAL_16MHz/4/13/16); break;
-		case 1:	period = ATTOTIME_IN_HZ((double)XTAL_16MHz/4/13/8); break;
-		case 2:	period = ATTOTIME_IN_HZ((double)XTAL_16MHz/4/8); break;
-		case 3:	period = ATTOTIME_IN_HZ((double)XTAL_16MHz/4/13/2); break;
+		case 0:	period = attotime::from_hz((double)XTAL_16MHz/4/13/16); break;
+		case 1:	period = attotime::from_hz((double)XTAL_16MHz/4/13/8); break;
+		case 2:	period = attotime::from_hz((double)XTAL_16MHz/4/8); break;
+		case 3:	period = attotime::from_hz((double)XTAL_16MHz/4/13/2); break;
 		}
 
-		m_timer_sio->adjust(attotime_zero, 0, period);
+		m_timer_sio->adjust(attotime::zero, 0, period);
 
 		m_baud_sel = baud_sel;
 	}
@@ -892,10 +880,10 @@ WRITE8_MEMBER( v1050_state::misc_ppi_pc_w )
 static I8255A_INTERFACE( misc_ppi_intf )
 {
 	DEVCB_NULL,							// Port A read
-	DEVCB_NULL,							// Port B read
-	DEVCB_DEVICE_HANDLER(CENTRONICS_TAG, misc_ppi_pc_r),		// Port C read
 	DEVCB_DRIVER_MEMBER(v1050_state, misc_ppi_pa_w),		// Port A write
+	DEVCB_NULL,							// Port B read
 	DEVCB_DEVICE_HANDLER(CENTRONICS_TAG, misc_ppi_pb_w),		// Port B write
+	DEVCB_DEVICE_HANDLER(CENTRONICS_TAG, misc_ppi_pc_r),		// Port C read
 	DEVCB_DRIVER_MEMBER(v1050_state, misc_ppi_pc_w)		// Port C write
 };
 
@@ -921,7 +909,7 @@ WRITE8_MEMBER( v1050_state::rtc_ppi_pb_w )
 	m_int_mask = data;
 }
 
-static READ8_DEVICE_HANDLER( rtc_ppi_pc_r )
+READ8_MEMBER( v1050_state::rtc_ppi_pc_r )
 {
 	/*
 
@@ -931,17 +919,17 @@ static READ8_DEVICE_HANDLER( rtc_ppi_pc_r )
         PC1
         PC2
         PC3                 clock busy
-        PC4                 clock address write
-        PC5                 clock data write
-        PC6                 clock data read
-        PC7                 clock device select
+        PC4
+        PC5
+        PC6
+        PC7
 
     */
 
-	return msm58321_busy_r(device) << 3;
+	return m_rtc->busy_r() << 3;
 }
 
-static WRITE8_DEVICE_HANDLER( rtc_ppi_pc_w )
+WRITE8_MEMBER( v1050_state::rtc_ppi_pc_w )
 {
 	/*
 
@@ -950,7 +938,7 @@ static WRITE8_DEVICE_HANDLER( rtc_ppi_pc_w )
         PC0
         PC1
         PC2
-        PC3                 clock busy
+        PC3
         PC4                 clock address write
         PC5                 clock data write
         PC6                 clock data read
@@ -958,79 +946,85 @@ static WRITE8_DEVICE_HANDLER( rtc_ppi_pc_w )
 
     */
 
-	msm58321_address_write_w(device, BIT(data, 4));
-	msm58321_write_w(device, BIT(data, 5));
-	msm58321_read_w(device, BIT(data, 6));
-	msm58321_cs2_w(device, BIT(data, 7));
+	m_rtc->address_write_w(BIT(data, 4));
+	m_rtc->write_w(BIT(data, 5));
+	m_rtc->read_w(BIT(data, 6));
+	m_rtc->cs2_w(BIT(data, 7));
 }
 
 static I8255A_INTERFACE( rtc_ppi_intf )
 {
-	DEVCB_DEVICE_HANDLER(MSM58321RS_TAG, msm58321_r),	// Port A read
-	DEVCB_NULL,							// Port B read
-	DEVCB_DEVICE_HANDLER(MSM58321RS_TAG, rtc_ppi_pc_r),		// Port C read
-	DEVCB_DEVICE_HANDLER(MSM58321RS_TAG, msm58321_w),	// Port A write
-	DEVCB_DRIVER_MEMBER(v1050_state, rtc_ppi_pb_w),		// Port B write
-	DEVCB_DEVICE_HANDLER(MSM58321RS_TAG, rtc_ppi_pc_w)			// Port C write
+	DEVCB_DEVICE_MEMBER(MSM58321RS_TAG, msm58321_device, read),
+	DEVCB_DEVICE_MEMBER(MSM58321RS_TAG, msm58321_device, write),
+	DEVCB_NULL,
+	DEVCB_DRIVER_MEMBER(v1050_state, rtc_ppi_pb_w),
+	DEVCB_DRIVER_MEMBER(v1050_state, rtc_ppi_pc_r),
+	DEVCB_DRIVER_MEMBER(v1050_state, rtc_ppi_pc_w)
 };
 
 /* Keyboard 8251A Interface */
 
 static TIMER_DEVICE_CALLBACK( kb_8251_tick )
 {
-	v1050_state *state = timer.machine->driver_data<v1050_state>();
+	v1050_state *state = timer.machine().driver_data<v1050_state>();
 
 	msm8251_transmit_clock(state->m_uart_kb);
 	msm8251_receive_clock(state->m_uart_kb);
 }
 
-static WRITE_LINE_DEVICE_HANDLER( kb_8251_rxrdy_w )
+WRITE_LINE_MEMBER( v1050_state::kb_rxrdy_w )
 {
-	v1050_state *driver_state = device->machine->driver_data<v1050_state>();
-
-	driver_state->set_interrupt(INT_KEYBOARD, state);
+	set_interrupt(INT_KEYBOARD, state);
 }
 
 static const msm8251_interface kb_8251_intf =
 {
-	NULL,
-	NULL,
-	kb_8251_rxrdy_w
+	DEVCB_NULL,
+	DEVCB_NULL,
+	DEVCB_NULL,
+	DEVCB_NULL,
+	DEVCB_NULL,
+	DEVCB_DRIVER_LINE_MEMBER(v1050_state, kb_rxrdy_w),
+	DEVCB_NULL,
+	DEVCB_NULL,
+	DEVCB_NULL
 };
 
 /* Serial 8251A Interface */
 
 static TIMER_DEVICE_CALLBACK( sio_8251_tick )
 {
-	v1050_state *state = timer.machine->driver_data<v1050_state>();
+	v1050_state *state = timer.machine().driver_data<v1050_state>();
 
 	msm8251_transmit_clock(state->m_uart_sio);
 	msm8251_receive_clock(state->m_uart_sio);
 }
 
-static WRITE_LINE_DEVICE_HANDLER( sio_8251_rxrdy_w )
+WRITE_LINE_MEMBER( v1050_state::sio_rxrdy_w )
 {
-	v1050_state *driver_state = device->machine->driver_data<v1050_state>();
+	m_rxrdy = state;
 
-	driver_state->m_rxrdy = state;
-
-	driver_state->set_interrupt(INT_RS_232, driver_state->m_rxrdy | driver_state->m_txrdy);
+	set_interrupt(INT_RS_232, m_rxrdy | m_txrdy);
 }
 
-static WRITE_LINE_DEVICE_HANDLER( sio_8251_txrdy_w )
+WRITE_LINE_MEMBER( v1050_state::sio_txrdy_w )
 {
-	v1050_state *driver_state = device->machine->driver_data<v1050_state>();
+	m_txrdy = state;
 
-	driver_state->m_txrdy = state;
-
-	driver_state->set_interrupt(INT_RS_232, driver_state->m_rxrdy | driver_state->m_txrdy);
+	set_interrupt(INT_RS_232, m_rxrdy | m_txrdy);
 }
 
 static const msm8251_interface sio_8251_intf =
 {
-	sio_8251_txrdy_w,
-	NULL,
-	sio_8251_rxrdy_w
+	DEVCB_NULL,
+	DEVCB_NULL,
+	DEVCB_NULL,
+	DEVCB_NULL,
+	DEVCB_NULL,
+	DEVCB_DRIVER_LINE_MEMBER(v1050_state, sio_rxrdy_w),
+	DEVCB_DRIVER_LINE_MEMBER(v1050_state, sio_txrdy_w),
+	DEVCB_NULL,
+	DEVCB_NULL
 };
 
 /* MB8877 Interface */
@@ -1051,11 +1045,11 @@ WRITE_LINE_MEMBER( v1050_state::fdc_drq_w )
 {
 	if (m_f_int_enb)
 	{
-		cpu_set_input_line(m_maincpu, INPUT_LINE_NMI, state);
+		device_set_input_line(m_maincpu, INPUT_LINE_NMI, state);
 	}
 	else
 	{
-		cpu_set_input_line(m_maincpu, INPUT_LINE_NMI, CLEAR_LINE);
+		device_set_input_line(m_maincpu, INPUT_LINE_NMI, CLEAR_LINE);
 	}
 }
 
@@ -1068,7 +1062,7 @@ static const wd17xx_interface fdc_intf =
 };
 
 static FLOPPY_OPTIONS_START( v1050 )
-	FLOPPY_OPTION( v1050, "dsk", "Visual 1050 disk image", basicdsk_identify_default, basicdsk_construct_default,
+	FLOPPY_OPTION( v1050, "dsk", "Visual 1050 disk image", basicdsk_identify_default, basicdsk_construct_default, NULL,
 		HEADS([1])
 		TRACKS([80])
 		SECTORS([10])
@@ -1076,7 +1070,7 @@ static FLOPPY_OPTIONS_START( v1050 )
 		FIRST_SECTOR_ID([1]))
 FLOPPY_OPTIONS_END
 
-static const floppy_config v1050_floppy_config =
+static const floppy_interface v1050_floppy_interface =
 {
 	DEVCB_NULL,
 	DEVCB_NULL,
@@ -1085,6 +1079,7 @@ static const floppy_config v1050_floppy_config =
 	DEVCB_NULL,
 	FLOPPY_STANDARD_5_25_DSHD,
 	FLOPPY_OPTIONS_NAME(v1050),
+	"floppy_5_25",
 	NULL
 };
 
@@ -1092,65 +1087,65 @@ static const floppy_config v1050_floppy_config =
 
 static IRQ_CALLBACK( v1050_int_ack )
 {
-	v1050_state *state = device->machine->driver_data<v1050_state>();
+	v1050_state *state = device->machine().driver_data<v1050_state>();
 
-	UINT8 vector = 0xf0 | (i8214_a_r(state->m_pic, 0) << 1);
+	UINT8 vector = 0xf0 | (state->m_pic->a_r() << 1);
 
 	//logerror("Interrupt Acknowledge Vector: %02x\n", vector);
 
-	cpu_set_input_line(state->m_maincpu, INPUT_LINE_IRQ0, CLEAR_LINE);
+	device_set_input_line(state->m_maincpu, INPUT_LINE_IRQ0, CLEAR_LINE);
 
 	return vector;
 }
 
 void v1050_state::machine_start()
 {
-	address_space *program = cpu_get_address_space(m_maincpu, ADDRESS_SPACE_PROGRAM);
+	address_space *program = m_maincpu->memory().space(AS_PROGRAM);
 
 	/* initialize I8214 */
-	i8214_etlg_w(m_pic, 1);
-	i8214_inte_w(m_pic, 1);
+	m_pic->etlg_w(1);
+	m_pic->inte_w(1);
 
 	/* initialize RTC */
-	msm58321_cs1_w(m_rtc, 1);
+	m_rtc->cs1_w(1);
 
 	/* set CPU interrupt callback */
-	cpu_set_irq_callback(m_maincpu, v1050_int_ack);
+	device_set_irq_callback(m_maincpu, v1050_int_ack);
 
 	/* setup memory banking */
-	UINT8 *ram = messram_get_ptr(machine->device("messram"));
+	UINT8 *ram = ram_get_ptr(machine().device(RAM_TAG));
 
-	memory_configure_bank(machine, "bank1", 0, 2, ram, 0x10000);
-	memory_configure_bank(machine, "bank1", 2, 1, ram + 0x1c000, 0);
-	memory_configure_bank(machine, "bank1", 3, 1, machine->region(Z80_TAG)->base(), 0);
+	memory_configure_bank(machine(), "bank1", 0, 2, ram, 0x10000);
+	memory_configure_bank(machine(), "bank1", 2, 1, ram + 0x1c000, 0);
+	memory_configure_bank(machine(), "bank1", 3, 1, machine().region(Z80_TAG)->base(), 0);
 
-	memory_install_readwrite_bank(program, 0x2000, 0x3fff, 0, 0, "bank2");
-	memory_configure_bank(machine, "bank2", 0, 2, ram + 0x2000, 0x10000);
-	memory_configure_bank(machine, "bank2", 2, 1, ram + 0x1e000, 0);
+	program->install_readwrite_bank(0x2000, 0x3fff, "bank2");
+	memory_configure_bank(machine(), "bank2", 0, 2, ram + 0x2000, 0x10000);
+	memory_configure_bank(machine(), "bank2", 2, 1, ram + 0x1e000, 0);
 
-	memory_install_readwrite_bank(program, 0x4000, 0x7fff, 0, 0, "bank3");
-	memory_configure_bank(machine, "bank3", 0, 2, ram + 0x4000, 0x10000);
+	program->install_readwrite_bank(0x4000, 0x7fff, "bank3");
+	memory_configure_bank(machine(), "bank3", 0, 2, ram + 0x4000, 0x10000);
 
-	memory_install_readwrite_bank(program, 0x8000, 0xbfff, 0, 0, "bank4");
-	memory_configure_bank(machine, "bank4", 0, 2, ram + 0x8000, 0x10000);
+	program->install_readwrite_bank(0x8000, 0xbfff, "bank4");
+	memory_configure_bank(machine(), "bank4", 0, 2, ram + 0x8000, 0x10000);
 
-	memory_install_readwrite_bank(program, 0xc000, 0xffff, 0, 0, "bank5");
-	memory_configure_bank(machine, "bank5", 0, 3, ram + 0xc000, 0);
+	program->install_readwrite_bank(0xc000, 0xffff, "bank5");
+	memory_configure_bank(machine(), "bank5", 0, 3, ram + 0xc000, 0);
 
 	bankswitch();
 
 	/* register for state saving */
-	state_save_register_global(machine, m_int_mask);
-	state_save_register_global(machine, m_int_state);
-	state_save_register_global(machine, m_f_int_enb);
-	state_save_register_global(machine, m_keylatch);
-	state_save_register_global(machine, m_keydata);
-	state_save_register_global(machine, m_keyavail);
-	state_save_register_global(machine, m_kb_so);
-	state_save_register_global(machine, m_rxrdy);
-	state_save_register_global(machine, m_txrdy);
-	state_save_register_global(machine, m_baud_sel);
-	state_save_register_global(machine, m_bank);
+	state_save_register_global(machine(), m_int_mask);
+	state_save_register_global(machine(), m_int_state);
+	state_save_register_global(machine(), m_f_int_enb);
+	state_save_register_global(machine(), m_keylatch);
+	state_save_register_global(machine(), m_keydata);
+	state_save_register_global(machine(), m_keyavail);
+	state_save_register_global(machine(), m_kb_so);
+	state_save_register_global(machine(), m_rxrdy);
+	state_save_register_global(machine(), m_txrdy);
+	state_save_register_global(machine(), m_baud_sel);
+	state_save_register_global(machine(), m_bank);
 }
 
 void v1050_state::machine_reset()
@@ -1159,7 +1154,7 @@ void v1050_state::machine_reset()
 
 	bankswitch();
 
-	m_timer_sio->adjust(attotime_zero, 0, ATTOTIME_IN_HZ((double)XTAL_16MHz/4/13/16));
+	m_timer_sio->adjust(attotime::zero, 0, attotime::from_hz((double)XTAL_16MHz/4/13/16));
 }
 
 /* Machine Driver */
@@ -1180,7 +1175,7 @@ static MACHINE_CONFIG_START( v1050, v1050_state )
 	MCFG_DEVICE_DISABLE()
 
 	/* keyboard HACK */
-	MCFG_TIMER_ADD_PERIODIC("keyboard", v1050_keyboard_tick, HZ(60))
+	MCFG_TIMER_ADD_PERIODIC("keyboard", v1050_keyboard_tick, attotime::from_hz(60))
 
     /* video hardware */
 	MCFG_FRAGMENT_ADD(v1050_video)
@@ -1193,23 +1188,26 @@ static MACHINE_CONFIG_START( v1050, v1050_state )
 
 	/* devices */
 	MCFG_I8214_ADD(UPB8214_TAG, XTAL_16MHz/4, pic_intf)
-	MCFG_MSM58321RS_ADD(MSM58321RS_TAG, XTAL_32_768kHz, rtc_intf)
+	MCFG_MSM58321_ADD(MSM58321RS_TAG, XTAL_32_768kHz, rtc_intf)
 	MCFG_I8255A_ADD(I8255A_DISP_TAG, disp_ppi_intf)
 	MCFG_I8255A_ADD(I8255A_MISC_TAG, misc_ppi_intf)
 	MCFG_I8255A_ADD(I8255A_RTC_TAG, rtc_ppi_intf)
 	MCFG_I8255A_ADD(I8255A_M6502_TAG, m6502_ppi_intf)
 	MCFG_MSM8251_ADD(I8251A_KB_TAG, /*XTAL_16MHz/8,*/ kb_8251_intf)
 	MCFG_MSM8251_ADD(I8251A_SIO_TAG, /*XTAL_16MHz/8,*/ sio_8251_intf)
-	MCFG_WD1793_ADD(MB8877_TAG, /*XTAL_16MHz/16,*/ fdc_intf )
-	MCFG_FLOPPY_2_DRIVES_ADD(v1050_floppy_config)
-	MCFG_TIMER_ADD_PERIODIC(TIMER_KB_TAG, kb_8251_tick, HZ((double)XTAL_16MHz/4/13/8))
+	MCFG_MB8877_ADD(MB8877_TAG, /*XTAL_16MHz/16,*/ fdc_intf )
+	MCFG_FLOPPY_2_DRIVES_ADD(v1050_floppy_interface)
+	MCFG_TIMER_ADD_PERIODIC(TIMER_KB_TAG, kb_8251_tick, attotime::from_hz((double)XTAL_16MHz/4/13/8))
 	MCFG_TIMER_ADD(TIMER_SIO_TAG, sio_8251_tick)
+
+	/* software lists */
+	MCFG_SOFTWARE_LIST_ADD("disk_list","v1050")
 
 	/* printer */
 	MCFG_CENTRONICS_ADD(CENTRONICS_TAG, standard_centronics)
 
 	/* internal ram */
-	MCFG_RAM_ADD("messram")
+	MCFG_RAM_ADD(RAM_TAG)
 	MCFG_RAM_DEFAULT_SIZE("128K")
 MACHINE_CONFIG_END
 

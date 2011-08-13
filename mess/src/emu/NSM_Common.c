@@ -11,6 +11,106 @@
 
 #include "osdcore.h"
 
+#include "LzmaEnc.h"
+#include "LzmaDec.h"
+
+SRes OnProgress(void *p, UInt64 inSize, UInt64 outSize)
+{
+  // Update progress bar.
+  return SZ_OK;
+}
+ICompressProgress g_ProgressCallback = { &OnProgress };
+
+void * AllocForLzma(void *p, size_t size)
+{
+    void *ptr = malloc(size);
+    if(!ptr)
+    {
+        cout << "FAILED TO ALLOCATE BLOCK OF SIZE " << size/1024.0/1024.0 << " MB " << endl;
+    }
+    return ptr;
+}
+void FreeForLzma(void *p, void *address)
+{
+    free(address);
+}
+ISzAlloc SzAllocForLzma = { &AllocForLzma, &FreeForLzma };
+
+int zlibGetMaxCompressedSize(int origSize)
+{
+    return origSize*1.01 + 256;
+}
+int lzmaGetMaxCompressedSize(int origSize)
+{
+    return origSize + origSize/3 + 256 + LZMA_PROPS_SIZE;
+}
+
+void lzmaCompress(
+    unsigned char* destBuf,
+    int &destSize,
+    unsigned char *srcBuf,
+    int srcSize,
+    int compressionLevel
+)
+{
+    SizeT propsSize = LZMA_PROPS_SIZE;
+
+    SizeT lzmaDestSize = (SizeT)destSize;
+
+    CLzmaEncProps props;
+    LzmaEncProps_Init(&props);
+    props.level = compressionLevel; //compression level
+    //props.dictSize = 1 << 16;
+    //props.dictSize = 1 << 24;
+    props.writeEndMark = 1; // 0 or 1
+
+    int res = LzmaEncode(
+                  destBuf+LZMA_PROPS_SIZE, &lzmaDestSize,
+                  srcBuf, srcSize,
+                  &props, destBuf, &propsSize, props.writeEndMark,
+                  &g_ProgressCallback, &SzAllocForLzma, &SzAllocForLzma);
+
+    destSize = (int)lzmaDestSize + LZMA_PROPS_SIZE;
+
+    cout << "COMPRESSED " << srcSize << " BYTES DOWN TO " << destSize << endl;
+
+    if(res != SZ_OK || propsSize != LZMA_PROPS_SIZE)
+    {
+        cout << "ERROR COMPRESSING DATA\n";
+        cout << res << ',' << propsSize << endl;
+        exit(1);
+    }
+}
+
+void lzmaUncompress(
+    unsigned char* destBuf,
+    int destSize,
+    unsigned char *srcBuf,
+    int srcSize
+)
+{
+    SizeT lzmaDestSize = (SizeT)destSize;
+    SizeT lzmaSrcSize = (SizeT)srcSize - LZMA_PROPS_SIZE;
+
+    cout << "DECOMPRESSING " << srcSize << endl;
+
+    ELzmaStatus finishStatus;
+    int res = LzmaDecode(
+                  destBuf, &lzmaDestSize,
+                  srcBuf+LZMA_PROPS_SIZE, &lzmaSrcSize,
+                  srcBuf, LZMA_PROPS_SIZE, LZMA_FINISH_END,
+                  &finishStatus, &SzAllocForLzma);
+
+    cout << "DECOMPRESSED " << srcSize << " BYTES DOWN TO " << lzmaDestSize << endl;
+
+    if(res != SZ_OK || finishStatus != LZMA_STATUS_FINISHED_WITH_MARK)
+    {
+        cout << "ERROR DECOMPRESSING DATA\n";
+        cout << res << ',' << finishStatus << endl;
+        exit(1);
+    }
+}
+
 extern volatile bool memoryBlocksLocked;
 
 // Copied from Multiplayer.cpp
@@ -20,16 +120,12 @@ extern unsigned char GetPacketIdentifier(RakNet::Packet *p);
 extern unsigned char *GetPacketData(RakNet::Packet *p);
 extern int GetPacketSize(RakNet::Packet *p);
 
-extern unsigned char compressedBuffer[MAX_ZLIB_BUF_SIZE];
-extern unsigned char syncBuffer[MAX_ZLIB_BUF_SIZE];
-extern unsigned char uncompressedBuffer[MAX_ZLIB_BUF_SIZE];
-
 Common::Common(string _username)
-:
-secondsBetweenSync(0),
-selfPeerID(0),
-username(_username),
-startupTime(RakNet::GetTimeUS())
+    :
+    secondsBetweenSync(0),
+    selfPeerID(0),
+    username(_username),
+    startupTime(RakNet::GetTimeUS())
 {
     if(username.length()>16)
     {
@@ -67,17 +163,17 @@ RakNet::SystemAddress Common::ConnectBlocking(const char *defaultAddress, unsign
             }
             else if(packet->data[0]==ID_CLIENT_INPUTS)
             {
-                if(peerIDs.find(packet->systemAddress)==peerIDs.end() || peerInputs.find(peerIDs[packet->systemAddress])==peerInputs.end())
+                if(peerIDs.find(packet->guid)==peerIDs.end() || peerInputs.find(peerIDs[packet->guid])==peerInputs.end())
                 {
-                    if(unknownPeerInputs.find(packet->systemAddress)==unknownPeerInputs.end())
+                    if(unknownPeerInputs.find(packet->guid)==unknownPeerInputs.end())
                     {
-                        unknownPeerInputs[packet->systemAddress] = vector<string>();
+                        unknownPeerInputs[packet->guid] = vector<string>();
                     }
-                    unknownPeerInputs[packet->systemAddress].push_back(string((char*)GetPacketData(packet),(int)GetPacketSize(packet)));
+                    unknownPeerInputs[packet->guid].push_back(string((char*)GetPacketData(packet),(int)GetPacketSize(packet)));
                 }
                 else
                 {
-                    peerInputs[peerIDs[packet->systemAddress]].push_back(string((char*)GetPacketData(packet),(int)GetPacketSize(packet)));
+                    peerInputs[peerIDs[packet->guid]].push_back(string((char*)GetPacketData(packet),(int)GetPacketSize(packet)));
                 }
             }
             else
@@ -100,28 +196,40 @@ int Common::getLargestPing()
     int largestPing=1;
     for(int a=0; a<rakInterface->NumberOfConnections(); a++)
     {
-        largestPing = max(rakInterface->GetAveragePing(rakInterface->GetSystemAddressFromIndex(a)),largestPing);
+        largestPing = max(rakInterface->GetHighestPing(rakInterface->GetSystemAddressFromIndex(a)),largestPing);
     }
     return largestPing;
 }
 
-void Common::destroyConstBlock(int i)
+bool Common::hasPeerWithID(int peerID)
 {
-  constBlocks.erase(constBlocks.begin()+i);
+    if(selfPeerID==peerID) return true;
+    for(
+        std::map<RakNet::RakNetGUID,int>::iterator it = peerIDs.begin();
+        it != peerIDs.end();
+        it++
+    )
+    {
+        if(it->second==peerID)
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 string Common::getLatencyString(int peerID)
 {
     for(
-        std::map<RakNet::SystemAddress,int>::iterator it = peerIDs.begin();
+        std::map<RakNet::RakNetGUID,int>::iterator it = peerIDs.begin();
         it != peerIDs.end();
         it++
-        )
+    )
     {
         if(it->second==peerID)
         {
             char buf[4096];
-            sprintf(buf,"Peer %d: %d ms", peerID, rakInterface->GetAveragePing(it->first));
+            sprintf(buf,"Peer %d: %d ms", peerID, rakInterface->GetHighestPing(it->first));
             return string(buf);
         }
     }
@@ -138,14 +246,14 @@ string Common::getStatisticsString()
         char message[4096];
         rss=rakInterface->GetStatistics(rakInterface->GetSystemAddressFromIndex(a));
         sprintf(
-                message,
-                "Sent: %"PRINTF_64_BIT_MODIFIER"u\n"
-                "Recv: %"PRINTF_64_BIT_MODIFIER"u\n"
-                "Loss: %.0f%%\n",
-                rss->valueOverLastSecond[RakNet::ACTUAL_BYTES_SENT],
-                rss->valueOverLastSecond[RakNet::ACTUAL_BYTES_RECEIVED],
-                rss->packetlossLastSecond
-                );
+            message,
+            "Sent: %d\n"
+            "Recv: %d\n"
+            "Loss: %.0f%%\n",
+            (int)rss->valueOverLastSecond[RakNet::ACTUAL_BYTES_SENT],
+            (int)rss->valueOverLastSecond[RakNet::ACTUAL_BYTES_RECEIVED],
+            rss->packetlossLastSecond
+        );
         retval += string(message) + string("\n");
     }
     return retval;
@@ -155,77 +263,34 @@ vector<int> Common::getPeerIDs()
 {
     vector<int> retval;
     for(
-        std::map<RakNet::SystemAddress,int>::iterator it = peerIDs.begin();
+        std::map<RakNet::RakNetGUID,int>::iterator it = peerIDs.begin();
         it != peerIDs.end();
         it++
-        )
+    )
     {
         retval.push_back(it->second);
     }
     return retval;
 }
 
-void Common::addConstBlock(unsigned char *tmpdata,int size)
+int Common::getNumOtherPeers()
 {
-	while(memoryBlocksLocked)
-	{
-	;
-	}
-	memoryBlocksLocked=true;
-    //cout << "Adding const block...\n";
-    //cout << "IN CRITICAL SECTION\n";
-    if(constBlocks.size()>=100)
-    {
-        //constBlocks.erase(constBlocks.begin());
-    }
-    constBlocks.push_back(MemoryBlock(size));
-    memcpy(constBlocks.back().data,tmpdata,size);
-
-	uLongf compressedSize = MAX_ZLIB_BUF_SIZE;
-
-    int ret = compress2(compressedBuffer,&compressedSize,(Bytef*)tmpdata,size,9);
-	if (ret != Z_OK)
-		cout << "CREATING ZLIB STREAM FAILED\n";
-
-    int compressedSizeInt = (int)compressedSize;
-
-    //cout << "COMPRESSING DATA FROM " << size << " TO " << compressedSize << endl;
-
-    int sendMessageSize = 1+sizeof(int)+sizeof(int)+compressedSize;
-	unsigned char *sendMessage = (unsigned char*)malloc(sendMessageSize);
-	sendMessage[0] = ID_CONST_DATA;
-	memcpy(sendMessage+1,&size,sizeof(int));
-	memcpy(sendMessage+1+sizeof(int),&compressedSizeInt,sizeof(int));
-	memcpy(sendMessage+1+sizeof(int)+sizeof(int),compressedBuffer,compressedSize);
-
-	rakInterface->Send(
-			(const char*)sendMessage,
-			sendMessageSize,
-			HIGH_PRIORITY,
-			RELIABLE_ORDERED,
-			ORDERING_CHANNEL_CONST_DATA,
-			RakNet::UNASSIGNED_SYSTEM_ADDRESS,
-			true
-		       );
-	memoryBlocksLocked=false;
-    //cout << "done\n";
-    //cout << "EXITING CRITICAL SECTION\n";
+    return int(peerIDs.size())-1;
 }
 
 int Common::getOtherPeerID(int index)
 {
     int count=0;
-    for(int a=0;a<rakInterface->NumberOfConnections();a++)
+    for(int a=0; a<rakInterface->NumberOfConnections(); a++)
     {
-        if(peerIDs.find(rakInterface->GetSystemAddressFromIndex(a))!=peerIDs.end())
+        if(peerIDs.find(rakInterface->GetGUIDFromIndex(a))!=peerIDs.end())
         {
             if(count==index)
-                return peerIDs[rakInterface->GetSystemAddressFromIndex(a)];
+                return peerIDs[rakInterface->GetGUIDFromIndex(a)];
             else
                 count++;
         }
     }
-    printf("ERROR GETTING PEER ID\n");
     return 0;
 }
 

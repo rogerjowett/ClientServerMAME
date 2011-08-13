@@ -1,5 +1,19 @@
+#pragma once
+
 #ifndef __PX8__
 #define __PX8__
+
+#define ADDRESS_MAP_MODERN
+
+#include "emu.h"
+#include "cpu/z80/z80.h"
+#include "cpu/m6800/m6800.h"
+#include "imagedev/cartslot.h"
+#include "imagedev/cassette.h"
+#include "machine/ram.h"
+#include "machine/msm8251.h"
+#include "machine/pf10.h"
+#include "sound/wave.h"
 
 #define UPD70008_TAG	"4a"
 #define UPD7508_TAG		"2e"
@@ -7,7 +21,6 @@
 #define SED1320_TAG		"7c"
 #define I8251_TAG		"13e"
 #define UPD7001_TAG		"1d"
-#define CASSETTE_TAG	"cassette"
 #define SCREEN_TAG		"screen"
 
 #define PX8_VIDEORAM_MASK	0x17ff
@@ -15,35 +28,56 @@
 class px8_state : public driver_device
 {
 public:
-	px8_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	px8_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag),
+		  m_maincpu(*this, UPD70008_TAG),
+		  m_cassette(*this, CASSETTE_TAG),
+		  m_ram(*this, RAM_TAG)
+	{ }
+
+	required_device<cpu_device> m_maincpu;
+	required_device<cassette_image_device> m_cassette;
+	required_device<device_t> m_ram;
+
+	virtual void machine_start();
+	virtual void machine_reset();
+
+	virtual bool screen_update(screen_device &screen, bitmap_t &bitmap, const rectangle &cliprect);
+
+	READ8_MEMBER( gah40m_r );
+	WRITE8_MEMBER( gah40m_w );
+	READ8_MEMBER( gah40s_r );
+	WRITE8_MEMBER( gah40s_w );
+	WRITE8_MEMBER( gah40s_ier_w );
+	READ8_MEMBER( krtn_0_3_r );
+	READ8_MEMBER( krtn_4_7_r );
+	WRITE8_MEMBER( ksc_w );
+
+	void bankswitch();
+	UINT8 krtn_read();
 
 	/* GAH40M state */
-	UINT16 icr;				/* input capture register */
-	UINT16 frc;				/* free running counter */
-	UINT8 ier;				/* interrupt acknowledge register */
-	UINT8 isr;				/* interrupt status register */
-	UINT8 sio;				/* serial I/O register */
-	int bank0;				/* */
+	UINT16 m_icr;				/* input capture register */
+	UINT16 m_frc;				/* free running counter */
+	UINT8 m_ier;				/* interrupt acknowledge register */
+	UINT8 m_isr;				/* interrupt status register */
+	UINT8 m_sio;				/* serial I/O register */
+	int m_bank0;				/* */
 
 	/* GAH40S state */
-	UINT16 cnt;				/* microcassette tape counter */
-	int swpr;				/* P-ROM power switch */
-	UINT16 pra;				/* P-ROM address */
-	UINT8 prd;				/* P-ROM data */
+	UINT16 m_cnt;				/* microcassette tape counter */
+	int m_swpr;				/* P-ROM power switch */
+	UINT16 m_pra;				/* P-ROM address */
+	UINT8 m_prd;				/* P-ROM data */
 
 	/* memory state */
-	int bk2;				/* */
+	int m_bk2;				/* */
 
 	/* keyboard state */
-	int ksc;				/* keyboard scan column */
+	int m_ksc;				/* keyboard scan column */
 
 	/* video state */
-	UINT8 *video_ram;		/* LCD video RAM */
-
-	/* devices */
-	device_t *sed1320;
-	device_t *cassette;
+	UINT8 *m_video_ram;		/* LCD video RAM */
 };
 
 #endif

@@ -30,36 +30,36 @@
 class m10_state : public driver_device
 {
 public:
-	m10_state(running_machine &machine, const driver_device_config_base &config)
-		: driver_device(machine, config) { }
+	m10_state(const machine_config &mconfig, device_type type, const char *tag)
+		: driver_device(mconfig, type, tag) { }
 
 	/* memory pointers */
-	UINT8 *             chargen;
-	UINT8 *             memory;
-	UINT8 *             rom;
-	UINT8 *             videoram;
-	UINT8 *             colorram;
-	size_t              videoram_size;
+	UINT8 *             m_chargen;
+	UINT8 *             m_memory;
+	UINT8 *             m_rom;
+	UINT8 *             m_videoram;
+	UINT8 *             m_colorram;
+	size_t              m_videoram_size;
 
 	/* video-related */
-	tilemap_t *           tx_tilemap;
-	gfx_element *       back_gfx;
+	tilemap_t *           m_tx_tilemap;
+	gfx_element *       m_back_gfx;
 
 	/* this is currently unused, because it is needed by gfx_layout (which has no machine) */
 	UINT32              extyoffs[32 * 8];
 
 	/* video state */
-	UINT8	              bottomline;
-	UINT8               flip;
+	UINT8	              m_bottomline;
+	UINT8               m_flip;
 
 	/* misc */
-	int                 last;
+	int                 m_last;
 
 	/* devices */
-	device_t *maincpu;
-	device_t *ic8j1;
-	device_t *ic8j2;
-	device_t *samples;
+	device_t *m_maincpu;
+	device_t *m_ic8j1;
+	device_t *m_ic8j2;
+	device_t *m_samples;
 };
 
 
@@ -70,8 +70,8 @@ WRITE8_HANDLER( m10_colorram_w );
 WRITE8_HANDLER( m10_chargen_w );
 WRITE8_HANDLER( m15_chargen_w );
 
-VIDEO_UPDATE( m10 );
-VIDEO_UPDATE( m15 );
+SCREEN_UPDATE( m10 );
+SCREEN_UPDATE( m15 );
 
 VIDEO_START( m10 );
 VIDEO_START( m15 );

@@ -136,6 +136,8 @@ enum
 	I386_LDTR_LIMIT,
 	I386_LDTR_FLAGS,
 
+	I386_CPL,
+
 	X87_CTRL,
 	X87_STATUS,
 	X87_ST0,
@@ -148,6 +150,17 @@ enum
 	X87_ST7,
 };
 
+/* Protected mode exceptions */
+#define FAULT_UD 6   // Invalid Opcode
+#define FAULT_NM 7   // Coprocessor not available
+#define FAULT_DF 8   // Double Fault
+#define FAULT_TS 10  // Invalid TSS
+#define FAULT_NP 11  // Segment or Gate not present
+#define FAULT_SS 12  // Stack fault
+#define FAULT_GP 13  // General Protection Fault
+#define FAULT_PF 14  // Page Fault
+#define FAULT_MF 16  // Match (Coprocessor) Fault
+
 typedef struct {
 	UINT16 selector;
 	UINT16 flags;
@@ -155,6 +168,17 @@ typedef struct {
 	UINT32 limit;
 	int d;		// Operand size
 } I386_SREG;
+
+typedef struct
+{
+	UINT16 segment;
+	UINT16 selector;
+	UINT32 offset;
+	UINT8 ar;  // access rights
+	UINT8 dpl;
+	UINT8 dword_count;
+	UINT8 present;
+} I386_CALL_GATE;
 
 typedef struct {
 	UINT32 base;
@@ -201,6 +225,8 @@ struct _i386_state
 	UINT8 IOP1;
 	UINT8 IOP2;
 	UINT8 NT;
+
+	UINT8 CPL;  // current privilege level
 
 	UINT8 performed_intersegment_jump;
 
@@ -273,6 +299,7 @@ extern int i386_parity_table[256];
 #define PROTECTED_MODE		(cpustate->cr[0] & 0x1)
 #define STACK_32BIT			(cpustate->sreg[SS].d)
 #define V8086_MODE			(cpustate->eflags & 0x00020000)
+#define NESTED_TASK			(cpustate->eflags & 0x00004000)
 
 #define SetOF_Add32(r,s,d)	(cpustate->OF = (((r) ^ (s)) & ((r) ^ (d)) & 0x80000000) ? 1: 0)
 #define SetOF_Add16(r,s,d)	(cpustate->OF = (((r) ^ (s)) & ((r) ^ (d)) & 0x8000) ? 1 : 0)
@@ -832,13 +859,13 @@ INLINE UINT8 POP8(i386_state *cpustate)
 	UINT8 value;
 	UINT32 ea;
 	if( STACK_32BIT ) {
-		ea = i386_translate(cpustate, SS, REG32(ESP) );
-		value = READ8(cpustate, ea );
 		REG32(ESP) += 1;
-	} else {
-		ea = i386_translate(cpustate, SS, REG16(SP) );
+		ea = i386_translate(cpustate, SS, REG32(ESP) - 1);
 		value = READ8(cpustate, ea );
+	} else {
 		REG16(SP) += 1;
+		ea = i386_translate(cpustate, SS, (REG16(SP) - 1) & 0xffff);
+		value = READ8(cpustate, ea );
 	}
 	return value;
 }
@@ -847,13 +874,13 @@ INLINE UINT16 POP16(i386_state *cpustate)
 	UINT16 value;
 	UINT32 ea;
 	if( STACK_32BIT ) {
-		ea = i386_translate(cpustate, SS, REG32(ESP) );
-		value = READ16(cpustate, ea );
 		REG32(ESP) += 2;
-	} else {
-		ea = i386_translate(cpustate, SS, REG16(SP) );
+		ea = i386_translate(cpustate, SS, REG32(ESP) - 2);
 		value = READ16(cpustate, ea );
+	} else {
 		REG16(SP) += 2;
+		ea = i386_translate(cpustate, SS, (REG16(SP) - 2) & 0xffff);
+		value = READ16(cpustate, ea );
 	}
 	return value;
 }
@@ -862,13 +889,13 @@ INLINE UINT32 POP32(i386_state *cpustate)
 	UINT32 value;
 	UINT32 ea;
 	if( STACK_32BIT ) {
-		ea = i386_translate(cpustate, SS, REG32(ESP) );
-		value = READ32(cpustate, ea );
 		REG32(ESP) += 4;
-	} else {
-		ea = i386_translate(cpustate, SS, REG16(SP) );
+		ea = i386_translate(cpustate, SS, REG32(ESP) - 4);
 		value = READ32(cpustate, ea );
+	} else {
 		REG16(SP) += 4;
+		ea = i386_translate(cpustate, SS, (REG16(SP) - 4) & 0xffff);
+		value = READ32(cpustate, ea );
 	}
 	return value;
 }
@@ -891,17 +918,75 @@ INLINE void BUMP_DI(i386_state *cpustate,int adjustment)
 
 
 
-/***********************************************************************************/
+/***********************************************************************************
+    I/O ACCESS
+***********************************************************************************/
 
-#define READPORT8(port)		    	(cpustate->io->read_byte(port))
-#define READPORT16(port)	    	(READPORT8(port) | (READPORT8(port+1) << 8))
-#define READPORT32(port)	    	(READPORT8(port) | (READPORT8(port+1) << 8) | (READPORT8(port+2) << 16) | (READPORT8(port+3) << 24))
-#define WRITEPORT8(port, value)		(cpustate->io->write_byte(port, value))
-#define WRITEPORT16(port, value)	WRITEPORT8(port,value & 0xff); \
-									(WRITEPORT8(port+1,(value >> 8) & 0xff))
-#define WRITEPORT32(port, value)	WRITEPORT8(port,value & 0xff); \
-									(WRITEPORT8(port+1,(value >> 8) & 0xff)); \
-									(WRITEPORT8(port+2,(value >> 16) & 0xff)); \
-									(WRITEPORT8(port+3,(value >> 24) & 0xff))
+INLINE UINT8 READPORT8(i386_state *cpustate, offs_t port)
+{
+	return cpustate->io->read_byte(port);
+}
+
+INLINE void WRITEPORT8(i386_state *cpustate, offs_t port, UINT8 value)
+{
+	cpustate->io->write_byte(port, value);
+}
+
+INLINE UINT16 READPORT16(i386_state *cpustate, offs_t port)
+{
+	if (port & 1)
+	{
+		return  READPORT8(cpustate, port) |
+		       (READPORT8(cpustate, port + 1) << 8);
+	}
+	else
+	{
+		return cpustate->io->read_word(port);
+	}
+}
+
+INLINE void WRITEPORT16(i386_state *cpustate, offs_t port, UINT16 value)
+{
+	if (port & 1)
+	{
+		WRITEPORT8(cpustate, port, value & 0xff);
+		WRITEPORT8(cpustate, port + 1, (value >> 8) & 0xff);
+	}
+	else
+	{
+		cpustate->io->write_word(port, value);
+	}
+}
+
+INLINE UINT32 READPORT32(i386_state *cpustate, offs_t port)
+{
+	if (port & 3)
+	{
+		return  READPORT8(cpustate, port) |
+		       (READPORT8(cpustate, port + 1) << 8) |
+		       (READPORT8(cpustate, port + 2) << 16) |
+		       (READPORT8(cpustate, port + 3) << 24);
+	}
+	else
+	{
+		return cpustate->io->read_dword(port);
+	}
+}
+
+INLINE void WRITEPORT32(i386_state *cpustate, offs_t port, UINT32 value)
+{
+	if (port & 3)
+	{
+		WRITEPORT8(cpustate, port, value & 0xff);
+		WRITEPORT8(cpustate, port + 1, (value >> 8) & 0xff);
+		WRITEPORT8(cpustate, port + 2, (value >> 16) & 0xff);
+		WRITEPORT8(cpustate, port + 3, (value >> 24) & 0xff);
+	}
+	else
+	{
+		cpustate->io->write_dword(port, value);
+	}
+}
+
 
 #endif /* __I386_H__ */
